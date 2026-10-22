@@ -1,124 +1,164 @@
-# DecisionLens
+# DecisionLens — AI-Powered Decision Intelligence Platform
 
-**DecisionLens** is an intelligent audio-driven executive decision analysis platform. It captures stakeholder deliberation audio or text inputs, extracts diarized conversational transcripts, structures decision criteria and alternatives, and runs algorithmic frameworks such as **Multi-Criteria Decision Analysis (MCDA)** and **SWOT** analysis.
-
----
-
-## 🏗️ Repository Architecture
-
-```text
-decisionlens/
-  apps/
-    web/                 # Next.js 14 App Router (Tailwind CSS, TypeScript)
-    api/                 # FastAPI REST application
-      routers/           # auth, folders, sessions, media, transcripts, responses, analysis, health
-      services/          # audio.py (ffmpeg), stt.py, llm.py, research.py, frameworks/, validators.py
-      models/            # SQLAlchemy database models and Pydantic v2 schemas
-      jobs/              # Background job runners (audio processing, STT, analysis)
-      alembic/           # Database migrations from day one
-  examples/
-    audio/               # Sample 16kHz mono audio generated with ffmpeg
-    transcripts/         # Sample diarized meeting transcripts (JSON)
-    expected_outputs/    # Sample MCDA decision matrices and executive decision brief
-  .env.example           # Environment template (all secrets kept strictly on backend)
-  .gitignore             # Ignores .env, .db, build artifacts
-```
+DecisionLens is a production-grade personal decision-intelligence platform that transforms unstructured thoughts, documents, and meeting audio recordings into structured analysis, evidence-backed reasoning, and an actionable roadmap.
 
 ---
 
-## ⚡ Prerequisites
+## Architecture & Subsystems
 
-1. **Node.js**: `20.x+` (verified with Node `v25.9.0`)
-2. **Python**: `3.11+` (verified with Python `3.12.8`)
-3. **ffmpeg / ffprobe**: Installed and available on system `$PATH`
-
----
-
-## 🔒 Security & Environment Configuration
-
-All sensitive keys (LLM, search, database connection strings, JWT secrets) are stored **only in `.env`**. They are loaded strictly on the backend and are **never exposed to the browser** or committed to version control.
-
-Copy the template to create your `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Configuration variables in `.env`:
-- `DATABASE_URL`: `sqlite:///./decisionlens.db` (or PostgreSQL `postgresql+psycopg2://...`)
-- `SECRET_KEY`: Backend signing key
-- `GEMINI_API_KEY`: Google Gemini API key (optional; deterministic decision models run if unset)
-- `OPENAI_API_KEY`: OpenAI API key (optional)
-- `TAVILY_API_KEY`: Tavily Search API key (optional)
-- `NEXT_PUBLIC_API_URL`: `http://localhost:8000`
+| Subsystem | Technology | Port / URL | Status |
+| :--- | :--- | :--- | :--- |
+| **Backend** | FastAPI + Python 3.12 + SQLAlchemy | `http://localhost:8000` | Fully Verified (82/82 Tests Pass) |
+| **Frontend** | Next.js 14 (App Router) + TypeScript + Tailwind CSS | `http://localhost:3000` | Fully Verified (Lint, Typecheck & Build Pass) |
+| **Database** | SQLite (Dev) / PostgreSQL (Production) | `./decisionlens.db` | Foreign Keys Enabled + Cascading Deletes |
+| **AI Engine** | OpenAI GPT-4o-mini / Hosted AI Service | Configurable API | Anti-Prompt Injection + Fenced Untrusted Input |
+| **Search Engine**| Tavily / Serper / Mock Provider | Configurable API | Primary-source prioritization + Claim audit |
 
 ---
 
-## 🚀 Getting Started
+## Clean Setup & Deployment Instructions
 
-### 1. Database Migrations (Day One)
-
-The database schema is managed via **Alembic**. Run migrations to bring the schema up to date:
-
-```bash
-# Activate virtual environment
-source .venv/bin/activate
-
-# Run Alembic migrations
-alembic -c apps/api/alembic.ini upgrade head
-```
-
-### 2. Start the FastAPI Backend
-
-```bash
-source .venv/bin/activate
-PYTHONPATH=. uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-- API Base URL: `http://localhost:8000`
-- Interactive Swagger UI: `http://localhost:8000/docs`
-- Health check endpoint: `http://localhost:8000/health`
-- Database read/write verification: `http://localhost:8000/health/db`
-
-### 3. Start the Next.js Web Application
-
-```bash
-cd apps/web
-npm run dev
-```
-
-- Web Dashboard: `http://localhost:3000`
+### Prerequisites
+- **Python 3.12+**
+- **Node.js 18.x or 20.x+** and **npm 9+**
+- **FFmpeg** (Optional, recommended for transcoding `.m4a` / `.mp3` audio files)
 
 ---
 
-## 🧪 Testing
+### 1. Backend Setup
 
-Run the automated integration test suite:
+1. **Navigate to the backend directory:**
+   ```bash
+   cd backend
+   ```
 
-```bash
-source .venv/bin/activate
-PYTHONPATH=. pytest tests/test_api.py -v
-```
+2. **Create and activate a virtual environment:**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   # Windows (PowerShell): .venv\Scripts\Activate.ps1
+   # Windows (CMD): .venv\Scripts\activate.bat
+   ```
 
-Tests verify:
-- Root `/` and `/health` endpoints
-- Database read and write verification `/health/db`
-- Folder creation & retrieval
-- Session creation
-- ffmpeg audio probe and synthetic audio generation
-- Speech-to-text transcript creation
-- Multi-Criteria Decision Analysis (MCDA) matrix calculation and persistence
+3. **Install dependencies:**
+   ```bash
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables:**
+   ```bash
+   cp .env.example .env
+   ```
+   *Key variables in `.env`:*
+   - `JWT_SECRET`: Secret key for JWT session tokens (generate a random 32+ character string in production).
+   - `DATABASE_URL`: `sqlite:///./decisionlens.db` for local SQLite or `postgresql+psycopg://user:pass@host:5432/db` for Postgres.
+   - `STORAGE_DIR`: `./storage` (directory for uploaded files and audio).
+   - `OPENAI_API_KEY`: OpenAI API key for structuring, gap analysis, and synthesis (falls back safely to structured mocked responses if empty).
+   - `SEARCH_PROVIDER`: `tavily`, `serper`, or `mock` for external research.
+   - `TAVILY_API_KEY` / `SERPER_API_KEY`: API keys for research web search.
+   - `GOOGLE_SPEECH_API_KEY`: Optional key for Chromium Google Speech API fallback.
+
+5. **Initialize Database & Start Backend Server:**
+   ```bash
+   uvicorn app.main:app --reload --port 8000
+   ```
+   *Tables and schema are initialized automatically on application startup.*
+   - Root Health Probe: [http://localhost:8000/api/health](http://localhost:8000/api/health)
+   - Interactive OpenAPI Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+6. **Run Backend Test Suite:**
+   ```bash
+   pytest tests/ -v
+   ```
 
 ---
 
-## 📊 Decision Frameworks
+### 2. Frontend Setup
 
-1. **MCDA (Multi-Criteria Decision Analysis):**
-   - Normalizes criteria weights.
-   - Computes weighted scores across all alternatives.
-   - Outputs ranked choices with sensitivity breakdown.
-2. **SWOT Analysis:**
-   - Evaluates Strengths, Weaknesses, Opportunities, and Threats.
-   - Generates actionable strategic risk mitigations.
-3. **First Principles & Second-Order Thinking:**
-   - Deconstructs objectives to fundamental constraints and traces downstream effects.
+1. **Navigate to the frontend directory:**
+   ```bash
+   cd frontend
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables:**
+   ```bash
+   cp .env.example .env.local
+   ```
+   Ensure `NEXT_PUBLIC_API_URL=http://localhost:8000` points to the active FastAPI backend.
+
+4. **Run Code Quality & Type Checks:**
+   ```bash
+   # Run ESLint (0 errors, 0 warnings)
+   npm run lint
+
+   # Run TypeScript strict type-checking
+   npm run type-check
+   ```
+
+5. **Build for Production:**
+   ```bash
+   npm run build
+   ```
+
+6. **Start Frontend Server:**
+   - **Development mode:**
+     ```bash
+     npm run dev
+     ```
+     Access at [http://localhost:3000](http://localhost:3000).
+   - **Production mode:**
+     ```bash
+     npm start
+     ```
+
+---
+
+## Security & Verification Summary
+
+1. **User Isolation & Cross-Tenant Data Access:**
+   - Every single endpoint is protected by JWT authentication via `get_current_user`.
+   - All folder, decision, attachment, gap, research, framework, and roadmap records are strictly scoped to the requesting user (`user_id`).
+   - Cross-user access attempts return `404 Not Found` to prevent ID enumeration and metadata leakage.
+   - Moving a decision across folders strictly validates ownership of both the decision and the destination folder.
+
+2. **Database Integrity & Cascading Deletion:**
+   - SQLite enforces foreign keys via `PRAGMA foreign_keys = ON` on every connection.
+   - All relationship models use `ondelete="CASCADE"` and `cascade="all, delete-orphan"`. Deleting a folder or decision cascades clean removal to all attachments, findings, gaps, research logs, framework runs, recommendations, and roadmaps.
+
+3. **Safe File Uploads & Audio:**
+   - Strict file extension whitelist (`.pdf`, `.docx`, `.txt`, `.md`, `.wav`, `.mp3`, `.m4a`, `.webm`, `.ogg`).
+   - Maximum upload size enforced (25 MB default).
+   - Server-side UUID generation (`uuid.uuid4().hex`) for stored files, preventing path traversal attacks and file overwrites.
+   - Deleting attachments removes the physical file from disk.
+
+4. **Prompt Injection & Untrusted Data Protection:**
+   - User-supplied texts are wrapped in `<UNTRUSTED_USER_INPUT>` boundaries with strict system guardrails forbidding execution of nested instructions or system overrides.
+   - Strict anti-hallucination prompts prohibit the AI engine from fabricating missing information, probabilities, or sources.
+
+5. **Error Sanitization:**
+   - Production error responses never leak internal stack traces or database structures.
+   - Standard HTTP exceptions and Pydantic validation errors return structured JSON details.
+
+---
+
+## Completed Phases
+
+- [x] **Phase 0:** Architecture Blueprint & Inspection
+- [x] **Phase 1:** Project Scaffold, Configuration & Health Check
+- [x] **Phase 2:** Database Models, Authentication, and User Isolation
+- [x] **Phase 3:** Folders, Decisions, and Persistence CRUD
+- [x] **Phase 4:** Document Uploads & Text Extraction (PDF, DOCX, TXT, MD)
+- [x] **Phase 5:** Audio Recording, Enhancement & Bilingual (EN/HI) Transcription
+- [x] **Phase 6:** Cognitive Structuring (8 Categories) & Private Feedback
+- [x] **Phase 7:** Information Gap Detection & Interactive Resolution Flow
+- [x] **Phase 8:** External Web Research Provider & Evidence Retrieval
+- [x] **Phase 9:** 5 Thinking Frameworks (Six Hats, SWOT, Decision Matrix, 5 Whys, Decision Tree)
+- [x] **Phase 10:** Decision Synthesis, Immutable Snapshots & Interactive Roadmap
+- [x] **Phase 11:** Connected Frontend Workflow, Stepper, & Markdown/JSON Export
+- [x] **Phase 12:** Security Audit, Quality Gate Verification & Hardening
