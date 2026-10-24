@@ -126,66 +126,56 @@ def change_password(
 )
 def get_oauth_providers():
     """Return available OAuth providers and their configuration status."""
-    use_supabase = bool(settings.supabase_url)
-
     google_auth_url = (
-        f"{settings.supabase_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback"
-        if use_supabase
-        else (
-            f"https://accounts.google.com/o/oauth2/v2/auth?client_id={settings.google_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback&state=google"
-            if settings.google_client_id
-            else None
-        )
+        f"https://accounts.google.com/o/oauth2/v2/auth?client_id={settings.google_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback&state=google"
+        if settings.google_client_id
+        else None
     )
 
     microsoft_auth_url = (
-        f"{settings.supabase_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback"
-        if use_supabase
-        else (
-            f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile%20User.Read&redirect_uri=http://localhost:3000/auth/callback&state=microsoft"
-            if settings.microsoft_client_id
-            else None
-        )
+        f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile%20User.Read&redirect_uri=http://localhost:3000/auth/callback&state=microsoft"
+        if settings.microsoft_client_id
+        else None
     )
 
     github_auth_url = (
-        f"{settings.supabase_url}/auth/v1/authorize?provider=github&redirect_to=http://localhost:3000/auth/callback"
-        if use_supabase
-        else (
-            f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email&redirect_uri=http://localhost:3000/auth/callback&state=github"
-            if settings.github_client_id
-            else None
-        )
+        f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email&redirect_uri=http://localhost:3000/auth/callback&state=github"
+        if settings.github_client_id
+        else None
     )
 
     providers: List[OAuthProviderInfo] = [
         OAuthProviderInfo(
             id="google",
             name="Google Workspace",
-            configured=bool(use_supabase or settings.google_client_id),
+            configured=bool(settings.google_client_id),
             client_id=settings.google_client_id or None,
             auth_url=google_auth_url,
         ),
         OAuthProviderInfo(
             id="github",
             name="GitHub",
-            configured=bool(use_supabase or settings.github_client_id),
+            configured=bool(settings.github_client_id),
             client_id=settings.github_client_id or None,
             auth_url=github_auth_url,
         ),
         OAuthProviderInfo(
             id="microsoft",
             name="Microsoft / Azure AD",
-            configured=bool(use_supabase or settings.microsoft_client_id),
+            configured=bool(settings.microsoft_client_id),
             client_id=settings.microsoft_client_id or None,
             auth_url=microsoft_auth_url,
         ),
         OAuthProviderInfo(
             id="supabase",
             name="Supabase Identity",
-            configured=bool(settings.supabase_url),
+            configured=bool(settings.supabase_url and settings.supabase_anon_key),
             client_id=None,
-            auth_url=microsoft_auth_url,
+            auth_url=(
+                f"{settings.supabase_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback"
+                if settings.supabase_url
+                else None
+            ),
         ),
     ]
     return providers
