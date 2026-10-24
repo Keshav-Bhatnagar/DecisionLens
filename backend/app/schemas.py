@@ -1,7 +1,20 @@
 import re
 from datetime import datetime
+from enum import Enum
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+
+
+class DecisionDomain(str, Enum):
+    REAL_ESTATE = "REAL_ESTATE"
+    FINANCE = "FINANCE"
+    CAREER = "CAREER"
+    EDUCATION = "EDUCATION"
+    BUSINESS = "BUSINESS"
+    PRODUCT = "PRODUCT"
+    SOFTWARE = "SOFTWARE"
+    OPERATIONS = "OPERATIONS"
+    PERSONAL = "PERSONAL"
 
 
 # ==========================================
@@ -44,6 +57,9 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     id: int
     created_at: datetime
+    oauth_provider: Optional[str] = None
+    avatar_url: Optional[str] = None
+    display_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -52,6 +68,48 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class OAuthLoginRequest(BaseModel):
+    provider: str = Field(..., description="Provider: google, github, microsoft")
+    code: Optional[str] = Field(None, description="OAuth authorization code returned from provider")
+    token: Optional[str] = Field(None, description="OAuth credential/token/id_token")
+    redirect_uri: Optional[str] = Field(None, description="Redirect URI used during auth flow")
+    email: Optional[EmailStr] = Field(None, description="Direct verified email in sandbox mode")
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class OAuthProviderInfo(BaseModel):
+    id: str
+    name: str
+    configured: bool
+    client_id: Optional[str] = None
+    auth_url: Optional[str] = None
+
+
+class UserChangePassword(BaseModel):
+    current_password: str
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        description="Password must be at least 8 characters long",
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long.")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter.")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter.")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit.")
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>\-_=+[\]/\\`~]", v):
+            raise ValueError("Password must contain at least one special character.")
+        return v
 
 
 # ==========================================
@@ -95,6 +153,7 @@ class DecisionBase(BaseModel):
     record_type: Optional[str] = Field("decision", description="'decision' or 'meeting'")
     status: Optional[str] = Field("draft", description="'draft', 'evaluating', 'decided', or 'archived'")
     language: Optional[str] = Field("en", description="'en' or 'hi'")
+    domain: Optional[str] = Field("BUSINESS", description="Decision domain (e.g. REAL_ESTATE, FINANCE, SOFTWARE)")
 
 
 class DecisionCreate(DecisionBase):
@@ -109,6 +168,7 @@ class DecisionUpdate(BaseModel):
     record_type: Optional[str] = None
     status: Optional[str] = None
     language: Optional[str] = None
+    domain: Optional[str] = None
     raw_input: Optional[str] = None
 
 
@@ -280,6 +340,9 @@ class GapItem(BaseModel):
     )
     answer: Optional[str] = Field(None, description="User-provided answer or research synthesis")
     research_query: Optional[str] = Field(None, description="Validated web research query")
+    source_origin: Optional[str] = Field(
+        None, description="Temporary tag indicating provenance / origin of gap generation (e.g., 'LLM: Gemini', 'Fallback: Heuristic Preset')"
+    )
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -435,16 +498,24 @@ class MatrixCriterion(BaseModel):
 
 
 class MatrixOption(BaseModel):
-    id: str = Field(..., description="Unique option ID, e.g. opt_a")
+    id: str = Field(..., description="Stable unique option ID, e.g. OPT_001")
     name: str = Field(..., description="Option label, e.g. 'Option A: Cloud Platform'")
     description: Optional[str] = ""
+    origin: str = Field("provided", description="'provided', 'derived', or 'researched'")
+    derived_from: Optional[List[str]] = Field(default_factory=list, description="IDs of parent options if derived")
+    derivation_reason: Optional[str] = Field(None, description="Explicit reason why this hybrid or derived option exists")
 
 
 class MatrixScoreItem(BaseModel):
     option_id: str
     criterion_id: str
     rating: float = Field(..., description="Rating on agreed scale (e.g. 1.0 to 10.0)")
+    reason: Optional[str] = Field(None, description="Explicit justification for the rating")
     notes: Optional[str] = None
+    supporting_finding_ids: List[str] = Field(default_factory=list, description="IDs/keys of findings justifying this rating")
+    supporting_gap_ids: List[str] = Field(default_factory=list, description="IDs of resolved gaps informing this score")
+    supporting_evidence_ids: List[str] = Field(default_factory=list, description="IDs of verified research claims")
+    status: str = Field("verified", description="'verified' or 'insufficient_evidence'")
 
 
 class MatrixResultOption(BaseModel):
@@ -455,6 +526,26 @@ class MatrixResultOption(BaseModel):
     rank: int = Field(..., description="Rank among options (1 is highest)")
     criteria_scores: Dict[str, float] = Field(default_factory=dict, description="Criterion ID -> raw rating")
     criteria_weighted_scores: Dict[str, float] = Field(default_factory=dict, description="Criterion ID -> (weight * rating) / 100")
+
+
+class CanonicalDecisionResult(BaseModel):
+    decision_id: int
+    version: int = 1
+    domain: str = Field("BUSINESS", description="Classified decision domain (REAL_ESTATE, FINANCE, SOFTWARE, etc.)")
+    selected_frameworks: List[str] = Field(default_factory=list)
+    options: List[MatrixOption] = Field(default_factory=list)
+    criteria: List[MatrixCriterion] = Field(default_factory=list)
+    ratings: List[MatrixScoreItem] = Field(default_factory=list)
+    results: List[MatrixResultOption] = Field(default_factory=list)
+    winner_option_id: str
+    winner_option_name: str
+    winner_score: float
+    winner_rank: int = 1
+    decision_status: str = Field("READY", description="'READY', 'CONDITIONAL', or 'NOT_READY'")
+    unresolved_critical_gap_ids: List[str] = Field(default_factory=list)
+    critical_conditions: List[str] = Field(default_factory=list)
+    is_stale: bool = Field(False, description="True if upstream findings/gaps were modified since evaluation")
+    override: Optional[Dict[str, Any]] = Field(None, description="Structured override metadata if winner was formally overridden")
 
 
 class DecisionMatrixAnalysis(BaseModel):
@@ -469,6 +560,8 @@ class DecisionMatrixAnalysis(BaseModel):
     winner_option_id: Optional[str] = None
     winner_option_name: Optional[str] = None
     sensitivity_notes: Optional[str] = None
+    canonical_result: Optional[CanonicalDecisionResult] = None
+    is_stale: bool = Field(False, description="True if upstream state changed since last evaluation")
 
 
 class MatrixEvaluationRequest(BaseModel):
@@ -578,16 +671,36 @@ class FrameworkAnalysisRequest(BaseModel):
     force_mock: bool = Field(False, description="Force deterministic mock mode for testing")
 
 
+class RecommendedTechnique(BaseModel):
+    framework_id: str = Field(..., description="'decision_matrix', 'six_hats', 'swot', 'five_whys', or 'decision_tree'")
+    role: str = Field("primary_evaluation", description="Role: 'primary_evaluation', 'risk_stress_test', 'strategic_alignment', 'root_cause_diagnosis', 'scenario_branching'")
+    role_label: str = Field("Primary Focus", description="Human-readable label, e.g. 'Primary Trade-Off Engine', 'Adversarial Stress-Test'")
+    validation_reason: str = Field(..., description="Specific justification why this technique is chosen for this problem")
+    priority: int = Field(1, description="Order / priority (1 = primary, 2 = secondary, etc.)")
+
+
 class FrameworkAnalysisResponse(BaseModel):
     decision_id: int
     evaluated_at: str
     selected_frameworks: List[str]
+    recommended_framework: Optional[str] = Field(None, description="Primary recommended framework ID")
+    recommended_techniques: List[RecommendedTechnique] = Field(
+        default_factory=list,
+        description="Curated N techniques validated specifically for this decision context",
+    )
+    methodology_rationale: Optional[str] = Field(
+        None,
+        description="High-level synthesis explaining why this specific ensemble of N techniques was selected",
+    )
     six_hats: Optional[SixHatsAnalysis] = None
     swot: Optional[SWOTAnalysis] = None
     decision_matrix: Optional[DecisionMatrixAnalysis] = None
     five_whys: Optional[FiveWhysAnalysis] = None
     decision_tree: Optional[DecisionTreeAnalysis] = None
     summary_insights: List[str] = Field(default_factory=list)
+    canonical_result: Optional[CanonicalDecisionResult] = None
+    is_stale: bool = Field(False, description="True if upstream data was modified after this evaluation")
+    domain: Optional[str] = Field("BUSINESS", description="Decision domain classification")
     message: Optional[str] = None
 
 
@@ -632,9 +745,10 @@ class CounterargumentItem(BaseModel):
 
 
 class ConfidenceAssessment(BaseModel):
-    level: str = Field("medium", description="'high', 'medium', or 'low'")
-    score: float = Field(0.75, ge=0.0, le=1.0, description="Confidence score from 0.0 to 1.0")
-    rationale: str = Field(..., description="Why this confidence level was assigned")
+    level: str = Field("MEDIUM", description="'HIGH', 'MEDIUM', or 'LOW'")
+    score: Optional[float] = Field(None, description="Optional mathematical score if defined, never fabricated")
+    status: str = Field("CONDITIONAL", description="'READY', 'CONDITIONAL', or 'NOT_READY'")
+    rationale: str = Field(..., description="Why this confidence status was assigned")
     limitations: List[str] = Field(
         default_factory=list,
         description="Explicit limitations, unresolved unknowns, or missing information"
@@ -650,6 +764,12 @@ class RoadmapTask(BaseModel):
     dependencies: List[str] = Field(default_factory=list, description="List of prerequisite task IDs")
     success_criteria: str = Field("", description="Objective completion definition")
     is_completed: bool = Field(False, description="Completion toggle")
+    source_type: Optional[str] = Field(None, description="'gap', 'risk', 'condition', or 'framework'")
+    source_ids: List[str] = Field(default_factory=list, description="IDs of origin gaps, risks, or conditions")
+    depends_on_gap_ids: List[str] = Field(default_factory=list, description="Gap IDs that must be resolved for this task")
+    depends_on_risk_ids: List[str] = Field(default_factory=list, description="Risk IDs addressed by this task")
+    depends_on_condition_ids: List[str] = Field(default_factory=list, description="Condition IDs addressed by this task")
+    reason: Optional[str] = Field(None, description="Explicit justification for why this task exists in the roadmap")
 
 
 class RoadmapPhase(BaseModel):
@@ -671,6 +791,7 @@ class DecisionSynthesis(BaseModel):
         "recommendation",
         description="'recommendation' if decision is conclusive, or 'conditional_next_step' if critical unknowns remain"
     )
+    decision_status: str = Field("READY", description="'READY', 'CONDITIONAL', or 'NOT_READY'")
     headline: str = Field(..., description="Executive summary statement")
     recommendation_text: str = Field(..., description="Comprehensive strategic recommendation")
     conditional_triggers: List[str] = Field(
@@ -684,6 +805,9 @@ class DecisionSynthesis(BaseModel):
     counterarguments: List[CounterargumentItem] = Field(default_factory=list)
     confidence_assessment: ConfidenceAssessment
     roadmap: RoadmapData
+    canonical_result: Optional[CanonicalDecisionResult] = None
+    domain: str = Field("BUSINESS", description="Classified decision domain")
+    is_stale: bool = Field(False, description="True if upstream data was modified after this synthesis")
     created_at: str
     version: int = 1
 

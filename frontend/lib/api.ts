@@ -32,7 +32,9 @@ export interface OAuthProviderInfo {
 
 export interface OAuthLoginPayload {
   provider: "google" | "github" | "microsoft" | string;
+  code?: string;
   token?: string;
+  redirect_uri?: string;
   email?: string;
   display_name?: string;
   avatar_url?: string;
