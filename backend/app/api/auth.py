@@ -224,9 +224,25 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
                             resolved_display_name = resolved_display_name or u_info.get("name")
                             resolved_avatar = resolved_avatar or u_info.get("picture")
                 else:
-                    logger.warning("Google token exchange error (%s): %s", token_resp.status_code, token_resp.text)
+                    err_detail = token_resp.text
+                    try:
+                        err_json = token_resp.json()
+                        err_detail = err_json.get("error_description") or err_json.get("error") or err_detail
+                    except Exception:
+                        pass
+                    logger.warning("Google token exchange error (%s): %s", token_resp.status_code, err_detail)
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Google OAuth failed: {err_detail}. Note: Authorization codes expire in 60s and cannot be reused; please sign in again.",
+                    )
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error("Exception during Google OAuth code exchange: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to connect to Google OAuth: {str(exc)}",
+            )
 
     # 2. Real Google Token Verification (if client_id is set and token provided)
     if normalized_provider == "google" and not resolved_email and settings.google_client_id and body.token and not body.token.startswith("mock_"):
