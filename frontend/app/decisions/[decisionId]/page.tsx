@@ -44,6 +44,7 @@ import {
   Mic,
   ArrowRight,
   ArrowLeft,
+  Check,
 } from "lucide-react";
 
 // export default function DecisionDetailPage({
@@ -765,15 +766,21 @@ export default function DecisionDetailPage({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                   <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
-                    <span className="text-[10px] text-emerald-400 font-mono block">Phase 8 ✓</span>
+                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                      Phase 8 <Check className="w-2.5 h-2.5" />
+                    </span>
                     <span className="font-semibold text-slate-300">External Web Research</span>
                   </div>
                   <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
-                    <span className="text-[10px] text-emerald-400 font-mono block">Phase 9 ✓</span>
+                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                      Phase 9 <Check className="w-2.5 h-2.5" />
+                    </span>
                     <span className="font-semibold text-slate-300">5 Thinking Frameworks</span>
                   </div>
                   <div className="p-3 bg-slate-800/80 rounded-xl border border-emerald-500/50">
-                    <span className="text-[10px] text-emerald-400 font-mono block">Phase 10 ✓</span>
+                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                      Phase 10 <Check className="w-2.5 h-2.5" />
+                    </span>
                     <span className="font-semibold text-emerald-300">Recommendation & Roadmap</span>
                   </div>
                 </div>

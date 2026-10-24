@@ -371,7 +371,7 @@ export default function GapResolutionPanel({
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
             <ShieldCheck className="w-3 h-3 text-emerald-600" />
-            Corroborated Evidence {isVerified && "✓"}
+            Corroborated Evidence {isVerified && <Check className="w-3 h-3 text-emerald-700 inline ml-0.5" />}
           </span>
         );
       case "single_source":
@@ -847,8 +847,9 @@ export default function GapResolutionPanel({
                                     <span className="text-slate-800 font-medium">{c.claim}</span>
                                     <span className="shrink-0 font-bold">
                                       {c.is_verified ? (
-                                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px]">
-                                          ✓ Verified Fact
+                                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px] inline-flex items-center gap-1">
+                                          <Check className="w-2.5 h-2.5" />
+                                          Verified Fact
                                         </span>
                                       ) : (
                                         <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10px]">

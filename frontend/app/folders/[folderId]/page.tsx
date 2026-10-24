@@ -24,6 +24,7 @@ import {
   Trash2,
   AlertCircle,
   Filter,
+  X,
 } from "lucide-react";
 
 export default function FolderDetailPage({
@@ -332,9 +333,9 @@ export default function FolderDetailPage({
               </h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 transition"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

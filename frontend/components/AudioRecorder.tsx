@@ -462,11 +462,11 @@ export default function AudioRecorder({
               onClick={() => setLanguage("en")}
               className={`flex items-center justify-center gap-2 p-2 rounded-lg border font-medium transition-all ${
                 language === "en"
-                  ? "border-indigo-600 bg-white text-indigo-600 font-bold shadow-xs"
-                  : "border-slate-200 bg-slate-100/50 text-slate-600 hover:bg-white"
+                  ? "border-[#2F5D8F] bg-white text-[#2F5D8F] font-bold shadow-xs"
+                  : "border-[#D9D2C3] bg-[#EFEADF]/40 text-[#5A6275] hover:bg-white"
               }`}
             >
-              <span className="text-base">🇺🇸</span>
+              <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-[#EFEADF] text-[#161E33] border border-[#D9D2C3]">EN</span>
               <span>English (en)</span>
             </button>
             <button
@@ -474,11 +474,11 @@ export default function AudioRecorder({
               onClick={() => setLanguage("hi")}
               className={`flex items-center justify-center gap-2 p-2 rounded-lg border font-medium transition-all ${
                 language === "hi"
-                  ? "border-indigo-600 bg-white text-indigo-600 font-bold shadow-xs"
-                  : "border-slate-200 bg-slate-100/50 text-slate-600 hover:bg-white"
+                  ? "border-[#2F5D8F] bg-white text-[#2F5D8F] font-bold shadow-xs"
+                  : "border-[#D9D2C3] bg-[#EFEADF]/40 text-[#5A6275] hover:bg-white"
               }`}
             >
-              <span className="text-base">🇮🇳</span>
+              <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-[#EFEADF] text-[#161E33] border border-[#D9D2C3]">HI</span>
               <span>Hindi (hi)</span>
             </button>
           </div>

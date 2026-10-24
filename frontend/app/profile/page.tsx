@@ -697,22 +697,24 @@ export default function ProfilePage() {
                         onClick={() => savePreferences("en", audioEnhancement)}
                         className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition ${
                           defaultLanguage === "en"
-                            ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 font-bold shadow-2xs"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-white"
+                            ? "border-[#2F5D8F] bg-[#FCFBF8] text-[#161E33] font-bold shadow-2xs"
+                            : "border-[#D9D2C3] bg-[#EFEADF]/40 text-[#5A6275] hover:bg-white"
                         }`}
                       >
-                        <span>🇺🇸 English (en)</span>
+                        <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-[#EFEADF] text-[#161E33] border border-[#D9D2C3]">EN</span>
+                        <span>English (en)</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => savePreferences("hi", audioEnhancement)}
                         className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition ${
                           defaultLanguage === "hi"
-                            ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 font-bold shadow-2xs"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-white"
+                            ? "border-[#2F5D8F] bg-[#FCFBF8] text-[#161E33] font-bold shadow-2xs"
+                            : "border-[#D9D2C3] bg-[#EFEADF]/40 text-[#5A6275] hover:bg-white"
                         }`}
                       >
-                        <span>🇮🇳 Hindi (hi)</span>
+                        <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-[#EFEADF] text-[#161E33] border border-[#D9D2C3]">HI</span>
+                        <span>Hindi (hi)</span>
                       </button>
                     </div>
                   </div>

@@ -15,6 +15,7 @@ import {
   getActiveRoadmap,
   updateActiveRoadmap,
 } from "@/lib/api";
+import { AlertTriangle, ExternalLink, Check } from "lucide-react";
 
 interface SynthesisPanelProps {
   decisionId: number;
@@ -447,7 +448,7 @@ export default function SynthesisPanel({
           {displaySynthesis.is_stale && (
             <div className="p-4 rounded bg-[#FFFBEB] border border-[#FDE68A] flex items-center justify-between text-[#92400E] text-xs">
               <div className="flex items-center gap-2.5">
-                <span className="font-bold">⚠</span>
+                <AlertTriangle className="w-4 h-4 text-[#92400E] shrink-0" />
                 <div>
                   <strong className="block font-bold">Upstream Analysis Updated</strong>
                   <span>Problem framing, evidence findings, or matrix weights have changed since this synthesis was produced.</span>
@@ -673,7 +674,8 @@ export default function SynthesisPanel({
                             rel="noopener noreferrer"
                             className="text-[#2F5D8F] hover:underline flex items-center gap-1 font-mono text-[10px]"
                           >
-                            Source Link ↗
+                            <span>Source Link</span>
+                            <ExternalLink className="w-2.5 h-2.5 inline" />
                           </a>
                         ) : (
                           <span className="capitalize text-[#8B909C]">
@@ -951,8 +953,9 @@ export default function SynthesisPanel({
                               </p>
                             )}
                             {task.success_criteria && (
-                              <p className="text-[10px] text-[#2F5D8F] font-mono mt-1">
-                                ✓ Exit Criteria: {task.success_criteria}
+                              <p className="text-[10px] text-[#2F5D8F] font-mono mt-1 flex items-center gap-1">
+                                <Check className="w-2.5 h-2.5 shrink-0" />
+                                <span>Exit Criteria: {task.success_criteria}</span>
                               </p>
                             )}
                           </div>

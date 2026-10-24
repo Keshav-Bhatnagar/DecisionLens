@@ -27,7 +27,7 @@ export interface PointCircularGalleryProps {
   categoryKey: string;
   title: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
   colorClasses: CategoryTheme;
   items: string[];
   onUpdateItem: (index: number, newValue: string) => void;
@@ -532,7 +532,7 @@ export default function PointCircularGallery({
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
               <div className="flex items-center gap-3">
-                <span className="text-2xl p-2 bg-white rounded-xl shadow-2xs border border-slate-200">
+                <span className="p-2 bg-white rounded-xl border border-slate-200 flex items-center justify-center text-slate-700">
                   {icon}
                 </span>
                 <div>

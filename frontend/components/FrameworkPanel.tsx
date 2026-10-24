@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Info,
   ExternalLink,
+  Zap,
 } from "lucide-react";
 import {
   FrameworkAnalysisResponse,
@@ -749,8 +750,8 @@ export default function FrameworkPanel({
                         </span>
                         <ul className="space-y-0.5">
                           {analysis.canonical_result.conditions_precedent.map((cond, idx) => (
-                            <li key={idx} className="flex items-start gap-1">
-                              <span className="text-amber-700 font-bold">⚡</span>
+                            <li key={idx} className="flex items-start gap-1.5">
+                              <Zap className="w-3 h-3 text-amber-700 shrink-0 mt-0.5" />
                               <span>{cond}</span>
                             </li>
                           ))}

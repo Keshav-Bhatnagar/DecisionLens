@@ -27,6 +27,10 @@ import {
   Maximize2,
   Columns,
   Square,
+  FileText,
+  Cloud,
+  Heart,
+  TrendingUp,
 } from "lucide-react";
 import PointCircularGallery from "./PointCircularGallery";
 import {
@@ -187,7 +191,7 @@ export default function StructuredFindingsEditor({
     key: keyof Omit<StructuredFindings, "private_feedback" | "summary" | "reviewed" | "reviewed_at">;
     title: string;
     description: string;
-    icon: string;
+    icon: React.ReactNode;
     colorClasses: {
       border: string;
       headerBg: string;
@@ -199,7 +203,7 @@ export default function StructuredFindingsEditor({
       key: "facts",
       title: "Facts",
       description: "Concrete verified data, constraints, and realities",
-      icon: "📌",
+      icon: <FileText className="w-4 h-4 text-sky-700" />,
       colorClasses: {
         border: "border-sky-200",
         headerBg: "bg-sky-50/80",
@@ -211,7 +215,7 @@ export default function StructuredFindingsEditor({
       key: "assumptions",
       title: "Assumptions",
       description: "Unverified hypotheses, untested premises, projections",
-      icon: "💭",
+      icon: <Cloud className="w-4 h-4 text-purple-700" />,
       colorClasses: {
         border: "border-purple-200",
         headerBg: "bg-purple-50/80",
@@ -223,7 +227,7 @@ export default function StructuredFindingsEditor({
       key: "feelings",
       title: "Feelings & Sentiment",
       description: "Emotional reactions, team sentiment, gut instincts, and morale",
-      icon: "❤️",
+      icon: <Heart className="w-4 h-4 text-rose-700" />,
       colorClasses: {
         border: "border-rose-200",
         headerBg: "bg-rose-50/80",
@@ -235,7 +239,7 @@ export default function StructuredFindingsEditor({
       key: "pros",
       title: "Pros & Strengths",
       description: "Advantages, positive benefits, and favorable outcomes",
-      icon: "🟢",
+      icon: <TrendingUp className="w-4 h-4 text-emerald-700" />,
       colorClasses: {
         border: "border-emerald-200",
         headerBg: "bg-emerald-50/80",
@@ -247,7 +251,7 @@ export default function StructuredFindingsEditor({
       key: "cons",
       title: "Cons & Risks",
       description: "Downsides, vulnerabilities, friction, and costs",
-      icon: "🔴",
+      icon: <AlertTriangle className="w-4 h-4 text-red-700" />,
       colorClasses: {
         border: "border-red-200",
         headerBg: "bg-red-50/80",
@@ -259,7 +263,7 @@ export default function StructuredFindingsEditor({
       key: "mixed_points",
       title: "Mixed Points & Trade-Offs",
       description: "Nuanced points carrying both upsides and drawbacks",
-      icon: "⚖️",
+      icon: <Scale className="w-4 h-4 text-amber-700" />,
       colorClasses: {
         border: "border-amber-200",
         headerBg: "bg-amber-50/80",
@@ -271,7 +275,7 @@ export default function StructuredFindingsEditor({
       key: "contradictions",
       title: "Contradictions",
       description: "Conflicting claims or opposing views across stakeholders",
-      icon: "⚡",
+      icon: <Zap className="w-4 h-4 text-orange-700" />,
       colorClasses: {
         border: "border-orange-200",
         headerBg: "bg-orange-50/80",
@@ -283,7 +287,7 @@ export default function StructuredFindingsEditor({
       key: "unknowns",
       title: "Unknowns & Open Questions",
       description: "Missing information, unanswered queries, and uncertainties",
-      icon: "❓",
+      icon: <HelpCircle className="w-4 h-4 text-indigo-700" />,
       colorClasses: {
         border: "border-indigo-200",
         headerBg: "bg-indigo-50/80",
@@ -294,14 +298,23 @@ export default function StructuredFindingsEditor({
   ];
 
   // 4 comparative dual-grid card pairs
-  const categoryPairs = [
+  const categoryPairs: Array<{
+    id: string;
+    pairNumber: number;
+    title: string;
+    subtitle: string;
+    iconA: React.ReactNode;
+    iconB: React.ReactNode;
+    first: (typeof categoryConfigs)[number];
+    second: (typeof categoryConfigs)[number];
+  }> = [
     {
       id: "pair-1",
       pairNumber: 1,
       title: "Facts & Assumptions",
       subtitle: "Verified Reality vs Untested Hypotheses",
-      iconA: "📌",
-      iconB: "💭",
+      iconA: <FileText className="w-4 h-4 text-sky-700" />,
+      iconB: <Cloud className="w-4 h-4 text-purple-700" />,
       first: categoryConfigs[0], // facts
       second: categoryConfigs[1], // assumptions
     },
@@ -310,8 +323,8 @@ export default function StructuredFindingsEditor({
       pairNumber: 2,
       title: "Feelings & Strengths",
       subtitle: "Team Sentiment vs Key Strategic Advantages",
-      iconA: "❤️",
-      iconB: "🟢",
+      iconA: <Heart className="w-4 h-4 text-rose-700" />,
+      iconB: <TrendingUp className="w-4 h-4 text-emerald-700" />,
       first: categoryConfigs[2], // feelings
       second: categoryConfigs[3], // pros
     },
@@ -320,8 +333,8 @@ export default function StructuredFindingsEditor({
       pairNumber: 3,
       title: "Risks & Trade-Offs",
       subtitle: "Downsides & Friction vs Balanced Nuances",
-      iconA: "🔴",
-      iconB: "⚖️",
+      iconA: <AlertTriangle className="w-4 h-4 text-red-700" />,
+      iconB: <Scale className="w-4 h-4 text-amber-700" />,
       first: categoryConfigs[4], // cons
       second: categoryConfigs[5], // mixed_points
     },
@@ -330,8 +343,8 @@ export default function StructuredFindingsEditor({
       pairNumber: 4,
       title: "Contradictions & Unknowns",
       subtitle: "Stakeholder Conflicts vs Critical Information Gaps",
-      iconA: "⚡",
-      iconB: "❓",
+      iconA: <Zap className="w-4 h-4 text-orange-700" />,
+      iconB: <HelpCircle className="w-4 h-4 text-indigo-700" />,
       first: categoryConfigs[6], // contradictions
       second: categoryConfigs[7], // unknowns
     },
@@ -389,7 +402,7 @@ export default function StructuredFindingsEditor({
             className={`px-5 py-3.5 border-b flex items-center justify-between ${config.colorClasses.headerBg} ${config.colorClasses.border}`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-xl p-1.5 bg-white rounded-xl shadow-2xs border border-slate-100 flex items-center justify-center shrink-0">
+              <span className="p-2 bg-white rounded-lg shadow-2xs border border-slate-200 flex items-center justify-center shrink-0">
                 {config.icon}
               </span>
               <div className="min-w-0">
@@ -589,9 +602,10 @@ export default function StructuredFindingsEditor({
                   {/* Card Pair Header */}
                   <div className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-purple-50/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-start gap-3.5">
-                      <div className="flex items-center -space-x-1.5 p-2.5 bg-white rounded-2xl shadow-2xs border border-slate-100 shrink-0">
-                        <span className="text-2xl">{activePair.iconA}</span>
-                        <span className="text-2xl">{activePair.iconB}</span>
+                      <div className="flex items-center gap-1.5 p-2 bg-white rounded-xl shadow-2xs border border-slate-200 shrink-0">
+                        {activePair.iconA}
+                        <span className="text-slate-300 font-light text-xs">/</span>
+                        {activePair.iconB}
                       </div>
                       <div>
                         <div className="flex items-center gap-2.5 flex-wrap">

@@ -7,7 +7,7 @@ import {
   ReportExportResponse,
   SaveReportResponse,
 } from "@/lib/api";
-import { Download, Copy, Check, Save, FileText, AlertCircle, RefreshCw } from "lucide-react";
+import { Download, Copy, Check, Save, FileText, AlertCircle, RefreshCw, X, CheckCircle2 } from "lucide-react";
 
 interface ReportExportModalProps {
   decisionId: number;
@@ -109,7 +109,7 @@ export default function ReportExportModal({
     setSuccessMsg(null);
     try {
       const res: SaveReportResponse = await saveDecisionReportExport(decisionId);
-      setSuccessMsg(`✓ ${res.message} (${res.filename})`);
+      setSuccessMsg(`${res.message} (${res.filename})`);
       if (onReportSaved) {
         onReportSaved();
       }
@@ -151,9 +151,9 @@ export default function ReportExportModal({
             </button>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-200/70 hover:bg-slate-300 text-slate-600 flex items-center justify-center font-bold text-sm transition"
+              className="w-8 h-8 rounded-full bg-slate-200/70 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -223,9 +223,12 @@ export default function ReportExportModal({
         )}
         {successMsg && (
           <div className="mx-6 mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
-            <span>{successMsg}</span>
-            <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-600 ml-3">
-              ✕
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+            <button onClick={() => setSuccessMsg(null)} className="text-emerald-700 hover:text-emerald-900 ml-3">
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
