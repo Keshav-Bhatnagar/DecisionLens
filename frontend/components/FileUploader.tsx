@@ -99,8 +99,8 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
         onClick={() => fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
           isDragging
-            ? "border-indigo-500 bg-indigo-50/60 scale-[1.01]"
-            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 bg-white"
+            ? "border-indigo-500 bg-indigo-50/70 scale-[1.01] shadow-md"
+            : "border-slate-200/90 hover:border-indigo-400 hover:bg-slate-50/70 bg-white/70 backdrop-blur-xs shadow-2xs"
         }`}
       >
         <input

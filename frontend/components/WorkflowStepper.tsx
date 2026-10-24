@@ -56,75 +56,100 @@ export default function WorkflowStepper({
   }[] = [
     {
       id: "ingestion",
-      label: "1. Ingestion & Audio",
-      description: "Context, Docs & Voice",
+      label: "1. Input & Voice",
+      description: "Problem, Audio & Documents",
       icon: <FileText className="w-4 h-4" />,
       isCompleted: isTranscriptReviewed || hasTranscript,
     },
     {
       id: "structuring",
-      label: "2. Structuring & Review",
-      description: "8 Cognitive Categories",
+      label: "2. Cognitive Structuring",
+      description: "Facts, Assumptions & Biases",
       icon: <Brain className="w-4 h-4" />,
       isCompleted: isPointsReviewed,
     },
     {
       id: "gaps",
-      label: "3. Gaps & Research",
-      description: "Ask Me & Web Citations",
+      label: "3. Information Gaps",
+      description: "Key Questions & Evidence",
       icon: <Search className="w-4 h-4" />,
       isCompleted: hasGaps,
     },
     {
       id: "frameworks",
       label: "4. Thinking Frameworks",
-      description: "5 Cognitive Lenses & Matrix",
+      description: "Option Scoring & Stress-Testing",
       icon: <Grid className="w-4 h-4" />,
       isCompleted: hasFrameworks,
     },
     {
       id: "synthesis",
-      label: "5. Synthesis & Roadmap",
-      description: "Executive Recommendation",
+      label: "5. Decision Synthesis",
+      description: "Recommendation & Roadmap",
       icon: <Compass className="w-4 h-4" />,
       isCompleted: hasSynthesis,
     },
   ];
 
   const currentIdx = stages.findIndex((s) => s.id === currentStage);
+  const completedCount = stages.filter((s) => s.isCompleted).length;
+  const progressPercent = Math.round(((currentIdx + 1) / stages.length) * 100);
 
   return (
-    <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 shadow-sm space-y-4">
+    <div className="glass-panel rounded-2xl p-4 sm:p-5 shadow-sm space-y-4 specular-edge">
       {/* Top Controls Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-            Decision Intelligence Workflow Progress
-          </span>
-          <span className="text-xs text-slate-400 font-medium">
-            (Stage {currentIdx + 1} of 5)
-          </span>
+        <div className="flex items-center gap-2.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-indigo-600 animate-pulse ring-4 ring-indigo-50"></span>
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+              Stage {currentIdx + 1} of 5: {stages[currentIdx]?.label.split(". ")[1]}
+            </span>
+            <span className="hidden sm:inline text-xs text-slate-400 font-medium ml-2">
+              ({completedCount} of 5 stages ready)
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onToggleViewMode}
-            className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium transition shadow-sm"
+            className="text-xs px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-semibold transition shadow-2xs flex items-center gap-1.5"
+            title="Toggle between Step-by-Step view and Full Overview"
           >
-            {viewMode === "step" ? "View Full Overview" : "Guided Step-by-Step Mode"}
+            {viewMode === "step" ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                <span className="font-semibold text-indigo-900">Step-by-Step</span>
+                <span className="text-slate-400 font-normal">/ All</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <span className="font-semibold text-slate-900">All Steps</span>
+                <span className="text-indigo-600 font-normal">/ Switch to Step</span>
+              </>
+            )}
           </button>
 
           <button
             type="button"
             onClick={onOpenExportModal}
-            className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-semibold transition shadow-sm hover:shadow"
+            className="inline-flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold transition shadow-sm hover:shadow"
           >
             <Share2 className="w-3.5 h-3.5" />
-            Export Brief
+            <span>Export Brief</span>
           </button>
         </div>
+      </div>
+
+      {/* Progress Bar with smooth gradient */}
+      <div className="w-full bg-slate-100/90 rounded-full h-2 overflow-hidden p-0.5">
+        <div
+          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 h-full rounded-full transition-all duration-500 ease-out shadow-xs"
+          style={{ width: `${progressPercent}%` }}
+        />
       </div>
 
       {/* Stepper Steps Bar */}
@@ -136,19 +161,19 @@ export default function WorkflowStepper({
               key={stage.id}
               type="button"
               onClick={() => onSelectStage(stage.id)}
-              className={`text-left p-3 rounded-2xl border transition relative overflow-hidden flex flex-col justify-between ${
+              className={`text-left p-3.5 rounded-2xl border transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
                 isActive
-                  ? "bg-indigo-50/80 border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm"
+                  ? "bg-indigo-50/90 border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm -translate-y-0.5"
                   : stage.isCompleted
-                  ? "bg-slate-50/80 border-emerald-200/90 hover:bg-slate-100/70"
-                  : "bg-white border-slate-200 hover:bg-slate-50"
+                  ? "bg-white/90 border-emerald-200/90 hover:bg-emerald-50/30 hover:border-emerald-300 hover:-translate-y-0.5 shadow-2xs"
+                  : "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:-translate-y-0.5 shadow-2xs"
               }`}
             >
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-2">
                 <span
-                  className={`p-1.5 rounded-lg ${
+                  className={`p-2 rounded-xl transition-colors ${
                     isActive
-                      ? "bg-indigo-600 text-white"
+                      ? "bg-indigo-600 text-white shadow-xs"
                       : stage.isCompleted
                       ? "bg-emerald-100 text-emerald-800"
                       : "bg-slate-100 text-slate-500"

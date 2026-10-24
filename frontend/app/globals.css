@@ -1,15 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Printed Dossier Editorial Tokens */
+  --bg-page: #F5F1E8;
+  --bg-surface: #FCFBF8;
+  --bg-sidebar: #EFEADF;
+  --ink: #161E33;
+  --ink-secondary: #5A6275;
+  --ink-tertiary: #8B909C;
+  --accent: #2F5D8F;
+  --accent-hover: #264B74;
+  --border: #D9D2C3;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* Aliases for compatibility */
+  --page-bg: #F5F1E8;
+  --surface: #FCFBF8;
+  --text-primary: #161E33;
+  --text-secondary: #5A6275;
+  --text-tertiary: #8B909C;
+  --border-subtle: #D9D2C3;
+
+  --background: #F5F1E8;
+  --foreground: #161E33;
+  --card: #FCFBF8;
+  --card-foreground: #161E33;
+  --ring: #2F5D8F;
+  --primary: #161E33;
+  --primary-foreground: #FFFFFF;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background-color: var(--bg-page);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9D2C3;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C4BCAC;
+}
+
+/* Hide scrollbar while preserving scroll functionality */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Accessible focus ring in steel blue accent */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Editorial Typography */
+.font-newsreader {
+  font-family: 'Newsreader', Georgia, serif;
+}
+
+.font-ui {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.font-courier {
+  font-family: 'Courier Prime', Courier, monospace;
 }

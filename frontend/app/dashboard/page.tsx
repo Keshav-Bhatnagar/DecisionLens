@@ -1,295 +1,786 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import { useRouter } from "next/navigation";
+import AppShell from "@/components/AppShell";
 import {
   getFolders,
+  getDecisions,
   createFolder,
-  deleteFolder,
+  createDecision,
   Folder,
+  Decision,
   User,
   getMe,
 } from "@/lib/api";
 import {
-  FolderPlus,
-  Folder as FolderIcon,
-  ChevronRight,
-  Trash2,
-  Layers,
-  FileText,
-  AlertCircle,
+  Search,
+  X,
   Plus,
 } from "lucide-react";
 
+type ViewMode = "LEDGER" | "WORKSPACES";
+type StatusFilter = "ALL" | "UNDER_SCRUTINY" | "NEEDS_EVIDENCE" | "READY_TO_DECIDE" | "DECIDED";
+
 export default function DashboardPage() {
+  const router = useRouter();
+
+  // Core Data
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [color, setColor] = useState("#4F46E5");
   const [error, setError] = useState<string | null>(null);
 
-  const colors = [
-    { name: "Indigo", hex: "#4F46E5" },
-    { name: "Emerald", hex: "#10B981" },
-    { name: "Amber", hex: "#F59E0B" },
-    { name: "Rose", hex: "#F43F5E" },
-    { name: "Sky", hex: "#0EA5E9" },
-    { name: "Violet", hex: "#8B5CF6" },
-  ];
+  // UI States
+  const [viewMode, setViewMode] = useState<ViewMode>("LEDGER");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const loadData = async () => {
+  // Modals
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+
+  // Forms
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderDesc, setNewFolderDesc] = useState("");
+  const [folderSubmitting, setFolderSubmitting] = useState(false);
+
+  const [challengeTitle, setChallengeTitle] = useState("");
+  const [challengeFolderId, setChallengeFolderId] = useState<number | "">("");
+  const [challengeSubmitting, setChallengeSubmitting] = useState(false);
+
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const user = await getMe();
       setCurrentUser(user);
-      const data = await getFolders();
-      setFolders(data);
+      if (user) {
+        const [folderData, decisionData] = await Promise.all([
+          getFolders().catch(() => []),
+          getDecisions().catch(() => []),
+        ]);
+        setFolders(folderData);
+        setDecisions(decisionData);
+        if (folderData.length > 0 && challengeFolderId === "") {
+          setChallengeFolderId(folderData[0].id);
+        }
+      } else {
+        setFolders([]);
+        setDecisions([]);
+      }
     } catch {
       setCurrentUser(null);
       setFolders([]);
+      setDecisions([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [challengeFolderId]);
 
   useEffect(() => {
     loadData();
-  }, []);
 
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("action") === "new" || params.get("challenge") === "true") {
+        setShowChallengeModal(true);
+      }
+      if (params.get("view") === "ledger") {
+        setViewMode("LEDGER");
+      }
+    }
+  }, [loadData]);
+
+  // Handle Create Workspace
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!newFolderName.trim()) return;
+    setFolderSubmitting(true);
     setError(null);
     try {
-      await createFolder({ name, description, color });
-      setShowCreateModal(false);
-      setName("");
-      setDescription("");
+      const created = await createFolder({
+        name: newFolderName.trim(),
+        description: newFolderDesc.trim(),
+      });
+      setShowCreateFolderModal(false);
+      setNewFolderName("");
+      setNewFolderDesc("");
       await loadData();
+      router.push(`/folders/${created.id}`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create folder");
+      setError(err instanceof Error ? err.message : "Failed to create workspace");
+    } finally {
+      setFolderSubmitting(false);
     }
   };
 
-  const handleDeleteFolder = async (folderId: number, e: React.MouseEvent) => {
+  // Handle Challenge Decision
+  const handleChallengeDecision = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this folder and all its decisions?")) return;
+    if (!challengeTitle.trim()) return;
+    setChallengeSubmitting(true);
+    setError(null);
     try {
-      await deleteFolder(folderId);
+      let targetFolderId = challengeFolderId;
+      if (!targetFolderId && folders.length > 0) {
+        targetFolderId = folders[0].id;
+      }
+      if (!targetFolderId) {
+        const defaultFolder = await createFolder({
+          name: "General Decisions",
+          description: "Default workspace",
+        });
+        targetFolderId = defaultFolder.id;
+      }
+
+      const created = await createDecision({
+        folder_id: Number(targetFolderId),
+        title: challengeTitle.trim(),
+        status: "evaluating",
+        record_type: "decision",
+      });
+
+      setShowChallengeModal(false);
+      setChallengeTitle("");
       await loadData();
+      router.push(`/decisions/${created.id}`);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to delete folder");
+      setError(err instanceof Error ? err.message : "Failed to start decision");
+    } finally {
+      setChallengeSubmitting(false);
     }
   };
+
+  // Pre-fill and open challenge modal from example
+  const handleSelectExample = (exampleText: string) => {
+    setChallengeTitle(exampleText);
+    setShowChallengeModal(true);
+  };
+
+  // Helper to resolve decision status
+  const resolveStatus = (d: Decision): "UNDER_SCRUTINY" | "NEEDS_EVIDENCE" | "READY_TO_DECIDE" | "DECIDED" => {
+    const rawGaps = d.gaps as { gaps?: unknown[] } | undefined;
+    const gapCount = Array.isArray(rawGaps?.gaps) ? rawGaps.gaps.length : 0;
+    if (d.status === "decided") return "DECIDED";
+    if (d.status === "evaluating" && gapCount > 0) return "NEEDS_EVIDENCE";
+    if (d.status === "evaluating") return "UNDER_SCRUTINY";
+    if (d.status === "ready") return "READY_TO_DECIDE";
+    return "UNDER_SCRUTINY";
+  };
+
+  const countOpenItems = (d: Decision): number => {
+    const rawGaps = d.gaps as { gaps?: unknown[] } | undefined;
+    return Array.isArray(rawGaps?.gaps) ? rawGaps.gaps.length : 0;
+  };
+
+  // Stats
+  const activeDecisionsCount = decisions.length;
+  const underScrutinyCount = decisions.filter((d) => resolveStatus(d) === "UNDER_SCRUTINY").length;
+  const needsEvidenceCount = decisions.filter((d) => resolveStatus(d) === "NEEDS_EVIDENCE").length;
+  const totalOpenQuestionsCount = decisions.reduce((acc, d) => acc + countOpenItems(d), 0);
+
+  const hasAnyDecisions = decisions.length > 0;
+
+  // Filtered decisions for the ledger
+  const filteredDecisions = useMemo(() => {
+    return decisions.filter((d) => {
+      const matchesSearch =
+        !searchQuery.trim() ||
+        d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (d.problem_statement &&
+          d.problem_statement.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const status = resolveStatus(d);
+      const matchesStatus =
+        statusFilter === "ALL" || status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [decisions, searchQuery, statusFilter]);
+
+  // Filtered workspaces
+  const filteredFolders = useMemo(() => {
+    return folders.filter((f) => {
+      return (
+        !searchQuery.trim() ||
+        f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (f.description && f.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    });
+  }, [folders, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar onUserChange={() => loadData()} />
-
-      <main className="max-w-6xl mx-auto px-6 py-10">
-        {!currentUser && !loading ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-xl mx-auto shadow-sm my-12">
-            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Layers className="w-8 h-8" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome to DecisionLens</h2>
-            <p className="text-sm text-slate-600 mb-6">
-              Sign in to manage your private workspace, organize folders, and capture structured decisions.
-            </p>
-            <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
-              💡 Click <strong>&quot;Sign In / Switch&quot;</strong> in the top-right corner to log in or use the 1-click test user buttons to test multi-tenancy.
-            </p>
+    <AppShell onRefresh={loadData}>
+      {!currentUser && !loading ? (
+        /* Calm Unauthenticated State */
+        <div className="bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] p-8 sm:p-12 text-center max-w-[620px] mx-auto my-12">
+          <h2 className="font-newsreader text-[32px] font-medium text-[#161E33] mb-3 tracking-tight">
+            Sign in to your decisions
+          </h2>
+          <p className="text-[14px] text-[#5A6275] leading-relaxed max-w-[460px] mx-auto mb-6">
+            Review decisions you are weighing, surface critical assumptions, and evaluate evidence before committing strategy.
+          </p>
+          <div>
+            <Link
+              href="/auth"
+              className="inline-block px-5 py-2.5 bg-[#161E33] hover:bg-[#232C47] text-white rounded-[4px] text-[14px] font-medium transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
+            >
+              Sign in to DecisionLens
+            </Link>
           </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                  Your Workspaces
-                </h1>
-                <p className="text-sm text-slate-500 mt-1">
-                  Organize problem statements, meeting discussions, and strategic decisions into folders.
-                </p>
-              </div>
+        </div>
+      ) : (
+        <div className="space-y-8 sm:space-y-10 font-ui text-[#161E33]">
+          {/* HEADER: Serif headline "Your decisions", subtitle, and right-aligned buttons */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#D9D2C3] pb-6">
+            <div>
+              <h1 className="font-newsreader text-[36px] sm:text-[40px] font-medium tracking-tight text-[#161E33] leading-tight">
+                Your decisions
+              </h1>
+              <p className="text-[14px] sm:text-[15px] text-[#5A6275] mt-1.5 leading-normal">
+                Track what you&apos;re weighing, and see where your reasoning needs work.
+              </p>
+            </div>
 
+            {/* Action buttons (No decorative arrows) */}
+            <div className="flex items-center gap-2.5 shrink-0 pt-2 sm:pt-0">
               <button
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-colors"
+                type="button"
+                onClick={() => setShowCreateFolderModal(true)}
+                className="px-3.5 py-2 bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] text-[14px] font-medium rounded-[4px] transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
               >
-                <FolderPlus className="w-4 h-4" />
-                New Folder
+                New workspace
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowChallengeModal(true)}
+                className="px-4 py-2 bg-[#161E33] hover:bg-[#232C47] text-white text-[14px] font-medium rounded-[4px] transition-colors shadow-none focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
+              >
+                Challenge a decision
               </button>
             </div>
+          </div>
 
-            {/* Folder Grid */}
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 h-44 animate-pulse" />
-                ))}
+          {/* STATS ROW: Single slim row of inline stats inside one bordered container.
+              Hidden entirely if all values are 0 or no decisions exist. */}
+          {hasAnyDecisions && activeDecisionsCount > 0 && (
+            <div className="bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] py-4 px-6 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#D9D2C3]">
+              <div className="py-2 sm:py-0 sm:px-4 first:pl-0">
+                <div className="font-newsreader text-[28px] font-normal text-[#161E33] leading-tight">
+                  {activeDecisionsCount}
+                </div>
+                <div className="text-[13px] text-[#5A6275] mt-0.5">
+                  Active
+                </div>
               </div>
-            ) : folders.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
-                <FolderIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <h3 className="text-base font-semibold text-slate-800">No folders yet</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-5">
-                  Create your first folder to start grouping decisions and meeting discussions together.
+
+              <div className="py-2 sm:py-0 sm:px-4">
+                <div className="font-newsreader text-[28px] font-normal text-[#161E33] leading-tight">
+                  {underScrutinyCount}
+                </div>
+                <div className="text-[13px] text-[#5A6275] mt-0.5">
+                  Under scrutiny
+                </div>
+              </div>
+
+              <div className="py-2 sm:py-0 sm:px-4">
+                <div className="font-newsreader text-[28px] font-normal text-[#161E33] leading-tight">
+                  {needsEvidenceCount}
+                </div>
+                <div className="text-[13px] text-[#5A6275] mt-0.5">
+                  Needs evidence
+                </div>
+              </div>
+
+              <div className="py-2 sm:py-0 sm:px-4 last:pr-0">
+                <div className="font-newsreader text-[28px] font-normal text-[#161E33] leading-tight">
+                  {totalOpenQuestionsCount}
+                </div>
+                <div className="text-[13px] text-[#5A6275] mt-0.5">
+                  Open questions
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* EMPTY STATE (when no decisions exist) */}
+          {!loading && !hasAnyDecisions && (
+            <div className="max-w-[720px] mx-auto text-center py-6 sm:py-10 space-y-8">
+              {/* 1. Serif heading & 2. Short paragraph */}
+              <div className="space-y-2.5">
+                <h2 className="font-newsreader text-[32px] sm:text-[38px] font-medium text-[#161E33] tracking-tight leading-snug">
+                  Start with a decision you&apos;re weighing
+                </h2>
+                <p className="text-[15px] text-[#5A6275] max-w-[540px] mx-auto leading-relaxed">
+                  Describe it in a few sentences. DecisionLens will surface the assumptions behind it, ask what&apos;s missing, and help you decide with evidence.
                 </p>
+              </div>
+
+              {/* 3. Primary button */}
+              <div>
                 <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                  type="button"
+                  onClick={() => setShowChallengeModal(true)}
+                  className="px-5 py-2.5 bg-[#161E33] hover:bg-[#232C47] text-white text-[14px] font-medium rounded-[4px] transition-colors shadow-none focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
                 >
-                  <Plus className="w-4 h-4" />
-                  Create Folder
+                  Challenge a decision
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {folders.map((folder) => (
-                  <Link
-                    key={folder.id}
-                    href={`/folders/${folder.id}`}
-                    className="group bg-white rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all p-6 flex flex-col justify-between relative overflow-hidden"
-                  >
-                    {/* Top color indicator accent */}
-                    <div
-                      className="absolute top-0 left-0 right-0 h-1.5"
-                      style={{ backgroundColor: folder.color || "#4F46E5" }}
-                    />
 
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
-                          style={{ backgroundColor: folder.color || "#4F46E5" }}
-                        >
-                          <FolderIcon className="w-5 h-5 text-white" />
-                        </div>
-                        <button
-                          onClick={(e) => handleDeleteFolder(folder.id, e)}
-                          title="Delete folder"
-                          className="text-slate-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                        {folder.name}
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                        {folder.description || "No description provided."}
-                      </p>
+              {/* 4. "How it works" row with 3 simple numbered steps */}
+              <div className="pt-6 border-t border-[#D9D2C3]">
+                <div className="font-courier text-[11px] font-medium text-[#5A6275] uppercase tracking-[0.08em] mb-4">
+                  How it works
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+                  <div className="p-3.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px]">
+                    <div className="font-courier text-[12px] font-medium text-[#2F5D8F] mb-1">
+                      01
                     </div>
-
-                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between mt-4">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-                        <FileText className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{folder.decision_count || 0} {folder.decision_count === 1 ? "record" : "records"}</span>
-                      </div>
-                      <span className="text-xs text-indigo-600 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
-                        Open <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
+                    <div className="text-[14px] font-medium text-[#161E33]">
+                      Describe the decision
                     </div>
-                  </Link>
-                ))}
+                    <div className="text-[12px] text-[#5A6275] mt-1 leading-normal">
+                      Share your current direction, alternatives, and background context.
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px]">
+                    <div className="font-courier text-[12px] font-medium text-[#2F5D8F] mb-1">
+                      02
+                    </div>
+                    <div className="text-[14px] font-medium text-[#161E33]">
+                      Review assumptions and gaps
+                    </div>
+                    <div className="text-[12px] text-[#5A6275] mt-1 leading-normal">
+                      Identify blind spots, hidden risks, and questions that need verification.
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px]">
+                    <div className="font-courier text-[12px] font-medium text-[#2F5D8F] mb-1">
+                      03
+                    </div>
+                    <div className="text-[14px] font-medium text-[#161E33]">
+                      Decide with evidence
+                    </div>
+                    <div className="text-[12px] text-[#5A6275] mt-1 leading-normal">
+                      Formulate a tested recommendation backed by empirical facts.
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </>
-        )}
-      </main>
 
-      {/* Create Folder Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-              <h3 className="text-lg font-semibold text-slate-900">Create New Folder</h3>
+              {/* 5. "Or try an example" with 3 clickable example cards */}
+              <div className="pt-4 text-left">
+                <div className="font-courier text-[11px] font-medium text-[#5A6275] uppercase tracking-[0.08em] mb-3">
+                  Or try an example
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectExample("Should we enter a new regional market this year?")}
+                    className="p-4 bg-[#FCFBF8] border border-[#D9D2C3] hover:border-[#2F5D8F] rounded-[4px] text-left transition-colors group focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
+                  >
+                    <span className="text-[14px] text-[#161E33] font-medium group-hover:text-[#2F5D8F] transition-colors leading-snug block">
+                      Should we enter a new regional market this year?
+                    </span>
+                    <span className="font-courier text-[11px] uppercase tracking-[0.08em] text-[#8B909C] mt-2 block">
+                      Strategic expansion
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectExample("Hire an internal leader or bring in an external one?")}
+                    className="p-4 bg-[#FCFBF8] border border-[#D9D2C3] hover:border-[#2F5D8F] rounded-[4px] text-left transition-colors group focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
+                  >
+                    <span className="text-[14px] text-[#161E33] font-medium group-hover:text-[#2F5D8F] transition-colors leading-snug block">
+                      Hire an internal leader or bring in an external one?
+                    </span>
+                    <span className="font-courier text-[11px] uppercase tracking-[0.08em] text-[#8B909C] mt-2 block">
+                      Leadership &amp; talent
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectExample("Build this capability in-house or buy it?")}
+                    className="p-4 bg-[#FCFBF8] border border-[#D9D2C3] hover:border-[#2F5D8F] rounded-[4px] text-left transition-colors group focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
+                  >
+                    <span className="text-[14px] text-[#161E33] font-medium group-hover:text-[#2F5D8F] transition-colors leading-snug block">
+                      Build this capability in-house or buy it?
+                    </span>
+                    <span className="font-courier text-[11px] uppercase tracking-[0.08em] text-[#8B909C] mt-2 block">
+                      Capital allocation
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FILTERS & LISTS (Only render when there is at least one decision) */}
+          {hasAnyDecisions && (
+            <div className="space-y-6">
+              {/* Top Filter Bar: Search + View Switcher */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
+                  <Search className="w-3.5 h-3.5 text-[#8B909C] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search decisions or workspaces..."
+                    className="w-full pl-8 pr-8 py-1.5 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B909C] hover:text-[#161E33]"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* View Switcher: All decisions vs Workspaces */}
+                <div className="flex items-center gap-1 border border-[#D9D2C3] rounded-[4px] p-0.5 bg-[#FCFBF8] text-[13px]">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("LEDGER")}
+                    className={`px-3 py-1 rounded-[4px] transition-colors ${
+                      viewMode === "LEDGER"
+                        ? "bg-[#F5F1E8] text-[#161E33] font-medium"
+                        : "text-[#5A6275] hover:text-[#161E33]"
+                    }`}
+                  >
+                    All decisions
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("WORKSPACES")}
+                    className={`px-3 py-1 rounded-[4px] transition-colors ${
+                      viewMode === "WORKSPACES"
+                        ? "bg-[#F5F1E8] text-[#161E33] font-medium"
+                        : "text-[#5A6275] hover:text-[#161E33]"
+                    }`}
+                  >
+                    Workspaces
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Tab Bar: Simple text tab bar with an underline on the active tab (no scrollbar artifact) */}
+              {viewMode === "LEDGER" && (
+                <div className="flex items-center gap-6 border-b border-[#D9D2C3] text-[13px] overflow-x-auto scrollbar-none">
+                  {(
+                    [
+                      { key: "ALL", label: "All" },
+                      { key: "UNDER_SCRUTINY", label: "Under scrutiny" },
+                      { key: "NEEDS_EVIDENCE", label: "Needs evidence" },
+                      { key: "READY_TO_DECIDE", label: "Ready to decide" },
+                      { key: "DECIDED", label: "Decided" },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setStatusFilter(tab.key)}
+                      className={`pb-2 transition-colors relative whitespace-nowrap ${
+                        statusFilter === tab.key
+                          ? "text-[#2F5D8F] font-medium border-b-2 border-[#2F5D8F] -mb-[1px]"
+                          : "text-[#5A6275] hover:text-[#161E33]"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* LEDGER VIEW */}
+              {viewMode === "LEDGER" && (
+                <div className="bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] overflow-hidden">
+                  {filteredDecisions.length === 0 ? (
+                    <div className="p-8 text-center text-[#5A6275] text-[13px]">
+                      No decisions match your search or filter.
+                    </div>
+                  ) : (
+                    <table className="w-full text-left border-collapse text-[13px]">
+                      <thead>
+                        <tr className="border-b border-[#D9D2C3] font-courier text-[11px] text-[#5A6275] font-medium uppercase tracking-[0.08em]">
+                          <th className="py-3 px-4 font-medium">DECISION</th>
+                          <th className="py-3 px-4 font-medium">WORKSPACE</th>
+                          <th className="py-3 px-4 font-medium">STATUS</th>
+                          <th className="py-3 px-4 font-medium text-right">DATE</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#D9D2C3]">
+                        {filteredDecisions.map((d) => {
+                          const parentFolder = folders.find((f) => f.id === d.folder_id);
+                          const status = resolveStatus(d);
+                          const formattedDate = new Date(d.created_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          });
+
+                          return (
+                            <tr
+                              key={d.id}
+                              onClick={() => router.push(`/decisions/${d.id}`)}
+                              className="hover:bg-[#F5F1E8] cursor-pointer transition-colors group"
+                            >
+                              {/* Decision Title & Problem */}
+                              <td className="py-3 px-4 max-w-md">
+                                <span className="font-medium text-[#161E33] group-hover:text-[#2F5D8F] transition-colors block leading-snug">
+                                  {d.title}
+                                </span>
+                                {d.problem_statement && (
+                                  <span className="text-[12px] text-[#5A6275] line-clamp-1 mt-0.5">
+                                    {d.problem_statement}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Workspace */}
+                              <td className="py-3 px-4 text-[#5A6275] whitespace-nowrap">
+                                {parentFolder?.name || "General"}
+                              </td>
+
+                              {/* Status Badge: square-ish (2px radius), mono 11px uppercase, muted tones with 1px border */}
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center font-courier text-[11px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 rounded-[2px] border ${
+                                    status === "DECIDED"
+                                      ? "text-[#2F6B4F] bg-[#E6EFE9] border-[#C5DACD]"
+                                      : status === "UNDER_SCRUTINY"
+                                      ? "text-[#2F5D8F] bg-[#E6EDF5] border-[#C5D4E6]"
+                                      : status === "NEEDS_EVIDENCE"
+                                      ? "text-[#8A5A14] bg-[#F4ECDC] border-[#E3D3AE]"
+                                      : "text-[#161E33] bg-[#EAE6DB] border-[#D3CDBD]"
+                                  }`}
+                                >
+                                  {status === "UNDER_SCRUTINY" && "Under scrutiny"}
+                                  {status === "NEEDS_EVIDENCE" && "Needs evidence"}
+                                  {status === "READY_TO_DECIDE" && "Ready to decide"}
+                                  {status === "DECIDED" && "Decided"}
+                                </span>
+                              </td>
+
+                              {/* Date: monospace uppercase label */}
+                              <td className="py-3 px-4 text-right font-courier text-[11px] text-[#5A6275] uppercase tracking-[0.08em] whitespace-nowrap">
+                                {formattedDate}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+
+              {/* WORKSPACES VIEW */}
+              {viewMode === "WORKSPACES" && (
+                <div className="space-y-4">
+                  {filteredFolders.length === 0 ? (
+                    <div className="bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] p-8 text-center text-[#5A6275] text-[13px]">
+                      No workspaces found.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredFolders.map((f) => {
+                        const count = decisions.filter((d) => d.folder_id === f.id).length;
+                        return (
+                          <Link
+                            key={f.id}
+                            href={`/folders/${f.id}`}
+                            className="bg-[#FCFBF8] border border-[#D9D2C3] hover:border-[#2F5D8F] rounded-[4px] p-4 flex flex-col justify-between transition-colors group focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
+                          >
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[14px] font-medium text-[#161E33] group-hover:text-[#2F5D8F] transition-colors">
+                                  {f.name}
+                                </span>
+                                <span className="font-courier text-[11px] uppercase tracking-[0.08em] text-[#8B909C]">
+                                  {count} {count === 1 ? "DECISION" : "DECISIONS"}
+                                </span>
+                              </div>
+                              <p className="text-[12px] text-[#5A6275] line-clamp-2 leading-relaxed">
+                                {f.description || "Active decision domain."}
+                              </p>
+                            </div>
+                            <div className="pt-3 mt-3 border-t border-[#D9D2C3] text-[12px] text-[#2F5D8F] font-medium">
+                              Open workspace
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: CREATE WORKSPACE */}
+      {showCreateFolderModal && (
+        <div className="fixed inset-0 z-50 bg-black/25 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
+          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative">
+            <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
+              <h3 className="text-[17px] font-medium text-[#161E33]">
+                New workspace
+              </h3>
               <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                type="button"
+                onClick={() => setShowCreateFolderModal(false)}
+                className="text-[#8B909C] hover:text-[#161E33] p-1 rounded-[2px]"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+              <div className="mb-3 p-2.5 rounded-[4px] bg-red-50 border border-red-200 text-red-700 text-xs">
+                {error}
               </div>
             )}
 
             <form onSubmit={handleCreateFolder} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Folder Name <span className="text-red-500">*</span>
+                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
+                  Workspace name
                 </label>
                 <input
                   type="text"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Q4 Product Roadmap, Marketing Strategy"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="e.g. Product Strategy, Leadership, Expansion"
+                  className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
+                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
+                  Description (optional)
+                </label>
                 <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional context for this folder"
-                  rows={3}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  rows={2}
+                  value={newFolderDesc}
+                  onChange={(e) => setNewFolderDesc(e.target.value)}
+                  placeholder="Brief context or domain notes..."
+                  className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Accent Color</label>
-                <div className="flex items-center gap-2">
-                  {colors.map((c) => (
-                    <button
-                      key={c.hex}
-                      type="button"
-                      onClick={() => setColor(c.hex)}
-                      className={`w-7 h-7 rounded-full transition-transform ${
-                        color === c.hex ? "scale-110 ring-2 ring-offset-2 ring-indigo-500" : "hover:scale-105"
-                      }`}
-                      style={{ backgroundColor: c.hex }}
-                      title={c.name}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#D9D2C3]">
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  onClick={() => setShowCreateFolderModal(false)}
+                  className="px-3.5 py-1.5 text-[13px] font-medium text-[#5A6275] hover:text-[#161E33] rounded-[4px]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+                  disabled={folderSubmitting}
+                  className="px-4 py-1.5 bg-[#161E33] hover:bg-[#232C47] text-white text-[13px] font-medium rounded-[4px] transition-colors disabled:opacity-50"
                 >
-                  Create Folder
+                  {folderSubmitting ? "Creating..." : "Create workspace"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+
+      {/* MODAL: CHALLENGE A DECISION */}
+      {showChallengeModal && (
+        <div className="fixed inset-0 z-50 bg-black/25 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
+          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative">
+            <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
+              <h3 className="text-[17px] font-medium text-[#161E33]">
+                Challenge a decision
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowChallengeModal(false)}
+                className="text-[#8B909C] hover:text-[#161E33] p-1 rounded-[2px]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-3 p-2.5 rounded-[4px] bg-red-50 border border-red-200 text-red-700 text-xs">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleChallengeDecision} className="space-y-4">
+              <div>
+                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
+                  Workspace
+                </label>
+                <select
+                  value={challengeFolderId}
+                  onChange={(e) => setChallengeFolderId(Number(e.target.value))}
+                  className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
+                >
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                  {folders.length === 0 && (
+                    <option value="">General Decisions (created automatically)</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
+                  What decision are you weighing?
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={challengeTitle}
+                  onChange={(e) => setChallengeTitle(e.target.value)}
+                  placeholder="e.g. Should we enter a new regional market this year?"
+                  className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#D9D2C3]">
+                <button
+                  type="button"
+                  onClick={() => setShowChallengeModal(false)}
+                  className="px-3.5 py-1.5 text-[13px] font-medium text-[#5A6275] hover:text-[#161E33] rounded-[4px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={challengeSubmitting}
+                  className="px-4 py-1.5 bg-[#161E33] hover:bg-[#232C47] text-white text-[13px] font-medium rounded-[4px] transition-colors disabled:opacity-50"
+                >
+                  {challengeSubmitting ? "Starting..." : "Start decision"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }

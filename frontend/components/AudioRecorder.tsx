@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Sliders,
   FileAudio,
+  Loader2,
+  Check,
 } from "lucide-react";
 import { uploadAudio, TranscriptionResponse } from "@/lib/api";
 
@@ -52,6 +54,8 @@ export default function AudioRecorder({
 
   // Submission & status
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingElapsed, setProcessingElapsed] = useState(0);
+  const [processingStep, setProcessingStep] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -77,6 +81,31 @@ export default function AudioRecorder({
       }
     };
   }, [audioUrl]);
+
+  // Track elapsed time and pipeline step during transcription
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isProcessing) {
+      const startTime = Date.now();
+      interval = setInterval(() => {
+        const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+        setProcessingElapsed(elapsedSec);
+        if (elapsedSec < 1) {
+          setProcessingStep(1);
+        } else if (elapsedSec < 3) {
+          setProcessingStep(2);
+        } else {
+          setProcessingStep(3);
+        }
+      }, 500);
+    } else {
+      setProcessingElapsed(0);
+      setProcessingStep(1);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessing]);
 
   // Format seconds to mm:ss
   const formatTime = (totalSeconds: number): string => {
@@ -322,6 +351,8 @@ export default function AudioRecorder({
     }
 
     setIsProcessing(true);
+    setProcessingElapsed(0);
+    setProcessingStep(1);
     setError(null);
     setSuccessMsg(null);
 
@@ -341,7 +372,7 @@ export default function AudioRecorder({
         clientTranscript: clientCapturedText || undefined,
       });
 
-      setSuccessMsg("Audio successfully processed & transcribed!");
+      setSuccessMsg("Audio successfully transcribed & updated in Meeting Transcript below!");
       onTranscriptionSuccess(res);
 
       // Clean up after successful transcription
@@ -350,6 +381,14 @@ export default function AudioRecorder({
       } else {
         setSelectedFile(null);
       }
+
+      // Smooth scroll to Meeting Transcript & Voice Notes section
+      setTimeout(() => {
+        const transcriptSection = document.getElementById("transcript-editor-section");
+        if (transcriptSection) {
+          transcriptSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 300);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Audio transcription failed."
@@ -360,7 +399,7 @@ export default function AudioRecorder({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="glass-panel rounded-2xl specular-edge p-6 sm:p-8 shadow-sm space-y-6">
       {/* Header with Title and Mode Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
         <div className="flex items-center gap-3">
@@ -679,6 +718,132 @@ export default function AudioRecorder({
             : "Transcribe Voice Audio"}
         </button>
       </div>
+
+      {/* Interactive Transcription Loading Window Modal */}
+      {isProcessing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full p-6 sm:p-8 space-y-6 text-center relative overflow-hidden">
+            {/* Top decorative gradient bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 animate-pulse" />
+
+            {/* Glowing Pulsing Icon */}
+            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
+              <div className="absolute inset-1 rounded-full bg-indigo-500/10 animate-pulse" />
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                <Mic className="w-8 h-8 animate-bounce" />
+              </div>
+            </div>
+
+            {/* Title and Status Badge */}
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                <span>AI Speech-to-Text Pipeline</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                Transcribing Voice Recording
+              </h3>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                Running neural speech recognition in{" "}
+                <span className="font-semibold text-slate-700">
+                  {language === "hi" ? "Hindi (hi-IN)" : "English (en-US)"}
+                </span>
+                .
+              </p>
+            </div>
+
+            {/* Step-by-Step Progress Pipeline */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-left space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 pb-1 border-b border-slate-200/60">
+                <span>PIPELINE PROGRESS</span>
+                <span className="font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                  {processingElapsed}s elapsed
+                </span>
+              </div>
+
+              {/* Step 1 */}
+              <div className="flex items-center gap-3 text-xs">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
+                    processingStep > 1
+                      ? "bg-emerald-500 text-white"
+                      : processingStep === 1
+                      ? "bg-indigo-600 text-white animate-pulse"
+                      : "bg-slate-200 text-slate-500"
+                  }`}
+                >
+                  {processingStep > 1 ? <Check className="w-3.5 h-3.5" /> : "1"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-slate-800">
+                    Audio Leveling & FFmpeg Noise Gate
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    {processingStep > 1 ? "Completed" : "Optimizing loudness & frequencies..."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex items-center gap-3 text-xs">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
+                    processingStep > 2
+                      ? "bg-emerald-500 text-white"
+                      : processingStep === 2
+                      ? "bg-indigo-600 text-white animate-pulse"
+                      : "bg-slate-200 text-slate-500"
+                  }`}
+                >
+                  {processingStep > 2 ? <Check className="w-3.5 h-3.5" /> : "2"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-slate-800">
+                    Multimodal AI Transcription
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    {processingStep > 2
+                      ? "Completed"
+                      : processingStep === 2
+                      ? "Extracting verbatim speech into text..."
+                      : "Waiting for audio preprocessing"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex items-center gap-3 text-xs">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
+                    processingStep === 3
+                      ? "bg-indigo-600 text-white animate-pulse"
+                      : "bg-slate-200 text-slate-500"
+                  }`}
+                >
+                  3
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-slate-800">
+                    Sync to Meeting Transcript & Voice Notes
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Populating editable editor below...
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Guidance */}
+            <div className="bg-indigo-50/70 border border-indigo-100/80 rounded-xl p-3 text-xs text-indigo-900 flex items-center gap-2 text-left">
+              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>
+                Speech output will appear immediately in <strong>Meeting Transcript & Voice Notes</strong> below for your review before structuring.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

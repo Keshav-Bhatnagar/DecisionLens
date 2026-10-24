@@ -17,6 +17,25 @@ export interface User {
   id: number;
   email: string;
   created_at: string;
+  oauth_provider?: string | null;
+  avatar_url?: string | null;
+  display_name?: string | null;
+}
+
+export interface OAuthProviderInfo {
+  id: "google" | "github" | "microsoft" | string;
+  name: string;
+  configured: boolean;
+  client_id?: string | null;
+  auth_url?: string | null;
+}
+
+export interface OAuthLoginPayload {
+  provider: "google" | "github" | "microsoft" | string;
+  token?: string;
+  email?: string;
+  display_name?: string;
+  avatar_url?: string;
 }
 
 export interface TokenResponse {
@@ -56,6 +75,7 @@ export interface Decision {
   analysis: Record<string, unknown>;
   recommendation: Record<string, unknown>;
   roadmap: Record<string, unknown>;
+  domain?: string;
   created_at: string;
   updated_at: string;
 }
@@ -157,8 +177,43 @@ export async function loginUser(email: string, password: string): Promise<TokenR
   return res;
 }
 
-export async function getMe(): Promise<User> {
-  return fetchApi<User>("/api/auth/me");
+export async function getMe(): Promise<User | null> {
+  const token = getStoredToken();
+  if (!token) {
+    return null;
+  }
+  try {
+    return await fetchApi<User>("/api/auth/me");
+  } catch (err: unknown) {
+    if (err instanceof ApiError && err.status === 401) {
+      clearStoredToken();
+      return null;
+    }
+    throw err;
+  }
+}
+
+export async function changePassword(
+  current_password: string,
+  new_password: string
+): Promise<{ message: string }> {
+  return fetchApi<{ message: string }>("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ current_password, new_password }),
+  });
+}
+
+export async function getOAuthProviders(): Promise<OAuthProviderInfo[]> {
+  return fetchApi<OAuthProviderInfo[]>("/api/auth/oauth/providers");
+}
+
+export async function authenticateOAuth(payload: OAuthLoginPayload): Promise<TokenResponse> {
+  const res = await fetchApi<TokenResponse>("/api/auth/oauth/authenticate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  setStoredToken(res.access_token);
+  return res;
 }
 
 // Folders
@@ -548,6 +603,7 @@ export interface GapItem {
   status: GapStatus;
   answer?: string | null;
   research_query?: string | null;
+  source_origin?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -746,6 +802,22 @@ export interface SWOTAnalysis {
   strategic_implications: string[];
 }
 
+export interface CanonicalDecisionResult {
+  winner_option_id: string;
+  winner_option_name: string;
+  winner_score: number;
+  winner_rank: number;
+  total_options_evaluated: number;
+  domain: string;
+  margin_over_runner_up?: number | null;
+  unresolved_gaps_count: number;
+  critical_unresolved_gaps: string[];
+  decision_status: "READY" | "CONDITIONAL" | string;
+  conditions_precedent: string[];
+  calculated_at?: string;
+  is_stale?: boolean;
+}
+
 export interface MatrixCriterion {
   id: string;
   name: string;
@@ -757,6 +829,9 @@ export interface MatrixOption {
   id: string;
   name: string;
   description?: string;
+  origin?: "original" | "derived" | "imported" | string;
+  derived_from?: string[];
+  derivation_reason?: string | null;
 }
 
 export interface MatrixScoreItem {
@@ -764,6 +839,11 @@ export interface MatrixScoreItem {
   criterion_id: string;
   rating: number;
   notes?: string | null;
+  reason?: string | null;
+  supporting_finding_ids?: string[];
+  supporting_gap_ids?: string[];
+  supporting_evidence_ids?: string[];
+  status?: string;
 }
 
 export interface MatrixResultOption {
@@ -788,6 +868,9 @@ export interface DecisionMatrixAnalysis {
   winner_option_id?: string | null;
   winner_option_name?: string | null;
   sensitivity_notes?: string | null;
+  canonical_result?: CanonicalDecisionResult | null;
+  domain?: string;
+  is_stale?: boolean;
 }
 
 export interface MatrixEvaluationRequest {
@@ -868,16 +951,30 @@ export interface FrameworkAnalysisRequest {
   force_mock?: boolean;
 }
 
+export interface RecommendedTechnique {
+  framework_id: string;
+  role: string;
+  role_label: string;
+  validation_reason: string;
+  priority: number;
+}
+
 export interface FrameworkAnalysisResponse {
   decision_id: number;
   evaluated_at: string;
   selected_frameworks: string[];
+  recommended_framework?: string | null;
+  recommended_techniques?: RecommendedTechnique[];
+  methodology_rationale?: string | null;
   six_hats?: SixHatsAnalysis | null;
   swot?: SWOTAnalysis | null;
   decision_matrix?: DecisionMatrixAnalysis | null;
   five_whys?: FiveWhysAnalysis | null;
   decision_tree?: DecisionTreeAnalysis | null;
   summary_insights: string[];
+  canonical_result?: CanonicalDecisionResult | null;
+  domain?: string;
+  is_stale?: boolean;
   message?: string | null;
 }
 
@@ -967,6 +1064,8 @@ export interface ConfidenceAssessment {
   score: number;
   rationale: string;
   limitations: string[];
+  status?: "READY" | "CONDITIONAL" | string;
+  conditions_precedent?: string[];
 }
 
 export interface RoadmapTask {
@@ -978,6 +1077,12 @@ export interface RoadmapTask {
   dependencies?: string[];
   success_criteria?: string;
   is_completed?: boolean;
+  source_type?: string;
+  source_ids?: string[];
+  depends_on_gap_ids?: string[];
+  depends_on_risk_ids?: string[];
+  depends_on_condition_ids?: string[];
+  reason?: string;
 }
 
 export interface RoadmapPhase {
@@ -1008,6 +1113,9 @@ export interface DecisionSynthesis {
   roadmap: RoadmapData;
   created_at: string;
   version: number;
+  canonical_result?: CanonicalDecisionResult | null;
+  domain?: string;
+  is_stale?: boolean;
 }
 
 export interface SynthesisRequest {

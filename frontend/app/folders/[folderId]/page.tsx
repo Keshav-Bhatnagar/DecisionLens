@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
+import AppShell from "@/components/AppShell";
 import {
   getFolder,
   getDecisions,
@@ -121,18 +121,11 @@ export default function FolderDetailPage({
   });
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar onUserChange={() => loadFolderData()} />
-
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mb-6">
-          <Link href="/dashboard" className="hover:text-indigo-600 transition-colors">
-            Workspaces
-          </Link>
-          <span>/</span>
-          <span className="text-slate-900 font-semibold">{folder?.name || "Folder"}</span>
-        </div>
+    <AppShell
+      activeFolderId={folderId}
+      breadcrumbs={folder ? [{ label: folder.name }] : undefined}
+      onRefresh={loadFolderData}
+    >
 
         {error ? (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-700 text-sm flex items-center justify-between">
@@ -260,42 +253,64 @@ export default function FolderDetailPage({
                   <Link
                     key={decision.id}
                     href={`/decisions/${decision.id}`}
-                    className="group bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                    className="group glass-card glass-card-hover rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 relative overflow-hidden"
                   >
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                    {/* Top Specular Edge */}
+                    <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent pointer-events-none" />
+
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${decision.record_type === "meeting"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                            }`}
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                            decision.record_type === "meeting"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                              : "bg-indigo-50 text-indigo-700 border border-indigo-200/80"
+                          }`}
                         >
                           {decision.record_type === "meeting" ? "Meeting Record" : "Decision"}
                         </span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                            decision.status === "decided"
+                              ? "bg-emerald-100/70 text-emerald-800 border border-emerald-300/60"
+                              : decision.status === "evaluating"
+                              ? "bg-amber-100/70 text-amber-800 border border-amber-300/60"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
+                          }`}
+                        >
                           {decision.status}
                         </span>
-                        <span className="text-xs text-slate-400">
-                          {new Date(decision.created_at).toLocaleDateString()}
+
+                        <span className="text-xs text-slate-400 font-medium">
+                          {new Date(decision.created_at).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
                         </span>
                       </div>
 
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
                         {decision.title}
                       </h3>
 
                       {decision.problem_statement && (
-                        <p className="text-xs text-slate-600 line-clamp-2">
-                          <strong className="text-slate-800">Problem:</strong> {decision.problem_statement}
+                        <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 leading-relaxed">
+                          <strong className="text-slate-800 font-semibold">Problem:</strong>{" "}
+                          {decision.problem_statement}
                         </p>
                       )}
                     </div>
 
                     <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
+                      <span className="text-xs font-semibold text-indigo-600 group-hover:translate-x-0.5 transition-transform hidden sm:inline-flex items-center gap-1">
+                        Open Workspace →
+                      </span>
                       <button
                         onClick={(e) => handleDeleteDecision(decision.id, e)}
                         title="Delete decision"
-                        className="text-slate-300 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                        className="text-slate-300 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 border border-transparent hover:border-red-200 transition-all"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -306,7 +321,6 @@ export default function FolderDetailPage({
             )}
           </>
         ) : null}
-      </main>
 
       {/* Create Decision/Meeting Modal */}
       {showCreateModal && (
@@ -423,6 +437,6 @@ export default function FolderDetailPage({
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

@@ -435,7 +435,7 @@ export default function GapResolutionPanel({
   });
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="glass-panel rounded-2xl specular-edge p-6 sm:p-8 shadow-sm space-y-6">
       {/* Header and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div className="space-y-1">
@@ -444,14 +444,11 @@ export default function GapResolutionPanel({
               <Globe className="w-5 h-5" />
             </div>
             <h2 className="text-lg font-bold text-slate-900">
-              Gap Detection & Web Research
+              Information Gaps & Evidence
             </h2>
-            <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-semibold">
-              Phases 7 & 8 Active
-            </span>
           </div>
           <p className="text-xs text-slate-500">
-            Targeted questions to resolve uncertainties. Answer with <strong>Ask Me</strong> or execute live web research with <strong>Research This</strong> prioritizing primary sources and verifying claim consensus.
+            Resolve critical uncertainties before finalizing your decision. Provide direct knowledge or run live web research to gather corroborated facts.
           </p>
         </div>
 
@@ -515,105 +512,99 @@ export default function GapResolutionPanel({
         </div>
       )}
 
-      {/* Metrics Summary Cards */}
+      {/* Clean Status & Filter Strip */}
       {gaps.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-center">
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
-              Total Gaps
-            </span>
-            <span className="text-xl font-bold text-slate-900">{totalCount}</span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>{pendingCount} Needs Attention</span>
+            </div>
+            <span className="text-slate-300">•</span>
+            <div className="flex items-center gap-1.5 font-medium text-slate-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>{answeredCount + researchedCount} Resolved</span>
+            </div>
+            {totalCount > 0 && (
+              <>
+                <span className="text-slate-300">•</span>
+                <span className="text-slate-500">{totalCount} total</span>
+              </>
+            )}
           </div>
-          <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 text-center">
-            <span className="text-[11px] font-medium text-amber-700 uppercase tracking-wider block">
-              Pending
-            </span>
-            <span className="text-xl font-bold text-amber-900">{pendingCount}</span>
-          </div>
-          <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 text-center">
-            <span className="text-[11px] font-medium text-emerald-700 uppercase tracking-wider block">
-              Answered
-            </span>
-            <span className="text-xl font-bold text-emerald-900">{answeredCount}</span>
-          </div>
-          <div className="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-3 text-center">
-            <span className="text-[11px] font-medium text-indigo-700 uppercase tracking-wider block">
-              Researched
-            </span>
-            <span className="text-xl font-bold text-indigo-900">{researchedCount}</span>
-          </div>
-          <div className="bg-purple-50/70 border border-purple-200/80 rounded-xl p-3 text-center">
-            <span className="text-[11px] font-medium text-purple-700 uppercase tracking-wider block">
-              Unknowns
-            </span>
-            <span className="text-xl font-bold text-purple-900">{skippedCount}</span>
-          </div>
-          <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 text-center col-span-2 sm:col-span-1">
-            <span className="text-[11px] font-medium text-blue-700 uppercase tracking-wider block">
-              Queued
-            </span>
-            <span className="text-xl font-bold text-blue-900">{researchQueuedCount}</span>
-          </div>
-        </div>
-      )}
 
-      {/* Filter Tabs */}
-      {gaps.length > 0 && (
-        <div className="flex items-center gap-1 border-b border-slate-200 pb-2 overflow-x-auto text-xs">
-          <button
-            type="button"
-            onClick={() => setFilterTab("all")}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              filterTab === "all" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            All ({gaps.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("pending")}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              filterTab === "pending" ? "bg-amber-600 text-white" : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Pending ({pendingCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("researched")}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              filterTab === "researched" ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Researched ({researchedCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("answered")}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              filterTab === "answered" ? "bg-emerald-600 text-white" : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Answered ({answeredCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("skipped")}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              filterTab === "skipped" ? "bg-purple-600 text-white" : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Unknowns ({skippedCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab("research_queued")}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${
-              filterTab === "research_queued" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            Queued ({researchQueuedCount})
-          </button>
+          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+            <button
+              type="button"
+              onClick={() => setFilterTab("all")}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                filterTab === "all"
+                  ? "bg-slate-900 text-white shadow-2xs"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              All ({gaps.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("pending")}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                filterTab === "pending"
+                  ? "bg-amber-600 text-white shadow-2xs"
+                  : "bg-white text-slate-600 hover:bg-amber-50 border border-slate-200"
+              }`}
+            >
+              Needs Attention ({pendingCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("answered")}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                filterTab === "answered"
+                  ? "bg-emerald-600 text-white shadow-2xs"
+                  : "bg-white text-slate-600 hover:bg-emerald-50 border border-slate-200"
+              }`}
+            >
+              Answered ({answeredCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("researched")}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                filterTab === "researched"
+                  ? "bg-indigo-600 text-white shadow-2xs"
+                  : "bg-white text-slate-600 hover:bg-indigo-50 border border-slate-200"
+              }`}
+            >
+              Researched ({researchedCount})
+            </button>
+            {skippedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilterTab("skipped")}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                  filterTab === "skipped"
+                    ? "bg-purple-600 text-white shadow-2xs"
+                    : "bg-white text-slate-600 hover:bg-purple-50 border border-slate-200"
+                }`}
+              >
+                Unknowns ({skippedCount})
+              </button>
+            )}
+            {researchQueuedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilterTab("research_queued")}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                  filterTab === "research_queued"
+                    ? "bg-blue-600 text-white shadow-2xs"
+                    : "bg-white text-slate-600 hover:bg-blue-50 border border-slate-200"
+                }`}
+              >
+                Queued ({researchQueuedCount})
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -658,7 +649,7 @@ export default function GapResolutionPanel({
             return (
               <div
                 key={gap.id}
-                className="bg-white rounded-xl border border-slate-200 hover:border-slate-300 transition-all shadow-sm overflow-hidden"
+                className="glass-card glass-card-hover rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden transition-all"
               >
                 {/* Main Card Header */}
                 <div className="p-4 sm:p-5">
@@ -690,21 +681,21 @@ export default function GapResolutionPanel({
                         type="button"
                         onClick={() => openAskMe(gap)}
                         disabled={isWorking}
-                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           gap.status === "answered"
                             ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                            : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/80"
+                            : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/80 shadow-2xs"
                         }`}
                       >
                         <User className="w-3.5 h-3.5" />
-                        {gap.status === "answered" ? "Edit Answer" : "Ask Me"}
+                        {gap.status === "answered" ? "Edit Answer" : "Answer Question"}
                       </button>
 
                       <button
                         type="button"
                         onClick={() => openResearch(gap)}
                         disabled={isWorking}
-                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           gap.status === "researched"
                             ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
                             : gap.status === "research_queued"
@@ -713,7 +704,7 @@ export default function GapResolutionPanel({
                         }`}
                       >
                         <Search className="w-3.5 h-3.5 text-blue-600" />
-                        {gap.status === "researched" ? "Re-Research" : "Research This"}
+                        {gap.status === "researched" ? "Re-Research" : "Research Web"}
                       </button>
                     </div>
                   </div>

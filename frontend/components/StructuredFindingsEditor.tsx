@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import {
   Sparkles,
   CheckCircle2,
@@ -19,7 +20,15 @@ import {
   Brain,
   Scale,
   Zap,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Columns,
+  Square,
 } from "lucide-react";
+import PointCircularGallery from "./PointCircularGallery";
 import {
   analyzeDecisionInputs,
   updateStructuredFindings,
@@ -52,6 +61,11 @@ export default function StructuredFindingsEditor({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showPrivateFeedback, setShowPrivateFeedback] = useState(false);
+
+// Dual-grid Card showcase and view navigation
+  const [activePairIndex, setActivePairIndex] = useState(0);
+  const [globalZoom, setGlobalZoom] = useState<"zoomOut" | "spacious" | "focus">("zoomOut");
+  const [layoutColumns, setLayoutColumns] = useState<1 | 2>(2);
 
   // Synchronize when initial props change
   useEffect(() => {
@@ -279,6 +293,145 @@ export default function StructuredFindingsEditor({
     },
   ];
 
+  // 4 comparative dual-grid card pairs
+  const categoryPairs = [
+    {
+      id: "pair-1",
+      pairNumber: 1,
+      title: "Facts & Assumptions",
+      subtitle: "Verified Reality vs Untested Hypotheses",
+      iconA: "📌",
+      iconB: "💭",
+      first: categoryConfigs[0], // facts
+      second: categoryConfigs[1], // assumptions
+    },
+    {
+      id: "pair-2",
+      pairNumber: 2,
+      title: "Feelings & Strengths",
+      subtitle: "Team Sentiment vs Key Strategic Advantages",
+      iconA: "❤️",
+      iconB: "🟢",
+      first: categoryConfigs[2], // feelings
+      second: categoryConfigs[3], // pros
+    },
+    {
+      id: "pair-3",
+      pairNumber: 3,
+      title: "Risks & Trade-Offs",
+      subtitle: "Downsides & Friction vs Balanced Nuances",
+      iconA: "🔴",
+      iconB: "⚖️",
+      first: categoryConfigs[4], // cons
+      second: categoryConfigs[5], // mixed_points
+    },
+    {
+      id: "pair-4",
+      pairNumber: 4,
+      title: "Contradictions & Unknowns",
+      subtitle: "Stakeholder Conflicts vs Critical Information Gaps",
+      iconA: "⚡",
+      iconB: "❓",
+      first: categoryConfigs[6], // contradictions
+      second: categoryConfigs[7], // unknowns
+    },
+  ];
+
+  const handlePrevPair = () => {
+    setActivePairIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNextPair = () => {
+    setActivePairIndex((prev) =>
+      Math.min(categoryPairs.length - 1, prev + 1)
+    );
+  };
+
+  // Keyboard navigation for dual-grid card carousel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrevPair();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNextPair();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Render a category grid column powered by 3D Circular Point Gallery for comfortable reading
+  const renderCategoryGridColumn = (
+    config: (typeof categoryConfigs)[number]
+  ) => {
+    if (!findings) return null;
+    const items = findings[config.key] || [];
+
+    return (
+      <div
+        key={config.key}
+        className={`border rounded-2xl overflow-hidden bg-white shadow-xs ${config.colorClasses.border} flex flex-col justify-between`}
+      >
+        <div>
+          {/* Category Header */}
+          <div
+            className={`px-5 py-3.5 border-b flex items-center justify-between ${config.colorClasses.headerBg} ${config.colorClasses.border}`}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-xl p-1.5 bg-white rounded-xl shadow-2xs border border-slate-100 flex items-center justify-center shrink-0">
+                {config.icon}
+              </span>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-900 block truncate">
+                  {config.title}
+                </span>
+                <span className="text-[10px] text-slate-500 block truncate">
+                  {config.description}
+                </span>
+              </div>
+            </div>
+
+            <span
+              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${config.colorClasses.badge}`}
+            >
+              {items.length} {items.length === 1 ? "point" : "points"}
+            </span>
+          </div>
+
+          {/* 3D Circular Point Gallery Canvas with Spacious Padding */}
+          <div className="p-4 sm:p-5 bg-slate-50/40">
+            <PointCircularGallery
+              categoryKey={config.key}
+              title={config.title}
+              description={config.description}
+              icon={config.icon}
+              colorClasses={config.colorClasses}
+              items={items}
+              zoomLevel={globalZoom}
+              onZoomChange={setGlobalZoom}
+              onUpdateItem={(index, newVal) =>
+                handleUpdateItem(config.key, index, newVal)
+              }
+              onDeleteItem={(index) => handleDeleteItem(config.key, index)}
+              onAddItem={() => handleAddItem(config.key)}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
       {/* Module Title and Run Button */}
@@ -290,11 +443,11 @@ export default function StructuredFindingsEditor({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-slate-900">
-                Cognitive Input Structuring (8 Categories)
+                Cognitive Structuring & De-Biasing
               </h2>
             </div>
             <p className="text-xs text-slate-500">
-              AI separates unstructured notes, transcripts, and documents into 8 distinct categories.
+              Separates objective facts from assumptions, emotions, and unverified claims to eliminate bias before analysis.
             </p>
           </div>
         </div>
@@ -320,10 +473,10 @@ export default function StructuredFindingsEditor({
           >
             <Sparkles className="w-4 h-4" />
             {isAnalyzing
-              ? "Categorizing Untrusted Input..."
+              ? "Structuring Inputs..."
               : findings
-              ? "Update Structuring"
-              : "Structure Inputs into 8 Categories"}
+              ? "Re-Run Structuring"
+              : "Structure Decision Inputs"}
           </button>
         </div>
       </div>
@@ -411,96 +564,209 @@ export default function StructuredFindingsEditor({
         </div>
       )}
 
-      {/* Structured Content Display */}
+      {/* Structured Findings Card View */}
       {findings && (
         <div className="space-y-6">
-          {/* Executive Summary */}
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
-              Executive Context Synthesis
-            </label>
-            <textarea
-              rows={2}
-              value={findings.summary || ""}
-              onChange={(e) => {
-                setFindings({ ...findings, summary: e.target.value });
-                if (reviewed) setReviewed(false);
-              }}
-              className="w-full text-xs text-slate-800 bg-white border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              placeholder="Objective synthesis of the decision context..."
-            />
-          </div>
+          {(() => {
+              const activePair =
+                categoryPairs[activePairIndex] || categoryPairs[0];
+              const prevPair =
+                categoryPairs[
+                  (activePairIndex - 1 + categoryPairs.length) %
+                    categoryPairs.length
+                ];
+              const nextPair =
+                categoryPairs[
+                  (activePairIndex + 1) % categoryPairs.length
+                ];
 
-          {/* 8 Category Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {categoryConfigs.map((config) => {
-              const items = findings[config.key] || [];
+              const countFirst = (findings[activePair.first.key] || []).length;
+              const countSecond = (findings[activePair.second.key] || []).length;
+              const totalPairCount = countFirst + countSecond;
 
               return (
-                <div
-                  key={config.key}
-                  className={`border rounded-xl overflow-hidden bg-white shadow-xs ${config.colorClasses.border}`}
-                >
-                  {/* Category Header */}
-                  <div
-                    className={`px-4 py-3 border-b flex items-center justify-between ${config.colorClasses.headerBg} ${config.colorClasses.border}`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base">{config.icon}</span>
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-slate-900 block truncate">
-                          {config.title}
-                        </span>
-                        <span className="text-[10px] text-slate-500 block truncate">
-                          {config.description}
-                        </span>
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-300">
+                  {/* Card Pair Header */}
+                  <div className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-purple-50/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3.5">
+                      <div className="flex items-center -space-x-1.5 p-2.5 bg-white rounded-2xl shadow-2xs border border-slate-100 shrink-0">
+                        <span className="text-2xl">{activePair.iconA}</span>
+                        <span className="text-2xl">{activePair.iconB}</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                            {activePair.title}
+                          </h3>
+                          <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 rounded-full">
+                            {totalPairCount} points
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 mt-1">
+                          {activePair.subtitle}
+                        </p>
                       </div>
                     </div>
 
-                    <span
-                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${config.colorClasses.badge}`}
-                    >
-                      {items.length}
-                    </span>
-                  </div>
-
-                  {/* Items List */}
-                  <div className="p-3 space-y-2">
-                    {items.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-2 group">
-                        <span className="text-xs text-slate-400 font-mono mt-1.5 shrink-0 select-none">
-                          {idx + 1}.
-                        </span>
-                        <textarea
-                          rows={2}
-                          value={item}
-                          onChange={(e) => handleUpdateItem(config.key, idx, e.target.value)}
-                          className={`w-full text-xs text-slate-800 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-colors ${config.colorClasses.accent}`}
-                        />
+                    {/* Zoom, Layout & Navigation Controls */}
+                    <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center">
+                      {/* Global Zoom Toolbar */}
+                      <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
                         <button
                           type="button"
-                          onClick={() => handleDeleteItem(config.key, idx)}
-                          title="Remove item"
-                          className="p-1.5 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0 opacity-70 group-hover:opacity-100"
+                          onClick={() => setGlobalZoom("zoomOut")}
+                          className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition ${
+                            globalZoom === "zoomOut"
+                              ? "bg-indigo-50 text-indigo-700 font-semibold"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                          title="Zoom Out: Wide camera view"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <ZoomOut className="w-3.5 h-3.5" />
+                          <span className="hidden md:inline">Zoom Out</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setGlobalZoom("spacious")}
+                          className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition ${
+                            globalZoom === "spacious"
+                              ? "bg-indigo-50 text-indigo-700 font-semibold"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                          title="Spacious Box: Generous card height"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5" />
+                          <span className="hidden md:inline">Spacious</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setGlobalZoom("focus")}
+                          className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition ${
+                            globalZoom === "focus"
+                              ? "bg-indigo-50 text-indigo-700 font-semibold"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                          title="Focus Zoom: Enlarged reading view"
+                        >
+                          <ZoomIn className="w-3.5 h-3.5" />
+                          <span className="hidden md:inline">Focus</span>
                         </button>
                       </div>
-                    ))}
 
-                    {/* Add Item Button */}
+                      {/* Layout Switcher: 2-Col Grid vs 1-Col Full Width */}
+                      <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => setLayoutColumns(2)}
+                          className={`p-1.5 rounded-lg text-xs transition ${
+                            layoutColumns === 2
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-slate-500 hover:text-slate-900"
+                          }`}
+                          title="2 Columns: Side-by-side comparison"
+                        >
+                          <Columns className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLayoutColumns(1)}
+                          className={`p-1.5 rounded-lg text-xs transition ${
+                            layoutColumns === 1
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-slate-500 hover:text-slate-900"
+                          }`}
+                          title="1 Column: Maximum spacious width"
+                        >
+                          <Square className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Arrow Navigation */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={handlePrevPair}
+                          disabled={activePairIndex === 0}
+                          title={`Previous: ${prevPair.title}`}
+                          className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleNextPair}
+                          disabled={
+                            activePairIndex === categoryPairs.length - 1
+                          }
+                          title={`Next: ${nextPair.title}`}
+                          className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Body: Grids (1-col expanded or 2-col side-by-side) */}
+                  <div className="p-6 sm:p-8 bg-slate-50/30">
+                    <div
+                      className={`grid ${
+                        layoutColumns === 1
+                          ? "grid-cols-1 gap-8"
+                          : "grid-cols-1 lg:grid-cols-2 gap-6"
+                      }`}
+                    >
+                      {renderCategoryGridColumn(activePair.first)}
+                      {renderCategoryGridColumn(activePair.second)}
+                    </div>
+                  </div>
+
+                  {/* Card Navigation Footer with Prev / Dots / Next */}
+                  <div className="p-4 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={() => handleAddItem(config.key)}
-                      className="w-full py-1.5 border border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-1"
+                      onClick={handlePrevPair}
+                      disabled={activePairIndex === 0}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs"
                     >
-                      <Plus className="w-3 h-3" /> Add {config.title.split(" ")[0]}
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Previous: {prevPair.title}</span>
+                    </button>
+
+                    {/* Step Dots Indicator for the 4 Cards */}
+                    <div className="flex items-center gap-2 py-1">
+                      {categoryPairs.map((p, i) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setActivePairIndex(i)}
+                          className={`h-2.5 rounded-full transition-all ${
+                            activePairIndex === i
+                              ? "w-8 bg-indigo-600 shadow-2xs"
+                              : "w-2.5 bg-slate-200 hover:bg-slate-300"
+                          }`}
+                          title={`Go to Card ${i + 1}: ${p.title}`}
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleNextPair}
+                      disabled={
+                        activePairIndex === categoryPairs.length - 1
+                      }
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs"
+                    >
+                      <span>Next: {nextPair.title}</span>
+                      <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               );
-            })}
-          </div>
+            })()}
 
           {/* Private Transcript Feedback Drawer (Collapsible) */}
           {findings.private_feedback && (

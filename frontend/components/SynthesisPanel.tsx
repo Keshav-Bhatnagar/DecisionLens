@@ -45,6 +45,7 @@ export default function SynthesisPanel({
   // User priority tags input
   const [priorities, setPriorities] = useState<string[]>([]);
   const [newPriorityInput, setNewPriorityInput] = useState("");
+  const [showPriorities, setShowPriorities] = useState(false);
 
   // New task inline creation state
   const [addingTaskPhaseId, setAddingTaskPhaseId] = useState<string | null>(
@@ -250,33 +251,29 @@ export default function SynthesisPanel({
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Header & Versioning Bar */}
-      <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      {/* Header & Action Bar */}
+      <div className="glass-panel rounded-2xl specular-edge p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="flex h-3 w-3 relative">
+              <span className="flex h-2.5 w-2.5 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-600"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-600"></span>
               </span>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Final Decision Synthesis & Actionable Roadmap
+              <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                Decision Recommendation & Roadmap
               </h2>
             </div>
-            <p className="text-sm text-slate-500 mt-1">
-              Deterministic synthesis grounded strictly in verified facts, research
-              citations, and framework outcomes. Never invents sources or probabilities.
+            <p className="text-xs text-slate-500 mt-1">
+              Grounded in structured facts, answered evidence gaps, and deterministic framework scoring.
             </p>
           </div>
 
-          {/* Snapshots Selector */}
-          {snapshots.length > 0 && (
-            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/70">
-              <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                Analysis Version:
-              </label>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Snapshots Selector */}
+            {snapshots.length > 0 && (
               <select
-                className="text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={viewingSnapshot?.id || ""}
                 onChange={(e) =>
                   handleSelectSnapshot(Number(e.target.value) || 0)
@@ -287,22 +284,92 @@ export default function SynthesisPanel({
                 </option>
                 {snapshots.map((snap) => (
                   <option key={snap.id} value={snap.id}>
-                    v{snap.version}: {snap.headline.slice(0, 35)}... (
-                    {new Date(snap.created_at).toLocaleDateString()})
+                    v{snap.version}: {snap.headline.slice(0, 30)}...
                   </option>
                 ))}
               </select>
-            </div>
-          )}
+            )}
+
+            {!viewingSnapshot && (
+              <button
+                type="button"
+                onClick={() => setShowPriorities(!showPriorities)}
+                className={`text-xs px-3 py-1.5 rounded-lg font-semibold border transition-all ${
+                  showPriorities || priorities.length > 0
+                    ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {priorities.length > 0 ? `Priorities (${priorities.length})` : "Set Priorities"}
+              </button>
+            )}
+
+            <button
+              onClick={handleRunSynthesis}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs disabled:opacity-50 transition"
+            >
+              {loading ? (
+                <>
+                  <svg
+                    className="animate-spin h-3.5 w-3.5 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                  Synthesizing Decision...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  {synthesis ? "Re-Run Synthesis" : "Generate Final Synthesis"}
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Strategic Priorities Input Bar */}
-        {!viewingSnapshot && (
-          <div className="mt-4 pt-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
-              Strategic Priorities (Optional Guidance)
-            </label>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
+        {/* Collapsible Strategic Priorities Drawer */}
+        {!viewingSnapshot && (showPriorities || (!displaySynthesis && priorities.length > 0)) && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                Strategic Priorities & Weights (Optional Guidance)
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPriorities(false)}
+                className="text-xs text-slate-400 hover:text-slate-600"
+              >
+                Collapse
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               {priorities.map((p) => (
                 <span
                   key={p}
@@ -329,66 +396,15 @@ export default function SynthesisPanel({
                 <button
                   type="button"
                   onClick={handleAddPriority}
-                  className="text-xs px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition"
+                  className="text-xs px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition"
                 >
                   Add
                 </button>
               </div>
             </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">
-                Synthesis synthesizes latest user-reviewed inputs, resolved gaps,
-                and framework scoring into an immutable snapshot.
-              </span>
-              <button
-                onClick={handleRunSynthesis}
-                disabled={loading}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-semibold text-xs rounded-xl shadow-md hover:shadow-indigo-500/20 disabled:opacity-50 transition"
-              >
-                {loading ? (
-                  <>
-                    <svg
-                      className="animate-spin h-3.5 w-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8H4z"
-                      />
-                    </svg>
-                    Synthesizing Final Decision...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
-                    {synthesis ? "Re-Synthesize & Save Snapshot" : "Generate Final Synthesis"}
-                  </>
-                )}
-              </button>
-            </div>
+            <p className="text-[11px] text-slate-400">
+              Priorities guide trade-off criteria weighting and risk thresholds when synthesizing multiple framework evaluations.
+            </p>
           </div>
         )}
       </div>
@@ -445,6 +461,26 @@ export default function SynthesisPanel({
       {/* Main Synthesis Presentation */}
       {displaySynthesis ? (
         <div className="space-y-8">
+          {/* Upstream Stale Warning Banner */}
+          {displaySynthesis.is_stale && (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 flex items-center justify-between text-amber-900 text-xs shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="text-base">⚠️</span>
+                <div>
+                  <strong className="block font-bold">Upstream Analysis Changed (Stale Synthesis)</strong>
+                  <span>Problem framing, structured findings, or gap answers have been updated since this synthesis was generated. Re-run synthesis to re-align with latest facts.</span>
+                </div>
+              </div>
+              <button
+                onClick={handleRunSynthesis}
+                disabled={loading}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-xs shrink-0 transition"
+              >
+                Re-Run Synthesis
+              </button>
+            </div>
+          )}
+
           {/* Executive Headline & Recommendation Card */}
           <div
             className={`rounded-3xl p-8 border shadow-lg transition relative overflow-hidden ${
@@ -453,6 +489,63 @@ export default function SynthesisPanel({
                 : "bg-gradient-to-br from-indigo-50/90 via-white to-emerald-50/40 border-indigo-200"
             }`}
           >
+            {/* Canonical Decision Framework Alignment */}
+            {displaySynthesis.canonical_result && (
+              <div className="mb-6 p-4 rounded-2xl bg-white/95 border border-indigo-100 shadow-2xs space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-slate-100 text-slate-700">
+                      {displaySynthesis.canonical_result.domain}
+                    </span>
+                    <span className="text-xs text-slate-600">
+                      Strategic Direction:{" "}
+                      <strong className="text-indigo-700 font-bold">
+                        {displaySynthesis.canonical_result.winner_option_name}
+                      </strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500">
+                      Evaluated Score:{" "}
+                      <strong className="text-slate-900 font-mono">
+                        {displaySynthesis.canonical_result.winner_score.toFixed(1)}/10
+                      </strong>
+                    </span>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        displaySynthesis.canonical_result.decision_status === "READY"
+                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                          : "bg-amber-50 text-amber-800 border border-amber-200"
+                      }`}
+                    >
+                      {displaySynthesis.canonical_result.decision_status === "READY"
+                        ? "✓ Verified & Ready"
+                        : "⚡ Preconditions Required"}
+                    </span>
+                  </div>
+                </div>
+
+                {displaySynthesis.canonical_result.conditions_precedent &&
+                  displaySynthesis.canonical_result.conditions_precedent.length > 0 && (
+                    <div className="pt-1">
+                      <span className="text-[11px] font-semibold text-amber-900 block mb-1">
+                        Preconditions to satisfy before execution:
+                      </span>
+                      <ul className="text-xs text-slate-700 space-y-1">
+                        {displaySynthesis.canonical_result.conditions_precedent.map(
+                          (cond, idx) => (
+                            <li key={idx} className="flex items-start gap-1.5">
+                              <span className="text-amber-500 font-bold shrink-0 mt-0.5">•</span>
+                              <span className="leading-relaxed">{cond}</span>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center gap-3 mb-4">
               <span
                 className={`px-3.5 py-1 rounded-full text-xs font-bold tracking-wide uppercase ${
@@ -919,6 +1012,25 @@ export default function SynthesisPanel({
                                 ✓ <strong>Success Criteria:</strong>{" "}
                                 {task.success_criteria}
                               </span>
+                            )}
+                            {task.reason && (
+                              <p className="text-[11px] text-slate-600 mt-1 italic">
+                                <strong className="not-italic text-slate-700 font-medium">Why this task:</strong> {task.reason}
+                              </p>
+                            )}
+                            {(task.source_type || (task.depends_on_gap_ids && task.depends_on_gap_ids.length > 0)) && (
+                              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                {task.source_type && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 uppercase font-semibold">
+                                    Source: {task.source_type.replace(/_/g, " ")}
+                                  </span>
+                                )}
+                                {task.depends_on_gap_ids && task.depends_on_gap_ids.length > 0 && (
+                                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                                    Resolves: {task.depends_on_gap_ids.join(", ")}
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>

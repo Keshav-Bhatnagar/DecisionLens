@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Sparkles,
   Layers,
@@ -16,6 +16,9 @@ import {
   Sliders,
   Check,
   ChevronRight,
+  ChevronDown,
+  Info,
+  ExternalLink,
 } from "lucide-react";
 import {
   FrameworkAnalysisResponse,
@@ -25,7 +28,58 @@ import {
   MatrixCriterion,
   MatrixOption,
   MatrixScoreItem,
+  RecommendedTechnique,
 } from "@/lib/api";
+
+type FrameworkKey =
+  | "decision_matrix"
+  | "five_whys"
+  | "swot"
+  | "six_hats"
+  | "decision_tree";
+
+const FRAMEWORK_DEFINITIONS = [
+  {
+    id: "decision_matrix" as FrameworkKey,
+    label: "Weighted Decision Matrix",
+    shortLabel: "Decision Matrix",
+    icon: TableIcon,
+    purpose: "Evaluate 2+ discrete options across weighted criteria mathematically.",
+    badgeReason: "Multi-option comparison detected; criteria weighting active.",
+  },
+  {
+    id: "five_whys" as FrameworkKey,
+    label: "Five Whys (Root Cause)",
+    shortLabel: "Five Whys",
+    icon: HelpCircle,
+    purpose: "Peel back surface symptoms to isolate the fundamental operational breakdown.",
+    badgeReason: "Operational bottleneck or degradation detected in context.",
+  },
+  {
+    id: "swot" as FrameworkKey,
+    label: "SWOT Analysis",
+    shortLabel: "SWOT",
+    icon: Compass,
+    purpose: "Map internal capabilities (strengths/weaknesses) against external forces (opportunities/threats).",
+    badgeReason: "Strategic positioning and architectural balance evaluation.",
+  },
+  {
+    id: "six_hats" as FrameworkKey,
+    label: "Six Thinking Hats",
+    shortLabel: "Six Hats",
+    icon: Brain,
+    purpose: "Examine the choice through 6 distinct cognitive perspectives simultaneously.",
+    badgeReason: "Multi-perspective cognitive scrutiny against emotional bias.",
+  },
+  {
+    id: "decision_tree" as FrameworkKey,
+    label: "Decision Tree",
+    shortLabel: "Decision Tree",
+    icon: GitBranch,
+    purpose: "Model sequential branching choices and assess risks against conditional payoff outcomes.",
+    badgeReason: "Sequential chance and conditional payoff branching.",
+  },
+];
 
 interface FrameworkPanelProps {
   decisionId: number;
@@ -44,11 +98,12 @@ export default function FrameworkPanel({
   const [loading, setLoading] = useState(false);
   const [evaluatingMatrix, setEvaluatingMatrix] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "six_hats" | "swot" | "decision_matrix" | "five_whys" | "decision_tree"
-  >("six_hats");
+  const [activeTab, setActiveTab] = useState<FrameworkKey>("decision_matrix");
+  const [showInapplicableDrawer, setShowInapplicableDrawer] = useState(false);
+  const [showConfigSelector, setShowConfigSelector] = useState(false);
+  const [manuallyEnabledFrameworks, setManuallyEnabledFrameworks] = useState<string[]>([]);
 
-  // Selection filters
+  // Selection filters for manual configuration
   const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>([
     "six_hats",
     "swot",
@@ -159,131 +214,323 @@ export default function FrameworkPanel({
 
   const totalMatrixWeight = matrixCriteria.reduce((sum, c) => sum + c.weight, 0);
 
+  // Recommended techniques ensemble from intelligent reasoning engine
+  const recommendedTechniques = useMemo(() => {
+    return analysis?.recommended_techniques || [];
+  }, [analysis]);
+
+  const recommendedMap = useMemo(() => {
+    const map = new Map<string, RecommendedTechnique>();
+    for (const rec of recommendedTechniques) {
+      map.set(rec.framework_id, rec);
+    }
+    return map;
+  }, [recommendedTechniques]);
+
+  // Audit framework applicability
+  const frameworkStatuses = useMemo(() => {
+    if (!analysis) return [];
+    return FRAMEWORK_DEFINITIONS.map((def) => {
+      const fwData = (analysis as any)?.[def.id];
+      const isApplicable = fwData ? fwData.applicable !== false : true;
+      const inapplicabilityReason = fwData?.inapplicability_reason || null;
+      return {
+        ...def,
+        data: fwData,
+        isApplicable,
+        inapplicabilityReason,
+      };
+    });
+  }, [analysis]);
+
+  const validFrameworks = useMemo(() => {
+    return frameworkStatuses.filter((fw) => fw.isApplicable && fw.data);
+  }, [frameworkStatuses]);
+
+  // Show ONLY the recommended N techniques (sorted by priority) + any manually enabled
+  const activeTabsList = useMemo(() => {
+    if (!analysis) return FRAMEWORK_DEFINITIONS;
+    if (recommendedTechniques.length > 0) {
+      const activeIds = new Set(recommendedTechniques.map((t) => t.framework_id));
+      manuallyEnabledFrameworks.forEach((id) => activeIds.add(id));
+
+      const filtered = FRAMEWORK_DEFINITIONS.filter((def) => activeIds.has(def.id));
+      return filtered.sort((a, b) => {
+        const prioA = recommendedMap.get(a.id)?.priority ?? 99;
+        const prioB = recommendedMap.get(b.id)?.priority ?? 99;
+        return prioA - prioB;
+      });
+    }
+    // Fallback if no recommended_techniques: show validFrameworks
+    return validFrameworks.length > 0 ? validFrameworks : FRAMEWORK_DEFINITIONS;
+  }, [analysis, recommendedTechniques, manuallyEnabledFrameworks, recommendedMap, validFrameworks]);
+
+  // Ruled-out / excluded frameworks with validation reasons
+  const excludedFrameworksList = useMemo(() => {
+    if (!analysis) return [];
+    const activeIds = new Set(activeTabsList.map((f) => f.id));
+    return FRAMEWORK_DEFINITIONS.filter((def) => !activeIds.has(def.id)).map((def) => {
+      const fwData = (analysis as any)?.[def.id];
+      const reason =
+        fwData?.inapplicability_reason ||
+        def.badgeReason ||
+        "Ruled out as non-essential for this specific decision structure.";
+      return {
+        ...def,
+        reason,
+      };
+    });
+  }, [analysis, activeTabsList]);
+
+  // Determine top recommended framework
+  const recommendedFramework = useMemo(() => {
+    if (!analysis) return null;
+    if (analysis.recommended_framework) return analysis.recommended_framework as FrameworkKey;
+    if (recommendedTechniques.length > 0) return recommendedTechniques[0].framework_id as FrameworkKey;
+    return (activeTabsList[0]?.id as FrameworkKey) || null;
+  }, [analysis, recommendedTechniques, activeTabsList]);
+
+  // Automatically select the best valid framework when data updates
+  useEffect(() => {
+    if (activeTabsList.length > 0) {
+      const currentIsValid = activeTabsList.some((fw) => fw.id === activeTab);
+      if (!currentIsValid && recommendedFramework) {
+        setActiveTab(recommendedFramework);
+      }
+    }
+  }, [activeTabsList, recommendedFramework, activeTab]);
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="glass-panel rounded-2xl specular-edge p-6 sm:p-8 shadow-sm space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Brain className="w-5 h-5" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-100">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100">
+            <Brain className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900">
-                Structured Thinking Frameworks
-              </h2>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200/50">
-                Phase 9
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Multi-perspective cognitive models with deterministic scoring & validated schemas.
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              Strategic Thinking Frameworks
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Targeted cognitive models selected to evaluate options and stress-test trade-offs.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleRunAnalysis}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow transition-all shrink-0"
-        >
-          <Sparkles className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "Evaluating Frameworks..." : analysis ? "Re-evaluate Frameworks" : "Run Framework Analysis"}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowConfigSelector((prev) => !prev)}
+            className="px-3 py-2 text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 rounded-xl transition"
+            title="Configure available frameworks"
+          >
+            <Sliders className="w-3.5 h-3.5 inline mr-1 text-slate-500" />
+            Config
+          </button>
+
+          <button
+            type="button"
+            onClick={handleRunAnalysis}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs font-semibold rounded-xl transition shadow-sm"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            {loading
+              ? "Evaluating Frameworks..."
+              : analysis
+              ? "Re-evaluate Frameworks"
+              : "Run Framework Analysis"}
+          </button>
+        </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+        <div className="p-3.5 bg-rose-50 border border-rose-200 text-xs text-rose-800 rounded-xl flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Framework Selector Pills */}
-      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-2">
-        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
-          <span>Active Framework Selection:</span>
-          <span className="text-slate-400 font-mono">
-            {selectedFrameworks.length}/5 Selected
-          </span>
+      {analysis?.is_stale && (
+        <div className="p-3.5 bg-amber-50 border border-amber-300 text-xs text-amber-900 rounded-xl flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+            <span>Upstream problem inputs or gaps have changed. Re-run analysis to synchronize criteria and scores.</span>
+          </div>
+          <button
+            onClick={() => handleRunAnalysis()}
+            disabled={loading}
+            className="px-3 py-1 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition"
+          >
+            Re-run Analysis
+          </button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { id: "six_hats", label: "Six Thinking Hats" },
-            { id: "swot", label: "SWOT Analysis" },
-            { id: "decision_matrix", label: "Weighted Decision Matrix" },
-            { id: "five_whys", label: "Five Whys" },
-            { id: "decision_tree", label: "Decision Tree" },
-          ].map((fw) => {
-            const isSelected = selectedFrameworks.includes(fw.id);
-            return (
+      )}
+
+      {/* Manual Framework Selector Drawer */}
+      {showConfigSelector && (
+        <div className="bg-slate-50 p-4 border border-slate-200 rounded-xl text-xs space-y-3 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between text-xs text-slate-600 font-semibold">
+            <span>Filter Active Evaluation Frameworks:</span>
+            <span>{selectedFrameworks.length}/5 Active</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {FRAMEWORK_DEFINITIONS.map((fw) => {
+              const isSelected = selectedFrameworks.includes(fw.id);
+              return (
+                <button
+                  key={fw.id}
+                  type="button"
+                  onClick={() => toggleFrameworkSelection(fw.id)}
+                  className={`px-3 py-1.5 text-xs rounded-lg border font-medium transition flex items-center gap-1.5 ${
+                    isSelected
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                  {fw.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Unified Clean Framework Tabs */}
+      {analysis && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto text-xs">
+            {activeTabsList.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              const rec = recommendedMap.get(tab.id);
+              const roleTag = rec ? rec.role_label : tab.id === recommendedFramework ? "Primary" : null;
+
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as FrameworkKey)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition whitespace-nowrap text-xs ${
+                    isActive
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{tab.shortLabel}</span>
+                  {roleTag && (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                      }`}
+                    >
+                      {roleTag}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+
+            {/* Subtle "+ Other Models" Drawer Toggle */}
+            {excludedFrameworksList.length > 0 && (
               <button
-                key={fw.id}
                 type="button"
-                onClick={() => toggleFrameworkSelection(fw.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 ${
-                  isSelected
-                    ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
-                }`}
+                onClick={() => setShowInapplicableDrawer((prev) => !prev)}
+                className="text-xs px-3 py-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl font-medium transition flex items-center gap-1.5 shrink-0"
               >
-                {isSelected && <Check className="w-3 h-3" />}
-                {fw.label}
+                <span>+ More ({excludedFrameworksList.length})</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    showInapplicableDrawer ? "rotate-180" : ""
+                  }`}
+                />
               </button>
+            )}
+          </div>
+
+          {/* Active Model Rationale Banner */}
+          {(() => {
+            const activeRec = recommendedMap.get(activeTab);
+            const activeDef = FRAMEWORK_DEFINITIONS.find((f) => f.id === activeTab);
+            const reason = activeRec?.validation_reason || activeDef?.purpose;
+
+            if (!reason) return null;
+
+            return (
+              <div className="flex items-center justify-between p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs text-indigo-950">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>
+                    <strong>Why this model:</strong> {reason}
+                  </span>
+                </div>
+                {activeRec?.role_label && (
+                  <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                    {activeRec.role_label}
+                  </span>
+                )}
+              </div>
             );
-          })}
+          })()}
+
+          {/* Expandable Secondary Frameworks Drawer */}
+          {showInapplicableDrawer && excludedFrameworksList.length > 0 && (
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between text-xs text-slate-600 font-semibold">
+                <span>Additional Frameworks (Not automatically prioritized for this problem):</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {excludedFrameworksList.map((fw) => (
+                  <div
+                    key={fw.id}
+                    className="p-3 bg-white border border-slate-200 rounded-xl text-xs space-y-2 flex flex-col justify-between"
+                  >
+                    <div>
+                      <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <fw.icon className="w-3.5 h-3.5 text-slate-500" />
+                        {fw.label}
+                      </span>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                        {fw.reason}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setManuallyEnabledFrameworks((prev) =>
+                          prev.includes(fw.id) ? prev : [...prev, fw.id]
+                        );
+                        setActiveTab(fw.id as FrameworkKey);
+                        setShowInapplicableDrawer(false);
+                      }}
+                      className="text-xs font-semibold px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 text-center transition"
+                    >
+                      + Enable {fw.shortLabel}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-200 pb-2 text-xs font-semibold">
-        {[
-          { id: "six_hats", label: "Six Thinking Hats", icon: Brain },
-          { id: "swot", label: "SWOT Analysis", icon: Compass },
-          { id: "decision_matrix", label: "Decision Matrix", icon: TableIcon },
-          { id: "five_whys", label: "Five Whys", icon: HelpCircle },
-          { id: "decision_tree", label: "Decision Tree", icon: GitBranch },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          const fwData = (analysis as any)?.[tab.id];
-          const isApplicable = fwData ? fwData.applicable !== false : true;
-
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
-                isActive
-                  ? "bg-slate-900 text-white shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-              {fwData && !isApplicable && (
-                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-bold">
-                  N/A
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      )}
 
       {/* Empty State when no analysis has been run yet */}
       {!analysis && !loading && (
-        <div className="text-center py-12 px-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-3">
-          <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto">
+        <div className="text-center py-12 px-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 text-indigo-600 flex items-center justify-center mx-auto shadow-2xs">
             <Brain className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-slate-800">
-            No Framework Analysis Generated Yet
+          <h3 className="text-sm font-semibold text-slate-800">
+            No Thinking Frameworks Evaluated Yet
           </h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Click &ldquo;Run Framework Analysis&rdquo; above to evaluate your structured findings, facts, and research across Six Thinking Hats, SWOT, Weighted Decision Matrix, Five Whys, and Decision Tree.
+          <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+            Click &ldquo;Run Framework Analysis&rdquo; above. DecisionLens will evaluate your decision context, identify the most applicable frameworks, and calculate deterministic scores.
           </p>
         </div>
       )}
@@ -457,28 +704,59 @@ export default function FrameworkPanel({
             <>
               {/* Winner Banner */}
               {matrixWinner && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-950">
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <div>
-                      <span className="font-bold text-emerald-900 text-sm block">
-                        Top Ranked Option: {matrixWinner}
-                      </span>
-                      <p className="text-emerald-700 text-xs">
-                        Calculated deterministically using exact criteria weights and scale ratings.
-                      </p>
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 text-xs text-emerald-950">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-emerald-900 text-sm">
+                            Canonical Winner: {matrixWinner}
+                          </span>
+                          {analysis.canonical_result && (
+                            <span
+                              className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                                analysis.canonical_result.decision_status === "READY"
+                                  ? "bg-emerald-200 text-emerald-900"
+                                  : "bg-amber-100 text-amber-800 border border-amber-300"
+                              }`}
+                            >
+                              {analysis.canonical_result.decision_status}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-emerald-700 text-xs">
+                          Calculated deterministically using exact criteria weights and scale ratings.
+                        </p>
+                      </div>
                     </div>
+                    {matrixResults.length > 0 && (
+                      <div className="text-right">
+                        <span className="font-mono text-base font-extrabold text-emerald-700">
+                          {matrixResults[0].weighted_score.toFixed(2)}/10
+                        </span>
+                        <span className="text-[10px] text-emerald-600 block">
+                          Rank #1 (Canonical)
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  {matrixResults.length > 0 && (
-                    <div className="text-right">
-                      <span className="font-mono text-base font-extrabold text-emerald-700">
-                        {matrixResults[0].weighted_score.toFixed(2)}/10
-                      </span>
-                      <span className="text-[10px] text-emerald-600 block">
-                        {matrixResults[0].normalized_score}% Match
-                      </span>
-                    </div>
-                  )}
+                  {analysis.canonical_result?.conditions_precedent &&
+                    analysis.canonical_result.conditions_precedent.length > 0 && (
+                      <div className="pt-2 border-t border-emerald-200/60 text-[11px] text-emerald-900">
+                        <span className="font-bold uppercase tracking-wider text-[10px] text-amber-900 block mb-1">
+                          Conditions Precedent for Winner Execution:
+                        </span>
+                        <ul className="space-y-0.5">
+                          {analysis.canonical_result.conditions_precedent.map((cond, idx) => (
+                            <li key={idx} className="flex items-start gap-1">
+                              <span className="text-amber-700 font-bold">⚡</span>
+                              <span>{cond}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                 </div>
               )}
 
@@ -513,7 +791,12 @@ export default function FrameworkPanel({
                       <th className="p-3 font-bold">Criteria & Weight</th>
                       {matrixOptions.map((opt) => (
                         <th key={opt.id} className="p-3 font-bold text-center">
-                          {opt.name}
+                          <div className="text-slate-900 font-bold">{opt.name}</div>
+                          {opt.origin === "derived" && (
+                            <span className="inline-block mt-0.5 text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              HYBRID / DERIVED
+                            </span>
+                          )}
                         </th>
                       ))}
                     </tr>
@@ -776,12 +1059,12 @@ export default function FrameworkPanel({
 
 function InapplicableNotice({ reason }: { reason?: string | null }) {
   return (
-    <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
-      <div className="flex items-center gap-2 font-bold text-amber-800">
+    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+      <div className="flex items-center gap-2 font-semibold text-[11px] text-amber-700 tracking-wide">
         <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-        <span>Framework Marked Not Applicable</span>
+        <span>Framework Ruled Out as Inapplicable</span>
       </div>
-      <p className="text-amber-800/90 leading-relaxed pl-6">
+      <p className="text-slate-600 leading-relaxed pl-6 text-xs">
         {reason || "This thinking framework was determined not applicable for the current decision context."}
       </p>
     </div>
