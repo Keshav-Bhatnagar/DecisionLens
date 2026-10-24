@@ -147,6 +147,8 @@ def delete_folder(
 
     verify_ownership(folder.owner_id, current_user.id, resource_name="Folder")
 
+    # Explicitly cascade delete child decisions for full portability
+    db.query(Decision).filter(Decision.folder_id == folder_id).delete(synchronize_session="fetch")
     db.delete(folder)
     db.commit()
 

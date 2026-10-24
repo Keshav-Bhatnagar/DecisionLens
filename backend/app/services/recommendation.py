@@ -9,6 +9,7 @@ from sqlalchemy import func
 from app.config import settings
 from app.models import Decision, AnalysisSnapshot, RoadmapRecord
 from app.services.ai import get_llm_client_and_model, call_gemini_direct_rest
+from app.services.folder_context import get_folder_precedents
 from app.schemas import (
     AlternativeOption,
     AssumptionItem,
@@ -423,6 +424,7 @@ def generate_mock_synthesis(
     decision: Decision,
     user_priorities: Optional[List[str]] = None,
     version: int = 1,
+    folder_precedents: Optional[List[Dict[str, Any]]] = None,
 ) -> DecisionSynthesis:
     """
     Generate high-fidelity deterministic synthesis adhering to all Phase 10 constraints.
@@ -536,9 +538,27 @@ def generate_mock_synthesis(
         )
     )
 
+    if folder_precedents:
+        for p in folder_precedents[:2]:
+            v_info = p.get("verdict_headline") or (f"Approved {p.get('verdict_winner')}" if p.get("verdict_winner") else None)
+            if v_info:
+                supporting_evidence.append(
+                    SupportingEvidenceItem(
+                        claim=f"Aligned with previous project milestone: {v_info}",
+                        source_title=f"Prior Folder Record #{p['id']}: {p['title']}",
+                        source_url=None,
+                        evidence_type="folder_memory",
+                        reliability="high",
+                    )
+                )
+
     is_conditional = (decision_status == "CONDITIONAL") or (len(critical_unknowns) > 0)
 
     decision_title_str = decision.title or "Strategic Dilemma"
+
+    continuity_note = ""
+    if folder_precedents:
+        continuity_note = f" This builds directly upon decisions and verified baseline established in prior folder session '{folder_precedents[-1]['title']}'."
 
     if is_conditional:
         decision_status = "CONDITIONAL"
@@ -550,6 +570,7 @@ def generate_mock_synthesis(
             f"However, because {len(critical_unknowns) or len(unresolved_gap_ids)} critical unknown(s) remain unresolved, "
             f"execution must proceed under an explicit risk-gated framework: Phase 1 focuses strictly on targeted due diligence "
             f"and clearance of precedent conditions before irrevocable capital or organizational commitment is finalized."
+            f"{continuity_note}"
         )
         conditional_triggers = critical_conditions or [
             f"Condition A: Verify satisfactory resolution for {critical_unknowns[0] if critical_unknowns else 'critical gaps'} prior to irrevocable contract execution.",
@@ -569,6 +590,7 @@ def generate_mock_synthesis(
             f"Following comprehensive evaluation across weighted criteria, '{top_option_name}' is confirmed as the "
             f"optimal strategic path for '{decision_title_str}'. With foundational facts validated and all critical "
             f"information gaps resolved, the leadership team should proceed directly to implementation under the attached phased roadmap."
+            f"{continuity_note}"
         )
         conditional_triggers = []
         confidence_level = "high"
@@ -725,6 +747,7 @@ def execute_hosted_synthesis(
     decision: Decision,
     user_priorities: Optional[List[str]] = None,
     version: int = 1,
+    folder_precedents: Optional[List[Dict[str, Any]]] = None,
 ) -> DecisionSynthesis:
     """Execute hosted LLM synthesis call with strict grounding, schema validation, and canonical winner enforcement."""
     client, model, provider = get_llm_client_and_model()
@@ -801,9 +824,17 @@ def execute_hosted_synthesis(
             "weighted_score": canonical_winner_score,
             "rank": canonical_winner_rank,
         },
+        "prior_folder_precedents": folder_precedents or [],
         "user_priorities": user_priorities or [],
         "version": version,
     }
+
+    continuity_instruction = ""
+    if folder_precedents:
+        continuity_instruction = (
+            f"4. FOLDER CONTINUITY: This session follows {len(folder_precedents)} preceding record(s) in this project folder. "
+            f"Explicitly maintain strategic continuity with prior established facts, milestones, and approved verdicts.\n"
+        )
 
     prompt_user = (
         f"Synthesize the final decision recommendation and execution roadmap based on the following verified decision context:\n\n"
@@ -812,7 +843,8 @@ def execute_hosted_synthesis(
         f"1. You MUST recommend '{canonical_winner_name}' (ID: {canonical_winner_id}, Score: {canonical_winner_score:.2f}/10, Rank #{canonical_winner_rank}). Do NOT substitute or alter the winner.\n"
         f"2. In 'alternatives_considered', mark '{canonical_winner_name}' as is_recommended=true and ALL others as is_recommended=false.\n"
         f"3. Ground all roadmap tasks strictly in the domain '{domain}'. Do NOT use software development terminology (POC, technical lead, staging, traffic migration) unless domain is SOFTWARE.\n"
-        f"4. Output JSON strictly matching the DecisionSynthesis schema."
+        f"{continuity_instruction}"
+        f"5. Output JSON strictly matching the DecisionSynthesis schema."
     )
 
     logger.info("Executing hosted %s (%s) decision synthesis for decision %s", provider.upper(), model, decision.id)
@@ -929,15 +961,32 @@ def run_decision_synthesis(
     ) or 0
     next_version = max_version + 1
 
+    folder_precedents = get_folder_precedents(decision, db) if db is not None else []
+
     if force_mock or not settings.has_ai_key:
         logger.info("Using deterministic mock synthesis engine (force_mock=%s, has_key=%s)", force_mock, settings.has_ai_key)
-        synthesis = generate_mock_synthesis(decision, user_priorities, version=next_version)
+        synthesis = generate_mock_synthesis(
+            decision,
+            user_priorities,
+            version=next_version,
+            folder_precedents=folder_precedents,
+        )
     else:
         try:
-            synthesis = execute_hosted_synthesis(decision, user_priorities, version=next_version)
+            synthesis = execute_hosted_synthesis(
+                decision,
+                user_priorities,
+                version=next_version,
+                folder_precedents=folder_precedents,
+            )
         except Exception as exc:
             logger.warning("Hosted synthesis failed (%s), falling back to high-fidelity mock", exc)
-            synthesis = generate_mock_synthesis(decision, user_priorities, version=next_version)
+            synthesis = generate_mock_synthesis(
+                decision,
+                user_priorities,
+                version=next_version,
+                folder_precedents=folder_precedents,
+            )
 
     # 1. Save immutable AnalysisSnapshot record
     snapshot = AnalysisSnapshot(

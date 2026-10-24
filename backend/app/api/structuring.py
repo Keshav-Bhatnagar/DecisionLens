@@ -54,6 +54,22 @@ def analyze_inputs(
         force_mock=force_mock,
     )
 
+    # Invalidate downstream framework analysis and synthesis
+    if decision.analysis and isinstance(decision.analysis, dict):
+        a_copy = dict(decision.analysis)
+        a_copy["is_stale"] = True
+        if "canonical_result" in a_copy and isinstance(a_copy["canonical_result"], dict):
+            a_copy["canonical_result"]["is_stale"] = True
+        decision.analysis = a_copy
+
+    if decision.recommendation and isinstance(decision.recommendation, dict):
+        r_copy = dict(decision.recommendation)
+        r_copy["is_stale"] = True
+        decision.recommendation = r_copy
+
+    db.commit()
+    db.refresh(decision)
+
     return StructuringResponse(
         decision_id=decision.id,
         findings=findings,
@@ -80,7 +96,7 @@ def get_structured_findings(
 
     verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
 
-    _, source_summary = assemble_decision_input_context(decision)
+    _, source_summary = assemble_decision_input_context(decision, db=db)
 
     points_data = decision.points or {}
     if points_data:
@@ -155,11 +171,24 @@ def update_structured_findings(
     decision.points = current_points
     decision.points_reviewed = payload.mark_reviewed
 
+    # Invalidate downstream framework analysis and synthesis
+    if decision.analysis and isinstance(decision.analysis, dict):
+        a_copy = dict(decision.analysis)
+        a_copy["is_stale"] = True
+        if "canonical_result" in a_copy and isinstance(a_copy["canonical_result"], dict):
+            a_copy["canonical_result"]["is_stale"] = True
+        decision.analysis = a_copy
+
+    if decision.recommendation and isinstance(decision.recommendation, dict):
+        r_copy = dict(decision.recommendation)
+        r_copy["is_stale"] = True
+        decision.recommendation = r_copy
+
     db.commit()
     db.refresh(decision)
 
     findings = StructuredFindings.model_validate(decision.points)
-    _, source_summary = assemble_decision_input_context(decision)
+    _, source_summary = assemble_decision_input_context(decision, db=db)
 
     return StructuringResponse(
         decision_id=decision.id,

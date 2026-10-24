@@ -31,10 +31,12 @@ import {
   Cloud,
   Heart,
   TrendingUp,
+  GitBranch,
 } from "lucide-react";
 import PointCircularGallery from "./PointCircularGallery";
 import {
   analyzeDecisionInputs,
+  getStructuredFindings,
   updateStructuredFindings,
   StructuredFindings,
   PrivateTranscriptFeedback,
@@ -60,13 +62,14 @@ export default function StructuredFindingsEditor({
       : null
   );
   const [reviewed, setReviewed] = useState(isReviewed);
+  const [sourceSummary, setSourceSummary] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showPrivateFeedback, setShowPrivateFeedback] = useState(false);
 
-// Dual-grid Card showcase and view navigation
+  // Dual-grid Card showcase and view navigation
   const [activePairIndex, setActivePairIndex] = useState(0);
   const [globalZoom, setGlobalZoom] = useState<"zoomOut" | "spacious" | "focus">("zoomOut");
   const [layoutColumns, setLayoutColumns] = useState<1 | 2>(2);
@@ -79,6 +82,21 @@ export default function StructuredFindingsEditor({
     setReviewed(isReviewed);
   }, [initialFindings, isReviewed]);
 
+  // Fetch initial source summary on mount
+  useEffect(() => {
+    let isMounted = true;
+    getStructuredFindings(decisionId)
+      .then((res) => {
+        if (isMounted && res.source_summary) {
+          setSourceSummary(res.source_summary);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [decisionId]);
+
   const handleRunAnalysis = async () => {
     setIsAnalyzing(true);
     setError(null);
@@ -88,6 +106,9 @@ export default function StructuredFindingsEditor({
       const res = await analyzeDecisionInputs(decisionId);
       setFindings(res.findings);
       setReviewed(res.points_reviewed);
+      if (res.source_summary) {
+        setSourceSummary(res.source_summary);
+      }
       setSuccessMsg("Inputs successfully categorized into 8 cognitive categories!");
       onFindingsUpdated();
       setTimeout(() => setSuccessMsg(null), 4000);
@@ -493,6 +514,24 @@ export default function StructuredFindingsEditor({
           </button>
         </div>
       </div>
+
+      {/* Sources & Folder Memory Banner */}
+      {sourceSummary && sourceSummary !== "None" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-paper-surface border border-border rounded text-xs text-ink-secondary">
+          <div className="flex items-center gap-2">
+            <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
+            <span>
+              Context Sources: <strong className="font-semibold text-ink">{sourceSummary}</strong>
+            </span>
+          </div>
+          {sourceSummary.includes("Folder Memory") && (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-accent/10 text-accent font-medium border border-accent/20">
+              <GitBranch className="w-3 h-3" />
+              Connected to Prior Folder Records
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Review Gate Alert Banner */}
       {findings && (
