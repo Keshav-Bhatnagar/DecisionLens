@@ -12,11 +12,13 @@ function CallbackHandler() {
 
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeProviderName, setActiveProviderName] = useState<string>("Identity Provider");
 
   useEffect(() => {
     const code = searchParams.get("code");
     const errorParam = searchParams.get("error");
     const errorDesc = searchParams.get("error_description");
+    const stateParam = searchParams.get("state");
 
     if (errorParam) {
       setStatus("error");
@@ -26,21 +28,49 @@ function CallbackHandler() {
 
     if (!code) {
       setStatus("error");
-      setErrorMessage("No authorization code was returned from Google.");
+      setErrorMessage("No authorization code was returned by the identity provider.");
       return;
     }
 
     let isMounted = true;
 
+    // Detect provider from query, state, sessionStorage, or code signature
+    let provider = searchParams.get("provider") || stateParam;
+    if (!provider || !["google", "microsoft", "github"].includes(provider.toLowerCase())) {
+      if (typeof window !== "undefined") {
+        const stored = sessionStorage.getItem("oauth_provider");
+        if (stored && ["google", "microsoft", "github"].includes(stored.toLowerCase())) {
+          provider = stored.toLowerCase();
+        }
+      }
+    }
+
+    if (!provider || !["google", "microsoft", "github"].includes(provider.toLowerCase())) {
+      if (code.startsWith("M.") || code.includes(".R3_") || code.length > 400) {
+        provider = "microsoft";
+      } else if (code.startsWith("4/")) {
+        provider = "google";
+      } else if (code.length === 20) {
+        provider = "github";
+      } else {
+        provider = "google";
+      }
+    }
+
+    const providerName =
+      provider === "microsoft"
+        ? "Microsoft / Azure AD"
+        : provider === "github"
+        ? "GitHub"
+        : "Google Workspace";
+
+    setActiveProviderName(providerName);
+
     async function completeOAuth() {
       try {
-        const provider =
-          searchParams.get("provider") ||
-          (typeof window !== "undefined" ? sessionStorage.getItem("oauth_provider") : null) ||
-          "google";
         const redirectUri = window.location.origin + "/auth/callback";
         await authenticateOAuth({
-          provider,
+          provider: provider || "google",
           code: code ?? undefined,
           redirect_uri: redirectUri,
         });
@@ -57,7 +87,7 @@ function CallbackHandler() {
           setErrorMessage(
             err instanceof Error
               ? err.message
-              : "Failed to exchange authorization code with Google. Please try signing in again."
+              : `Failed to exchange authorization code with ${providerName}. Please try signing in again.`
           );
         }
       }
@@ -85,7 +115,7 @@ function CallbackHandler() {
           <div className="space-y-4 py-4">
             <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
             <div>
-              <h2 className="font-serif text-base font-bold text-ink">Verifying Google Credentials</h2>
+              <h2 className="font-serif text-base font-bold text-ink">Verifying {activeProviderName} Credentials</h2>
               <p className="text-xs text-ink-secondary mt-1">
                 Authenticating your account and initializing your DecisionLens dossier...
               </p>

@@ -133,7 +133,7 @@ def get_oauth_providers():
             configured=bool(settings.google_client_id),
             client_id=settings.google_client_id or None,
             auth_url=(
-                f"https://accounts.google.com/o/oauth2/v2/auth?client_id={settings.google_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback"
+                f"https://accounts.google.com/o/oauth2/v2/auth?client_id={settings.google_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback&state=google"
                 if settings.google_client_id
                 else None
             ),
@@ -144,7 +144,7 @@ def get_oauth_providers():
             configured=bool(settings.github_client_id),
             client_id=settings.github_client_id or None,
             auth_url=(
-                f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email&redirect_uri=http://localhost:3000/auth/callback"
+                f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email&redirect_uri=http://localhost:3000/auth/callback&state=github"
                 if settings.github_client_id
                 else None
             ),
@@ -155,7 +155,7 @@ def get_oauth_providers():
             configured=bool(settings.microsoft_client_id),
             client_id=settings.microsoft_client_id or None,
             auth_url=(
-                f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback"
+                f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile%20User.Read&redirect_uri=http://localhost:3000/auth/callback&state=microsoft"
                 if settings.microsoft_client_id
                 else None
             ),
@@ -175,6 +175,17 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
     """
     valid_providers = {"google", "github", "microsoft"}
     normalized_provider = body.provider.lower().strip()
+
+    # Smart auto-detection if code signature identifies a specific provider
+    if body.code:
+        code_str = body.code.strip()
+        if code_str.startswith("M.") or "MS-" in code_str or len(code_str) > 400:
+            normalized_provider = "microsoft"
+        elif code_str.startswith("4/"):
+            normalized_provider = "google"
+        elif len(code_str) == 20 and all(c in "0123456789abcdefABCDEF" for c in code_str):
+            normalized_provider = "github"
+
     if normalized_provider not in valid_providers:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -203,23 +214,27 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
                     access_token = t_data.get("access_token")
                     id_token = t_data.get("id_token")
 
-                    if access_token:
+                    # Decode Google id_token claims directly
+                    if id_token:
+                        try:
+                            import base64
+                            import json
+                            payload_part = id_token.split(".")[1]
+                            padded = payload_part + "=" * ((4 - len(payload_part) % 4) % 4)
+                            decoded = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+                            resolved_email = decoded.get("email") or resolved_email
+                            resolved_display_name = resolved_display_name or decoded.get("name")
+                            resolved_avatar = resolved_avatar or decoded.get("picture")
+                        except Exception:
+                            pass
+
+                    if not resolved_email and access_token:
                         u_resp = client.get(
                             "https://www.googleapis.com/oauth2/v3/userinfo",
                             headers={"Authorization": f"Bearer {access_token}"},
                         )
                         if u_resp.status_code == 200:
                             u_info = u_resp.json()
-                            resolved_email = u_info.get("email")
-                            resolved_display_name = resolved_display_name or u_info.get("name")
-                            resolved_avatar = resolved_avatar or u_info.get("picture")
-                    elif id_token:
-                        info_resp = client.get(
-                            "https://oauth2.googleapis.com/tokeninfo",
-                            params={"id_token": id_token},
-                        )
-                        if info_resp.status_code == 200:
-                            u_info = info_resp.json()
                             resolved_email = u_info.get("email")
                             resolved_display_name = resolved_display_name or u_info.get("name")
                             resolved_avatar = resolved_avatar or u_info.get("picture")
@@ -263,19 +278,55 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
                 if token_resp.status_code == 200:
                     t_data = token_resp.json()
                     access_token = t_data.get("access_token")
-                    if access_token:
-                        me_resp = client.get(
-                            "https://graph.microsoft.com/v1.0/me",
-                            headers={"Authorization": f"Bearer {access_token}"},
-                        )
-                        if me_resp.status_code == 200:
-                            u_info = me_resp.json()
-                            resolved_email = u_info.get("mail") or u_info.get("userPrincipalName")
-                            resolved_display_name = resolved_display_name or u_info.get("displayName")
+                    id_token = t_data.get("id_token")
+
+                    # Extract claims from Microsoft id_token (vital for personal accounts like @gmail.com where Graph mail is null)
+                    if id_token:
+                        try:
+                            import base64
+                            import json
+                            payload_part = id_token.split(".")[1]
+                            padded = payload_part + "=" * ((4 - len(payload_part) % 4) % 4)
+                            decoded = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+                            token_email = decoded.get("email") or decoded.get("preferred_username") or decoded.get("upn")
+                            if token_email and "@" in token_email:
+                                resolved_email = token_email
+                            resolved_display_name = resolved_display_name or decoded.get("name")
+                        except Exception as decode_err:
+                            logger.warning("Failed to decode Microsoft id_token: %s", decode_err)
+
+                    if access_token and not resolved_email:
+                        try:
+                            me_resp = client.get(
+                                "https://graph.microsoft.com/v1.0/me",
+                                headers={"Authorization": f"Bearer {access_token}"},
+                            )
+                            if me_resp.status_code == 200:
+                                u_info = me_resp.json()
+                                resolved_email = u_info.get("mail") or u_info.get("userPrincipalName")
+                                resolved_display_name = resolved_display_name or u_info.get("displayName")
+                        except Exception:
+                            pass
                 else:
-                    logger.warning("Microsoft token exchange error (%s): %s", token_resp.status_code, token_resp.text)
+                    err_detail = token_resp.text
+                    try:
+                        err_json = token_resp.json()
+                        err_detail = err_json.get("error_description") or err_json.get("error") or err_detail
+                    except Exception:
+                        pass
+                    logger.warning("Microsoft token exchange error (%s): %s", token_resp.status_code, err_detail)
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Microsoft OAuth failed: {err_detail}",
+                    )
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error("Exception during Microsoft OAuth code exchange: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to connect to Microsoft OAuth: {str(exc)}",
+            )
 
     # 3. GitHub Authorization Code Exchange
     if normalized_provider == "github" and body.code:
@@ -317,9 +368,25 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
                                             resolved_email = em.get("email")
                                             break
                 else:
-                    logger.warning("GitHub token exchange error (%s): %s", token_resp.status_code, token_resp.text)
+                    err_detail = token_resp.text
+                    try:
+                        err_json = token_resp.json()
+                        err_detail = err_json.get("error_description") or err_json.get("error") or err_detail
+                    except Exception:
+                        pass
+                    logger.warning("GitHub token exchange error (%s): %s", token_resp.status_code, err_detail)
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"GitHub OAuth failed: {err_detail}",
+                    )
+        except HTTPException:
+            raise
         except Exception as exc:
             logger.error("Exception during GitHub OAuth code exchange: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to connect to GitHub OAuth: {str(exc)}",
+            )
 
     # 4. Real Google Token Verification (if client_id is set and token provided)
     if normalized_provider == "google" and not resolved_email and settings.google_client_id and body.token and not body.token.startswith("mock_"):
