@@ -1231,11 +1231,26 @@ export interface SaveReportResponse {
 
 export async function exportDecisionReport(
   decisionId: number,
-  format: "markdown" | "json" = "markdown"
+  format: "markdown" | "json" | "latex" = "markdown"
 ): Promise<ReportExportResponse> {
   return fetchApi<ReportExportResponse>(
     `/api/decisions/${decisionId}/export?format=${format}`
   );
+}
+
+export async function downloadDecisionExportBlob(
+  decisionId: number,
+  format: "pdf" | "latex" | "markdown" | "json"
+): Promise<Blob> {
+  const token = getStoredToken();
+  const url = `${API_BASE_URL}/api/decisions/${decisionId}/export?format=${format}&download=true`;
+  const response = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) {
+    throw new Error(`Download failed with status ${response.status}`);
+  }
+  return response.blob();
 }
 
 export async function saveDecisionReportExport(

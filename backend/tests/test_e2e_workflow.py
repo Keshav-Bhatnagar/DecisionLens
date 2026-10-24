@@ -314,7 +314,28 @@ def test_complete_decision_lens_end_to_end_lifecycle(client: TestClient):
     assert "active_roadmap" in json_data
     assert "exported_at" in json_data
 
-    # 10c. Save Report to Document Library (creates Attachment record)
+    # 10c. LaTeX Export (.tex)
+    export_tex_res = client.get(
+        f"/api/decisions/{decision_id}/export?format=latex",
+        headers=auth_headers,
+    )
+    assert export_tex_res.status_code == 200
+    tex_data = export_tex_res.json()
+    assert tex_data["format"] == "latex"
+    assert r"\documentclass" in tex_data["content"]
+    assert "DecisionLens" in tex_data["content"]
+
+    # 10d. Interactive PDF Export (.pdf)
+    export_pdf_res = client.get(
+        f"/api/decisions/{decision_id}/export?format=pdf&download=true",
+        headers=auth_headers,
+    )
+    assert export_pdf_res.status_code == 200
+    assert "application/pdf" in export_pdf_res.headers["content-type"]
+    assert len(export_pdf_res.content) > 1000
+    assert export_pdf_res.content[:4] == b"%PDF"
+
+    # 10e. Save Report Bundle to Document Library (creates Attachment records)
     save_report_res = client.post(
         f"/api/decisions/{decision_id}/export/save",
         headers=auth_headers,

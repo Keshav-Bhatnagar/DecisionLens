@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 import re
 from datetime import datetime, timezone
-from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.responses import PlainTextResponse, JSONResponse, Response
 from app.models import Decision, User, AnalysisSnapshot, RoadmapRecord, Attachment
 from app.config import settings
 from app.schemas import (
@@ -21,6 +21,8 @@ from app.services.recommendation import run_decision_synthesis
 from app.services.report_generator import (
     generate_decision_markdown_report,
     generate_decision_json_report,
+    generate_decision_latex_report,
+    generate_decision_interactive_pdf,
 )
 from app.auth import get_current_user, verify_ownership
 
@@ -289,14 +291,14 @@ def update_active_roadmap(
 )
 def export_decision_report(
     decision_id: int,
-    format: str = "markdown",  # "markdown" or "json"
+    format: str = "markdown",  # "markdown", "json", "latex", "tex", or "pdf"
     download: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Generate an executive decision brief covering all intelligence stages.
-    Supports markdown or json, with optional direct file download.
+    Supports interactive PDF, publication-ready LaTeX (.tex), Markdown, and JSON.
     """
     decision = db.query(Decision).filter(Decision.id == decision_id).first()
     if not decision:
@@ -307,8 +309,36 @@ def export_decision_report(
     verify_ownership(decision.owner_id, current_user.id, "decision")
 
     slug = re.sub(r"[^a-zA-Z0-9_-]", "_", decision.title)[:40] or f"decision_{decision.id}"
+    fmt = format.lower().strip()
 
-    if format.lower() == "json":
+    # 1. Interactive PDF format
+    if fmt == "pdf":
+        pdf_bytes = generate_decision_interactive_pdf(decision)
+        disposition = "attachment" if download else "inline"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"{disposition}; filename=\"{slug}_decision_dossier.pdf\""},
+        )
+
+    # 2. Interactive LaTeX format
+    if fmt in ("latex", "tex"):
+        tex_content = generate_decision_latex_report(decision)
+        if download:
+            return PlainTextResponse(
+                content=tex_content,
+                media_type="application/x-latex",
+                headers={"Content-Disposition": f"attachment; filename=\"{slug}_decision_dossier.tex\""},
+            )
+        return {
+            "decision_id": decision.id,
+            "title": decision.title,
+            "format": "latex",
+            "content": tex_content,
+        }
+
+    # 3. JSON format
+    if fmt == "json":
         json_data = generate_decision_json_report(decision)
         if download:
             return JSONResponse(
@@ -317,7 +347,7 @@ def export_decision_report(
             )
         return json_data
 
-    # Markdown format
+    # 4. Markdown format (default)
     md_content = generate_decision_markdown_report(decision)
     if download:
         return PlainTextResponse(
@@ -344,8 +374,9 @@ def save_decision_report_export(
     db: Session = Depends(get_db),
 ):
     """
-    Generates the executive decision brief and saves it as an official attachment
-    record in storage and database, making it permanently retrievable.
+    Generates the executive decision brief bundle (PDF, LaTeX .tex, and Markdown)
+    and saves them as official attachment records in storage and database,
+    making them permanently retrievable in the attachments library.
     """
     decision = db.query(Decision).filter(Decision.id == decision_id).first()
     if not decision:
@@ -355,37 +386,73 @@ def save_decision_report_export(
         )
     verify_ownership(decision.owner_id, current_user.id, "decision")
 
-    md_content = generate_decision_markdown_report(decision)
     slug = re.sub(r"[^a-zA-Z0-9_-]", "_", decision.title)[:40] or f"decision_{decision.id}"
     timestamp_suffix = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    filename = f"{slug}_Executive_Brief_{timestamp_suffix}.md"
 
-    # Save to storage directory
-    storage_file_path = settings.storage_path / f"export_{decision_id}_{timestamp_suffix}.md"
-    with open(storage_file_path, "w", encoding="utf-8") as f:
+    # 1. Generate & Save Markdown
+    md_content = generate_decision_markdown_report(decision)
+    md_filename = f"{slug}_Executive_Brief_{timestamp_suffix}.md"
+    md_storage_path = settings.storage_path / f"export_{decision_id}_{timestamp_suffix}.md"
+    with open(md_storage_path, "w", encoding="utf-8") as f:
         f.write(md_content)
 
-    file_size = len(md_content.encode("utf-8"))
-
-    # Register as attachment
-    attachment = Attachment(
+    att_md = Attachment(
         owner_id=current_user.id,
         decision_id=decision.id,
-        original_name=filename,
-        stored_path=str(storage_file_path),
+        original_name=md_filename,
+        stored_path=str(md_storage_path),
         media_type="text/markdown",
-        file_size=file_size,
+        file_size=len(md_content.encode("utf-8")),
         extracted_text=md_content,
     )
-    db.add(attachment)
+    db.add(att_md)
+
+    # 2. Generate & Save Interactive LaTeX (.tex)
+    tex_content = generate_decision_latex_report(decision)
+    tex_filename = f"{slug}_Executive_Dossier_{timestamp_suffix}.tex"
+    tex_storage_path = settings.storage_path / f"export_{decision_id}_{timestamp_suffix}.tex"
+    with open(tex_storage_path, "w", encoding="utf-8") as f:
+        f.write(tex_content)
+
+    att_tex = Attachment(
+        owner_id=current_user.id,
+        decision_id=decision.id,
+        original_name=tex_filename,
+        stored_path=str(tex_storage_path),
+        media_type="application/x-latex",
+        file_size=len(tex_content.encode("utf-8")),
+        extracted_text=tex_content,
+    )
+    db.add(att_tex)
+
+    # 3. Generate & Save Interactive Dossier PDF (.pdf)
+    pdf_bytes = generate_decision_interactive_pdf(decision)
+    pdf_filename = f"{slug}_Executive_Dossier_{timestamp_suffix}.pdf"
+    pdf_storage_path = settings.storage_path / f"export_{decision_id}_{timestamp_suffix}.pdf"
+    with open(pdf_storage_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    att_pdf = Attachment(
+        owner_id=current_user.id,
+        decision_id=decision.id,
+        original_name=pdf_filename,
+        stored_path=str(pdf_storage_path),
+        media_type="application/pdf",
+        file_size=len(pdf_bytes),
+        extracted_text=f"DecisionLens Interactive PDF Executive Dossier: {decision.title}",
+    )
+    db.add(att_pdf)
+
     db.commit()
-    db.refresh(attachment)
+    db.refresh(att_pdf)
 
     return {
-        "attachment_id": attachment.id,
-        "filename": attachment.original_name,
-        "file_size": attachment.file_size,
+        "attachment_id": att_pdf.id,
+        "filename": md_filename,
+        "pdf_filename": pdf_filename,
+        "latex_filename": tex_filename,
+        "file_size": len(pdf_bytes),
         "content": md_content,
-        "created_at": attachment.created_at.isoformat(),
-        "message": "Executive Decision Brief successfully saved to attachments library.",
+        "created_at": att_pdf.created_at.isoformat(),
+        "message": "Executive Dossier Bundle (PDF, LaTeX, and Markdown) successfully saved to attachments library.",
     }
