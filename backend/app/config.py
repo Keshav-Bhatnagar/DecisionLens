@@ -31,19 +31,71 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3002",
     ]
 
-    # External APIs (optional in Phase 1)
+    # AI Provider & Model Configuration (Gemini / OpenAI)
+    ai_provider: str = "auto"  # auto, gemini, openai, or mock
+    gemini_api_key: str = ""
+    google_api_key: str = ""
+    gemini_model: str = "gemini-1.5-flash"
+
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     whisper_model: str = "whisper-1"
 
-    # External Web Search Provider (Phase 8)
-    search_provider: str = "tavily"  # tavily, serper, duckduckgo, or mock
+    # External Web Search Provider (duckduckgo, tavily, serper, or mock)
+    search_provider: str = "duckduckgo"
     search_api_key: str = ""
     tavily_api_key: str = ""
     serper_api_key: str = ""
 
     # Optional Speech-to-Text Keys
     google_speech_api_key: str = ""
+
+    # OAuth Identity Providers (Google, GitHub, Microsoft)
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    microsoft_client_id: str = ""
+    microsoft_client_secret: str = ""
+
+    # Supabase Auth Configuration
+    supabase_url: str = "https://fzqlmmdfiiwaqawygkyf.supabase.co"
+    supabase_anon_key: str = ""
+
+    @property
+    def has_ai_key(self) -> bool:
+        """Check if any hosted LLM key (Gemini or OpenAI) is configured."""
+        return bool(
+            (self.gemini_api_key and self.gemini_api_key.strip())
+            or (self.google_api_key and self.google_api_key.strip())
+            or (self.openai_api_key and self.openai_api_key.strip())
+        )
+
+    @property
+    def active_ai_provider(self) -> str:
+        """Resolve active AI provider: explicit selection or auto-detect by configured keys."""
+        prov = (self.ai_provider or "auto").strip().lower()
+        if prov in {"gemini", "openai", "mock"}:
+            return prov
+        if (self.gemini_api_key and self.gemini_api_key.strip()) or (self.google_api_key and self.google_api_key.strip()):
+            return "gemini"
+        if self.openai_api_key and self.openai_api_key.strip():
+            return "openai"
+        return "mock"
+
+    @property
+    def active_search_provider(self) -> str:
+        """Resolve active search provider: explicit selection or auto-detect by configured keys."""
+        sp = (self.search_provider or "auto").strip().lower()
+        if sp in {"duckduckgo", "tavily", "serper", "mock"}:
+            return sp
+        if self.tavily_api_key and self.tavily_api_key.strip():
+            return "tavily"
+        if self.serper_api_key and self.serper_api_key.strip():
+            return "serper"
+        if self.search_api_key and self.search_api_key.strip():
+            return "tavily" if self.search_api_key.strip().startswith("tvly") else "serper"
+        return "duckduckgo"
 
     model_config = SettingsConfigDict(
         env_file=".env",

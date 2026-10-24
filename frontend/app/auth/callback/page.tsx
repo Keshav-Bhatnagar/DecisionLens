@@ -15,6 +15,22 @@ function CallbackHandler() {
   const [activeProviderName, setActiveProviderName] = useState<string>("Identity Provider");
 
   useEffect(() => {
+    // 1. Check URL hash (Supabase OAuth standard web flow returns #access_token=...&token_type=bearer)
+    let hashToken: string | null = null;
+    let hashError: string | null = null;
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      hashToken = hashParams.get("access_token");
+      hashError = hashParams.get("error_description") || hashParams.get("error");
+    }
+
+    if (hashError) {
+      setStatus("error");
+      setErrorMessage(hashError);
+      return;
+    }
+
+    // 2. Check query search params (standard code or error)
     const code = searchParams.get("code");
     const errorParam = searchParams.get("error");
     const errorDesc = searchParams.get("error_description");
@@ -26,42 +42,46 @@ function CallbackHandler() {
       return;
     }
 
-    if (!code) {
+    if (!code && !hashToken) {
       setStatus("error");
-      setErrorMessage("No authorization code was returned by the identity provider.");
+      setErrorMessage("No authorization code or session token was returned by the identity provider.");
       return;
     }
 
     let isMounted = true;
 
-    // Detect provider from query, state, sessionStorage, or code signature
+    // Detect provider from query, state, sessionStorage, hash, or code signature
     let provider = searchParams.get("provider") || stateParam;
-    if (!provider || !["google", "microsoft", "github"].includes(provider.toLowerCase())) {
+    if (!provider || !["google", "microsoft", "github", "supabase", "azure"].includes(provider.toLowerCase())) {
       if (typeof window !== "undefined") {
         const stored = sessionStorage.getItem("oauth_provider");
-        if (stored && ["google", "microsoft", "github"].includes(stored.toLowerCase())) {
+        if (stored && ["google", "microsoft", "github", "supabase", "azure"].includes(stored.toLowerCase())) {
           provider = stored.toLowerCase();
         }
       }
     }
 
-    if (!provider || !["google", "microsoft", "github"].includes(provider.toLowerCase())) {
-      if (code.startsWith("M.") || code.includes(".R3_") || code.length > 400) {
+    if (hashToken) {
+      provider = "supabase";
+    } else if (!provider || !["google", "microsoft", "github", "supabase", "azure"].includes(provider.toLowerCase())) {
+      if (code && (code.startsWith("M.") || code.includes(".R3_") || code.length > 400)) {
         provider = "microsoft";
-      } else if (code.startsWith("4/")) {
+      } else if (code && code.startsWith("4/")) {
         provider = "google";
-      } else if (code.length === 20) {
+      } else if (code && code.length === 20) {
         provider = "github";
       } else {
-        provider = "google";
+        provider = "supabase";
       }
     }
 
     const providerName =
-      provider === "microsoft"
+      provider === "microsoft" || provider === "azure"
         ? "Microsoft / Azure AD"
         : provider === "github"
         ? "GitHub"
+        : provider === "supabase"
+        ? "Supabase Identity"
         : "Google Workspace";
 
     setActiveProviderName(providerName);
@@ -69,11 +89,19 @@ function CallbackHandler() {
     async function completeOAuth() {
       try {
         const redirectUri = window.location.origin + "/auth/callback";
-        await authenticateOAuth({
-          provider: provider || "google",
-          code: code ?? undefined,
-          redirect_uri: redirectUri,
-        });
+        if (hashToken) {
+          await authenticateOAuth({
+            provider: "supabase",
+            token: hashToken,
+            redirect_uri: redirectUri,
+          });
+        } else {
+          await authenticateOAuth({
+            provider: provider || "supabase",
+            code: code ?? undefined,
+            redirect_uri: redirectUri,
+          });
+        }
 
         if (isMounted) {
           setStatus("success");
@@ -87,7 +115,7 @@ function CallbackHandler() {
           setErrorMessage(
             err instanceof Error
               ? err.message
-              : `Failed to exchange authorization code with ${providerName}. Please try signing in again.`
+              : `Failed to exchange authorization credentials with ${providerName}. Please try signing in again.`
           );
         }
       }

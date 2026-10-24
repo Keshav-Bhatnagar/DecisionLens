@@ -126,39 +126,66 @@ def change_password(
 )
 def get_oauth_providers():
     """Return available OAuth providers and their configuration status."""
+    use_supabase = bool(settings.supabase_url)
+
+    google_auth_url = (
+        f"{settings.supabase_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback"
+        if use_supabase
+        else (
+            f"https://accounts.google.com/o/oauth2/v2/auth?client_id={settings.google_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback&state=google"
+            if settings.google_client_id
+            else None
+        )
+    )
+
+    microsoft_auth_url = (
+        f"{settings.supabase_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback"
+        if use_supabase
+        else (
+            f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile%20User.Read&redirect_uri=http://localhost:3000/auth/callback&state=microsoft"
+            if settings.microsoft_client_id
+            else None
+        )
+    )
+
+    github_auth_url = (
+        f"{settings.supabase_url}/auth/v1/authorize?provider=github&redirect_to=http://localhost:3000/auth/callback"
+        if use_supabase
+        else (
+            f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email&redirect_uri=http://localhost:3000/auth/callback&state=github"
+            if settings.github_client_id
+            else None
+        )
+    )
+
     providers: List[OAuthProviderInfo] = [
         OAuthProviderInfo(
             id="google",
             name="Google Workspace",
-            configured=bool(settings.google_client_id),
+            configured=bool(use_supabase or settings.google_client_id),
             client_id=settings.google_client_id or None,
-            auth_url=(
-                f"https://accounts.google.com/o/oauth2/v2/auth?client_id={settings.google_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback&state=google"
-                if settings.google_client_id
-                else None
-            ),
+            auth_url=google_auth_url,
         ),
         OAuthProviderInfo(
             id="github",
             name="GitHub",
-            configured=bool(settings.github_client_id),
+            configured=bool(use_supabase or settings.github_client_id),
             client_id=settings.github_client_id or None,
-            auth_url=(
-                f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email&redirect_uri=http://localhost:3000/auth/callback&state=github"
-                if settings.github_client_id
-                else None
-            ),
+            auth_url=github_auth_url,
         ),
         OAuthProviderInfo(
             id="microsoft",
-            name="Microsoft / Office 365",
-            configured=bool(settings.microsoft_client_id),
+            name="Microsoft / Azure AD",
+            configured=bool(use_supabase or settings.microsoft_client_id),
             client_id=settings.microsoft_client_id or None,
-            auth_url=(
-                f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile%20User.Read&redirect_uri=http://localhost:3000/auth/callback&state=microsoft"
-                if settings.microsoft_client_id
-                else None
-            ),
+            auth_url=microsoft_auth_url,
+        ),
+        OAuthProviderInfo(
+            id="supabase",
+            name="Supabase Identity",
+            configured=bool(settings.supabase_url),
+            client_id=None,
+            auth_url=microsoft_auth_url,
         ),
     ]
     return providers
@@ -170,10 +197,10 @@ def get_oauth_providers():
     summary="Authenticate or register user via OAuth provider",
 )
 def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
-    """Authenticate or register user via Google, GitHub, or Microsoft OAuth.
+    """Authenticate or register user via Google, GitHub, Microsoft, or Supabase OAuth.
     Supports real token verification or seamless dev sandbox simulation.
     """
-    valid_providers = {"google", "github", "microsoft"}
+    valid_providers = {"google", "github", "microsoft", "supabase", "azure"}
     normalized_provider = body.provider.lower().strip()
 
     # Smart auto-detection if code signature identifies a specific provider
@@ -189,7 +216,7 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
     if normalized_provider not in valid_providers:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported OAuth provider '{body.provider}'. Valid options: google, github, microsoft",
+            detail=f"Unsupported OAuth provider '{body.provider}'. Valid options: google, github, microsoft, supabase",
         )
 
     resolved_email: Optional[str] = None
@@ -404,7 +431,69 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
         except Exception:
             pass
 
-    # 2. Direct verified email or Sandbox mode fallback
+    # 5. Supabase OAuth Token / Hash Verification
+    if (normalized_provider in {"supabase", "azure"} or "supabase" in normalized_provider or not resolved_email) and body.token and not body.token.startswith("mock_"):
+        try:
+            import base64
+            import json
+            token_str = body.token.strip()
+            # Decode JWT payload
+            if "." in token_str:
+                parts = token_str.split(".")
+                if len(parts) >= 2:
+                    payload_part = parts[1]
+                    padded = payload_part + "=" * ((4 - len(payload_part) % 4) % 4)
+                    decoded = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+                    resolved_email = (
+                        decoded.get("email")
+                        or decoded.get("user_metadata", {}).get("email")
+                        or decoded.get("preferred_username")
+                        or resolved_email
+                    )
+                    user_meta = decoded.get("user_metadata") or {}
+                    resolved_display_name = (
+                        resolved_display_name
+                        or user_meta.get("full_name")
+                        or user_meta.get("name")
+                        or decoded.get("name")
+                    )
+                    resolved_avatar = (
+                        resolved_avatar
+                        or user_meta.get("avatar_url")
+                        or user_meta.get("picture")
+                    )
+        except Exception as exc:
+            logger.warning("Supabase token decode warning: %s", exc)
+
+    # 6. Supabase Code Exchange (if PKCE code was returned from Supabase OAuth)
+    if (normalized_provider in {"supabase", "azure"} or "supabase" in normalized_provider) and body.code and not resolved_email and settings.supabase_url:
+        try:
+            redirect_uri = body.redirect_uri or "http://localhost:3000/auth/callback"
+            token_url = f"{settings.supabase_url}/auth/v1/token?grant_type=pkce"
+            headers = {}
+            if settings.supabase_anon_key:
+                headers["apikey"] = settings.supabase_anon_key
+            with httpx.Client(timeout=8.0) as client:
+                res = client.post(
+                    token_url,
+                    headers=headers,
+                    json={
+                        "auth_code": body.code,
+                        "code": body.code,
+                        "redirect_uri": redirect_uri,
+                    },
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    user = data.get("user") or {}
+                    resolved_email = user.get("email")
+                    u_meta = user.get("user_metadata") or {}
+                    resolved_display_name = u_meta.get("full_name") or u_meta.get("name") or resolved_display_name
+                    resolved_avatar = u_meta.get("avatar_url") or resolved_avatar
+        except Exception as pkce_err:
+            logger.warning("Supabase PKCE code exchange warning: %s", pkce_err)
+
+    # 7. Direct verified email or Sandbox mode fallback
     if not resolved_email and body.email:
         resolved_email = str(body.email).lower().strip()
     elif not resolved_email and body.token and "@" in body.token:

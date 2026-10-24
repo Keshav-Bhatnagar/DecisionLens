@@ -49,7 +49,7 @@ export default function AuthPage() {
   // OAuth Provider and Dialog State
   const [oauthProviders, setOauthProviders] = useState<OAuthProviderInfo[]>([]);
   const [showOAuthModal, setShowOAuthModal] = useState(false);
-  const [activeOAuthProvider, setActiveOAuthProvider] = useState<"google" | "github" | "microsoft">("google");
+  const [activeOAuthProvider, setActiveOAuthProvider] = useState<"google" | "github" | "microsoft" | "supabase">("google");
   const [customOAuthEmail, setCustomOAuthEmail] = useState("");
   const [oauthLoading, setOauthLoading] = useState(false);
 
@@ -155,7 +155,7 @@ export default function AuthPage() {
   }, []);
 
   // Open OAuth Dialog or Direct Redirect
-  const handleTriggerOAuth = (provider: "google" | "github" | "microsoft") => {
+  const handleTriggerOAuth = (provider: "google" | "github" | "microsoft" | "supabase") => {
     setError(null);
     setSuccessMsg(null);
     setActiveOAuthProvider(provider);
