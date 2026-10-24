@@ -50,6 +50,7 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     """Create all database tables and ensure SQLite schema migrations."""
+    import app.models  # noqa: F401 - ensure models are registered on Base.metadata
     Base.metadata.create_all(bind=engine)
 
     # Apply incremental column additions for local SQLite development if tables were created earlier
