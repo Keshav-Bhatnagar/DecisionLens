@@ -34,9 +34,13 @@ function CallbackHandler() {
 
     async function completeOAuth() {
       try {
+        const provider =
+          searchParams.get("provider") ||
+          (typeof window !== "undefined" ? sessionStorage.getItem("oauth_provider") : null) ||
+          "google";
         const redirectUri = window.location.origin + "/auth/callback";
         await authenticateOAuth({
-          provider: "google",
+          provider,
           code: code ?? undefined,
           redirect_uri: redirectUri,
         });

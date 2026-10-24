@@ -144,7 +144,7 @@ def get_oauth_providers():
             configured=bool(settings.github_client_id),
             client_id=settings.github_client_id or None,
             auth_url=(
-                f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email"
+                f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email&redirect_uri=http://localhost:3000/auth/callback"
                 if settings.github_client_id
                 else None
             ),
@@ -155,7 +155,7 @@ def get_oauth_providers():
             configured=bool(settings.microsoft_client_id),
             client_id=settings.microsoft_client_id or None,
             auth_url=(
-                f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile"
+                f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback"
                 if settings.microsoft_client_id
                 else None
             ),
@@ -244,7 +244,84 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
                 detail=f"Failed to connect to Google OAuth: {str(exc)}",
             )
 
-    # 2. Real Google Token Verification (if client_id is set and token provided)
+    # 2. Microsoft Azure AD Authorization Code Exchange
+    if normalized_provider == "microsoft" and body.code:
+        try:
+            redirect_uri = body.redirect_uri or "http://localhost:3000/auth/callback"
+            token_payload = {
+                "code": body.code,
+                "client_id": settings.microsoft_client_id,
+                "client_secret": settings.microsoft_client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            }
+            with httpx.Client(timeout=10.0) as client:
+                token_resp = client.post(
+                    "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+                    data=token_payload,
+                )
+                if token_resp.status_code == 200:
+                    t_data = token_resp.json()
+                    access_token = t_data.get("access_token")
+                    if access_token:
+                        me_resp = client.get(
+                            "https://graph.microsoft.com/v1.0/me",
+                            headers={"Authorization": f"Bearer {access_token}"},
+                        )
+                        if me_resp.status_code == 200:
+                            u_info = me_resp.json()
+                            resolved_email = u_info.get("mail") or u_info.get("userPrincipalName")
+                            resolved_display_name = resolved_display_name or u_info.get("displayName")
+                else:
+                    logger.warning("Microsoft token exchange error (%s): %s", token_resp.status_code, token_resp.text)
+        except Exception as exc:
+            logger.error("Exception during Microsoft OAuth code exchange: %s", exc)
+
+    # 3. GitHub Authorization Code Exchange
+    if normalized_provider == "github" and body.code:
+        try:
+            redirect_uri = body.redirect_uri or "http://localhost:3000/auth/callback"
+            token_payload = {
+                "code": body.code,
+                "client_id": settings.github_client_id,
+                "client_secret": settings.github_client_secret,
+                "redirect_uri": redirect_uri,
+            }
+            with httpx.Client(timeout=10.0) as client:
+                token_resp = client.post(
+                    "https://github.com/login/oauth/access_token",
+                    headers={"Accept": "application/json"},
+                    data=token_payload,
+                )
+                if token_resp.status_code == 200:
+                    t_data = token_resp.json()
+                    access_token = t_data.get("access_token")
+                    if access_token:
+                        u_resp = client.get(
+                            "https://api.github.com/user",
+                            headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
+                        )
+                        if u_resp.status_code == 200:
+                            u_info = u_resp.json()
+                            resolved_email = u_info.get("email")
+                            resolved_display_name = resolved_display_name or u_info.get("name") or u_info.get("login")
+                            resolved_avatar = resolved_avatar or u_info.get("avatar_url")
+                            if not resolved_email:
+                                emails_resp = client.get(
+                                    "https://api.github.com/user/emails",
+                                    headers={"Authorization": f"Bearer {access_token}", "Accept": "application/json"},
+                                )
+                                if emails_resp.status_code == 200:
+                                    for em in emails_resp.json():
+                                        if em.get("primary") and em.get("verified"):
+                                            resolved_email = em.get("email")
+                                            break
+                else:
+                    logger.warning("GitHub token exchange error (%s): %s", token_resp.status_code, token_resp.text)
+        except Exception as exc:
+            logger.error("Exception during GitHub OAuth code exchange: %s", exc)
+
+    # 4. Real Google Token Verification (if client_id is set and token provided)
     if normalized_provider == "google" and not resolved_email and settings.google_client_id and body.token and not body.token.startswith("mock_"):
         try:
             with httpx.Client(timeout=5.0) as client:
