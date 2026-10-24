@@ -5,11 +5,15 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from app.config import settings
 
 # Engine setup with appropriate connection arguments
-is_sqlite = settings.database_url.startswith("sqlite")
+db_url = settings.database_url
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+is_sqlite = db_url.startswith("sqlite")
 connect_args = {"check_same_thread": False} if is_sqlite else {}
 
 engine = create_engine(
-    settings.database_url,
+    db_url,
     connect_args=connect_args,
     pool_pre_ping=True,
     echo=False,
@@ -50,8 +54,17 @@ def init_db() -> None:
 
     # Apply incremental column additions for local SQLite development if tables were created earlier
     if is_sqlite:
-        with engine.connect() as conn:
-            try:
+        try:
+            with engine.connect() as conn:
+                # Check users columns
+                user_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(users);")).fetchall()]
+                if "oauth_provider" not in user_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN oauth_provider VARCHAR(50);"))
+                if "avatar_url" not in user_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500);"))
+                if "display_name" not in user_cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN display_name VARCHAR(150);"))
+
                 # Check folders columns
                 folder_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(folders);")).fetchall()]
                 if "color" not in folder_cols:
@@ -67,6 +80,8 @@ def init_db() -> None:
                     conn.execute(text("ALTER TABLE decisions ADD COLUMN record_type VARCHAR(30) DEFAULT 'decision';"))
                 if "points_reviewed" not in decision_cols:
                     conn.execute(text("ALTER TABLE decisions ADD COLUMN points_reviewed BOOLEAN DEFAULT 0;"))
+                if "domain" not in decision_cols:
+                    conn.execute(text("ALTER TABLE decisions ADD COLUMN domain VARCHAR(50) DEFAULT 'BUSINESS';"))
 
                 # Check attachments columns
                 attach_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(attachments);")).fetchall()]
@@ -74,5 +89,5 @@ def init_db() -> None:
                     conn.execute(text("ALTER TABLE attachments ADD COLUMN file_size INTEGER DEFAULT 0;"))
 
                 conn.commit()
-            except Exception:
-                pass
+        except Exception:
+            pass
