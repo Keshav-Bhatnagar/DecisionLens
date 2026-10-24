@@ -139,23 +139,16 @@ def get_oauth_providers():
         OAuthProviderInfo(
             id="microsoft",
             name="Microsoft / Azure AD",
-            configured=True,
+            configured=bool(settings.microsoft_client_id),
             client_id=settings.microsoft_client_id or None,
             auth_url=f"{base_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback",
         ),
         OAuthProviderInfo(
             id="github",
             name="GitHub",
-            configured=True,
+            configured=bool(settings.github_client_id),
             client_id=settings.github_client_id or None,
             auth_url=f"{base_url}/auth/v1/authorize?provider=github&redirect_to=http://localhost:3000/auth/callback",
-        ),
-        OAuthProviderInfo(
-            id="supabase",
-            name="Supabase Identity",
-            configured=True,
-            client_id=None,
-            auth_url=f"{base_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback",
         ),
     ]
     return providers
