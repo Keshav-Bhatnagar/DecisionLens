@@ -84,7 +84,11 @@ def test_structuring_success_with_8_categories_and_private_feedback(
     for cat in categories:
         assert cat in findings, f"Category '{cat}' missing from findings"
         assert isinstance(findings[cat], list)
-        assert len(findings[cat]) > 0, f"Expected non-empty list for category '{cat}'"
+        if cat != "contradictions":
+            assert len(findings[cat]) > 0, f"Expected non-empty list for category '{cat}'"
+        else:
+            # Epistemic Rule: No manufactured contradictions. When only trade-offs exist, contradictions is empty.
+            assert len(findings["contradictions"]) == 0
 
     # Verify summary
     assert len(findings["summary"]) > 0

@@ -1,8 +1,9 @@
 import re
+import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+from typing import Optional, Dict, Any, List, Union
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator, model_validator
 
 
 class DecisionDomain(str, Enum):
@@ -247,6 +248,41 @@ class TranscriptionResponse(BaseModel):
 # Input Structuring Schemas (Phase 6)
 # ==========================================
 
+class GroundedCognitiveItem(BaseModel):
+    id: str = Field(default_factory=lambda: f"cog_{uuid.uuid4().hex[:8]}")
+    category: str = Field(
+        ...,
+        description="Cognitive category (facts, assumptions, feelings, pros, cons, mixed_points, contradictions, unknowns)",
+    )
+    text: str = Field(..., description="The epistemically precise statement text")
+    source_spans: List[str] = Field(
+        default_factory=list,
+        description="Verbatim or near-verbatim quote/excerpt from source material supporting this claim",
+    )
+    source_ids: List[str] = Field(
+        default_factory=list,
+        description="IDs or section tags of source documents/transcripts where this originated",
+    )
+    derivation_type: str = Field(
+        "direct_extraction",
+        description="Derivation type: direct_extraction, normalized_extraction, explicit_user_inference, model_inference, or analytical_derivation",
+    )
+    epistemic_status: str = Field(
+        "confirmed_fact",
+        description="Epistemic status: confirmed_fact, estimate, expectation, projection, target, aspiration, hypothesis, unvalidated_premise, subjective_preference, explicit_risk, inferred_risk, trade_off, true_contradiction, or open_question",
+    )
+    confidence: float = Field(
+        0.95,
+        ge=0.0,
+        le=1.0,
+        description="Epistemic confidence rating between 0.0 and 1.0",
+    )
+    is_direct_extraction: bool = Field(
+        True,
+        description="True if directly extracted from source without model-driven extrapolation",
+    )
+
+
 class PrivateTranscriptFeedback(BaseModel):
     tone_observations: str = Field(
         "", description="Assessment of discussion tone, emotional intensity, or conversational dynamics"
@@ -287,12 +323,129 @@ class StructuredFindings(BaseModel):
     unknowns: List[str] = Field(
         default_factory=list, description="Missing data, unanswered questions, and open uncertainties"
     )
+    grounded_items: Optional[Dict[str, List[GroundedCognitiveItem]]] = Field(
+        default_factory=dict,
+        description="Internal source-grounding metadata mapping category to traceable items",
+    )
     private_feedback: Optional[PrivateTranscriptFeedback] = Field(
         default_factory=PrivateTranscriptFeedback, description="Private feedback on inputs/transcript"
     )
     summary: str = Field("", description="Objective summary of the input data")
     reviewed: bool = Field(False, description="Whether the user has reviewed and approved these findings")
     reviewed_at: Optional[datetime] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_grounded_data(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        categories = [
+            "facts",
+            "assumptions",
+            "feelings",
+            "pros",
+            "cons",
+            "mixed_points",
+            "contradictions",
+            "unknowns",
+        ]
+        grounded = data.get("grounded_items") or {}
+        if not isinstance(grounded, dict):
+            grounded = {}
+
+        for cat in categories:
+            raw_list = data.get(cat) or []
+            normalized_strings: List[str] = []
+            category_grounded_items: List[Dict[str, Any]] = (
+                grounded.get(cat, []) if isinstance(grounded.get(cat), list) else []
+            )
+
+            if raw_list and isinstance(raw_list, list):
+                for item in raw_list:
+                    if isinstance(item, dict):
+                        text = str(item.get("text", "")).strip()
+                        if text:
+                            normalized_strings.append(text)
+                            if not any(
+                                isinstance(g, dict) and g.get("text") == text
+                                for g in category_grounded_items
+                            ):
+                                item_copy = dict(item)
+                                if not item_copy.get("category"):
+                                    item_copy["category"] = cat
+                                if not item_copy.get("id"):
+                                    item_copy["id"] = f"cog_{uuid.uuid4().hex[:8]}"
+                                if not item_copy.get("source_spans"):
+                                    item_copy["source_spans"] = [text[:120]]
+                                if not item_copy.get("derivation_type"):
+                                    item_copy["derivation_type"] = (
+                                        "direct_extraction" if cat in {"facts", "feelings"} else "normalized_extraction"
+                                    )
+                                if not item_copy.get("epistemic_status"):
+                                    item_copy["epistemic_status"] = (
+                                        "confirmed_fact" if cat in {"facts", "pros"} else "open_question"
+                                    )
+                                category_grounded_items.append(item_copy)
+                    elif isinstance(item, str):
+                        clean_text = item.strip()
+                        if clean_text:
+                            normalized_strings.append(clean_text)
+                            if not any(
+                                isinstance(g, dict) and g.get("text") == clean_text
+                                for g in category_grounded_items
+                            ):
+                                # Infer baseline derivation and epistemic status
+                                derivation = (
+                                    "direct_extraction"
+                                    if cat in {"facts", "feelings"}
+                                    else (
+                                        "explicit_user_inference"
+                                        if cat == "assumptions"
+                                        else "normalized_extraction"
+                                    )
+                                )
+                                status_val = (
+                                    "confirmed_fact"
+                                    if cat == "facts"
+                                    else (
+                                        "subjective_preference"
+                                        if cat == "feelings"
+                                        else (
+                                            "projection"
+                                            if cat == "assumptions"
+                                            else (
+                                                "trade_off"
+                                                if cat == "mixed_points"
+                                                else (
+                                                    "true_contradiction"
+                                                    if cat == "contradictions"
+                                                    else (
+                                                        "open_question"
+                                                        if cat == "unknowns"
+                                                        else "inferred_risk"
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                                category_grounded_items.append({
+                                    "id": f"cog_{uuid.uuid4().hex[:8]}",
+                                    "category": cat,
+                                    "text": clean_text,
+                                    "source_spans": [clean_text[:120]],
+                                    "source_ids": [],
+                                    "derivation_type": derivation,
+                                    "epistemic_status": status_val,
+                                    "confidence": 0.95,
+                                    "is_direct_extraction": cat in {"facts", "feelings"},
+                                })
+                data[cat] = normalized_strings
+            grounded[cat] = category_grounded_items
+
+        data["grounded_items"] = grounded
+        return data
 
 
 class StructuringUpdate(BaseModel):
@@ -304,6 +457,7 @@ class StructuringUpdate(BaseModel):
     mixed_points: Optional[List[str]] = None
     contradictions: Optional[List[str]] = None
     unknowns: Optional[List[str]] = None
+    grounded_items: Optional[Dict[str, List[GroundedCognitiveItem]]] = None
     private_feedback: Optional[PrivateTranscriptFeedback] = None
     summary: Optional[str] = None
     mark_reviewed: bool = Field(True, description="Whether to mark the findings as reviewed")

@@ -158,6 +158,11 @@ def update_structured_findings(
         current_points["unknowns"] = payload.unknowns
     if payload.summary is not None:
         current_points["summary"] = payload.summary
+    if payload.grounded_items is not None:
+        current_points["grounded_items"] = {
+            k: [item.model_dump(mode="json") if hasattr(item, "model_dump") else item for item in v]
+            for k, v in payload.grounded_items.items()
+        }
     if payload.private_feedback is not None:
         current_points["private_feedback"] = payload.private_feedback.model_dump(mode="json")
 
