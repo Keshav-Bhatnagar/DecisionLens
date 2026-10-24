@@ -125,57 +125,37 @@ def change_password(
     summary="List available OAuth identity providers",
 )
 def get_oauth_providers():
-    """Return available OAuth providers and their configuration status."""
-    google_auth_url = (
-        f"https://accounts.google.com/o/oauth2/v2/auth?client_id={settings.google_client_id}&response_type=code&scope=openid%20email%20profile&redirect_uri=http://localhost:3000/auth/callback&state=google"
-        if settings.google_client_id
-        else None
-    )
-
-    microsoft_auth_url = (
-        f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={settings.microsoft_client_id}&response_type=code&scope=openid%20email%20profile%20User.Read&redirect_uri=http://localhost:3000/auth/callback&state=microsoft"
-        if settings.microsoft_client_id
-        else None
-    )
-
-    github_auth_url = (
-        f"https://github.com/login/oauth/authorize?client_id={settings.github_client_id}&scope=user:email&redirect_uri=http://localhost:3000/auth/callback&state=github"
-        if settings.github_client_id
-        else None
-    )
+    """Return available OAuth providers, unified under Supabase OAuth."""
+    base_url = settings.supabase_url.rstrip("/") if settings.supabase_url else "https://fzqlmmdfiiwaqawygkyf.supabase.co"
 
     providers: List[OAuthProviderInfo] = [
         OAuthProviderInfo(
             id="google",
             name="Google Workspace",
-            configured=bool(settings.google_client_id),
+            configured=True,
             client_id=settings.google_client_id or None,
-            auth_url=google_auth_url,
-        ),
-        OAuthProviderInfo(
-            id="github",
-            name="GitHub",
-            configured=bool(settings.github_client_id),
-            client_id=settings.github_client_id or None,
-            auth_url=github_auth_url,
+            auth_url=f"{base_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback",
         ),
         OAuthProviderInfo(
             id="microsoft",
             name="Microsoft / Azure AD",
-            configured=bool(settings.microsoft_client_id),
+            configured=True,
             client_id=settings.microsoft_client_id or None,
-            auth_url=microsoft_auth_url,
+            auth_url=f"{base_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback",
+        ),
+        OAuthProviderInfo(
+            id="github",
+            name="GitHub",
+            configured=True,
+            client_id=settings.github_client_id or None,
+            auth_url=f"{base_url}/auth/v1/authorize?provider=github&redirect_to=http://localhost:3000/auth/callback",
         ),
         OAuthProviderInfo(
             id="supabase",
             name="Supabase Identity",
-            configured=bool(settings.supabase_url and settings.supabase_anon_key),
+            configured=True,
             client_id=None,
-            auth_url=(
-                f"{settings.supabase_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback"
-                if settings.supabase_url
-                else None
-            ),
+            auth_url=f"{base_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback",
         ),
     ]
     return providers
@@ -452,6 +432,25 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
                         or user_meta.get("avatar_url")
                         or user_meta.get("picture")
                     )
+
+            if settings.supabase_anon_key and settings.supabase_url:
+                try:
+                    with httpx.Client(timeout=6.0) as client:
+                        u_res = client.get(
+                            f"{settings.supabase_url}/auth/v1/user",
+                            headers={
+                                "Authorization": f"Bearer {token_str}",
+                                "apikey": settings.supabase_anon_key,
+                            },
+                        )
+                        if u_res.status_code == 200:
+                            u_data = u_res.json()
+                            resolved_email = u_data.get("email") or resolved_email
+                            m = u_data.get("user_metadata") or {}
+                            resolved_display_name = m.get("full_name") or m.get("name") or resolved_display_name
+                            resolved_avatar = m.get("avatar_url") or resolved_avatar
+                except Exception as api_err:
+                    logger.warning("Supabase user API verification warning: %s", api_err)
         except Exception as exc:
             logger.warning("Supabase token decode warning: %s", exc)
 
