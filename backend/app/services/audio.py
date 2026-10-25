@@ -298,10 +298,14 @@ def transcribe_audio_google_free(audio_path: Path, language: str = "en") -> str:
         return " ".join(results).strip()
 
 
-def transcribe_audio_gemini(audio_path: Path, language: str = "en") -> str:
+def transcribe_audio_gemini(
+    audio_path: Path,
+    language: str = "en",
+    client_hint: Optional[str] = None,
+) -> str:
     """
-    Transcribe audio file using Google Gemini native multimodal audio understanding.
-    Fast (typically 1-3 seconds), highly accurate, and supports both English and Hindi.
+    Transcribe audio file using Google Gemini 3.5 Flash native multimodal audio understanding.
+    Fast (typically 2-4 seconds), executive-grade accuracy, and supports both English and Hindi.
     """
     api_key = (settings.gemini_api_key or settings.google_api_key).strip()
     if not api_key:
@@ -321,24 +325,27 @@ def transcribe_audio_gemini(audio_path: Path, language: str = "en") -> str:
     mime_type = mime_map.get(ext, "audio/wav")
 
     norm_lang = language.strip().lower()
+    hint_clause = ""
+    if client_hint and len(client_hint.strip()) > 3:
+        clean_hint = clean_noise_tokens(client_hint)
+        if clean_hint:
+            hint_clause = f"\nOptional phonetics reference from microphone draft: \"{clean_hint}\""
+
     if norm_lang == "hi":
         instruction = (
-            "Provide an accurate, verbatim speech-to-text transcript of this audio recording in Hindi "
-            "(use Devanagari script or natural conversational Hinglish as spoken). "
-            "Perform speaker diarization: if multiple speakers are talking, distinguish distinct voices and label each turn "
-            "(e.g., 'Speaker 1:', 'Speaker 2:', or use their actual names if participants state or address each other by name). "
-            "Preserve conversational back-and-forth exchanges clearly line by line. "
-            "If only one person is speaking, transcribe naturally without unnecessary speaker prefixes. "
-            "Output ONLY the transcribed dialogue without commentary, intro/outro, timestamps, or markdown code blocks."
+            "Provide an accurate, high-fidelity verbatim speech-to-text transcript of this audio in Hindi "
+            "(use Devanagari script or conversational Hinglish as spoken). "
+            "Perform speaker diarization: distinguish different speakers line by line (e.g. 'Speaker 1:', 'Speaker 2:'). "
+            "Output ONLY the transcribed dialogue with proper punctuation, without meta commentary or markdown blocks."
+            f"{hint_clause}"
         )
     else:
         instruction = (
-            "Provide an accurate, verbatim speech-to-text transcript of this audio recording in English. "
-            "Perform speaker diarization: if multiple speakers are talking, distinguish distinct voices and label each turn "
-            "(e.g., 'Speaker 1:', 'Speaker 2:', or use their actual names if participants state or address each other by name). "
-            "Preserve conversational back-and-forth exchanges clearly line by line. "
-            "If only one person is speaking, transcribe naturally without unnecessary speaker prefixes. "
-            "Output ONLY the transcribed dialogue without commentary, intro/outro, timestamps, or markdown code blocks."
+            "Provide a high-fidelity verbatim speech-to-text transcript of this audio in English. "
+            "Accurately capture all technical terminology, acronyms, trade-offs, and proper nouns. "
+            "Perform speaker diarization: distinguish different speakers line by line (e.g. 'Speaker 1:', 'Speaker 2:'). "
+            "Output ONLY the transcribed dialogue with complete sentences and punctuation, without meta commentary or markdown blocks."
+            f"{hint_clause}"
         )
 
     try:
@@ -348,9 +355,9 @@ def transcribe_audio_gemini(audio_path: Path, language: str = "en") -> str:
         audio_bytes = audio_path.read_bytes()
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
-        # Directly use fast models (gemini-flash-lite-latest responds in 1.5 - 2.5s)
+        # gemini-3.5-flash is Google's top-tier multimodal model with state-of-the-art audio speech recognition
         models_to_try = [
-            "gemini-flash-lite-latest",
+            "gemini-3.5-flash",
             "gemini-flash-latest",
         ]
 
@@ -379,7 +386,7 @@ def transcribe_audio_gemini(audio_path: Path, language: str = "en") -> str:
                     "temperature": 0.0,
                 },
             }
-            with httpx.Client(timeout=12.0) as client:
+            with httpx.Client(timeout=25.0) as client:
                 resp = client.post(url, headers=headers, json=payload)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -415,11 +422,11 @@ def transcribe_audio_file(
 ) -> str:
     """
     Transcribe audio file with multi-tiered speech-to-text pipeline:
-    0. Fast-path: Browser live-captured Web Speech transcript (< 50ms).
     1. If force_mock=True (unit tests), returns unit test mock text.
-    2. Tier 1: Google Gemini native multimodal speech recognition (fast, high accuracy, English & Hindi).
+    2. Tier 1: Google Gemini 3.5 Flash native multimodal speech recognition (high fidelity, English & Hindi).
     3. Tier 2: OpenAI Whisper (whisper-1) if OpenAI API key is configured.
-    4. Tier 3: FFmpeg + Google Speech Recognition v2.
+    4. Tier 3: Browser live-captured Web Speech transcript if remote models are unavailable.
+    5. Tier 4: FFmpeg + Google Speech Recognition v2.
     Strictly restricted to 'en' and 'hi'.
     """
     norm_lang = language.strip().lower()
@@ -434,18 +441,15 @@ def transcribe_audio_file(
         logger.info(f"Using mock transcription for testing (language={norm_lang}, force_mock=True)")
         return get_mock_transcript(norm_lang)
 
-    # 0. Fast-path: If browser Web Speech API captured spoken words in real time, use immediately (< 50ms)
-    if client_transcript and len(client_transcript.strip()) > 3:
-        cleaned_client = clean_noise_tokens(client_transcript)
-        if cleaned_client:
-            logger.info(f"Fast-path: utilizing browser speech transcript ({len(cleaned_client)} chars)")
-            return cleaned_client
-
-    # 1. Tier 1: Google Gemini multimodal transcription (fastest hosted STT, 1.5 - 2.5 seconds)
+    # 1. Tier 1: Google Gemini 3.5 Flash multimodal transcription (highest quality)
     gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
     if gemini_key:
         try:
-            gemini_text = transcribe_audio_gemini(audio_path, language=norm_lang)
+            gemini_text = transcribe_audio_gemini(
+                audio_path,
+                language=norm_lang,
+                client_hint=client_transcript,
+            )
             if gemini_text and gemini_text.strip():
                 return gemini_text.strip()
         except Exception as exc:
@@ -474,7 +478,7 @@ def transcribe_audio_file(
         except Exception as exc:
             logger.warning(f"OpenAI Whisper transcription failed ({exc}). Falling back to browser/Google Speech.")
 
-    # 3. Tier 3: Browser live-captured Web Speech transcript if provided
+    # 3. Tier 3: Browser live-captured Web Speech transcript fallback if remote AI failed
     if client_transcript and client_transcript.strip():
         cleaned_client = clean_noise_tokens(client_transcript)
         if cleaned_client:
