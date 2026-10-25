@@ -139,37 +139,57 @@ def generate_universal_decision_gaps(
     # Concatenate all available evidence for sufficiency checking
     all_evidence_lower = f"{full_text_lower} " + " ".join(str(f).lower() for f in stage2_facts)
 
-    # 2. Extract explicitly stated candidate options
+    # 2. Extract explicitly stated candidate options without fabricating or capturing verbal phrases
     extracted_options: List[str] = []
-    # Match patterns like: "evaluating PostgreSQL, MongoDB, and PostgreSQL + Redis", "options are: X, Y, Z"
-    opt_match = re.search(
-        r'(?:considering|options (?:are|include)|evaluating|between)\s*(?:three|two|several|the following)?[:\s]+([^.]+)',
+
+    # A. Explicit colon lists: e.g. "platform: PostgreSQL or MongoDB", "options: A, B", "candidates: X, Y"
+    colon_m = re.search(
+        r'(?:options|candidates|alternatives|platform|technologies|vendors|choices|cars|database|between two [a-z]+)[:\s]+([A-Za-z0-9\s\-]+?)\s+(?:and|or|vs\.?|versus)\s+([A-Za-z0-9\s\-]+?)(?:[.,;\n]|$)',
         full_text,
         re.IGNORECASE,
     )
-    if opt_match:
-        for p in re.split(r',|\band\b|;|\bor\b', opt_match.group(1)):
-            cleaned = re.sub(
-                r'^(?:are\s+|the\s+(?:first|second|third|fourth)\s+is\s+|a\s+|an\s+|the\s+)+',
-                '',
-                p.strip(),
-                flags=re.IGNORECASE,
-            )
-            cleaned = cleaned.strip(" .:")
-            if cleaned and 2 < len(cleaned) < 55 and cleaned not in extracted_options:
-                extracted_options.append(cleaned)
+    if colon_m:
+        o1, o2 = colon_m.group(1).strip(), colon_m.group(2).strip()
+        stop_words = {"the", "our", "this", "what", "which", "evaluating", "considering", "two", "three"}
+        if len(o1) > 1 and len(o2) > 1 and o1.lower() not in stop_words and o2.lower() not in stop_words:
+            extracted_options = [o1, o2]
 
-    # Match "X vs Y" or "X versus Y"
+    # B. "between X and/or Y" (ignoring verbal stop phrases)
     if not extracted_options:
-        vs_match = re.search(
-            r'([A-Za-z0-9\s\-]{3,35})\s+(?:versus|vs\.?)\s+([A-Za-z0-9\s\-]{3,35})',
+        between_m = re.search(
+            r'\bbetween\s+(?:two\s+[a-z]+\s*:\s*)?([A-Za-z0-9\s\-]{2,35}?)\s+(?:and|or|versus|vs\.?)\s+([A-Za-z0-9\s\-]{2,35}?)(?:[.,;\n]|$)',
             full_text,
             re.IGNORECASE,
         )
-        if vs_match:
-            o1, o2 = vs_match.group(1).strip(), vs_match.group(2).strip()
-            if o1.lower() not in ["the", "this", "our"] and o2.lower() not in ["the", "this", "our"]:
+        if between_m:
+            o1, o2 = between_m.group(1).strip(), between_m.group(2).strip()
+            stop = {"the", "our", "this", "two", "three", "several", "them", "evaluating", "considering", "transactional"}
+            if o1.lower() not in stop and o2.lower() not in stop and not o1.lower().startswith("two ") and not o2.lower().startswith("two "):
                 extracted_options = [o1, o2]
+
+    # C. "X vs Y" or "X versus Y"
+    if not extracted_options:
+        vs_m = re.search(
+            r'([A-Za-z0-9\s\-]{2,35})\s+(?:versus|vs\.?)\s+([A-Za-z0-9\s\-]{2,35})',
+            full_text,
+            re.IGNORECASE,
+        )
+        if vs_m:
+            o1, o2 = vs_m.group(1).strip(), vs_m.group(2).strip()
+            stop = {"the", "our", "this", "what", "which", "evaluating"}
+            if o1.lower() not in stop and o2.lower() not in stop:
+                extracted_options = [o1, o2]
+
+    # D. Named offers or locations: "offer from X and another from Y", "relocate to X or Y"
+    if not extracted_options:
+        offer_m = re.search(
+            r'(?:offer from|relocate to|moving to)\s+([A-Za-z0-9\s\-]{2,35}?)\s+(?:and(?: another from)?|or)\s+([A-Za-z0-9\s\-]{2,35}?)(?:[.,;\n]|$)',
+            full_text,
+            re.IGNORECASE,
+        )
+        if offer_m:
+            o1, o2 = offer_m.group(1).strip(), offer_m.group(2).strip()
+            extracted_options = [o1, o2]
 
     # 3. Classify Reasoning Mode(s)
     is_diagnosis = any(w in full_text_lower for w in [
@@ -191,8 +211,10 @@ def generate_universal_decision_gaps(
         "should we acquire", "should we invest", "evaluate whether", "worth acquiring", "acquisition"
     ])
     is_selection = any(w in full_text_lower for w in [
-        "choose", "select", "which", "versus", " vs ", "migrate from", "compare", "alternative"
-    ]) or bool(extracted_options)
+        "choose", "select", "which", "versus", " vs ", "migrate from", "compare",
+        "alternative", "job offer", "offers", "offer", "accept", "moving to", "relocate",
+        "buy or rent", "between", "decide between", "college", "car", "database"
+    ]) or bool(extracted_options) or (not is_diagnosis and not is_timing and not is_strategy)
 
     # 4. Check what evidence is ALREADY established (Sufficiency & Non-Redundancy Filters)
     has_budget = any(pat in all_evidence_lower for pat in [
@@ -460,200 +482,103 @@ def generate_universal_decision_gaps(
             )
             gap_counter += 1
 
-    elif any(w in full_text_lower for w in ["college", "university", "admissions", "school", "degree"]):
-        # Education / College Selection
-        origin_tag = _get_origin("Education Selection Mode")
+    # 5. Selection & Comparative Decision Mode
+    # Handles education, career, personal, consumer, business, and technical selection identically without domain checklists
+    if is_selection or (not is_diagnosis and not is_timing and not is_strategy):
+        origin_tag = _get_origin("Universal Selection & Comparative Engine")
         opt_names = extracted_options[:3]
+        decision_subject = (title or problem or "this decision").strip(" ?.:")
 
-        if not has_academic_field:
-            gaps.append(
-                GapItem(
-                    id=f"gap_{gap_counter}",
-                    title="Target Academic Field & Degree Program",
-                    question="What specific degree program, academic discipline, or long-term career outcome are you targeting?",
-                    reason="College selection must be evaluated based on the strength and faculty of specific departments, not general institutional reputation.",
-                    gap_type="GOAL",
-                    importance="critical",
-                    priority_score=gap_counter,
-                    affected_options=opt_names,
-                    affected_dimensions=["academic_program", "career_alignment"],
-                    recommended_resolution_method="ask_user",
-                    status="pending",
-                    source_origin=origin_tag,
-                    derived_from=["decision_context", "education_requirement"],
-                    materiality_reason="A college that ranks highly overall may have a weak program in the student's chosen major, altering the winning choice.",
-                    created_at=now_str,
-                    updated_at=now_str,
-                )
-            )
-            gap_counter += 1
-
-        if not has_budget:
-            gaps.append(
-                GapItem(
-                    id=f"gap_{gap_counter}",
-                    title="Maximum Acceptable Annual Budget & Financial Boundary",
-                    question="What is your maximum acceptable annual budget for tuition, fees, and living expenses?",
-                    reason="Establishes a firm financial boundary to eliminate options that require unmanageable debt or exceed family resources.",
-                    gap_type="CONSTRAINT",
-                    importance="high",
-                    priority_score=gap_counter,
-                    affected_options=opt_names,
-                    affected_dimensions=["tuition_budget", "financial_feasibility"],
-                    recommended_resolution_method="ask_user",
-                    status="pending",
-                    source_origin=origin_tag,
-                    derived_from=["decision_context", "education_requirement"],
-                    materiality_reason="Financial constraints immediately disqualify institutions exceeding budget ceilings before deeper evaluation.",
-                    created_at=now_str,
-                    updated_at=now_str,
-                )
-            )
-            gap_counter += 1
-
-        if not has_location_pref:
-            gaps.append(
-                GapItem(
-                    id=f"gap_{gap_counter}",
-                    title="Geographic Location & Campus Environment Preferences",
-                    question="What geographic regions, campus settings (urban vs suburban), or travel constraints are non-negotiable for this choice?",
-                    reason="Clarifies personal lifestyle and commuting constraints that affect student retention and well-being.",
-                    gap_type="PREFERENCE",
-                    importance="medium",
-                    priority_score=gap_counter,
-                    affected_options=opt_names,
-                    affected_dimensions=["geographic_location", "campus_environment"],
-                    recommended_resolution_method="ask_user",
-                    status="pending",
-                    source_origin=origin_tag,
-                    derived_from=["decision_context", "education_requirement"],
-                    materiality_reason="Filters out geographic locations that the decision-maker is unwilling or unable to attend.",
-                    created_at=now_str,
-                    updated_at=now_str,
-                )
-            )
-            gap_counter += 1
-
-        if extracted_options:
-            gaps.append(
-                GapItem(
-                    id=f"gap_{gap_counter}",
-                    title="Comparative Placement Statistics & Accreditation",
-                    question=f"What are the verified career placement statistics, employer recruitment networks, and program accreditations between {' and '.join(extracted_options[:2])}?",
-                    reason="Provides verifiable external empirical data on postgraduate career outcomes and return on educational investment.",
-                    gap_type="COMPARATIVE",
-                    importance="high",
-                    priority_score=gap_counter,
-                    affected_options=opt_names,
-                    affected_dimensions=["career_placement", "institutional_reputation"],
-                    recommended_resolution_method="web_research",
-                    status="pending",
-                    source_origin=origin_tag,
-                    derived_from=["decision_context", "education_requirement"],
-                    materiality_reason="Objective graduate placement outcomes validate whether an institution delivers on its stated career claims.",
-                    created_at=now_str,
-                    updated_at=now_str,
-                )
-            )
-            gap_counter += 1
-
-    else:
-        # General / Technical Selection Mode
-        origin_tag = _get_origin("Technical & Comparative Selection Mode")
-        opt_names = extracted_options[:3]
-
+        # Dimension A: Evaluative Criteria & Priority Weighting
         if not has_criteria:
-            is_tech = any(w in full_text_lower for w in ["database", "infrastructure", "latency", "throughput", "system", "architecture"])
-            q_text = (
-                "What peak query throughput, concurrency, and read/write latency SLAs must the system achieve under peak operational load?"
-                if is_tech
-                else f"What primary criteria, success metrics, and non-negotiable requirements will determine the winning alternative for '{title or 'this decision'}'?"
-            )
             gaps.append(
                 GapItem(
                     id=f"gap_{gap_counter}",
-                    title="Core Performance & Success Criteria",
-                    question=q_text,
-                    reason="Defines the measurable standard that any acceptable option must satisfy, establishing clear evaluation criteria.",
-                    gap_type="QUANTITATIVE" if is_tech else "REQUIREMENT",
+                    title="Primary Evaluative Criteria & Success Priorities",
+                    question=f"What primary criteria, personal/organizational priorities, and non-negotiable success factors will determine the winning alternative for '{decision_subject}'?",
+                    reason="Without explicit evaluative criteria and priority weighting, competing alternatives cannot be objectively scored or compared against the decision-maker's actual requirements.",
+                    gap_type="REQUIREMENT",
                     importance="critical",
                     priority_score=gap_counter,
                     affected_options=opt_names,
-                    affected_dimensions=["performance_slas", "success_criteria"],
+                    affected_dimensions=["evaluative_criteria", "success_metrics", "priority_weighting"],
                     recommended_resolution_method="ask_user",
                     status="pending",
                     source_origin=origin_tag,
                     derived_from=["decision_context", "selection_requirement"],
-                    materiality_reason="Without quantified performance requirements, options cannot be objectively scored or eliminated.",
+                    materiality_reason="Directly establishes the decision matrix; without explicit priorities, alternatives cannot be scored or ranked against trade-offs.",
                     created_at=now_str,
                     updated_at=now_str,
                 )
             )
             gap_counter += 1
 
+        # Dimension B: Boundary Constraints (Financial, Operational, or Geographic Limits)
         if not has_budget:
             gaps.append(
                 GapItem(
                     id=f"gap_{gap_counter}",
-                    title="Financial Expenditure Boundary & Budget Ceiling",
-                    question="What is the maximum acceptable financial investment or recurring operating expenditure limit for this decision?",
-                    reason="Establishes a firm financial boundary to filter out solutions that exceed available capital.",
+                    title="Boundary Constraints & Feasibility Limits",
+                    question=f"What is the maximum acceptable financial investment, cost ceiling, or non-negotiable boundary constraint for '{decision_subject}'?",
+                    reason="Establishes a firm feasibility boundary to eliminate alternatives that require excessive spending or violate fundamental constraints.",
                     gap_type="CONSTRAINT",
                     importance="high",
                     priority_score=gap_counter,
                     affected_options=opt_names,
-                    affected_dimensions=["budget_constraints", "financial_feasibility"],
+                    affected_dimensions=["boundary_constraints", "financial_feasibility", "spending_limits"],
                     recommended_resolution_method="ask_user",
                     status="pending",
                     source_origin=origin_tag,
                     derived_from=["decision_context", "selection_requirement"],
-                    materiality_reason="Disqualifies candidates whose total cost of ownership exceeds available organizational spending limits.",
+                    materiality_reason="Disqualifies candidate options that exceed available capital or violate hard boundaries before deeper analysis.",
                     created_at=now_str,
                     updated_at=now_str,
                 )
             )
             gap_counter += 1
 
+        # Dimension C: Empirical Comparative Evidence & Verified Trade-Offs (when candidate options exist)
         if extracted_options and len(extracted_options) >= 2 and not has_benchmarks:
             gaps.append(
                 GapItem(
                     id=f"gap_{gap_counter}",
-                    title="Empirical Comparative Performance Benchmarks",
-                    question=f"What are the published empirical benchmarks, operational trade-offs, and verified performance metrics between {' and '.join(extracted_options[:2])}?",
-                    reason="Gathers independent, third-party performance data to validate alternative viability rather than relying on unverified assumptions.",
+                    title="Empirical Comparative Evidence & Verified Trade-Offs",
+                    question=f"What are the published specifications, verified empirical metrics, and documented trade-offs between {' and '.join(extracted_options[:2])} across key decision factors?",
+                    reason="Gathers objective external evidence and verified data points to validate alternative claims rather than relying on unverified assumptions.",
                     gap_type="COMPARATIVE",
                     importance="high",
                     priority_score=gap_counter,
                     affected_options=opt_names,
-                    affected_dimensions=["comparative_benchmarks", "technical_trade_offs"],
+                    affected_dimensions=["comparative_evidence", "empirical_trade_offs"],
                     recommended_resolution_method="web_research",
                     status="pending",
                     source_origin=origin_tag,
                     derived_from=["decision_context", "selection_requirement"],
-                    materiality_reason="Provides objective evidence to compare candidates directly across throughput, latency, and reliability.",
+                    materiality_reason="Objective empirical evidence confirms whether candidate alternatives genuinely deliver on claimed capabilities, terms, or performance.",
                     created_at=now_str,
                     updated_at=now_str,
                 )
             )
             gap_counter += 1
 
+        # Dimension D: Long-Term Feasibility & Execution Bandwidth
         if not has_operational:
             gaps.append(
                 GapItem(
                     id=f"gap_{gap_counter}",
-                    title="Operational Maintenance & Implementation Capacity",
-                    question="What dedicated operational maintenance capacity, team expertise, and ongoing monitoring resources are available to support the selected solution?",
-                    reason="Determines whether the team has the operational bandwidth and skills required to maintain the chosen alternative in production.",
+                    title="Long-Term Feasibility & Execution Bandwidth",
+                    question=f"What ongoing operational effort, maintenance overhead, or personal lifestyle adjustments are required to sustain the selected alternative for '{decision_subject}' long-term?",
+                    reason="Determines whether the ongoing operational demands, personal capacity, or maintenance overhead of the chosen alternative are sustainable over time.",
                     gap_type="OPERATIONAL",
                     importance="medium",
                     priority_score=gap_counter,
                     affected_options=opt_names,
-                    affected_dimensions=["operational_complexity", "team_expertise"],
+                    affected_dimensions=["operational_feasibility", "maintenance_overhead", "execution_capacity"],
                     recommended_resolution_method="ask_user",
                     status="pending",
                     source_origin=origin_tag,
                     derived_from=["decision_context", "selection_requirement"],
-                    materiality_reason="Prevents selecting complex architectures that exceed team maintenance capacity and create long-term operational fragility.",
+                    materiality_reason="Prevents selecting an option that appears attractive upfront but creates unsustainable ongoing maintenance overhead, organizational friction, or personal regret.",
                     created_at=now_str,
                     updated_at=now_str,
                 )
