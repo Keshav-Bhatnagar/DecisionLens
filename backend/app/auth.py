@@ -99,6 +99,8 @@ def get_current_user(
     return user
 
 
+
+
 def verify_ownership(
     resource_owner_id: int,
     current_user_id: int,

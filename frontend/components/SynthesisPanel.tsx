@@ -67,30 +67,27 @@ export default function SynthesisPanel({
     setLoading(true);
     setError(null);
     try {
-      if (!synthesis) {
-        try {
-          const latest = await getDecisionSynthesis(decisionId);
-          setSynthesis(latest);
-          setActiveRoadmap(latest.roadmap);
-        } catch {
-          // May not be synthesized yet
-        }
-      }
 
-      try {
-        const snapList = await getAnalysisSnapshots(decisionId);
-        setSnapshots(snapList);
-      } catch {
-        // No snapshots yet
-      }
+      // Fetch synthesis, snapshots, and roadmap concurrently in parallel
+      const [synthRes, snapListRes, roadmapRes] = await Promise.allSettled([
+        !synthesis ? getDecisionSynthesis(decisionId) : Promise.resolve(synthesis),
+        getAnalysisSnapshots(decisionId),
+        getActiveRoadmap(decisionId),
+      ]);
 
-      try {
-        const currentRoadmap = await getActiveRoadmap(decisionId);
-        setActiveRoadmap(currentRoadmap);
-      } catch {
-        // Handled via synthesis roadmap
+
+      if (synthRes.status === "fulfilled" && synthRes.value) {
+        setSynthesis(synthRes.value);
+        setActiveRoadmap(synthRes.value.roadmap);
+      }
+      if (snapListRes.status === "fulfilled" && snapListRes.value) {
+        setSnapshots(snapListRes.value);
+      }
+      if (roadmapRes.status === "fulfilled" && roadmapRes.value) {
+        setActiveRoadmap(roadmapRes.value);
       }
     } catch (err: unknown) {
+
       console.error(err);
     } finally {
       setLoading(false);

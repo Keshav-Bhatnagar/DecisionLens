@@ -10,14 +10,16 @@ if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 is_sqlite = db_url.startswith("sqlite")
-connect_args = {"check_same_thread": False} if is_sqlite else {}
+engine_kwargs = {"echo": False}
+if is_sqlite:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 20
+    engine_kwargs["pool_recycle"] = 300
+    engine_kwargs["pool_pre_ping"] = False  # Avoid 450ms WAN roundtrip ping on every request
 
-engine = create_engine(
-    db_url,
-    connect_args=connect_args,
-    pool_pre_ping=True,
-    echo=False,
-)
+engine = create_engine(db_url, **engine_kwargs)
 
 # Enable foreign key constraints in SQLite
 if is_sqlite:

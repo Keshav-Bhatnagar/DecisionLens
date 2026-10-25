@@ -137,20 +137,15 @@ export default function DecisionDetailPage({
         }
       }
 
-      try {
-        const f = await getFolder(d.folder_id);
-        setFolder(f);
-      } catch {
-        // Folder might be inaccessible
-      }
-
-      try {
-        const atts = await getAttachments(decisionId);
-        setAttachments(atts);
-      } catch {
-        setAttachments([]);
-      }
+      // Fetch folder and attachments concurrently in parallel
+      const [folderRes, attsRes] = await Promise.allSettled([
+        getFolder(d.folder_id),
+        getAttachments(decisionId),
+      ]);
+      if (folderRes.status === "fulfilled") setFolder(folderRes.value);
+      if (attsRes.status === "fulfilled") setAttachments(attsRes.value);
     } catch (err: unknown) {
+
       setError(err instanceof Error ? err.message : "Failed to load decision");
     } finally {
       setLoading(false);

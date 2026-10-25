@@ -300,16 +300,16 @@ export default function PointCircularGallery({
               if (diff === 1) {
                 translateX = cardDimensions.translateX;
                 translateZ = cardDimensions.translateZ;
-                rotateY = "-24deg";
+                rotateY = "-12deg";
                 scale = cardDimensions.neighborScale;
-                opacity = 0.55;
+                opacity = 0.9;
                 zIndex = 20;
               } else if (diff === -1) {
                 translateX = `-${cardDimensions.translateX}`;
                 translateZ = cardDimensions.translateZ;
-                rotateY = "24deg";
+                rotateY = "12deg";
                 scale = cardDimensions.neighborScale;
-                opacity = 0.55;
+                opacity = 0.9;
                 zIndex = 20;
               }
 
@@ -324,7 +324,7 @@ export default function PointCircularGallery({
                   className={`absolute ${cardDimensions.widthClass} ${cardDimensions.heightClass} rounded-2xl transition-all duration-500 ease-[cubic-bezier(0.18,0.85,0.25,1)] ${
                     isCenter
                       ? "cursor-default"
-                      : "cursor-pointer hover:opacity-85 hover:scale-[0.82]"
+                      : "cursor-pointer hover:opacity-100 hover:scale-[0.82]"
                   }`}
                   style={{
                     transform: `translate3d(${translateX}, 0, ${translateZ}) scale(${scale}) rotateY(${rotateY})`,
@@ -333,14 +333,15 @@ export default function PointCircularGallery({
                     transformStyle: "preserve-3d",
                   }}
                 >
-                  {/* Point Card Frame with 3D Depth: Crisp Center & Semi-Blurred Background */}
+                  {/* Point Card Frame with Crisp Depth */}
                   <div
                     className={`w-full h-full rounded-2xl flex flex-col justify-between p-5 sm:p-6 transition-all duration-300 relative ${
                       isCenter
-                        ? "bg-white border-2 border-indigo-200/90 shadow-2xl ring-1 ring-indigo-500/10 blur-none opacity-100"
-                        : "bg-white/60 border border-slate-200/80 shadow-md backdrop-blur-md opacity-40 blur-[1.5px] hover:blur-none hover:opacity-80 hover:bg-white/80"
+                        ? "bg-white border-2 border-indigo-200/90 shadow-2xl ring-1 ring-indigo-500/10 opacity-100"
+                        : "bg-white border border-slate-200 shadow-md opacity-90 hover:opacity-100"
                     }`}
                   >
+
                     {/* Top Specular Lighting Edge */}
                     <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-white to-transparent pointer-events-none rounded-t-2xl" />
 
@@ -351,7 +352,7 @@ export default function PointCircularGallery({
                           className={`w-6 h-6 rounded-lg text-xs font-mono font-bold flex items-center justify-center shrink-0 shadow-2xs ${
                             isCenter
                               ? "bg-indigo-600 text-white"
-                              : "bg-slate-200/80 text-slate-500"
+                              : "bg-slate-200 text-slate-700 font-bold"
                           }`}
                         >
                           {String(idx + 1).padStart(2, "0")}
@@ -408,11 +409,12 @@ export default function PointCircularGallery({
                           className="w-full h-full text-[15px] sm:text-[15.5px] leading-[1.7] text-slate-900 placeholder:text-slate-400 bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-normal scrollbar-none"
                         />
                       ) : (
-                        <p className="text-sm text-slate-400 line-clamp-6 leading-relaxed select-none">
+                        <p className="text-sm text-slate-700 font-medium line-clamp-6 leading-relaxed select-none">
                           {item || `Empty ${title.toLowerCase()} point...`}
                         </p>
                       )}
                     </div>
+
 
                     {/* Card Footer: Reading Metrics & Helpful Hint */}
                     <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
