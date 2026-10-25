@@ -51,6 +51,11 @@ export default function AppShell({
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
+  // Automatically close mobile sidebar on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   // Load saved sidebar collapse preference
   useEffect(() => {
     try {
@@ -118,14 +123,15 @@ export default function AppShell({
         }`}
       >
         {/* Calm Contextual Topbar: Breadcrumbs + User Info */}
-        <header className="sticky top-0 z-30 bg-[#F5F1E8]/95 backdrop-blur-xs border-b border-[#D9D2C3] px-6 h-14 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-[#F5F1E8]/95 backdrop-blur-xs border-b border-[#D9D2C3] px-4 sm:px-6 h-14 flex items-center justify-between">
           {/* Left: Mobile Menu & Breadcrumbs */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             {/* Mobile Hamburger Button */}
             <button
+              type="button"
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden p-1.5 text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40 rounded-[4px] transition-colors"
-              aria-label="Open sidebar"
+              className="lg:hidden w-8 h-8 flex items-center justify-center text-[#161E33] bg-[#FCFBF8] border border-[#D9D2C3] hover:bg-[#EFEADF] active:bg-[#D9D2C3]/60 rounded-[4px] transition-colors shrink-0 shadow-2xs"
+              aria-label="Open navigation sidebar"
             >
               <Menu className="w-4 h-4" />
             </button>

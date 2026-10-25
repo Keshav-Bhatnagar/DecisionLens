@@ -71,6 +71,9 @@ export default function Sidebar({
 
   const collapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
   const mobileOpen = controlledMobileOpen !== undefined ? controlledMobileOpen : internalMobileOpen;
+  // On mobile (when drawer is open), always display fully expanded view.
+  // On desktop, follow the collapsed state.
+  const isExpanded = !collapsed || mobileOpen;
 
   // Modals
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
@@ -117,6 +120,25 @@ export default function Sidebar({
     }
   }, [onCloseMobile]);
 
+  // Lock body scroll and listen for Escape key when mobile sidebar is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          closeMobile();
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [mobileOpen, closeMobile]);
+
   const loadSidebarData = useCallback(async () => {
     try {
       const u = await getMe();
@@ -153,6 +175,7 @@ export default function Sidebar({
   }, [pathname, closeMobile]);
 
   const handleLogout = () => {
+    closeMobile();
     clearStoredToken();
     setUser(null);
     router.push("/auth");
@@ -242,26 +265,28 @@ export default function Sidebar({
       {mobileOpen && (
         <div
           onClick={closeMobile}
-          className="lg:hidden fixed inset-0 z-40 bg-black/20 backdrop-blur-xs transition-opacity"
+          className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-200"
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar Container: 240px wide, darker paper #EFEADF with 1px right border #D9D2C3 */}
+      {/* Sidebar Container: 280px drawer on mobile, 240px (or 64px collapsed) on desktop */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#EFEADF] border-r border-[#D9D2C3] text-[#161E33] transition-all duration-200 ease-in-out font-ui ${
-          collapsed ? "w-16" : "w-[240px]"
+        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#EFEADF] border-r border-[#D9D2C3] text-[#161E33] transition-transform lg:transition-all duration-200 ease-in-out font-ui shadow-2xl lg:shadow-none w-[280px] max-w-[85vw] ${
+          collapsed ? "lg:w-16" : "lg:w-[240px]"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
-        {/* Header: Logo + Name + Collapse Toggle */}
+        {/* Header: Logo + Name + Actions */}
         <div className="h-14 px-4 border-b border-[#D9D2C3] flex items-center justify-between shrink-0">
           <Link
             href="/dashboard"
+            onClick={closeMobile}
             className="flex items-center gap-2.5 overflow-hidden group"
           >
             <div className="w-6 h-6 rounded-[4px] bg-[#161E33] text-white flex items-center justify-center font-semibold text-xs shrink-0">
               DL
             </div>
-            {!collapsed && (
+            {isExpanded && (
               <span className="font-medium text-[15px] tracking-tight text-[#161E33]">
                 DecisionLens
               </span>
@@ -270,22 +295,36 @@ export default function Sidebar({
 
           {/* Desktop collapse toggle */}
           <button
+            type="button"
             onClick={toggleCollapsed}
-            className="hidden lg:flex items-center justify-center w-6 h-6 rounded-[4px] text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40 transition-colors"
+            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-[4px] text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40 transition-colors"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4" />
             ) : (
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-4 h-4" />
             )}
+          </button>
+
+          {/* Mobile close button */}
+          <button
+            type="button"
+            onClick={closeMobile}
+            className="lg:hidden flex items-center justify-center w-8 h-8 rounded-[4px] text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/50 active:scale-95 transition-all"
+            title="Close sidebar"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Secondary Action Button: Outlined "New decision" button (4px radius, no shadow) */}
+        {/* Secondary Action Button: Outlined "New decision" button */}
         <div className="p-3 border-b border-[#D9D2C3]">
-          {collapsed ? (
+          {!isExpanded ? (
             <button
+              type="button"
               onClick={() => setShowNewDecisionModal(true)}
               className="w-10 h-10 mx-auto rounded-[4px] bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
               title="New decision"
@@ -294,7 +333,11 @@ export default function Sidebar({
             </button>
           ) : (
             <button
-              onClick={() => setShowNewDecisionModal(true)}
+              type="button"
+              onClick={() => {
+                setShowNewDecisionModal(true);
+                closeMobile();
+              }}
               className="w-full py-2 px-3 rounded-[4px] bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] font-medium text-[13px] flex items-center justify-center gap-1.5 transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
             >
               <Plus className="w-4 h-4" />
@@ -304,7 +347,7 @@ export default function Sidebar({
         </div>
 
         {/* Search input (expanded only) */}
-        {!collapsed && (
+        {isExpanded && (
           <div className="px-3 pt-3 pb-1 shrink-0">
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8B909C]" />
@@ -325,6 +368,7 @@ export default function Sidebar({
           <nav className="space-y-0.5">
             <Link
               href="/dashboard"
+              onClick={closeMobile}
               className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
                 pathname === "/dashboard" && !pathname.includes("ledger")
                   ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
@@ -335,11 +379,12 @@ export default function Sidebar({
               <LayoutDashboard className={`w-4 h-4 shrink-0 ${
                 pathname === "/dashboard" && !pathname.includes("ledger") ? "text-[#2F5D8F]" : "text-[#5A6275]"
               }`} />
-              {!collapsed && <span>Dashboard</span>}
+              {isExpanded && <span>Dashboard</span>}
             </Link>
 
             <Link
               href="/dashboard?view=ledger"
+              onClick={closeMobile}
               className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
                 pathname === "/dashboard" && pathname.includes("ledger")
                   ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
@@ -350,11 +395,12 @@ export default function Sidebar({
               <FileText className={`w-4 h-4 shrink-0 ${
                 pathname === "/dashboard" && pathname.includes("ledger") ? "text-[#2F5D8F]" : "text-[#5A6275]"
               }`} />
-              {!collapsed && <span>Decision ledger</span>}
+              {isExpanded && <span>Decision ledger</span>}
             </Link>
 
             <Link
               href="/profile"
+              onClick={closeMobile}
               className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
                 pathname === "/profile"
                   ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
@@ -365,21 +411,24 @@ export default function Sidebar({
               <UserIcon className={`w-4 h-4 shrink-0 ${
                 pathname === "/profile" ? "text-[#2F5D8F]" : "text-[#5A6275]"
               }`} />
-              {!collapsed && <span>Profile &amp; settings</span>}
+              {isExpanded && <span>Profile &amp; settings</span>}
             </Link>
           </nav>
 
           {/* Workspaces Section */}
           <div className="space-y-1">
-            {!collapsed ? (
+            {isExpanded ? (
               <div className="flex items-center justify-between px-2.5 mb-1">
                 <span className="font-courier text-[11px] font-medium text-[#5A6275] uppercase tracking-[0.08em]">
                   Workspaces
                 </span>
                 <button
                   type="button"
-                  onClick={() => setShowNewFolderModal(true)}
-                  className="p-0.5 rounded-[2px] text-[#8B909C] hover:text-[#161E33] transition-colors"
+                  onClick={() => {
+                    setShowNewFolderModal(true);
+                    closeMobile();
+                  }}
+                  className="p-1 rounded-[2px] text-[#8B909C] hover:text-[#161E33] transition-colors"
                   title="New workspace"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -388,6 +437,7 @@ export default function Sidebar({
             ) : (
               <div className="flex justify-center my-1">
                 <button
+                  type="button"
                   onClick={() => setShowNewFolderModal(true)}
                   className="p-1 rounded-[4px] text-[#5A6275] hover:text-[#161E33]"
                   title="Workspaces"
@@ -397,7 +447,7 @@ export default function Sidebar({
               </div>
             )}
 
-            {!collapsed && (
+            {isExpanded && (
               <div className="space-y-0.5">
                 {filteredFolders.length === 0 ? (
                   <p className="text-[12px] text-[#8B909C] px-2.5 py-1">
@@ -411,6 +461,7 @@ export default function Sidebar({
                       <Link
                         key={f.id}
                         href={`/folders/${f.id}`}
+                        onClick={closeMobile}
                         className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
                           isActive
                             ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
@@ -429,7 +480,7 @@ export default function Sidebar({
 
           {/* Recent Decisions Section */}
           <div className="space-y-1">
-            {!collapsed && (
+            {isExpanded && (
               <div className="px-2.5 mb-1">
                 <span className="font-courier text-[11px] font-medium text-[#5A6275] uppercase tracking-[0.08em]">
                   Recent decisions
@@ -437,7 +488,7 @@ export default function Sidebar({
               </div>
             )}
 
-            {!collapsed && (
+            {isExpanded && (
               <div className="space-y-0.5">
                 {recentDecisions.length === 0 ? (
                   <p className="text-[12px] text-[#8B909C] px-2.5 py-1">
@@ -451,6 +502,7 @@ export default function Sidebar({
                       <Link
                         key={d.id}
                         href={`/decisions/${d.id}`}
+                        onClick={closeMobile}
                         className={`block px-2.5 py-1.5 rounded-[4px] text-[13px] truncate transition-colors ${
                           isActive
                             ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
@@ -474,6 +526,7 @@ export default function Sidebar({
             <div className="flex items-center justify-between gap-2">
               <Link
                 href="/profile"
+                onClick={closeMobile}
                 className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-85 transition-opacity"
                 title="Profile & settings"
               >
@@ -485,7 +538,7 @@ export default function Sidebar({
                     (user.display_name || user.email).charAt(0).toUpperCase()
                   )}
                 </div>
-                {!collapsed && (
+                {isExpanded && (
                   <div className="min-w-0 text-left">
                     <p className="text-[13px] font-medium text-[#161E33] truncate leading-tight block">
                       {formatDisplayName(user.display_name, user.email)}
@@ -496,7 +549,7 @@ export default function Sidebar({
                   </div>
                 )}
               </Link>
-              {!collapsed && (
+              {isExpanded && (
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -508,9 +561,10 @@ export default function Sidebar({
               )}
             </div>
           ) : (
-            !collapsed && (
+            isExpanded && (
               <Link
                 href="/auth"
+                onClick={closeMobile}
                 className="w-full py-1.5 px-3 rounded-[4px] border border-[#161E33] bg-[#FCFBF8] hover:bg-[#F5F1E8] text-[13px] font-medium text-[#161E33] transition-colors flex items-center justify-center gap-1.5"
               >
                 <LogIn className="w-3.5 h-3.5 text-[#5A6275]" />
@@ -523,8 +577,8 @@ export default function Sidebar({
 
       {/* Modal: New Workspace */}
       {showNewFolderModal && (
-        <div className="fixed inset-0 z-50 bg-black/25 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
-          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative">
+        <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
+          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
               <h3 className="text-[17px] font-medium text-[#161E33]">
                 New workspace
@@ -595,8 +649,8 @@ export default function Sidebar({
 
       {/* Modal: New Decision */}
       {showNewDecisionModal && (
-        <div className="fixed inset-0 z-50 bg-black/25 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
-          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative">
+        <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
+          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
               <h3 className="text-[17px] font-medium text-[#161E33]">
                 New decision
