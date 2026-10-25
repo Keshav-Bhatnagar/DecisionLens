@@ -13,6 +13,7 @@ import FrameworkPanel from "@/components/FrameworkPanel";
 import SynthesisPanel from "@/components/SynthesisPanel";
 import WorkflowStepper, { WorkflowStage } from "@/components/WorkflowStepper";
 import ReportExportModal from "@/components/ReportExportModal";
+import SpeechDictationButton from "@/components/SpeechDictationButton";
 import {
   getDecision,
   updateDecision,
@@ -45,6 +46,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  Upload,
 } from "lucide-react";
 
 // export default function DecisionDetailPage({
@@ -143,7 +145,12 @@ export default function DecisionDetailPage({
         getAttachments(decisionId),
       ]);
       if (folderRes.status === "fulfilled") setFolder(folderRes.value);
-      if (attsRes.status === "fulfilled") setAttachments(attsRes.value);
+      if (attsRes.status === "fulfilled") {
+        setAttachments(attsRes.value);
+        if (attsRes.value.length > 0 && (!d.transcript || !d.transcript.trim()) && !stageManuallySelected) {
+          setIngestionTab("docs");
+        }
+      }
     } catch (err: unknown) {
 
       setError(err instanceof Error ? err.message : "Failed to load decision");
@@ -656,17 +663,25 @@ export default function DecisionDetailPage({
                   <div className="space-y-5">
                     {/* Problem Statement / Agenda Card */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-                      <div className="flex items-center gap-2">
-                        {recordType === "meeting" ? (
-                          <Users className="w-5 h-5 text-emerald-600" />
-                        ) : (
-                          <Compass className="w-5 h-5 text-indigo-600" />
-                        )}
-                        <h2 className="text-base font-bold text-slate-900">
-                          {recordType === "meeting"
-                            ? "Meeting Purpose & Agenda Objectives"
-                            : "Problem Statement & Core Dilemma"}
-                        </h2>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {recordType === "meeting" ? (
+                            <Users className="w-5 h-5 text-emerald-600" />
+                          ) : (
+                            <Compass className="w-5 h-5 text-indigo-600" />
+                          )}
+                          <h2 className="text-base font-bold text-slate-900">
+                            {recordType === "meeting"
+                              ? "Meeting Purpose & Agenda Objectives"
+                              : "Problem Statement & Core Dilemma"}
+                          </h2>
+                        </div>
+                        <SpeechDictationButton
+                          onTranscript={(text) =>
+                            setProblemStatement((prev) => (prev ? `${prev} ${text}` : text))
+                          }
+                          title="Dictate problem statement or goals"
+                        />
                       </div>
                       <p className="text-xs text-slate-500">
                         {recordType === "meeting"
@@ -692,13 +707,21 @@ export default function DecisionDetailPage({
 
                     {/* Description & Context Card */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-slate-600" />
-                        <h2 className="text-base font-bold text-slate-900">
-                          {recordType === "meeting"
-                            ? "Attendees & Meeting Context"
-                            : "Background Context & Initial Notes"}
-                        </h2>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-slate-600" />
+                          <h2 className="text-base font-bold text-slate-900">
+                            {recordType === "meeting"
+                              ? "Attendees & Meeting Context"
+                              : "Background Context & Initial Notes"}
+                          </h2>
+                        </div>
+                        <SpeechDictationButton
+                          onTranscript={(text) =>
+                            setDescription((prev) => (prev ? `${prev} ${text}` : text))
+                          }
+                          title="Dictate notes and context"
+                        />
                       </div>
                       <textarea
                         value={description}
@@ -715,6 +738,145 @@ export default function DecisionDetailPage({
                             : "focus:ring-indigo-500 focus:border-indigo-500"
                         }`}
                       />
+                    </div>
+
+                    {/* Reference Documents & Attachments Card */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                            <Paperclip className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h2 className="text-base font-bold text-slate-900">
+                              Reference Documents & Uploaded Files
+                            </h2>
+                            <p className="text-xs text-slate-500">
+                              Documents attached to this {recordType === "meeting" ? "meeting" : "decision"} for fact-checking and analysis.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setIngestionTab("docs")}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>+ Upload / Add Documents</span>
+                          </button>
+                          <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">
+                            {attachments.length} {attachments.length === 1 ? "document" : "documents"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {attachments.length === 0 ? (
+                        <div className="p-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/60">
+                          <Paperclip className="w-7 h-7 text-slate-400 mx-auto mb-2" />
+                          <p className="text-xs font-semibold text-slate-700">No reference documents attached yet</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">Upload PDFs, notes, or transcripts to ground this analysis in verified facts.</p>
+                          <button
+                            type="button"
+                            onClick={() => setIngestionTab("docs")}
+                            className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs transition-colors"
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Upload Documents Now</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {attachments.map((att) => {
+                            const isExpanded = expandedAttachmentId === att.id;
+                            const wordCount = att.extracted_text
+                              ? att.extracted_text.split(/\s+/).filter(Boolean).length
+                              : 0;
+
+                            return (
+                              <div
+                                key={att.id}
+                                className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50 hover:bg-slate-50 transition-colors"
+                              >
+                                <div className="p-4 flex items-center justify-between gap-4">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-bold shrink-0">
+                                      <FileText className="w-4 h-4 text-indigo-600" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-semibold text-slate-900 truncate">
+                                        {att.original_name}
+                                      </p>
+                                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                        <span>{formatFileSize(att.file_size)}</span>
+                                        <span>•</span>
+                                        <span>{wordCount} words extracted</span>
+                                        <span>•</span>
+                                        <span>{new Date(att.created_at).toLocaleDateString()}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedAttachmentId(isExpanded ? null : att.id)}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
+                                    >
+                                      {isExpanded ? (
+                                        <>
+                                          Hide Text <ChevronUp className="w-3.5 h-3.5" />
+                                        </>
+                                      ) : (
+                                        <>
+                                          View Extracted Text <ChevronDown className="w-3.5 h-3.5" />
+                                        </>
+                                      )}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteAttachment(att.id)}
+                                      title="Delete document"
+                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {isExpanded && (
+                                  <div className="p-4 bg-white border-t border-slate-200 space-y-3">
+                                    <div className="flex items-center justify-between text-xs text-slate-500">
+                                      <span className="font-semibold text-slate-700">
+                                        Extracted Text Preview
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyText(att.extracted_text, att.id)}
+                                        className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium"
+                                      >
+                                        {copiedId === att.id ? (
+                                          <>
+                                            <CheckCircle2 className="w-3.5 h-3.5" /> Copied!
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="w-3.5 h-3.5" /> Copy Text
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+
+                                    <div className="max-h-60 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-800 whitespace-pre-wrap leading-relaxed select-text">
+                                      {att.extracted_text}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

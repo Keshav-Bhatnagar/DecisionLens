@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import SpeechDictationButton from "@/components/SpeechDictationButton";
 import {
   getFolder,
   getDecisions,
   createDecision,
   deleteDecision,
   deleteFolder,
+  uploadAttachment,
   Folder,
   Decision,
 } from "@/lib/api";
@@ -25,6 +27,9 @@ import {
   AlertCircle,
   Filter,
   X,
+  Paperclip,
+  Upload,
+  Loader2,
 } from "lucide-react";
 
 export default function FolderDetailPage({
@@ -49,6 +54,50 @@ export default function FolderDetailPage({
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("draft");
   const [error, setError] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getNextTitle = useCallback(
+    (type: string) => {
+      if (type === "meeting") {
+        const count = decisions.filter((d) => d.record_type === "meeting").length;
+        return `Meeting ${count + 1}`;
+      } else {
+        const count = decisions.filter((d) => d.record_type !== "meeting").length;
+        return `Discussion ${count + 1}`;
+      }
+    },
+    [decisions]
+  );
+
+  const handleOpenCreateModal = (type: "decision" | "meeting" = "decision") => {
+    setRecordType(type);
+    setTitle(getNextTitle(type));
+    setProblemStatement("");
+    setDescription("");
+    setSelectedFiles([]);
+    setError(null);
+    setShowCreateModal(true);
+  };
+
+  const handleSwitchRecordType = (newType: string) => {
+    setRecordType(newType);
+    if (!title.trim() || title.startsWith("Meeting") || title.startsWith("Discussion")) {
+      setTitle(getNextTitle(newType));
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...filesArray]);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const loadFolderData = useCallback(async () => {
     setLoading(true);
@@ -75,8 +124,9 @@ export default function FolderDetailPage({
     e.preventDefault();
     if (!title.trim()) return;
     setError(null);
+    setIsSubmitting(true);
     try {
-      await createDecision({
+      const created = await createDecision({
         folder_id: folderId,
         title,
         problem_statement: problemStatement,
@@ -84,13 +134,28 @@ export default function FolderDetailPage({
         record_type: recordType,
         status,
       });
+
+      // Upload any attached files to this decision
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          try {
+            await uploadAttachment(created.id, file);
+          } catch (uploadErr) {
+            console.error("Failed to upload file:", file.name, uploadErr);
+          }
+        }
+      }
+
       setShowCreateModal(false);
       setTitle("");
       setProblemStatement("");
       setDescription("");
-      await loadFolderData();
+      setSelectedFiles([]);
+      router.push(`/decisions/${created.id}`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create decision");
+      setError(err instanceof Error ? err.message : "Failed to create record");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -178,13 +243,22 @@ export default function FolderDetailPage({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start">
+                <div className="flex items-center gap-2 self-start flex-wrap">
                   <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-colors"
+                    onClick={() => handleOpenCreateModal("decision")}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-colors"
+                    title="Start new decision analysis"
                   >
                     <Plus className="w-4 h-4" />
-                    New Record
+                    <span>Decision</span>
+                  </button>
+                  <button
+                    onClick={() => handleOpenCreateModal("meeting")}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors"
+                    title="Record meeting discussion"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>Meeting</span>
                   </button>
                   <button
                     onClick={handleDeleteFolder}
@@ -354,11 +428,12 @@ export default function FolderDetailPage({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setRecordType("decision")}
-                    className={`p-3 rounded-xl border text-left transition-all ${recordType === "decision"
-                        ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-1 ring-indigo-600"
+                    onClick={() => handleSwitchRecordType("decision")}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      recordType === "decision"
+                        ? "border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-1 ring-indigo-600 shadow-2xs font-semibold"
                         : "border-slate-200 hover:border-slate-300 text-slate-700"
-                      }`}
+                    }`}
                   >
                     <Compass className="w-4 h-4 mb-1 text-indigo-600" />
                     <p className="text-xs font-bold">Decision Analysis</p>
@@ -366,11 +441,12 @@ export default function FolderDetailPage({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRecordType("meeting")}
-                    className={`p-3 rounded-xl border text-left transition-all ${recordType === "meeting"
-                        ? "border-emerald-600 bg-emerald-50/50 text-emerald-900 ring-1 ring-emerald-600"
+                    onClick={() => handleSwitchRecordType("meeting")}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      recordType === "meeting"
+                        ? "border-emerald-600 bg-emerald-50/50 text-emerald-900 ring-1 ring-emerald-600 shadow-2xs font-semibold"
                         : "border-slate-200 hover:border-slate-300 text-slate-700"
-                      }`}
+                    }`}
                   >
                     <Users className="w-4 h-4 mb-1 text-emerald-600" />
                     <p className="text-xs font-bold">Meeting Record</p>
@@ -380,46 +456,141 @@ export default function FolderDetailPage({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Title <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <SpeechDictationButton
+                    onTranscript={(text) => setTitle((prev) => (prev ? `${prev} ${text}` : text))}
+                    title="Dictate title"
+                  />
+                </div>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Choose Database Architecture, Cloud Migration Strategy"
+                  placeholder={
+                    recordType === "meeting"
+                      ? "e.g. Meeting 1, Sprint Architecture Sync"
+                      : "e.g. Discussion 1, Cloud Migration Strategy"
+                  }
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Problem Statement / Discussion Goal
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    {recordType === "meeting"
+                      ? "Discussion Goals & Agenda"
+                      : "Problem Statement / Discussion Goal"}
+                  </label>
+                  <SpeechDictationButton
+                    onTranscript={(text) =>
+                      setProblemStatement((prev) => (prev ? `${prev} ${text}` : text))
+                    }
+                    title="Dictate problem statement or goals"
+                  />
+                </div>
                 <textarea
                   value={problemStatement}
                   onChange={(e) => setProblemStatement(e.target.value)}
-                  placeholder="What is the core problem to solve or key question to answer?"
+                  placeholder={
+                    recordType === "meeting"
+                      ? "What is the meeting agenda, core dilemmas, or alignment objectives?"
+                      : "What is the core problem to solve or key question to answer?"
+                  }
                   rows={3}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Initial Context or Notes
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    {recordType === "meeting"
+                      ? "Attendees & Meeting Notes"
+                      : "Initial Context or Notes"}
+                  </label>
+                  <SpeechDictationButton
+                    onTranscript={(text) =>
+                      setDescription((prev) => (prev ? `${prev} ${text}` : text))
+                    }
+                    title="Dictate notes and context"
+                  />
+                </div>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Additional background context, constraints, or stakeholders"
+                  placeholder={
+                    recordType === "meeting"
+                      ? "Participants, pre-reads, constraints, or background notes..."
+                      : "Additional background context, constraints, or stakeholders..."
+                  }
                   rows={2}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              {/* Reference Documents & File Upload Option */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Attach Reference Documents (optional)
+                  </label>
+                  <span className="text-[11px] text-slate-500">PDF, Audio, DOCX, TXT</span>
+                </div>
+
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border border-dashed border-slate-300 hover:border-indigo-400 rounded-xl p-3 bg-slate-50/70 hover:bg-slate-50 transition-colors cursor-pointer text-center"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept=".pdf,.docx,.txt,.md,.mp3,.wav,.m4a,.webm"
+                  />
+                  <div className="flex items-center justify-center gap-2 text-xs text-indigo-600 font-medium">
+                    <Paperclip className="w-4 h-4" />
+                    <span>Click to attach files</span>
+                    <span className="text-slate-400 font-normal">or drag & drop</span>
+                  </div>
+                </div>
+
+                {/* Selected Files List */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-2 space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                    {selectedFiles.map((f, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200 text-xs"
+                      >
+                        <div className="flex items-center gap-2 truncate min-w-0">
+                          <FileText className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                          <span className="truncate text-slate-800 font-medium">{f.name}</span>
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            ({(f.size / 1024).toFixed(0)} KB)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(i)}
+                          className="text-slate-400 hover:text-red-500 p-0.5 ml-2 transition-colors"
+                          title="Remove file"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
@@ -429,9 +600,23 @@ export default function FolderDetailPage({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+                  disabled={isSubmitting}
+                  className={`px-4 py-2 text-xs font-semibold text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5 disabled:opacity-50 ${
+                    recordType === "meeting"
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : "bg-indigo-600 hover:bg-indigo-700"
+                  }`}
                 >
-                  Create Record
+                  {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>
+                    {isSubmitting
+                      ? selectedFiles.length > 0
+                        ? "Creating & Uploading..."
+                        : "Creating..."
+                      : recordType === "meeting"
+                      ? "Create Meeting"
+                      : "Create Decision"}
+                  </span>
                 </button>
               </div>
             </form>

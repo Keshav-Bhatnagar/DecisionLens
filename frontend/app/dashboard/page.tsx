@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import SpeechDictationButton from "@/components/SpeechDictationButton";
 import {
   getFolders,
   getDecisions,
@@ -269,6 +270,8 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => {
                   setChallengeRecordType("meeting");
+                  const count = decisions.filter((d) => d.record_type === "meeting").length;
+                  setChallengeTitle(`Meeting ${count + 1}`);
                   setShowChallengeModal(true);
                 }}
                 className="px-3.5 py-2 bg-[#FCFBF8] border border-[#2D6A4F] hover:bg-[#E8F3EE] text-[#1B4332] text-[14px] font-medium rounded-[4px] transition-colors focus:ring-2 focus:ring-[#2D6A4F]/25 focus:outline-none flex items-center gap-1.5"
@@ -280,6 +283,8 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => {
                   setChallengeRecordType("decision");
+                  const count = decisions.filter((d) => d.record_type !== "meeting").length;
+                  setChallengeTitle(`Discussion ${count + 1}`);
                   setShowChallengeModal(true);
                 }}
                 className="px-4 py-2 bg-[#161E33] hover:bg-[#232C47] text-white text-[14px] font-medium rounded-[4px] transition-colors shadow-none focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none flex items-center gap-1.5"
@@ -807,7 +812,12 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#EFEADF] rounded-[4px] mb-4">
               <button
                 type="button"
-                onClick={() => setChallengeRecordType("decision")}
+                onClick={() => {
+                  setChallengeRecordType("decision");
+                  if (!challengeTitle.trim() || challengeTitle.startsWith("Meeting") || challengeTitle.startsWith("Discussion")) {
+                    setChallengeTitle(`Discussion ${decisions.filter((d) => d.record_type !== "meeting").length + 1}`);
+                  }
+                }}
                 className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
                   challengeRecordType === "decision"
                     ? "bg-[#FCFBF8] text-[#161E33] shadow-2xs font-semibold"
@@ -819,7 +829,12 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setChallengeRecordType("meeting")}
+                onClick={() => {
+                  setChallengeRecordType("meeting");
+                  if (!challengeTitle.trim() || challengeTitle.startsWith("Meeting") || challengeTitle.startsWith("Discussion")) {
+                    setChallengeTitle(`Meeting ${decisions.filter((d) => d.record_type === "meeting").length + 1}`);
+                  }
+                }}
                 className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
                   challengeRecordType === "meeting"
                     ? "bg-[#FCFBF8] text-[#1B4332] shadow-2xs font-semibold"
@@ -859,9 +874,17 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
-                  {challengeRecordType === "meeting" ? "Meeting title or subject" : "What decision are you weighing?"}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[13px] font-medium text-[#161E33]">
+                    {challengeRecordType === "meeting" ? "Meeting title or subject" : "What decision are you weighing?"}
+                  </label>
+                  <SpeechDictationButton
+                    onTranscript={(text) =>
+                      setChallengeTitle((prev) => (prev ? `${prev} ${text}` : text))
+                    }
+                    title="Dictate title"
+                  />
+                </div>
                 <textarea
                   required
                   rows={3}

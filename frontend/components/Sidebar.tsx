@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import SpeechDictationButton from "@/components/SpeechDictationButton";
 import {
   LayoutDashboard,
   FileText,
@@ -354,7 +355,9 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => {
+                  const defaultTitle = `Discussion ${recentDecisions.filter((d) => d.record_type !== "meeting").length + 1}`;
                   setNewRecordType("decision");
+                  setNewDecisionTitle(defaultTitle);
                   setShowNewDecisionModal(true);
                   closeMobile();
                 }}
@@ -367,7 +370,9 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => {
+                  const defaultTitle = `Meeting ${recentDecisions.filter((d) => d.record_type === "meeting").length + 1}`;
                   setNewRecordType("meeting");
+                  setNewDecisionTitle(defaultTitle);
                   setShowNewDecisionModal(true);
                   closeMobile();
                 }}
@@ -715,7 +720,12 @@ export default function Sidebar({
             <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#EFEADF] rounded-[4px] mb-4">
               <button
                 type="button"
-                onClick={() => setNewRecordType("decision")}
+                onClick={() => {
+                  setNewRecordType("decision");
+                  if (!newDecisionTitle.trim() || newDecisionTitle.startsWith("Meeting") || newDecisionTitle.startsWith("Discussion")) {
+                    setNewDecisionTitle(`Discussion ${recentDecisions.filter((d) => d.record_type !== "meeting").length + 1}`);
+                  }
+                }}
                 className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
                   newRecordType === "decision"
                     ? "bg-[#FCFBF8] text-[#161E33] shadow-2xs font-semibold"
@@ -727,7 +737,12 @@ export default function Sidebar({
               </button>
               <button
                 type="button"
-                onClick={() => setNewRecordType("meeting")}
+                onClick={() => {
+                  setNewRecordType("meeting");
+                  if (!newDecisionTitle.trim() || newDecisionTitle.startsWith("Meeting") || newDecisionTitle.startsWith("Discussion")) {
+                    setNewDecisionTitle(`Meeting ${recentDecisions.filter((d) => d.record_type === "meeting").length + 1}`);
+                  }
+                }}
                 className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
                   newRecordType === "meeting"
                     ? "bg-[#FCFBF8] text-[#1B4332] shadow-2xs font-semibold"
@@ -767,9 +782,17 @@ export default function Sidebar({
               </div>
 
               <div>
-                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
-                  {newRecordType === "meeting" ? "Meeting title or subject" : "What decision are you weighing?"}
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[13px] font-medium text-[#161E33]">
+                    {newRecordType === "meeting" ? "Meeting title or subject" : "What decision are you weighing?"}
+                  </label>
+                  <SpeechDictationButton
+                    onTranscript={(text) =>
+                      setNewDecisionTitle((prev) => (prev ? `${prev} ${text}` : text))
+                    }
+                    title="Dictate title"
+                  />
+                </div>
                 <textarea
                   rows={3}
                   required
