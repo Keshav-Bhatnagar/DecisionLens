@@ -296,12 +296,16 @@ export default function DecisionDetailPage({
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl shadow-2xs transition"
                   >
                     <Share2 className="w-3.5 h-3.5" />
-                    Export Brief
+                    {recordType === "meeting" ? "Export Minutes" : "Export Brief"}
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] rounded-xl shadow-sm transition-all disabled:opacity-50"
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-sm transition-all disabled:opacity-50 ${
+                      recordType === "meeting"
+                        ? "bg-emerald-600 hover:bg-emerald-700"
+                        : "bg-indigo-600 hover:bg-indigo-700"
+                    }`}
                   >
                     <Save className="w-3.5 h-3.5" />
                     {saving ? "Saving..." : "Save Changes"}
@@ -321,7 +325,7 @@ export default function DecisionDetailPage({
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                    Title
+                    {recordType === "meeting" ? "Meeting Subject / Title" : "Decision Title"}
                   </label>
                   <input
                     type="text"
@@ -329,7 +333,11 @@ export default function DecisionDetailPage({
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full text-xl sm:text-2xl font-extrabold text-slate-900 border-0 border-b-2 border-transparent hover:border-slate-300 focus:border-indigo-600 focus:ring-0 px-0 py-1 transition-all rounded-none bg-transparent"
-                    placeholder="Decision or Meeting Title"
+                    placeholder={
+                      recordType === "meeting"
+                        ? "Meeting Title (e.g. Weekly Strategy Sync, Vendor Evaluation Call)"
+                        : "Decision Title (e.g. Choose between Kubernetes vs Cloud Run)"
+                    }
                   />
                 </div>
 
@@ -343,10 +351,21 @@ export default function DecisionDetailPage({
                       onChange={(e) => setStatus(e.target.value)}
                       className="w-full text-xs font-semibold border border-slate-200/90 rounded-xl px-3.5 py-2.5 bg-white/80 backdrop-blur-xs text-slate-800 shadow-2xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                     >
-                      <option value="draft">Draft</option>
-                      <option value="evaluating">Evaluating Options</option>
-                      <option value="decided">Decided</option>
-                      <option value="archived">Archived</option>
+                      {recordType === "meeting" ? (
+                        <>
+                          <option value="draft">Draft / Scheduled</option>
+                          <option value="evaluating">Discussion Active / In Review</option>
+                          <option value="decided">Minutes Finalized & Logged</option>
+                          <option value="archived">Archived</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="draft">Draft</option>
+                          <option value="evaluating">Evaluating Options</option>
+                          <option value="decided">Decided</option>
+                          <option value="archived">Archived</option>
+                        </>
+                      )}
                     </select>
                   </div>
 
@@ -385,6 +404,7 @@ export default function DecisionDetailPage({
                 }
                 hasFrameworks={Boolean(decision.analysis && typeof decision.analysis === "object" && Object.keys(decision.analysis).length > 0)}
                 hasSynthesis={Boolean(decision.recommendation && typeof decision.recommendation === "object" && "headline" in decision.recommendation)}
+                recordType={recordType}
               />
             </div>
 
@@ -399,12 +419,14 @@ export default function DecisionDetailPage({
                       onClick={() => setIngestionTab("voice")}
                       className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition ${
                         ingestionTab === "voice"
-                          ? "bg-indigo-600 text-white shadow-sm"
+                          ? recordType === "meeting"
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : "bg-indigo-600 text-white shadow-sm"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                     >
                       <Mic className="w-4 h-4" />
-                      <span>1. Voice & Audio</span>
+                      <span>{recordType === "meeting" ? "1. Meeting Audio & Voice" : "1. Voice & Audio"}</span>
                       {Boolean(decision.transcript) && (
                         <span
                           className={`w-2 h-2 rounded-full ${
@@ -420,12 +442,18 @@ export default function DecisionDetailPage({
                       onClick={() => setIngestionTab("docs")}
                       className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition ${
                         ingestionTab === "docs"
-                          ? "bg-indigo-600 text-white shadow-sm"
+                          ? recordType === "meeting"
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : "bg-indigo-600 text-white shadow-sm"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                     >
                       <Paperclip className="w-4 h-4" />
-                      <span>2. Documents ({attachments.length})</span>
+                      <span>
+                        {recordType === "meeting"
+                          ? `2. Meeting Documents (${attachments.length})`
+                          : `2. Reference Documents (${attachments.length})`}
+                      </span>
                     </button>
 
                     <button
@@ -433,12 +461,14 @@ export default function DecisionDetailPage({
                       onClick={() => setIngestionTab("context")}
                       className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition ${
                         ingestionTab === "context"
-                          ? "bg-indigo-600 text-white shadow-sm"
+                          ? recordType === "meeting"
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : "bg-indigo-600 text-white shadow-sm"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                       }`}
                     >
                       <FileText className="w-4 h-4" />
-                      <span>3. Problem Statement & Notes</span>
+                      <span>{recordType === "meeting" ? "3. Agenda & Attendees" : "3. Problem Statement & Notes"}</span>
                     </button>
                   </div>
                 )}
@@ -624,23 +654,39 @@ export default function DecisionDetailPage({
                 {/* Sub-Tab 3: Problem Statement & Background Notes */}
                 {(viewMode === "all" || ingestionTab === "context") && (
                   <div className="space-y-5">
-                    {/* Problem Statement Card */}
+                    {/* Problem Statement / Agenda Card */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
                       <div className="flex items-center gap-2">
-                        <Compass className="w-5 h-5 text-indigo-600" />
+                        {recordType === "meeting" ? (
+                          <Users className="w-5 h-5 text-emerald-600" />
+                        ) : (
+                          <Compass className="w-5 h-5 text-indigo-600" />
+                        )}
                         <h2 className="text-base font-bold text-slate-900">
-                          Problem Statement & Core Dilemma
+                          {recordType === "meeting"
+                            ? "Meeting Purpose & Agenda Objectives"
+                            : "Problem Statement & Core Dilemma"}
                         </h2>
                       </div>
                       <p className="text-xs text-slate-500">
-                        Articulate the core problem to solve, the decision question, or the central goal of this meeting discussion.
+                        {recordType === "meeting"
+                          ? "Articulate the central purpose, agenda items, and desired outcomes of this meeting discussion."
+                          : "Articulate the core problem to solve, the decision question, or the central goal of this decision."}
                       </p>
                       <textarea
                         value={problemStatement}
                         onChange={(e) => setProblemStatement(e.target.value)}
                         rows={4}
-                        placeholder="Describe what decision needs to be made, why it matters, and what criteria are most critical..."
-                        className="w-full text-sm border border-slate-200 rounded-xl p-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        placeholder={
+                          recordType === "meeting"
+                            ? "e.g. Align on Q4 infrastructure scaling roadmap, review candidate cloud architectures, and assign follow-up action items..."
+                            : "Describe what decision needs to be made, why it matters, and what criteria are most critical..."
+                        }
+                        className={`w-full text-sm border border-slate-200 rounded-xl p-4 focus:ring-2 focus:outline-none ${
+                          recordType === "meeting"
+                            ? "focus:ring-emerald-500/20 focus:border-emerald-500"
+                            : "focus:ring-indigo-500 focus:border-indigo-500"
+                        }`}
                       />
                     </div>
 
@@ -649,15 +695,25 @@ export default function DecisionDetailPage({
                       <div className="flex items-center gap-2">
                         <FileText className="w-5 h-5 text-slate-600" />
                         <h2 className="text-base font-bold text-slate-900">
-                          Background Context & Initial Notes
+                          {recordType === "meeting"
+                            ? "Attendees & Meeting Context"
+                            : "Background Context & Initial Notes"}
                         </h2>
                       </div>
                       <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         rows={3}
-                        placeholder="Add initial notes, key stakeholders, constraints, or known deadlines..."
-                        className="w-full text-sm border border-slate-200 rounded-xl p-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        placeholder={
+                          recordType === "meeting"
+                            ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
+                            : "Add initial notes, key stakeholders, constraints, or known deadlines..."
+                        }
+                        className={`w-full text-sm border border-slate-200 rounded-xl p-4 focus:ring-2 focus:outline-none ${
+                          recordType === "meeting"
+                            ? "focus:ring-emerald-500/20 focus:border-emerald-500"
+                            : "focus:ring-indigo-500 focus:border-indigo-500"
+                        }`}
                       />
                     </div>
                   </div>

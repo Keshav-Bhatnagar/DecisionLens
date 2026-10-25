@@ -16,6 +16,8 @@ import {
   LogIn,
   X,
   Menu,
+  Users,
+  Compass,
 } from "lucide-react";
 import {
   getFolders,
@@ -82,6 +84,7 @@ export default function Sidebar({
   const [newFolderDesc, setNewFolderDesc] = useState("");
   const [newDecisionTitle, setNewDecisionTitle] = useState("");
   const [newDecisionFolderId, setNewDecisionFolderId] = useState<number | "">("");
+  const [newRecordType, setNewRecordType] = useState<"decision" | "meeting">("decision");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -243,7 +246,7 @@ export default function Sidebar({
         folder_id: Number(targetFolderId),
         title: newDecisionTitle.trim(),
         status: "evaluating",
-        record_type: "decision",
+        record_type: newRecordType,
       });
 
       setShowNewDecisionModal(false);
@@ -252,7 +255,7 @@ export default function Sidebar({
       onRefresh?.();
       router.push(`/decisions/${created.id}`);
     } catch (err: unknown) {
-      setModalError(err instanceof Error ? err.message : "Failed to create decision");
+      setModalError(err instanceof Error ? err.message : `Failed to create ${newRecordType}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -319,29 +322,62 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Secondary Action Button: Outlined "New decision" button */}
+        {/* Action Buttons: Split Decision and Meeting buttons */}
         <div className="p-3 border-b border-[#D9D2C3]">
           {!isExpanded ? (
-            <button
-              type="button"
-              onClick={() => setShowNewDecisionModal(true)}
-              className="w-10 h-10 mx-auto rounded-[4px] bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
-              title="New decision"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+            <div className="flex flex-col gap-1.5 items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setNewRecordType("decision");
+                  setShowNewDecisionModal(true);
+                }}
+                className="w-10 h-10 rounded-[4px] bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
+                title="New Decision"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewRecordType("meeting");
+                  setShowNewDecisionModal(true);
+                }}
+                className="w-10 h-10 rounded-[4px] bg-[#FCFBF8] border border-[#2D6A4F] hover:bg-[#E8F3EE] text-[#1B4332] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#2D6A4F]/25 focus:outline-none"
+                title="New Meeting"
+              >
+                <Users className="w-4 h-4 text-[#2D6A4F]" />
+              </button>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setShowNewDecisionModal(true);
-                closeMobile();
-              }}
-              className="w-full py-2 px-3 rounded-[4px] bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] font-medium text-[13px] flex items-center justify-center gap-1.5 transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New decision</span>
-            </button>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setNewRecordType("decision");
+                  setShowNewDecisionModal(true);
+                  closeMobile();
+                }}
+                className="w-full py-2 px-2 rounded-[4px] bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] font-medium text-[12px] flex items-center justify-center gap-1.5 transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none shadow-2xs"
+                title="Start Decision Analysis"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#2F5D8F]" />
+                <span>Decision</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewRecordType("meeting");
+                  setShowNewDecisionModal(true);
+                  closeMobile();
+                }}
+                className="w-full py-2 px-2 rounded-[4px] bg-[#FCFBF8] border border-[#2D6A4F] hover:bg-[#E8F3EE] text-[#1B4332] font-medium text-[12px] flex items-center justify-center gap-1.5 transition-colors focus:ring-2 focus:ring-[#2D6A4F]/25 focus:outline-none shadow-2xs"
+                title="Record Meeting Discussion"
+              >
+                <Users className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                <span>Meeting</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -477,12 +513,12 @@ export default function Sidebar({
             )}
           </div>
 
-          {/* Recent Decisions Section */}
+          {/* Recent Records Section */}
           <div className="space-y-1">
             {isExpanded && (
               <div className="px-2.5 mb-1">
                 <span className="font-courier text-[11px] font-medium text-[#5A6275] uppercase tracking-[0.08em]">
-                  Recent decisions
+                  Recent records
                 </span>
               </div>
             )}
@@ -491,25 +527,37 @@ export default function Sidebar({
               <div className="space-y-0.5">
                 {recentDecisions.length === 0 ? (
                   <p className="text-[12px] text-[#8B909C] px-2.5 py-1">
-                    No recent decisions
+                    No recent records
                   </p>
                 ) : (
                   recentDecisions.map((d) => {
                     const isActive =
                       activeDecisionId === d.id || pathname === `/decisions/${d.id}`;
+                    const isMeeting = d.record_type === "meeting";
                     return (
                       <Link
                         key={d.id}
                         href={`/decisions/${d.id}`}
                         onClick={closeMobile}
-                        className={`block px-2.5 py-1.5 rounded-[4px] text-[13px] truncate transition-colors ${
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
                           isActive
-                            ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
+                            ? isMeeting
+                              ? "text-[#1B4332] font-medium bg-[#2D6A4F]/[0.08]"
+                              : "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
                             : "text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40"
                         }`}
                         title={d.title}
                       >
-                        {d.title}
+                        <span
+                          className={`text-[9px] font-mono px-1 py-0.2 rounded font-bold shrink-0 ${
+                            isMeeting
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300/60"
+                              : "bg-[#2F5D8F]/10 text-[#2F5D8F] border border-[#2F5D8F]/20"
+                          }`}
+                        >
+                          {isMeeting ? "MTG" : "DEC"}
+                        </span>
+                        <span className="truncate flex-1">{d.title}</span>
                       </Link>
                     );
                   })
@@ -646,13 +694,13 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* Modal: New Decision */}
+      {/* Modal: New Decision or Meeting */}
       {showNewDecisionModal && (
         <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
           <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
               <h3 className="text-[17px] font-medium text-[#161E33]">
-                New decision
+                {newRecordType === "meeting" ? "Record new meeting" : "New decision analysis"}
               </h3>
               <button
                 type="button"
@@ -660,6 +708,34 @@ export default function Sidebar({
                 className="text-[#8B909C] hover:text-[#161E33] p-1 rounded-[2px]"
               >
                 <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Type selector toggle */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#EFEADF] rounded-[4px] mb-4">
+              <button
+                type="button"
+                onClick={() => setNewRecordType("decision")}
+                className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                  newRecordType === "decision"
+                    ? "bg-[#FCFBF8] text-[#161E33] shadow-2xs font-semibold"
+                    : "text-[#5A6275] hover:text-[#161E33]"
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5 text-[#2F5D8F]" />
+                <span>Decision</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewRecordType("meeting")}
+                className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                  newRecordType === "meeting"
+                    ? "bg-[#FCFBF8] text-[#1B4332] shadow-2xs font-semibold"
+                    : "text-[#5A6275] hover:text-[#161E33]"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                <span>Meeting</span>
               </button>
             </div>
 
@@ -692,14 +768,18 @@ export default function Sidebar({
 
               <div>
                 <label className="block text-[13px] font-medium text-[#161E33] mb-1">
-                  What decision are you weighing?
+                  {newRecordType === "meeting" ? "Meeting title or subject" : "What decision are you weighing?"}
                 </label>
                 <textarea
                   rows={3}
                   required
                   value={newDecisionTitle}
                   onChange={(e) => setNewDecisionTitle(e.target.value)}
-                  placeholder="e.g. Should we enter a new regional market this year?"
+                  placeholder={
+                    newRecordType === "meeting"
+                      ? "e.g. Weekly Strategy Sync, Vendor Evaluation Call"
+                      : "e.g. Choose between Kubernetes vs Cloud Run for multi-region scale"
+                  }
                   className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
                 />
               </div>
@@ -715,9 +795,17 @@ export default function Sidebar({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 bg-[#161E33] hover:bg-[#232C47] text-white text-[13px] font-medium rounded-[4px] transition-colors disabled:opacity-50"
+                  className={`px-4 py-1.5 text-white text-[13px] font-medium rounded-[4px] transition-colors disabled:opacity-50 ${
+                    newRecordType === "meeting"
+                      ? "bg-[#1B4332] hover:bg-[#2D6A4F]"
+                      : "bg-[#161E33] hover:bg-[#232C47]"
+                  }`}
                 >
-                  {isSubmitting ? "Starting..." : "Start decision"}
+                  {isSubmitting
+                    ? "Creating..."
+                    : newRecordType === "meeting"
+                    ? "Record meeting"
+                    : "Start decision"}
                 </button>
               </div>
             </form>

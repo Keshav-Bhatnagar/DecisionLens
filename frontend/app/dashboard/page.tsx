@@ -18,10 +18,13 @@ import {
   Search,
   X,
   Plus,
+  Users,
+  Compass,
 } from "lucide-react";
 
 type ViewMode = "LEDGER" | "WORKSPACES";
 type StatusFilter = "ALL" | "UNDER_SCRUTINY" | "NEEDS_EVIDENCE" | "READY_TO_DECIDE" | "DECIDED";
+type RecordTypeFilter = "ALL" | "decision" | "meeting";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -36,6 +39,8 @@ export default function DashboardPage() {
   // UI States
   const [viewMode, setViewMode] = useState<ViewMode>("LEDGER");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [typeFilter, setTypeFilter] = useState<RecordTypeFilter>("ALL");
+  const [challengeRecordType, setChallengeRecordType] = useState<"decision" | "meeting">("decision");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Modals
@@ -140,7 +145,7 @@ export default function DashboardPage() {
         folder_id: Number(targetFolderId),
         title: challengeTitle.trim(),
         status: "evaluating",
-        record_type: "decision",
+        record_type: challengeRecordType,
       });
 
       setShowChallengeModal(false);
@@ -148,7 +153,7 @@ export default function DashboardPage() {
       await loadData();
       router.push(`/decisions/${created.id}`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to start decision");
+      setError(err instanceof Error ? err.message : `Failed to create ${challengeRecordType}`);
     } finally {
       setChallengeSubmitting(false);
     }
@@ -157,6 +162,7 @@ export default function DashboardPage() {
   // Pre-fill and open challenge modal from example
   const handleSelectExample = (exampleText: string) => {
     setChallengeTitle(exampleText);
+    setChallengeRecordType("decision");
     setShowChallengeModal(true);
   };
 
@@ -177,7 +183,8 @@ export default function DashboardPage() {
   };
 
   // Stats
-  const activeDecisionsCount = decisions.length;
+  const activeDecisionsCount = decisions.filter((d) => d.record_type !== "meeting").length;
+  const activeMeetingsCount = decisions.filter((d) => d.record_type === "meeting").length;
   const underScrutinyCount = decisions.filter((d) => resolveStatus(d) === "UNDER_SCRUTINY").length;
   const needsEvidenceCount = decisions.filter((d) => resolveStatus(d) === "NEEDS_EVIDENCE").length;
   const totalOpenQuestionsCount = decisions.reduce((acc, d) => acc + countOpenItems(d), 0);
@@ -197,9 +204,13 @@ export default function DashboardPage() {
       const matchesStatus =
         statusFilter === "ALL" || status === statusFilter;
 
-      return matchesSearch && matchesStatus;
+      const dType = d.record_type || "decision";
+      const matchesType =
+        typeFilter === "ALL" || dType === typeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
     });
-  }, [decisions, searchQuery, statusFilter]);
+  }, [decisions, searchQuery, statusFilter, typeFilter]);
 
   // Filtered workspaces
   const filteredFolders = useMemo(() => {
@@ -245,7 +256,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            {/* Action buttons (No decorative arrows) */}
+            {/* Action buttons */}
             <div className="flex items-center gap-2.5 shrink-0 pt-2 sm:pt-0">
               <button
                 type="button"
@@ -256,33 +267,48 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowChallengeModal(true)}
-                className="px-4 py-2 bg-[#161E33] hover:bg-[#232C47] text-white text-[14px] font-medium rounded-[4px] transition-colors shadow-none focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
+                onClick={() => {
+                  setChallengeRecordType("meeting");
+                  setShowChallengeModal(true);
+                }}
+                className="px-3.5 py-2 bg-[#FCFBF8] border border-[#2D6A4F] hover:bg-[#E8F3EE] text-[#1B4332] text-[14px] font-medium rounded-[4px] transition-colors focus:ring-2 focus:ring-[#2D6A4F]/25 focus:outline-none flex items-center gap-1.5"
               >
-                Challenge a decision
+                <Users className="w-4 h-4 text-[#2D6A4F]" />
+                <span>Record meeting</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChallengeRecordType("decision");
+                  setShowChallengeModal(true);
+                }}
+                className="px-4 py-2 bg-[#161E33] hover:bg-[#232C47] text-white text-[14px] font-medium rounded-[4px] transition-colors shadow-none focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4 text-[#EFEADF]" />
+                <span>New decision</span>
               </button>
             </div>
           </div>
 
           {/* STATS ROW: Single slim row of inline stats inside one bordered container.
               Hidden entirely if all values are 0 or no decisions exist. */}
-          {hasAnyDecisions && activeDecisionsCount > 0 && (
+          {hasAnyDecisions && (activeDecisionsCount > 0 || activeMeetingsCount > 0) && (
             <div className="bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] py-4 px-6 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#D9D2C3]">
               <div className="py-2 sm:py-0 sm:px-4 first:pl-0">
                 <div className="font-newsreader text-[28px] font-normal text-[#161E33] leading-tight">
                   {activeDecisionsCount}
                 </div>
                 <div className="text-[13px] text-[#5A6275] mt-0.5">
-                  Active
+                  Decisions
                 </div>
               </div>
 
               <div className="py-2 sm:py-0 sm:px-4">
-                <div className="font-newsreader text-[28px] font-normal text-[#161E33] leading-tight">
-                  {underScrutinyCount}
+                <div className="font-newsreader text-[28px] font-normal text-[#1B4332] leading-tight">
+                  {activeMeetingsCount}
                 </div>
                 <div className="text-[13px] text-[#5A6275] mt-0.5">
-                  Under scrutiny
+                  Meeting records
                 </div>
               </div>
 
@@ -476,31 +502,73 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Status Tab Bar: Simple text tab bar with an underline on the active tab (no scrollbar artifact) */}
+              {/* Record Type and Status Tab Bars */}
               {viewMode === "LEDGER" && (
-                <div className="flex items-center gap-6 border-b border-[#D9D2C3] text-[13px] overflow-x-auto scrollbar-none">
-                  {(
-                    [
-                      { key: "ALL", label: "All" },
-                      { key: "UNDER_SCRUTINY", label: "Under scrutiny" },
-                      { key: "NEEDS_EVIDENCE", label: "Needs evidence" },
-                      { key: "READY_TO_DECIDE", label: "Ready to decide" },
-                      { key: "DECIDED", label: "Decided" },
-                    ] as const
-                  ).map((tab) => (
+                <div className="space-y-3 border-b border-[#D9D2C3] pb-3">
+                  {/* Row 1: Record Type Filter (All, Decisions, Meetings) */}
+                  <div className="flex items-center gap-2">
                     <button
-                      key={tab.key}
                       type="button"
-                      onClick={() => setStatusFilter(tab.key)}
-                      className={`pb-2 transition-colors relative whitespace-nowrap ${
-                        statusFilter === tab.key
-                          ? "text-[#2F5D8F] font-medium border-b-2 border-[#2F5D8F] -mb-[1px]"
-                          : "text-[#5A6275] hover:text-[#161E33]"
+                      onClick={() => setTypeFilter("ALL")}
+                      className={`px-3 py-1 text-xs rounded-[4px] font-medium transition-colors ${
+                        typeFilter === "ALL"
+                          ? "bg-[#161E33] text-white"
+                          : "bg-[#FCFBF8] border border-[#D9D2C3] text-[#5A6275] hover:text-[#161E33]"
                       }`}
                     >
-                      {tab.label}
+                      All records ({decisions.length})
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => setTypeFilter("decision")}
+                      className={`px-3 py-1 text-xs rounded-[4px] font-medium transition-colors flex items-center gap-1.5 ${
+                        typeFilter === "decision"
+                          ? "bg-[#2F5D8F] text-white"
+                          : "bg-[#FCFBF8] border border-[#D9D2C3] text-[#5A6275] hover:text-[#161E33]"
+                      }`}
+                    >
+                      <Compass className="w-3.5 h-3.5" />
+                      <span>Decisions ({decisions.filter((d) => d.record_type !== "meeting").length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTypeFilter("meeting")}
+                      className={`px-3 py-1 text-xs rounded-[4px] font-medium transition-colors flex items-center gap-1.5 ${
+                        typeFilter === "meeting"
+                          ? "bg-[#1B4332] text-white"
+                          : "bg-[#FCFBF8] border border-[#D9D2C3] text-[#5A6275] hover:text-[#161E33]"
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                      <span>Meetings ({decisions.filter((d) => d.record_type === "meeting").length})</span>
+                    </button>
+                  </div>
+
+                  {/* Row 2: Status Tab Bar */}
+                  <div className="flex items-center gap-6 text-[13px] overflow-x-auto scrollbar-none pt-1">
+                    {(
+                      [
+                        { key: "ALL", label: "All statuses" },
+                        { key: "UNDER_SCRUTINY", label: "Under scrutiny" },
+                        { key: "NEEDS_EVIDENCE", label: "Needs evidence" },
+                        { key: "READY_TO_DECIDE", label: "Ready to decide" },
+                        { key: "DECIDED", label: "Decided" },
+                      ] as const
+                    ).map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setStatusFilter(tab.key)}
+                        className={`pb-1 transition-colors relative whitespace-nowrap ${
+                          statusFilter === tab.key
+                            ? "text-[#2F5D8F] font-medium border-b-2 border-[#2F5D8F] -mb-[1px]"
+                            : "text-[#5A6275] hover:text-[#161E33]"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -509,13 +577,14 @@ export default function DashboardPage() {
                 <div className="bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] overflow-hidden">
                   {filteredDecisions.length === 0 ? (
                     <div className="p-8 text-center text-[#5A6275] text-[13px]">
-                      No decisions match your search or filter.
+                      No records match your search or filter.
                     </div>
                   ) : (
                     <table className="w-full text-left border-collapse text-[13px]">
                       <thead>
                         <tr className="border-b border-[#D9D2C3] font-courier text-[11px] text-[#5A6275] font-medium uppercase tracking-[0.08em]">
-                          <th className="py-3 px-4 font-medium">DECISION</th>
+                          <th className="py-3 px-4 font-medium">RECORD</th>
+                          <th className="py-3 px-4 font-medium">TYPE</th>
                           <th className="py-3 px-4 font-medium">WORKSPACE</th>
                           <th className="py-3 px-4 font-medium">STATUS</th>
                           <th className="py-3 px-4 font-medium text-right">DATE</th>
@@ -525,6 +594,7 @@ export default function DashboardPage() {
                         {filteredDecisions.map((d) => {
                           const parentFolder = folders.find((f) => f.id === d.folder_id);
                           const status = resolveStatus(d);
+                          const isMeeting = d.record_type === "meeting";
                           const formattedDate = new Date(d.created_at).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
@@ -536,7 +606,7 @@ export default function DashboardPage() {
                               onClick={() => router.push(`/decisions/${d.id}`)}
                               className="hover:bg-[#F5F1E8] cursor-pointer transition-colors group"
                             >
-                              {/* Decision Title & Problem */}
+                              {/* Title & Problem */}
                               <td className="py-3 px-4 max-w-md">
                                 <span className="font-medium text-[#161E33] group-hover:text-[#2F5D8F] transition-colors block leading-snug">
                                   {d.title}
@@ -546,6 +616,19 @@ export default function DashboardPage() {
                                     {d.problem_statement}
                                   </span>
                                 )}
+                              </td>
+
+                              {/* Type Badge */}
+                              <td className="py-3 px-4 whitespace-nowrap">
+                                <span
+                                  className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                                    isMeeting
+                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300/60"
+                                      : "bg-[#2F5D8F]/10 text-[#2F5D8F] border border-[#2F5D8F]/20"
+                                  }`}
+                                >
+                                  {isMeeting ? "Meeting" : "Decision"}
+                                </span>
                               </td>
 
                               {/* Workspace */}
@@ -703,13 +786,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* MODAL: CHALLENGE A DECISION */}
+      {/* MODAL: CHALLENGE A DECISION OR RECORD A MEETING */}
       {showChallengeModal && (
         <div className="fixed inset-0 z-50 bg-black/25 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
           <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative">
             <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
               <h3 className="text-[17px] font-medium text-[#161E33]">
-                Challenge a decision
+                {challengeRecordType === "meeting" ? "Record new meeting" : "Challenge a decision"}
               </h3>
               <button
                 type="button"
@@ -717,6 +800,34 @@ export default function DashboardPage() {
                 className="text-[#8B909C] hover:text-[#161E33] p-1 rounded-[2px]"
               >
                 <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Type selector toggle */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#EFEADF] rounded-[4px] mb-4">
+              <button
+                type="button"
+                onClick={() => setChallengeRecordType("decision")}
+                className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                  challengeRecordType === "decision"
+                    ? "bg-[#FCFBF8] text-[#161E33] shadow-2xs font-semibold"
+                    : "text-[#5A6275] hover:text-[#161E33]"
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5 text-[#2F5D8F]" />
+                <span>Decision</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setChallengeRecordType("meeting")}
+                className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                  challengeRecordType === "meeting"
+                    ? "bg-[#FCFBF8] text-[#1B4332] shadow-2xs font-semibold"
+                    : "text-[#5A6275] hover:text-[#161E33]"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-[#2D6A4F]" />
+                <span>Meeting</span>
               </button>
             </div>
 
@@ -749,14 +860,18 @@ export default function DashboardPage() {
 
               <div>
                 <label className="block text-[13px] font-medium text-[#161E33] mb-1">
-                  What decision are you weighing?
+                  {challengeRecordType === "meeting" ? "Meeting title or subject" : "What decision are you weighing?"}
                 </label>
                 <textarea
                   required
                   rows={3}
                   value={challengeTitle}
                   onChange={(e) => setChallengeTitle(e.target.value)}
-                  placeholder="e.g. Should we enter a new regional market this year?"
+                  placeholder={
+                    challengeRecordType === "meeting"
+                      ? "e.g. Sprint Architecture Sync, Vendor Security Review"
+                      : "e.g. Choose between Kubernetes vs Cloud Run for multi-region scale"
+                  }
                   className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
                 />
               </div>
@@ -772,9 +887,17 @@ export default function DashboardPage() {
                 <button
                   type="submit"
                   disabled={challengeSubmitting}
-                  className="px-4 py-1.5 bg-[#161E33] hover:bg-[#232C47] text-white text-[13px] font-medium rounded-[4px] transition-colors disabled:opacity-50"
+                  className={`px-4 py-1.5 text-white text-[13px] font-medium rounded-[4px] transition-colors disabled:opacity-50 ${
+                    challengeRecordType === "meeting"
+                      ? "bg-[#1B4332] hover:bg-[#2D6A4F]"
+                      : "bg-[#161E33] hover:bg-[#232C47]"
+                  }`}
                 >
-                  {challengeSubmitting ? "Starting..." : "Start decision"}
+                  {challengeSubmitting
+                    ? "Creating..."
+                    : challengeRecordType === "meeting"
+                    ? "Record meeting"
+                    : "Start decision"}
                 </button>
               </div>
             </form>

@@ -35,24 +35,31 @@ def generate_decision_markdown_report(decision: Decision) -> str:
     confidence_score = rec.get("confidence_assessment", {}).get("score", 0.85)
     conf_pct = int(confidence_score * 100) if isinstance(confidence_score, (int, float)) else 85
     synthesis_type = rec.get("synthesis_type", "recommendation")
+    is_meeting = (decision.record_type or "decision").lower() == "meeting"
+
+    report_title = f"DecisionLens Executive Meeting Minutes: {decision.title}" if is_meeting else f"DecisionLens Executive Decision Brief: {decision.title}"
+    record_id_tag = f"MTG-{decision.id:04d}" if is_meeting else f"DEC-{decision.id:04d}"
+    section1_title = "## 1. Meeting Purpose & Agenda Objectives" if is_meeting else "## 1. Problem Statement & Operational Scope"
+    core_label = "**Meeting Purpose & Objectives:**" if is_meeting else "**Core Problem:**"
+    bg_label = "**Attendees & Discussion Context:**" if is_meeting else "**Background Context:**"
 
     lines = [
-        f"# DecisionLens Executive Decision Brief: {decision.title}",
+        f"# {report_title}",
         "",
-        f"**Decision ID:** `DEC-{decision.id:04d}`  ",
+        f"**Record ID:** `{record_id_tag}`  ",
         f"**Date:** {now_str}  ",
         f"**Status:** {status_str}  ",
-        f"**Record Type:** {decision.record_type.capitalize()}  ",
+        f"**Record Type:** {'Meeting Discussion' if is_meeting else 'Decision Analysis'}  ",
         f"**Confidence Assessment:** {conf_pct}% ({rec.get('confidence_assessment', {}).get('level', 'MEDIUM').upper()})  ",
-        f"**Synthesis Type:** {'⚠ Conditional Next Step (Risk-Gated)' if synthesis_type == 'conditional_next_step' else '✓ Conclusive Strategic Recommendation'}  ",
+        f"**Synthesis Type:** {'⚠ Conditional Next Step (Risk-Gated)' if synthesis_type == 'conditional_next_step' else ('✓ Meeting Consensus & Action Items' if is_meeting else '✓ Conclusive Strategic Recommendation')}  ",
         "",
         "---",
         "",
-        "## 1. Problem Statement & Operational Scope",
+        section1_title,
         "",
-        f"**Core Problem:**  \n{decision.problem_statement or 'No explicit problem statement provided.'}",
+        f"{core_label}  \n{decision.problem_statement or ('No explicit meeting agenda provided.' if is_meeting else 'No explicit problem statement provided.')}",
         "",
-        f"**Background Context:**  \n{decision.description or 'No supplementary background provided.'}",
+        f"{bg_label}  \n{decision.description or ('No attendee list or notes provided.' if is_meeting else 'No supplementary background provided.')}",
         "",
     ]
 
@@ -966,18 +973,22 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     conf_score = rec.get("confidence_assessment", {}).get("score", 0.85)
     conf_pct = int(conf_score * 100) if isinstance(conf_score, (int, float)) else 85
     conf_level = str(rec.get("confidence_assessment", {}).get("level", "MEDIUM")).upper()
+    is_meeting = (decision.record_type or "decision").lower() == "meeting"
+
+    banner_subtitle = "DECISIONLENS EXECUTIVE MEETING MINUTES" if is_meeting else "DECISIONLENS STRATEGIC INTELLIGENCE DOSSIER"
+    record_id_prefix = "MTG" if is_meeting else "DEC"
 
     banner_data = [
         [
-            Paragraph("<b>DECISIONLENS STRATEGIC INTELLIGENCE DOSSIER</b>", ParagraphStyle("BTop", parent=meta_style, fontName="Helvetica-Bold", textColor=COLOR_STEEL)),
+            Paragraph(f"<b>{banner_subtitle}</b>", ParagraphStyle("BTop", parent=meta_style, fontName="Helvetica-Bold", textColor=COLOR_STEEL)),
             Paragraph(f"<b>STATUS:</b> <font color=\"#166534\">{escape_xml(status_str)}</font>", ParagraphStyle("BStat", parent=meta_style, alignment=2)),
         ],
         [
             Paragraph(f"<b>{escape_xml(decision.title)}</b>", title_style),
-            Paragraph(f"<b>ID:</b> DEC-{decision.id:04d}<br/><b>Date:</b> {now_str}<br/><b>Domain:</b> {escape_xml(domain_str)}", meta_style),
+            Paragraph(f"<b>ID:</b> {record_id_prefix}-{decision.id:04d}<br/><b>Date:</b> {now_str}<br/><b>Domain:</b> {escape_xml(domain_str)}", meta_style),
         ],
         [
-            Paragraph(f"<b>Confidence Assessment:</b> {conf_pct}% ({escape_xml(conf_level)}) &bull; <b>Record Type:</b> {escape_xml(decision.record_type.capitalize())}", ParagraphStyle("BBot", parent=meta_style, textColor=COLOR_NAVY)),
+            Paragraph(f"<b>Confidence Assessment:</b> {conf_pct}% ({escape_xml(conf_level)}) &bull; <b>Record Type:</b> {escape_xml('Meeting Discussion' if is_meeting else 'Decision Analysis')}", ParagraphStyle("BBot", parent=meta_style, textColor=COLOR_NAVY)),
             Paragraph("<b>Verified Evidence:</b> Grounded", ParagraphStyle("BBotR", parent=meta_style, alignment=2, textColor=COLOR_MUTED)),
         ]
     ]
@@ -998,11 +1009,11 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     story.append(BookmarkFlowable("sec_toc", "Table of Contents", 0))
     story.append(Paragraph("<b>Table of Contents (Click to Jump Directly)</b>", h2_style))
     toc_links = [
-        '<a href="#sec_problem" color="#2F5D8F">1. Problem Statement & Operational Scope</a>',
+        f'<a href="#sec_problem" color="#2F5D8F">{ "1. Meeting Purpose & Agenda Objectives" if is_meeting else "1. Problem Statement & Operational Scope" }</a>',
         '<a href="#sec_cognitive" color="#2F5D8F">2. Cognitive Structuring (8 Distinct Categories)</a>',
         '<a href="#sec_gaps" color="#2F5D8F">3. Information Gaps & Web Research Resolution</a>',
-        '<a href="#sec_frameworks" color="#2F5D8F">4. Multi-Lens Analytical Framework Results</a>',
-        '<a href="#sec_synthesis" color="#2F5D8F">5. Strategic Recommendation & Decision Synthesis</a>',
+        f'<a href="#sec_frameworks" color="#2F5D8F">{ "4. Meeting Alignment & Analytical Frameworks" if is_meeting else "4. Multi-Lens Analytical Framework Results" }</a>',
+        f'<a href="#sec_synthesis" color="#2F5D8F">{ "5. Meeting Decisions & Executive Minutes" if is_meeting else "5. Strategic Recommendation & Decision Synthesis" }</a>',
         '<a href="#sec_roadmap" color="#2F5D8F">6. Actionable Implementation Roadmap</a>',
     ]
     toc_data = [[Paragraph(link, body_style)] for link in toc_links]

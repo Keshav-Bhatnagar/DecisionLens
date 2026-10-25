@@ -11,6 +11,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Share2,
+  Mic,
+  Users,
 } from "lucide-react";
 
 export type WorkflowStage =
@@ -32,6 +34,7 @@ interface WorkflowStepperProps {
   hasGaps: boolean;
   hasFrameworks: boolean;
   hasSynthesis: boolean;
+  recordType?: "decision" | "meeting" | string;
 }
 
 export default function WorkflowStepper({
@@ -46,50 +49,91 @@ export default function WorkflowStepper({
   hasGaps,
   hasFrameworks,
   hasSynthesis,
+  recordType = "decision",
 }: WorkflowStepperProps) {
+  const isMeeting = recordType === "meeting";
+
   const stages: {
     id: WorkflowStage;
     label: string;
     description: string;
     icon: React.ReactNode;
     isCompleted: boolean;
-  }[] = [
-    {
-      id: "ingestion",
-      label: "1. Input & Voice",
-      description: "Problem, Audio & Documents",
-      icon: <FileText className="w-4 h-4" />,
-      isCompleted: isTranscriptReviewed || hasTranscript,
-    },
-    {
-      id: "structuring",
-      label: "2. Cognitive Structuring",
-      description: "Facts, Assumptions & Biases",
-      icon: <Brain className="w-4 h-4" />,
-      isCompleted: isPointsReviewed,
-    },
-    {
-      id: "gaps",
-      label: "3. Information Gaps",
-      description: "Key Questions & Evidence",
-      icon: <Search className="w-4 h-4" />,
-      isCompleted: hasGaps,
-    },
-    {
-      id: "frameworks",
-      label: "4. Thinking Frameworks",
-      description: "Option Scoring & Stress-Testing",
-      icon: <Grid className="w-4 h-4" />,
-      isCompleted: hasFrameworks,
-    },
-    {
-      id: "synthesis",
-      label: "5. Decision Synthesis",
-      description: "Recommendation & Roadmap",
-      icon: <Compass className="w-4 h-4" />,
-      isCompleted: hasSynthesis,
-    },
-  ];
+  }[] = isMeeting
+    ? [
+        {
+          id: "ingestion",
+          label: "1. Audio & Notes",
+          description: "Meeting Audio, Voice & Context",
+          icon: <Mic className="w-4 h-4" />,
+          isCompleted: isTranscriptReviewed || hasTranscript,
+        },
+        {
+          id: "structuring",
+          label: "2. Discussion Points",
+          description: "Key Takeaways & Statements",
+          icon: <Users className="w-4 h-4" />,
+          isCompleted: isPointsReviewed,
+        },
+        {
+          id: "gaps",
+          label: "3. Action Items & Gaps",
+          description: "Owners, Tasks & Missing Info",
+          icon: <Search className="w-4 h-4" />,
+          isCompleted: hasGaps,
+        },
+        {
+          id: "frameworks",
+          label: "4. Decisions & Alignment",
+          description: "Agreed Points vs Disagreements",
+          icon: <Grid className="w-4 h-4" />,
+          isCompleted: hasFrameworks,
+        },
+        {
+          id: "synthesis",
+          label: "5. Meeting Minutes",
+          description: "Executive Summary & Email",
+          icon: <Compass className="w-4 h-4" />,
+          isCompleted: hasSynthesis,
+        },
+      ]
+    : [
+        {
+          id: "ingestion",
+          label: "1. Input & Dilemma",
+          description: "Problem, Audio & Documents",
+          icon: <FileText className="w-4 h-4" />,
+          isCompleted: isTranscriptReviewed || hasTranscript,
+        },
+        {
+          id: "structuring",
+          label: "2. Cognitive Structuring",
+          description: "Facts, Assumptions & Biases",
+          icon: <Brain className="w-4 h-4" />,
+          isCompleted: isPointsReviewed,
+        },
+        {
+          id: "gaps",
+          label: "3. Information Gaps",
+          description: "Key Questions & Evidence",
+          icon: <Search className="w-4 h-4" />,
+          isCompleted: hasGaps,
+        },
+        {
+          id: "frameworks",
+          label: "4. Thinking Frameworks",
+          description: "Option Scoring & Stress-Testing",
+          icon: <Grid className="w-4 h-4" />,
+          isCompleted: hasFrameworks,
+        },
+        {
+          id: "synthesis",
+          label: "5. Decision Synthesis",
+          description: "Recommendation & Roadmap",
+          icon: <Compass className="w-4 h-4" />,
+          isCompleted: hasSynthesis,
+        },
+      ];
 
   const currentIdx = stages.findIndex((s) => s.id === currentStage);
   const completedCount = stages.filter((s) => s.isCompleted).length;
@@ -136,10 +180,14 @@ export default function WorkflowStepper({
           <button
             type="button"
             onClick={onOpenExportModal}
-            className="inline-flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold transition shadow-sm hover:shadow"
+            className={`inline-flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-xl font-semibold transition shadow-sm hover:shadow text-white ${
+              isMeeting
+                ? "bg-gradient-to-r from-teal-700 to-emerald-600 hover:from-teal-600 hover:to-emerald-500"
+                : "bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400"
+            }`}
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span>Export Brief</span>
+            <span>{isMeeting ? "Export Minutes" : "Export Brief"}</span>
           </button>
         </div>
       </div>
@@ -147,7 +195,11 @@ export default function WorkflowStepper({
       {/* Progress Bar with smooth gradient */}
       <div className="w-full bg-slate-100/90 rounded-full h-2 overflow-hidden p-0.5">
         <div
-          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 h-full rounded-full transition-all duration-500 ease-out shadow-xs"
+          className={`h-full rounded-full transition-all duration-500 ease-out shadow-xs ${
+            isMeeting
+              ? "bg-gradient-to-r from-teal-500 via-emerald-500 to-teal-600"
+              : "bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600"
+          }`}
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -163,7 +215,9 @@ export default function WorkflowStepper({
               onClick={() => onSelectStage(stage.id)}
               className={`text-left p-3.5 rounded-2xl border transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
                 isActive
-                  ? "bg-indigo-50/90 border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm -translate-y-0.5"
+                  ? isMeeting
+                    ? "bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500/20 shadow-sm -translate-y-0.5"
+                    : "bg-indigo-50/90 border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm -translate-y-0.5"
                   : stage.isCompleted
                   ? "bg-white/90 border-emerald-200/90 hover:bg-emerald-50/30 hover:border-emerald-300 hover:-translate-y-0.5 shadow-2xs"
                   : "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 hover:-translate-y-0.5 shadow-2xs"
