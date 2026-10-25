@@ -790,16 +790,34 @@ def detect_decision_gaps(
                 if not content and last_err:
                     raise last_err
             else:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": GAP_DETECTION_SYSTEM_PROMPT},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    response_format={"type": "json_object"},
-                    temperature=0.0,
-                )
-                content = response.choices[0].message.content
+                try:
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": GAP_DETECTION_SYSTEM_PROMPT},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.0,
+                    )
+                    content = response.choices[0].message.content
+                except Exception as azure_err:
+                    if provider == "azure":
+                        gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
+                        if gemini_key:
+                            logger.warning("Azure gap detection failed (%s). Attempting Gemini fallback...", azure_err)
+                            try:
+                                content = call_gemini_direct_rest(
+                                    model="gemini-3.5-flash",
+                                    system_prompt=GAP_DETECTION_SYSTEM_PROMPT,
+                                    user_prompt=user_prompt,
+                                    api_key=gemini_key,
+                                    temperature=0.0,
+                                )
+                            except Exception as rest_err:
+                                logger.warning("Gemini fallback also failed for gaps: %s", rest_err)
+                    if not content:
+                        raise azure_err
 
             parsed = json.loads(content)
             now_str = datetime.now(timezone.utc).isoformat()

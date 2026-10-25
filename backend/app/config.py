@@ -31,8 +31,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3002",
     ]
 
-    # AI Provider & Model Configuration (Gemini / OpenAI)
-    ai_provider: str = "auto"  # auto, gemini, openai, or mock
+    # AI Provider & Model Configuration (Azure / Gemini / OpenAI)
+    ai_provider: str = "auto"  # auto, azure, gemini, openai, or mock
     gemini_api_key: str = ""
     google_api_key: str = ""
     gemini_model: str = "gemini-3.5-flash"
@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     whisper_model: str = "whisper-1"
+
+    # Azure OpenAI Configuration
+    azure_openai_api_key: str = ""
+    azure_openai_endpoint: str = ""
+    azure_openai_api_version: str = "2024-08-01-preview"
+    azure_openai_deployment: str = "gpt-4o-mini"
+
+    # Azure AI Speech (STT) Configuration
+    azure_speech_key: str = ""
+    azure_speech_region: str = ""
 
     # External Web Search Provider (duckduckgo, tavily, serper, or mock)
     search_provider: str = "duckduckgo"
@@ -67,19 +77,23 @@ class Settings(BaseSettings):
 
     @property
     def has_ai_key(self) -> bool:
-        """Check if any hosted LLM key (Gemini or OpenAI) is configured."""
+        """Check if any hosted LLM key (Azure, Gemini, or OpenAI) is configured."""
         return bool(
-            (self.gemini_api_key and self.gemini_api_key.strip())
+            (self.azure_openai_api_key and self.azure_openai_endpoint)
+            or (self.gemini_api_key and self.gemini_api_key.strip())
             or (self.google_api_key and self.google_api_key.strip())
             or (self.openai_api_key and self.openai_api_key.strip())
         )
 
     @property
     def active_ai_provider(self) -> str:
-        """Resolve active AI provider: explicit selection or auto-detect by configured keys."""
+        """Resolve active AI provider: explicit selection or auto-detect by configured keys (Azure > Gemini > OpenAI)."""
         prov = (self.ai_provider or "auto").strip().lower()
-        if prov in {"gemini", "openai", "mock"}:
-            return prov
+        if prov in {"azure", "azure_openai", "gemini", "openai", "mock"}:
+            return "azure" if prov in {"azure", "azure_openai"} else prov
+        # Auto-detection preference order: Azure -> Gemini -> OpenAI -> Mock
+        if self.azure_openai_api_key and self.azure_openai_endpoint:
+            return "azure"
         if (self.gemini_api_key and self.gemini_api_key.strip()) or (self.google_api_key and self.google_api_key.strip()):
             return "gemini"
         if self.openai_api_key and self.openai_api_key.strip():

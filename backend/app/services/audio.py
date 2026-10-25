@@ -414,6 +414,126 @@ def transcribe_audio_gemini(
     return ""
 
 
+def transcribe_audio_azure_speech(
+    audio_path: Path,
+    language: str = "en",
+    key: Optional[str] = None,
+    region: Optional[str] = None,
+) -> str:
+    """
+    Transcribe audio file via Microsoft Azure AI Speech REST API.
+    Converts audio to 16kHz 16-bit mono PCM WAV, segments if longer than 50 seconds,
+    and returns high-accuracy punctuated transcription.
+    Supports English ('en-US') and Hindi ('hi-IN').
+    """
+    speech_key = (key or settings.azure_speech_key).strip()
+    speech_region = (region or settings.azure_speech_region).strip()
+    if not speech_key or not speech_region:
+        return ""
+
+    locale = "hi-IN" if language.lower() == "hi" else "en-US"
+    url = f"https://{speech_region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language={locale}&format=detailed"
+
+    ffmpeg_bin = get_ffmpeg_binary()
+    if not ffmpeg_bin:
+        logger.warning("FFmpeg binary not found for Azure Speech audio preparation.")
+        return ""
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        converted_wav = temp_dir_path / "audio_16k.wav"
+
+        # Transcode to 16kHz, 16-bit mono PCM WAV
+        cmd = [
+            ffmpeg_bin, "-y",
+            "-i", str(audio_path),
+            "-vn",
+            "-acodec", "pcm_s16le",
+            "-ar", "16000",
+            "-ac", "1",
+            str(converted_wav),
+        ]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+        if res.returncode != 0 or not converted_wav.exists() or converted_wav.stat().st_size == 0:
+            logger.warning("Failed to transcode audio for Azure Speech: %s", res.stderr)
+            return ""
+
+        # Check duration
+        duration = probe_audio_duration(converted_wav) or 0.0
+
+        headers = {
+            "Ocp-Apim-Subscription-Key": speech_key,
+            "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+            "Accept": "application/json",
+        }
+
+        # If <= 55 seconds, send in a single call
+        if duration <= 55.0:
+            audio_data = converted_wav.read_bytes()
+            try:
+                import httpx
+                with httpx.Client(timeout=30.0) as client:
+                    resp = client.post(url, headers=headers, content=audio_data)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        status_str = data.get("RecognitionStatus")
+                        if status_str == "Success":
+                            text = data.get("DisplayText") or ""
+                            if not text and data.get("NBest"):
+                                text = data["NBest"][0].get("Display", "")
+                            return clean_noise_tokens(text)
+                        elif status_str in ("NoMatch", "InitialSilenceTimeout"):
+                            logger.info("Azure Speech detected silence or no speech match.")
+                            return ""
+                        else:
+                            logger.warning("Azure Speech recognition status: %s", status_str)
+                    else:
+                        logger.warning("Azure Speech API returned HTTP %s: %s", resp.status_code, resp.text[:200])
+            except Exception as exc:
+                logger.warning("Azure Speech REST request error: %s", exc)
+            return ""
+
+        # If > 55 seconds, segment into 45-second chunks
+        segment_pattern = str(temp_dir_path / "chunk_%03d.wav")
+        seg_cmd = [
+            ffmpeg_bin, "-y",
+            "-i", str(converted_wav),
+            "-f", "segment",
+            "-segment_time", "45",
+            "-c", "copy",
+            segment_pattern,
+        ]
+        subprocess.run(seg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+
+        chunks = sorted(list(temp_dir_path.glob("chunk_*.wav")))
+        if not chunks:
+            chunks = [converted_wav]
+
+        collected_texts = []
+        try:
+            import httpx
+            with httpx.Client(timeout=30.0) as client:
+                for chunk in chunks:
+                    chunk_bytes = chunk.read_bytes()
+                    resp = client.post(url, headers=headers, content=chunk_bytes)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data.get("RecognitionStatus") == "Success":
+                            chunk_text = data.get("DisplayText") or ""
+                            if not chunk_text and data.get("NBest"):
+                                chunk_text = data["NBest"][0].get("Display", "")
+                            cleaned = clean_noise_tokens(chunk_text)
+                            if cleaned:
+                                collected_texts.append(cleaned)
+                    else:
+                        logger.warning("Azure Speech chunk transcription HTTP %s: %s", resp.status_code, resp.text[:200])
+        except Exception as exc:
+            logger.warning("Azure Speech chunked transcription error: %s", exc)
+
+        full_text = " ".join(collected_texts).strip()
+        return full_text
+
+
 def transcribe_audio_file(
     audio_path: Path,
     language: str = "en",
@@ -423,10 +543,11 @@ def transcribe_audio_file(
     """
     Transcribe audio file with multi-tiered speech-to-text pipeline:
     1. If force_mock=True (unit tests), returns unit test mock text.
-    2. Tier 1: Google Gemini 3.5 Flash native multimodal speech recognition (high fidelity, English & Hindi).
-    3. Tier 2: OpenAI Whisper (whisper-1) if OpenAI API key is configured.
-    4. Tier 3: Browser live-captured Web Speech transcript if remote models are unavailable.
-    5. Tier 4: FFmpeg + Google Speech Recognition v2.
+    2. Tier 0: Azure AI Speech Service (Primary if configured in Azure).
+    3. Tier 1: Google Gemini 3.5 Flash multimodal transcription (Option A Fallback).
+    4. Tier 2: OpenAI Whisper (whisper-1) if OpenAI API key is configured.
+    5. Tier 3: Browser live-captured Web Speech transcript if remote models are unavailable.
+    6. Tier 4: FFmpeg + Google Speech Recognition v2.
     Strictly restricted to 'en' and 'hi'.
     """
     norm_lang = language.strip().lower()
@@ -441,7 +562,26 @@ def transcribe_audio_file(
         logger.info(f"Using mock transcription for testing (language={norm_lang}, force_mock=True)")
         return get_mock_transcript(norm_lang)
 
-    # 1. Tier 1: Google Gemini 3.5 Flash multimodal transcription (highest quality)
+    # 0. Tier 0: Azure AI Speech Service (Option B primary)
+    azure_speech_key = settings.azure_speech_key.strip()
+    azure_speech_region = settings.azure_speech_region.strip()
+    if azure_speech_key and azure_speech_region:
+        try:
+            logger.info("Attempting Tier 0 Azure AI Speech transcription (language=%s)...", norm_lang)
+            azure_text = transcribe_audio_azure_speech(
+                audio_path,
+                language=norm_lang,
+                key=azure_speech_key,
+                region=azure_speech_region,
+            )
+            if azure_text and azure_text.strip():
+                logger.info("Successfully transcribed audio via Azure AI Speech (%d chars)", len(azure_text))
+                return azure_text.strip()
+            logger.info("Azure AI Speech returned empty or silence. Checking fallback...")
+        except Exception as exc:
+            logger.warning("Tier 0 Azure AI Speech transcription failed (%s). Falling back to Tier 1 Gemini.", exc)
+
+    # 1. Tier 1 (Fallback Option A): Google Gemini 3.5 Flash multimodal transcription (highest quality)
     gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
     if gemini_key:
         try:

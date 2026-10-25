@@ -1164,6 +1164,19 @@ def get_llm_client_and_model(task: str = "default"):
     """
     provider = settings.active_ai_provider
 
+    if provider == "azure":
+        from openai import AzureOpenAI
+        azure_key = settings.azure_openai_api_key.strip()
+        azure_endpoint = settings.azure_openai_endpoint.strip()
+        azure_api_version = settings.azure_openai_api_version.strip() or "2024-08-01-preview"
+        client = AzureOpenAI(
+            api_key=azure_key,
+            azure_endpoint=azure_endpoint,
+            api_version=azure_api_version,
+        )
+        selected_model = (settings.azure_openai_deployment or "gpt-4o-mini").strip()
+        return client, selected_model, "azure"
+
     if provider == "gemini":
         from openai import OpenAI
         gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
@@ -1261,10 +1274,15 @@ class AIService:
             )
             response_content = response.choices[0].message.content
         except Exception as exc:
-            # 2. Resilient failover for Gemini: try direct REST endpoint with candidate models (prioritizing 3.5)
-            if provider == "gemini":
-                gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
-                candidate_models = [model, "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
+            # 2. Resilient failover: If Azure or Gemini fails, try direct Gemini REST endpoint (Option A fallback)
+            gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
+            if (provider in {"azure", "gemini"}) and gemini_key:
+                logger.warning(
+                    "Hosted %s structuring failed (%s). Triggering resilient fallback to native Gemini REST models...",
+                    provider.upper(),
+                    exc,
+                )
+                candidate_models = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
                 unique_candidates = []
                 for m in candidate_models:
                     if m and m not in unique_candidates:
@@ -1273,7 +1291,7 @@ class AIService:
                 last_err = exc
                 for cand in unique_candidates:
                     try:
-                        logger.info("Attempting native Gemini REST structuring with model '%s'", cand)
+                        logger.info("Attempting fallback Gemini REST structuring with model '%s'", cand)
                         response_content = call_gemini_direct_rest(
                             model=cand,
                             system_prompt=STRUCTURING_SYSTEM_PROMPT,
@@ -1281,15 +1299,15 @@ class AIService:
                             api_key=gemini_key,
                         )
                         if response_content:
-                            logger.info("Native Gemini REST structuring succeeded with model '%s'", cand)
+                            logger.info("Fallback Gemini REST structuring succeeded with model '%s'", cand)
                             break
                     except Exception as rest_exc:
                         last_err = rest_exc
-                        logger.warning("Native Gemini REST call failed on model '%s': %s", cand, rest_exc)
+                        logger.warning("Fallback Gemini REST call failed on model '%s': %s", cand, rest_exc)
 
                 if not response_content:
                     logger.warning(
-                        "All hosted Gemini models failed or exceeded quota (%s). Falling back gracefully to deterministic source-grounded structuring engine.",
+                        "All hosted Azure/Gemini models failed (%s). Falling back gracefully to deterministic source-grounded structuring engine.",
                         last_err,
                     )
                     mock_findings = generate_mock_structuring_findings(raw_text, language)

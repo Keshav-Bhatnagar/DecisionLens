@@ -352,7 +352,24 @@ def run_ai_framework_evaluation(
             if isinstance(parsed, dict):
                 return parsed
     except Exception as exc:
-        logger.warning(f"AI framework evaluation failed: {exc}. Gracefully falling back to deterministic modules.", exc_info=True)
+        logger.warning(f"AI framework evaluation failed: {exc}. Checking fallback...", exc_info=True)
+        if provider == "azure":
+            gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
+            if gemini_key:
+                try:
+                    content = call_gemini_direct_rest(
+                        model="gemini-3.1-flash-lite",
+                        system_prompt=FRAMEWORK_INTELLIGENCE_SYSTEM_PROMPT,
+                        user_prompt=user_prompt,
+                        api_key=gemini_key,
+                        temperature=0.0,
+                    )
+                    if content:
+                        parsed = json.loads(content)
+                        if isinstance(parsed, dict):
+                            return parsed
+                except Exception as rest_err:
+                    logger.warning("Fallback Gemini framework evaluation failed: %s", rest_err)
         return None
 
     return None

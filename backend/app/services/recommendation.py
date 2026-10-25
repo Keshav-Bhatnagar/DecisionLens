@@ -876,21 +876,23 @@ def execute_hosted_synthesis(
         except Exception as proxy_exc:
             last_err = proxy_exc
             logger.warning("Synthesis with model '%s' failed (%s), trying fallback...", cand_model, proxy_exc)
-            if provider == "gemini":
+            if provider in {"azure", "gemini"}:
                 try:
                     gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
-                    raw_content = call_gemini_direct_rest(
-                        model=cand_model,
-                        system_prompt=SYNTHESIS_SYSTEM_PROMPT,
-                        user_prompt=prompt_user,
-                        api_key=gemini_key,
-                    )
-                    if raw_content:
-                        logger.info("Direct REST synthesis succeeded with model '%s'", cand_model)
-                        break
+                    if gemini_key:
+                        fallback_model = cand_model if provider == "gemini" else "gemini-3.5-flash"
+                        raw_content = call_gemini_direct_rest(
+                            model=fallback_model,
+                            system_prompt=SYNTHESIS_SYSTEM_PROMPT,
+                            user_prompt=prompt_user,
+                            api_key=gemini_key,
+                        )
+                        if raw_content:
+                            logger.info("Direct REST synthesis succeeded with fallback model '%s'", fallback_model)
+                            break
                 except Exception as rest_exc:
                     last_err = rest_exc
-                    logger.warning("Direct REST fallback failed for '%s': %s", cand_model, rest_exc)
+                    logger.warning("Direct REST fallback failed for synthesis: %s", rest_exc)
 
     if not raw_content and last_err:
         raise last_err
