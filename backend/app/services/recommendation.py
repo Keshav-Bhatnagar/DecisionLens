@@ -852,7 +852,7 @@ def execute_hosted_synthesis(
     raw_content = None
     candidate_models = [model]
     if provider == "gemini":
-        for alt_m in ["gemini-flash-latest", "gemini-pro-latest", "gemini-3.5-flash"]:
+        for alt_m in ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-flash-latest"]:
             if alt_m not in candidate_models:
                 candidate_models.append(alt_m)
 

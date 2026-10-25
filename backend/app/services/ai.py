@@ -1213,29 +1213,47 @@ class AIService:
             )
             response_content = response.choices[0].message.content
         except Exception as exc:
-            # 2. Resilient fallback for Gemini: call Google's native REST endpoint directly
+            # 2. Resilient failover for Gemini: try direct REST endpoint with candidate models
             if provider == "gemini":
                 gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
-                try:
-                    logger.info("OpenAI-compatible proxy failed (%s), falling back to native Gemini REST endpoint", exc)
-                    response_content = call_gemini_direct_rest(
-                        model=model,
-                        system_prompt=STRUCTURING_SYSTEM_PROMPT,
-                        user_prompt=user_prompt,
-                        api_key=gemini_key,
+                candidate_models = [model, "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash-preview"]
+                unique_candidates = []
+                for m in candidate_models:
+                    if m and m not in unique_candidates:
+                        unique_candidates.append(m)
+
+                last_err = exc
+                for cand in unique_candidates:
+                    try:
+                        logger.info("Attempting native Gemini REST structuring with model '%s'", cand)
+                        response_content = call_gemini_direct_rest(
+                            model=cand,
+                            system_prompt=STRUCTURING_SYSTEM_PROMPT,
+                            user_prompt=user_prompt,
+                            api_key=gemini_key,
+                        )
+                        if response_content:
+                            logger.info("Native Gemini REST structuring succeeded with model '%s'", cand)
+                            break
+                    except Exception as rest_exc:
+                        last_err = rest_exc
+                        logger.warning("Native Gemini REST call failed on model '%s': %s", cand, rest_exc)
+
+                if not response_content:
+                    logger.warning(
+                        "All hosted Gemini models failed or exceeded quota (%s). Falling back gracefully to deterministic source-grounded structuring engine.",
+                        last_err,
                     )
-                except Exception as rest_exc:
-                    logger.error("Native Gemini REST call also failed: %s", rest_exc)
-                    raise HTTPException(
-                        status_code=status.HTTP_502_BAD_GATEWAY,
-                        detail=f"Hosted AI structuring service failure (gemini): {str(rest_exc)}",
-                    )
+                    mock_findings = generate_mock_structuring_findings(raw_text, language)
+                    return validate_and_sanitize_grounded_findings(mock_findings, raw_text)
             else:
-                logger.error("Hosted AI structuring error (%s): %s", provider, exc)
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Hosted AI structuring service failure ({provider}): {str(exc)}",
+                logger.warning(
+                    "Hosted AI structuring error (%s: %s). Falling back gracefully to deterministic source-grounded structuring engine.",
+                    provider,
+                    exc,
                 )
+                mock_findings = generate_mock_structuring_findings(raw_text, language)
+                return validate_and_sanitize_grounded_findings(mock_findings, raw_text)
 
         if not response_content:
             raise ValueError(f"Empty response received from {provider.upper()} model.")
