@@ -5,10 +5,16 @@ echo "=================================================="
 echo "🚀 Starting DecisionLens Full-Stack System"
 echo "=================================================="
 
-# 1. Start FastAPI Backend in background on internal port 8000
-echo "Starting FastAPI Backend on 127.0.0.1:8000..."
+# 1. Start FastAPI Backend in background on internal port 8000 with auto-restart and 120s keep-alive
+echo "Starting FastAPI Backend on 127.0.0.1:8000 (keep-alive: 120s)..."
 cd /app/backend
-uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+(
+  while true; do
+    uvicorn app.main:app --host 127.0.0.1 --port 8000 --timeout-keep-alive 120
+    echo "Uvicorn exited with status $?. Restarting in 2 seconds..."
+    sleep 2
+  done
+) &
 BACKEND_PID=$!
 
 # 2. Start Next.js Frontend on the public container PORT

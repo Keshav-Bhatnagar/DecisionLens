@@ -6,12 +6,28 @@ from app.config import settings
 
 import logging
 
+from urllib.parse import urlparse, urlunparse
+
 logger = logging.getLogger("decisionlens.database")
 
 # Engine setup with appropriate connection arguments
 db_url = settings.database_url
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+# Dynamically route Supabase direct IPv6 URLs to IPv4 connection pooler for cloud hosts like Render
+try:
+    parsed_db = urlparse(db_url)
+    if parsed_db.hostname and parsed_db.hostname.startswith("db.") and parsed_db.hostname.endswith(".supabase.co"):
+        project_ref = parsed_db.hostname.replace("db.", "").replace(".supabase.co", "")
+        new_user = f"postgres.{project_ref}" if parsed_db.username == "postgres" else parsed_db.username
+        # Preserve user's private password from environment
+        auth_part = f"{new_user}:{parsed_db.password}" if parsed_db.password else new_user
+        netloc = f"{auth_part}@aws-0-ap-southeast-1.pooler.supabase.com:6543"
+        db_url = urlunparse((parsed_db.scheme, netloc, parsed_db.path, parsed_db.params, parsed_db.query, parsed_db.fragment))
+        logger.info("Dynamically converted Supabase direct host to IPv4 connection pooler.")
+except Exception as exc:
+    logger.debug(f"URL parsing skipped: {exc}")
 
 is_sqlite = db_url.startswith("sqlite")
 engine_kwargs = {"echo": False}

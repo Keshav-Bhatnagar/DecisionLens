@@ -15,6 +15,12 @@ if (typeof nextEnv?.loadEnvConfig === "function") {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  httpAgentOptions: {
+    keepAlive: true,
+  },
+  experimental: {
+    proxyTimeout: 120000,
+  },
   async rewrites() {
     const backendUrl =
       process.env.INTERNAL_API_URL ||

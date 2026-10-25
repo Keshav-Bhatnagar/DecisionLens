@@ -20,9 +20,15 @@ from app.api.outcomes import router as outcomes_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Ensure storage directory exists
-    _ = settings.storage_path
+    try:
+        _ = settings.storage_path
+    except Exception as exc:
+        logger.warning(f"Could not prepare storage directory: {exc}")
     # Initialize database tables and execute incremental SQLite migrations
-    init_db()
+    try:
+        init_db()
+    except Exception as exc:
+        logger.error(f"init_db failed during lifespan: {exc}")
     yield
 
 

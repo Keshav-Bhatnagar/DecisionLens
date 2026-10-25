@@ -129,6 +129,26 @@ def probe_audio_duration(file_path: Path) -> Optional[float]:
     return None
 
 
+NOISE_PATTERNS = {
+    "<noise>", "[noise]", "(noise)",
+    "<silence>", "[silence]", "(silence)",
+    "[background noise]", "<background noise>",
+    "[applause]", "[laughter]", "[gasp]",
+    "<ambient>", "[ambient sound]",
+}
+
+
+def clean_noise_tokens(text: str) -> str:
+    """Strip AI noise annotations and check if meaningful speech remains."""
+    if not text:
+        return ""
+    cleaned = text.strip()
+    for np in NOISE_PATTERNS:
+        cleaned = cleaned.replace(np, "").replace(np.upper(), "")
+    cleaned = " ".join(cleaned.split()).strip()
+    return cleaned
+
+
 def enhance_audio_with_ffmpeg(
     input_path: Path,
     output_path: Path,
@@ -136,7 +156,7 @@ def enhance_audio_with_ffmpeg(
     enable_noise_reduction: bool = True,
 ) -> bool:
     """
-    Apply FFmpeg loudness normalization (loudnorm) and optional high-pass filter noise reduction.
+    Apply fast FFmpeg loudness normalization (loudnorm) and optional high-pass filter noise reduction.
     Returns True if successfully enhanced, False if FFmpeg fails or is not installed.
     """
     ffmpeg_bin = get_ffmpeg_binary()
@@ -149,7 +169,7 @@ def enhance_audio_with_ffmpeg(
         # High-pass filter at 200 Hz to remove low-frequency ambient rumble and mic handling hum
         audio_filters.append("highpass=f=200")
     if enable_normalization:
-        # EBU R128 two-pass-like integrated loudness normalization
+        # EBU R128 integrated loudness normalization
         audio_filters.append("loudnorm")
 
     filter_str = ",".join(audio_filters) if audio_filters else "anull"
@@ -163,6 +183,7 @@ def enhance_audio_with_ffmpeg(
         "-af", filter_str,
         "-c:a", "pcm_s16le",
         "-ar", "16000",
+        "-threads", "2",
         str(output_path),
     ]
 
@@ -172,7 +193,7 @@ def enhance_audio_with_ffmpeg(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            timeout=60,
+            timeout=15,
         )
         if result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 0:
             return True
@@ -327,20 +348,13 @@ def transcribe_audio_gemini(audio_path: Path, language: str = "en") -> str:
         audio_bytes = audio_path.read_bytes()
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
+        # Directly use fast models (gemini-flash-lite-latest responds in 1.5 - 2.5s)
         models_to_try = [
             "gemini-flash-lite-latest",
-            "gemini-3.1-flash-lite-preview",
             "gemini-flash-latest",
-            settings.gemini_model,
         ]
-        seen = set()
-        unique_models = []
-        for m in models_to_try:
-            if m and m not in seen:
-                seen.add(m)
-                unique_models.append(m)
 
-        for model_name in unique_models:
+        for model_name in models_to_try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
             headers = {
                 "x-goog-api-key": api_key,
@@ -365,7 +379,7 @@ def transcribe_audio_gemini(audio_path: Path, language: str = "en") -> str:
                     "temperature": 0.0,
                 },
             }
-            with httpx.Client(timeout=35.0) as client:
+            with httpx.Client(timeout=12.0) as client:
                 resp = client.post(url, headers=headers, json=payload)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -373,12 +387,16 @@ def transcribe_audio_gemini(audio_path: Path, language: str = "en") -> str:
                     if candidates:
                         parts = candidates[0].get("content", {}).get("parts", [])
                         if parts and "text" in parts[0]:
-                            text = parts[0]["text"].strip()
-                            if text:
+                            raw_text = parts[0]["text"].strip()
+                            clean_text = clean_noise_tokens(raw_text)
+                            if clean_text:
                                 logger.info(
-                                    f"Successfully transcribed audio via Gemini ({model_name}, {len(text)} chars)"
+                                    f"Successfully transcribed audio via Gemini ({model_name}, {len(clean_text)} chars)"
                                 )
-                                return text
+                                return clean_text
+                            else:
+                                logger.info(f"Gemini output was noise/silence token ({raw_text}) - treating as silent")
+                                return ""
                 else:
                     logger.warning(
                         f"Gemini STT with model {model_name} returned HTTP {resp.status_code}: {resp.text[:200]}"
@@ -397,11 +415,11 @@ def transcribe_audio_file(
 ) -> str:
     """
     Transcribe audio file with multi-tiered speech-to-text pipeline:
+    0. Fast-path: Browser live-captured Web Speech transcript (< 50ms).
     1. If force_mock=True (unit tests), returns unit test mock text.
     2. Tier 1: Google Gemini native multimodal speech recognition (fast, high accuracy, English & Hindi).
     3. Tier 2: OpenAI Whisper (whisper-1) if OpenAI API key is configured.
-    4. Tier 3: Browser live-captured Web Speech transcript if provided.
-    5. Tier 4: FFmpeg + Google Speech Recognition v2.
+    4. Tier 3: FFmpeg + Google Speech Recognition v2.
     Strictly restricted to 'en' and 'hi'.
     """
     norm_lang = language.strip().lower()
@@ -416,7 +434,14 @@ def transcribe_audio_file(
         logger.info(f"Using mock transcription for testing (language={norm_lang}, force_mock=True)")
         return get_mock_transcript(norm_lang)
 
-    # 1. Tier 1: Google Gemini multimodal transcription (fastest & most accurate with GEMINI_API_KEY)
+    # 0. Fast-path: If browser Web Speech API captured spoken words in real time, use immediately (< 50ms)
+    if client_transcript and len(client_transcript.strip()) > 3:
+        cleaned_client = clean_noise_tokens(client_transcript)
+        if cleaned_client:
+            logger.info(f"Fast-path: utilizing browser speech transcript ({len(cleaned_client)} chars)")
+            return cleaned_client
+
+    # 1. Tier 1: Google Gemini multimodal transcription (fastest hosted STT, 1.5 - 2.5 seconds)
     gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
     if gemini_key:
         try:
@@ -443,7 +468,7 @@ def transcribe_audio_file(
                     language=norm_lang,
                     prompt=whisper_prompt,
                 )
-            text = transcription.text.strip()
+            text = clean_noise_tokens(transcription.text.strip())
             if text:
                 return text
         except Exception as exc:
@@ -451,19 +476,21 @@ def transcribe_audio_file(
 
     # 3. Tier 3: Browser live-captured Web Speech transcript if provided
     if client_transcript and client_transcript.strip():
-        logger.info(f"Using browser Web Speech transcript fallback ({len(client_transcript)} chars)")
-        return client_transcript.strip()
+        cleaned_client = clean_noise_tokens(client_transcript)
+        if cleaned_client:
+            logger.info(f"Using browser Web Speech transcript fallback ({len(cleaned_client)} chars)")
+            return cleaned_client
 
     # 4. Tier 4: Google Speech Recognition via FFmpeg
     try:
         recognized = transcribe_audio_google_free(audio_path, language=norm_lang)
-        if recognized and recognized.strip():
-            logger.info(f"Successfully transcribed audio via Google Speech API ({len(recognized)} chars)")
-            return recognized.strip()
+        cleaned_rec = clean_noise_tokens(recognized)
+        if cleaned_rec:
+            logger.info(f"Successfully transcribed audio via Google Speech API ({len(cleaned_rec)} chars)")
+            return cleaned_rec
     except Exception as exc:
         logger.warning(f"Google Speech Recognition execution error: {exc}")
 
-    # 5. If speech was completely silent or unintelligible, return empty string
     return ""
 
 

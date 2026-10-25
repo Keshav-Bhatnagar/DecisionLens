@@ -25,6 +25,7 @@ from app.schemas import (
 )
 from app.services.audio import (
     SUPPORTED_LANGUAGES,
+    clean_noise_tokens,
     process_and_store_audio,
     transcribe_audio_file,
 )
@@ -109,15 +110,19 @@ async def upload_and_transcribe_audio(
         except Exception as retry_exc:
             logger.warning(f"Audio transcription fallback also failed ({retry_exc}). Using client transcript fallback.")
 
-    if not transcript_text or not transcript_text.strip():
-        if client_transcript and client_transcript.strip():
-            transcript_text = client_transcript.strip()
+    clean_text = clean_noise_tokens(transcript_text)
+    if not clean_text:
+        clean_client = clean_noise_tokens(client_transcript or "")
+        if clean_client:
+            transcript_text = clean_client
         else:
             transcript_text = (
                 "इस रिकॉर्डिंग में कोई स्पष्ट आवाज़ नहीं मिली। कृपया माइक्रोफ़ोन चेक करें और साफ़ बोलें।"
                 if norm_lang == "hi"
                 else "No clear speech was detected in this recording. Please verify your microphone and speak clearly."
             )
+    else:
+        transcript_text = clean_text
 
     # Record audio recording metadata in database
     audio_rec = AudioRecording(
