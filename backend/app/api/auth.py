@@ -2,7 +2,7 @@ import logging
 import secrets
 from typing import List, Optional
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -124,9 +124,19 @@ def change_password(
     response_model=List[OAuthProviderInfo],
     summary="List available OAuth identity providers",
 )
-def get_oauth_providers():
-    """Return available OAuth providers, unified under Supabase OAuth."""
+def get_oauth_providers(request: Request):
+    """Return available OAuth providers, unified under Supabase OAuth with dynamic origin resolution."""
     base_url = settings.supabase_url.rstrip("/") if settings.supabase_url else "https://fzqlmmdfiiwaqawygkyf.supabase.co"
+
+    # Dynamically determine frontend origin for redirect
+    frontend_origin = "http://localhost:3000"
+    if request:
+        origin_header = request.headers.get("origin") or request.headers.get("referer")
+        if origin_header:
+            from urllib.parse import urlparse
+            parsed = urlparse(origin_header)
+            if parsed.scheme and parsed.netloc:
+                frontend_origin = f"{parsed.scheme}://{parsed.netloc}"
 
     providers: List[OAuthProviderInfo] = [
         OAuthProviderInfo(
@@ -134,21 +144,21 @@ def get_oauth_providers():
             name="Google Workspace",
             configured=True,
             client_id=settings.google_client_id or None,
-            auth_url=f"{base_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback",
+            auth_url=f"{base_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to={frontend_origin}/auth/callback",
         ),
         OAuthProviderInfo(
             id="microsoft",
             name="Microsoft / Azure AD",
             configured=bool(settings.microsoft_client_id),
             client_id=settings.microsoft_client_id or None,
-            auth_url=f"{base_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to=http://localhost:3000/auth/callback",
+            auth_url=f"{base_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to={frontend_origin}/auth/callback",
         ),
         OAuthProviderInfo(
             id="github",
             name="GitHub",
             configured=bool(settings.github_client_id),
             client_id=settings.github_client_id or None,
-            auth_url=f"{base_url}/auth/v1/authorize?provider=github&redirect_to=http://localhost:3000/auth/callback",
+            auth_url=f"{base_url}/auth/v1/authorize?provider=github&redirect_to={frontend_origin}/auth/callback",
         ),
     ]
     return providers
