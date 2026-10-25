@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import SpeechDictationButton from "@/components/SpeechDictationButton";
+import ModalPortal from "@/components/ModalPortal";
 import {
   getFolder,
   getDecisions,
@@ -399,8 +400,9 @@ export default function FolderDetailPage({
 
       {/* Create Decision/Meeting Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-150">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
               <h3 className="text-lg font-semibold text-slate-900">
                 New Record in &quot;{folder?.name}&quot;
@@ -622,6 +624,7 @@ export default function FolderDetailPage({
             </form>
           </div>
         </div>
+      </ModalPortal>
       )}
     </AppShell>
   );
