@@ -58,6 +58,8 @@ export default function AudioRecorder({
   const [processingStep, setProcessingStep] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [lastTranscribedText, setLastTranscribedText] = useState<string | null>(null);
+  const [copiedTranscript, setCopiedTranscript] = useState<boolean>(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -372,6 +374,9 @@ export default function AudioRecorder({
         clientTranscript: clientCapturedText || undefined,
       });
 
+      if (res?.transcript) {
+        setLastTranscribedText(res.transcript);
+      }
       setSuccessMsg("Audio successfully transcribed & updated in Meeting Transcript below!");
       onTranscriptionSuccess(res);
 
@@ -694,8 +699,38 @@ export default function AudioRecorder({
 
       {successMsg && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
           <span>{successMsg}</span>
+        </div>
+      )}
+
+      {lastTranscribedText && (
+        <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl space-y-2.5 animate-in fade-in">
+          <div className="flex items-center justify-between text-xs font-semibold text-emerald-900">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              Verbatim Speech Transcript ({lastTranscribedText.split(/\s+/).filter(Boolean).length} words)
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(lastTranscribedText);
+                  setCopiedTranscript(true);
+                  setTimeout(() => setCopiedTranscript(false), 2000);
+                }}
+                className="text-xs text-emerald-700 hover:text-emerald-900 font-medium px-2 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 transition"
+              >
+                {copiedTranscript ? "Copied!" : "Copy"}
+              </button>
+              <span className="text-[11px] font-medium bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                Synced to Editor
+              </span>
+            </div>
+          </div>
+          <div className="bg-white/95 rounded-xl p-3.5 border border-emerald-100 text-xs sm:text-sm text-slate-800 leading-relaxed max-h-56 overflow-y-auto whitespace-pre-wrap font-sans select-text shadow-2xs">
+            {lastTranscribedText}
+          </div>
         </div>
       )}
 

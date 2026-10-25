@@ -106,8 +106,8 @@ export default function DecisionDetailPage({
     }, 50);
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (silent: boolean = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const d = await getDecision(decisionId);
@@ -118,8 +118,8 @@ export default function DecisionDetailPage({
       setStatus(d.status || "draft");
       setRecordType(d.record_type || "decision");
 
-      // Smart initial stage auto-selection if user hasn't explicitly chosen one
-      if (!stageManuallySelected) {
+      // Smart initial stage auto-selection only on initial non-silent load
+      if (!stageManuallySelected && !silent) {
         if (d.recommendation && typeof d.recommendation === "object" && "headline" in d.recommendation) {
           setWorkflowStage("synthesis");
         } else if (d.analysis && typeof d.analysis === "object" && Object.keys(d.analysis).length > 0) {
@@ -148,7 +148,7 @@ export default function DecisionDetailPage({
 
       setError(err instanceof Error ? err.message : "Failed to load decision");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [decisionId, stageManuallySelected]);
 
@@ -462,7 +462,19 @@ export default function DecisionDetailPage({
                               : prev
                           );
                         }
-                        await loadData();
+                        // Explicitly pin to Ingestion -> Voice tab so the transcript never disappears
+                        setWorkflowStage("ingestion");
+                        setIngestionTab("voice");
+                        setStageManuallySelected(true);
+                        await loadData(true);
+
+                        // Smooth scroll directly to the transcript editor
+                        setTimeout(() => {
+                          const elem = document.getElementById("transcript-editor-section");
+                          if (elem) {
+                            elem.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }
+                        }, 150);
                       }}
                     />
 
@@ -473,7 +485,7 @@ export default function DecisionDetailPage({
                         initialTranscript={decision.transcript || ""}
                         isReviewed={decision.transcript_reviewed}
                         language={decision.language || "en"}
-                        onTranscriptSaved={() => loadData()}
+                        onTranscriptSaved={() => loadData(true)}
                       />
                     </div>
                   </div>
