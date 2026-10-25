@@ -163,3 +163,132 @@ def test_verify_ownership_reusable_check():
 
     assert exc_info.value.status_code == 404
     assert "Decision not found" in exc_info.value.detail
+
+
+def test_change_password_success(client: TestClient, registered_user: dict):
+    """Verify changing password updates hash and allows logging in with new credentials."""
+    headers = {"Authorization": f"Bearer {registered_user['token']}"}
+    payload = {
+        "current_password": registered_user["password"],
+        "new_password": "NewSecretPass2026!",
+    }
+    res = client.post("/api/auth/change-password", headers=headers, json=payload)
+    assert res.status_code == 200
+    assert "successfully" in res.json()["message"].lower()
+
+    # Old password fails
+    fail_login = client.post(
+        "/api/auth/login",
+        json={"email": registered_user["email"], "password": registered_user["password"]},
+    )
+    assert fail_login.status_code == 401
+
+    # New password succeeds
+    ok_login = client.post(
+        "/api/auth/login",
+        json={"email": registered_user["email"], "password": "NewSecretPass2026!"},
+    )
+    assert ok_login.status_code == 200
+
+
+def test_change_password_wrong_current(client: TestClient, registered_user: dict):
+    """Verify changing password rejects incorrect current password with HTTP 400."""
+    headers = {"Authorization": f"Bearer {registered_user['token']}"}
+    payload = {
+        "current_password": "WrongPassword123!",
+        "new_password": "NewSecretPass2026!",
+    }
+    res = client.post("/api/auth/change-password", headers=headers, json=payload)
+    assert res.status_code == 400
+    assert "current password does not match" in res.json()["detail"].lower()
+
+
+def test_change_password_weak_new(client: TestClient, registered_user: dict):
+    """Verify changing password validates new password complexity (HTTP 422 on failure)."""
+    headers = {"Authorization": f"Bearer {registered_user['token']}"}
+    payload = {
+        "current_password": registered_user["password"],
+        "new_password": "weak",
+    }
+    res = client.post("/api/auth/change-password", headers=headers, json=payload)
+    assert res.status_code == 422
+
+
+def test_oauth_providers_list(client: TestClient):
+    """Verify GET /api/auth/oauth/providers returns Google, GitHub, and Microsoft metadata."""
+    res = client.get("/api/auth/oauth/providers")
+    assert res.status_code == 200
+    providers = res.json()
+    assert isinstance(providers, list)
+    provider_ids = [p["id"] for p in providers]
+    assert "google" in provider_ids
+    assert "github" in provider_ids
+    assert "microsoft" in provider_ids
+
+    # Check Google provider attributes
+    google_p = next(p for p in providers if p["id"] == "google")
+    assert "Google Workspace" in google_p["name"]
+    assert "configured" in google_p
+
+
+def test_oauth_authenticate_google_sandbox(client: TestClient):
+    """Verify authenticating via Google OAuth creates user with provider tag and returns JWT."""
+    payload = {
+        "provider": "google",
+        "email": "executive.director@google.com",
+        "display_name": "Executive Director",
+        "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+    }
+    res = client.post("/api/auth/oauth/authenticate", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+    assert data["user"]["email"] == "executive.director@google.com"
+    assert data["user"]["oauth_provider"] == "google"
+    assert data["user"]["display_name"] == "Executive Director"
+
+    # User can now query /api/auth/me using this JWT
+    headers = {"Authorization": f"Bearer {data['access_token']}"}
+    me_res = client.get("/api/auth/me", headers=headers)
+    assert me_res.status_code == 200
+    assert me_res.json()["email"] == "executive.director@google.com"
+    assert me_res.json()["oauth_provider"] == "google"
+
+
+def test_oauth_authenticate_github_existing_linking(client: TestClient, registered_user: dict):
+    """Verify OAuth authentication with an existing user's email links the OAuth provider."""
+    payload = {
+        "provider": "github",
+        "email": registered_user["email"],
+        "display_name": "GitHub Developer",
+        "avatar_url": "https://avatars.githubusercontent.com/u/12345",
+    }
+    res = client.post("/api/auth/oauth/authenticate", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["user"]["email"] == registered_user["email"]
+    assert data["user"]["oauth_provider"] == "github"
+    assert data["user"]["display_name"] == "GitHub Developer"
+
+
+def test_oauth_authenticate_unsupported_provider(client: TestClient):
+    """Verify unsupported provider is rejected with HTTP 400."""
+    payload = {
+        "provider": "unsupported_provider_xyz",
+        "email": "test@example.com",
+    }
+    res = client.post("/api/auth/oauth/authenticate", json=payload)
+    assert res.status_code == 400
+    assert "unsupported oauth provider" in res.json()["detail"].lower()
+
+
+def test_oauth_authenticate_missing_credentials(client: TestClient):
+    """Verify OAuth request without email or id_token fails validation."""
+    payload = {
+        "provider": "google",
+    }
+    res = client.post("/api/auth/oauth/authenticate", json=payload)
+    assert res.status_code == 400
+    assert "missing oauth credentials" in res.json()["detail"].lower()
+

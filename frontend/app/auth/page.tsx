@@ -523,8 +523,8 @@ export default function AuthPage() {
 
       {/* Dev / Sandbox Persona Simulation Modal (fallback if live OAuth client unconfigured) */}
       {showOAuthModal && (
-        <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-paper-surface rounded-md border border-border p-6 max-w-md w-full shadow-lg space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-[#FCFBF8] rounded-md border border-[#D9D2C3] p-6 max-w-md w-full shadow-2xl space-y-4 relative z-50">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-sm bg-paper-sidebar border border-border flex items-center justify-center text-accent">

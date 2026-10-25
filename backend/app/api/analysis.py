@@ -13,6 +13,8 @@ from app.schemas import (
     MatrixEvaluationResponse,
 )
 from app.services.framework_engine import (
+    build_canonical_decision_result,
+    detect_decision_domain,
     run_framework_analysis,
     validate_and_calculate_matrix_scores,
 )
@@ -97,6 +99,9 @@ def get_framework_analysis(
         decision_id=decision.id,
         evaluated_at=analysis_data.get("evaluated_at", ""),
         selected_frameworks=analysis_data.get("selected_frameworks", []),
+        recommended_framework=analysis_data.get("recommended_framework"),
+        recommended_techniques=analysis_data.get("recommended_techniques", []),
+        methodology_rationale=analysis_data.get("methodology_rationale"),
         six_hats=analysis_data.get("six_hats"),
         swot=analysis_data.get("swot"),
         decision_matrix=analysis_data.get("decision_matrix"),
@@ -143,6 +148,39 @@ def evaluate_matrix_scores(
         )
         total_weight = sum(c.weight for c in request.criteria)
 
+        domain = getattr(decision, "domain", None) or detect_decision_domain(decision)
+        canonical_result = build_canonical_decision_result(
+            decision=decision,
+            criteria=request.criteria,
+            options=request.options,
+            ratings=request.ratings,
+            results=results,
+            winner_id=winner_id,
+            winner_name=winner_name,
+            domain=domain,
+        )
+
+        if decision.analysis and isinstance(decision.analysis, dict):
+            a_copy = dict(decision.analysis)
+            a_copy["is_stale"] = False
+            a_copy["canonical_result"] = canonical_result.model_dump()
+            if "decision_matrix" in a_copy and isinstance(a_copy["decision_matrix"], dict):
+                dm_copy = dict(a_copy["decision_matrix"])
+                dm_copy["results"] = [r.model_dump() for r in results]
+                dm_copy["winner_option_id"] = winner_id
+                dm_copy["winner_option_name"] = winner_name
+                dm_copy["canonical_result"] = canonical_result.model_dump()
+                a_copy["decision_matrix"] = dm_copy
+            decision.analysis = a_copy
+
+        if decision.recommendation and isinstance(decision.recommendation, dict):
+            r_copy = dict(decision.recommendation)
+            r_copy["is_stale"] = True
+            decision.recommendation = r_copy
+
+        db.commit()
+        db.refresh(decision)
+
         return MatrixEvaluationResponse(
             valid=True,
             scale_min=request.scale_min,
@@ -154,6 +192,7 @@ def evaluate_matrix_scores(
             results=results,
             winner_option_id=winner_id,
             winner_option_name=winner_name,
+            canonical_result=canonical_result,
         )
     except ValueError as val_err:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(val_err))

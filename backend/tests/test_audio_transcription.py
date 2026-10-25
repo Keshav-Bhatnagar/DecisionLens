@@ -251,3 +251,41 @@ def test_audio_cross_user_isolation(client: TestClient, auth_headers: dict, deci
         json={"transcript": "Unauthorized edit", "mark_reviewed": True},
     )
     assert res_b_patch.status_code == 404
+
+
+def test_gemini_audio_transcription_tier(monkeypatch, tmp_path):
+    """Test that transcribe_audio_gemini calls the Gemini API endpoint and returns text."""
+    from unittest.mock import MagicMock
+    from pathlib import Path
+    from app.services.audio import transcribe_audio_gemini, transcribe_audio_file
+    import httpx
+
+    fake_audio = tmp_path / "test.webm"
+    fake_audio.write_bytes(b"RIFF\x00\x00\x00\x00WAVE")
+
+    # Mock httpx.Client post response
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [{"text": "Hello world from Gemini speech-to-text"}]
+                }
+            }
+        ]
+    }
+
+    mock_client = MagicMock()
+    mock_client.__enter__.return_value.post.return_value = mock_resp
+    from app.config import settings
+    monkeypatch.setattr(settings, "gemini_api_key", "test_key_gemini")
+    monkeypatch.setattr(httpx, "Client", lambda **kwargs: mock_client)
+
+    result = transcribe_audio_gemini(fake_audio, language="en")
+    assert result == "Hello world from Gemini speech-to-text"
+
+    # Also test transcribe_audio_file invokes Tier 1
+    full_result = transcribe_audio_file(fake_audio, language="en", force_mock=False)
+    assert full_result == "Hello world from Gemini speech-to-text"
+

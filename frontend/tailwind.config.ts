@@ -58,6 +58,20 @@ const config: Config = {
           accent: "#2F5D8F",
           border: "#D9D2C3",
         },
+        paper: {
+          page: "#F5F1E8",
+          surface: "#FCFBF8",
+          sidebar: "#EFEADF",
+        },
+        ink: {
+          DEFAULT: "#161E33",
+          secondary: "#5A6275",
+          tertiary: "#8B909C",
+        },
+        border: {
+          DEFAULT: "#D9D2C3",
+          subtle: "#E4DEC8",
+        },
       },
       borderRadius: {
         sm: "2px",

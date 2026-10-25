@@ -534,6 +534,9 @@ class GapItem(BaseModel):
     derived_from: List[str] = Field(
         default_factory=list, description="Origin derivation: e.g. ['decision_context', 'stage_2_unknown', 'missing_requirement']"
     )
+    discovery_reason: Optional[str] = Field(
+        None, description="Clear justification of why Stage 3 discovered this gap if not explicitly stated in Stage 2 unknowns"
+    )
     dependencies: List[str] = Field(
         default_factory=list, description="IDs of prerequisite gaps that must be resolved first"
     )

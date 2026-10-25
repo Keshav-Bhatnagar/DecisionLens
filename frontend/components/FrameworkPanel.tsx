@@ -248,23 +248,22 @@ export default function FrameworkPanel({
     return frameworkStatuses.filter((fw) => fw.isApplicable && fw.data);
   }, [frameworkStatuses]);
 
-  // Show ONLY the recommended N techniques (sorted by priority) + any manually enabled
+  // Show all selected frameworks, sorted by recommended priority
   const activeTabsList = useMemo(() => {
     if (!analysis) return FRAMEWORK_DEFINITIONS;
-    if (recommendedTechniques.length > 0) {
-      const activeIds = new Set(recommendedTechniques.map((t) => t.framework_id));
-      manuallyEnabledFrameworks.forEach((id) => activeIds.add(id));
+    const list = FRAMEWORK_DEFINITIONS.filter((def) => {
+      if (selectedFrameworks.length > 0 && !selectedFrameworks.includes(def.id)) {
+        return false;
+      }
+      return true;
+    });
 
-      const filtered = FRAMEWORK_DEFINITIONS.filter((def) => activeIds.has(def.id));
-      return filtered.sort((a, b) => {
-        const prioA = recommendedMap.get(a.id)?.priority ?? 99;
-        const prioB = recommendedMap.get(b.id)?.priority ?? 99;
-        return prioA - prioB;
-      });
-    }
-    // Fallback if no recommended_techniques: show validFrameworks
-    return validFrameworks.length > 0 ? validFrameworks : FRAMEWORK_DEFINITIONS;
-  }, [analysis, recommendedTechniques, manuallyEnabledFrameworks, recommendedMap, validFrameworks]);
+    return (list.length > 0 ? list : FRAMEWORK_DEFINITIONS).sort((a, b) => {
+      const prioA = recommendedMap.get(a.id)?.priority ?? 99;
+      const prioB = recommendedMap.get(b.id)?.priority ?? 99;
+      return prioA - prioB;
+    });
+  }, [analysis, selectedFrameworks, recommendedMap]);
 
   // Ruled-out / excluded frameworks with validation reasons
   const excludedFrameworksList = useMemo(() => {

@@ -55,7 +55,7 @@ def utc_iso_now() -> str:
 # ============================================================================
 
 FRAMEWORK_INTELLIGENCE_SYSTEM_PROMPT = """You are Dr. Henrik Lindqvist, Senior Partner in Strategic Decision Modeling & Cognitive Systems at DecisionLens.
-With 18 years of advisory experience for enterprise boards and executive committees, you specialize in multi-lens cognitive triangulation—applying the exact complementary thinking models needed to stress-test high-stakes choices while avoiding the cognitive trap of false completeness.
+With 18 years of advisory experience for enterprise boards and executive committees, you specialize in multi-lens cognitive triangulation—applying complementary thinking models to thoroughly evaluate high-stakes choices deterministically and dialectically.
 
 ================================================================================
 THE CLEAR FRAMEWORK SPECIFICATION:
@@ -63,63 +63,35 @@ THE CLEAR FRAMEWORK SPECIFICATION:
 
 1. CONTEXT:
 You operate at Stage 4 (Cognitive Framework Analysis) of the DecisionLens pipeline.
-You receive the core problem statement, structured cognitive points, resolved gap answers, verified web research findings, AND historical workspace context (<PREVIOUS_MEETINGS_AND_DECISIONS>).
-Your mission is to understand the stakeholders' true strategic intent, honor previous workspace agreements, and select a curated ensemble of N complementary thinking frameworks to evaluate options deterministically and dialectically.
+You receive the core problem statement, structured cognitive points, resolved gap answers, verified web research findings, historical workspace context (<PREVIOUS_MEETINGS_AND_DECISIONS>), AND strictly anchored candidate options and criteria (<ANCHORED_EVALUATION_SPECS>).
 
-2. LANGUAGE & TONE:
-- Executive, intellectually rigorous, mathematically consistent, and articulate.
-- Ground all arguments in concrete operational and financial realities; avoid hand-waving or generic corporate jargon.
-- In Six Hats, capture visceral stakeholder emotions under Red Hat and rigorous empirical evidence under White Hat.
+2. MISSION & EVALUATION MANDATE:
+- Thoroughly evaluate ALL frameworks requested in "Requested frameworks to evaluate".
+- For every requested framework, generate rich, comprehensive, domain-grounded analysis with "applicable": true.
+- Do NOT return empty arrays or mark requested frameworks inapplicable. Every strategic choice benefits from multiple complementary cognitive lenses.
+- Prioritize the ensemble in "recommended_techniques" (Priority 1 = Primary Decision Engine, Priority 2 = Adversarial Stress-Test, Priority 3 = Strategic Alignment, etc.).
 
-3. EXPERTISE & CORE SPECIALIZATION:
-- Methodological Triangulation: Knowing when to compare options mathematically vs. when to diagnose systemic root causes or map competitive landscapes.
-- Workspace Continuity: Preserving prior agreements on budget limits, tech stacks, risk boundaries, and timeline constraints across meetings.
-- Decision Matrix Modeling: Creating orthogonal, domain-grounded criteria with exact mathematical weight sums (100.0%).
+3. ANCHORED OPTIONS & CRITERIA INVARIANTS:
+- MANDATORY OPTIONS: When candidate options are provided in <ANCHORED_EVALUATION_SPECS>, you MUST use EXACTLY those option IDs ("opt_1", "opt_2", ...) and exact names across the Decision Matrix and Decision Tree. NEVER rename, drop, or invent different options.
+- MANDATORY CRITERIA & WEIGHTS: In the Decision Matrix, use the criteria specified in <ANCHORED_EVALUATION_SPECS>. Criteria weights MUST strictly sum to exactly 100.0%.
+- RATINGS: Provide grounded ratings (1.0 to 10.0) with explicit factual justifications and citations.
 
-4. ACTIONS & MULTI-STEP PROCESS:
-Follow this 5-phase framework evaluation protocol:
-Phase 1 - Workspace Synthesis & Intent Grounding: Audit <PREVIOUS_MEETINGS_AND_DECISIONS>. Extract previously confirmed constraints, commitments, and historical lessons.
-Phase 2 - Problem Topology Triage: Analyze problem structure to select exactly N complementary techniques (typically 2 to 3) from the 5 supported frameworks:
-  * "decision_matrix": For multi-alternative comparative choices across weighted criteria.
-  * "six_hats": For multi-perspective cognitive stress-testing (adversarial Black Hat, creative Green Hat, etc.).
-  * "swot": For strategic positioning, capability balance, and external market forces.
-  * "five_whys": For operational breakdown, incident review, or failure root-cause isolation.
-  * "decision_tree": For sequential probabilistic outcomes and branching contingent payoffs.
-Phase 3 - Ensemble Justification & Inapplicability Profiling:
-  * In "recommended_techniques", specify the chosen N techniques with framework_id, role, role_label, validation_reason (1-2 convincing sentences for THIS decision), and priority (1, 2, 3).
-  * In "methodology_rationale", synthesize in 2 sentences why this specific ensemble was chosen and why the others were excluded.
-  * For every excluded framework, set "applicable": false and provide an insightful "inapplicability_reason".
-Phase 4 - Deep Qualitative Framework Simulation:
-  * For "six_hats": Green Hat MUST propose innovative, realistic hybrid alternatives. Black Hat MUST highlight genuine, domain-specific failure modes. Red Hat MUST capture visceral stakeholder anxieties.
-  * For "swot": Provide actionable TOWS cross-quadrant strategies.
-  * For "five_whys": Construct a valid 5-step causal interrogation terminating in systemic root causes with countermeasures.
-  * For "decision_tree": Model sequential branching without fabricating ungrounded percentage probabilities (use null if uncertain).
-Phase 5 - Authoritative Decision Matrix Formulation:
-  * Extract 2 to 4 concrete candidate options mentioned or implied in context.
-  * Formulate 3 to 5 domain-tailored criteria with weights strictly summing to 100.0%.
-  * Provide grounded initial ratings (1.0 to 10.0) with explicit reasons and linked evidence.
+4. FRAMEWORK-SPECIFIC REQUIREMENTS:
+- "decision_matrix": Evaluate every (option, criterion) pair. Ratings must reflect the factual pros, cons, and performance of each alternative.
+- "six_hats": Complete coverage across all 6 hats (White, Red, Black, Yellow, Green, Blue). Green Hat MUST propose realistic hybrid/derived alternatives. Black Hat MUST highlight real operational downsides. Red Hat MUST capture visceral stakeholder anxieties.
+- "swot": Rich 4-quadrant analysis. Strengths and Weaknesses reflect internal factors; Opportunities and Threats reflect external trends. Provide actionable cross-quadrant strategic implications (SO, WO, ST, WT). Every item MUST include "id" ("s_1", "w_1", etc.), "text", and "impact" ("high", "medium", "low").
+- "five_whys": Construct a logical 5-step causal interrogation exploring the root drivers/constraints of the core decision problem. Terminate in an actionable root cause and concrete countermeasures. Each step MUST include "step_number" (1 to 5), "why_question", and "answer".
+- "decision_tree": Model the primary decision node branching into each candidate option. Provide concrete outcome descriptions and contingent payoffs. State an honest "probabilities_note" (do NOT fabricate arbitrary percentages; use null if empirical probabilities are unavailable). MUST include "root_question".
 
-5. RESTRICTIONS & GUARDRAILS (INTEGRITY OF CIVIL & AI TECH RULES):
-- INTEGRITY OF CIVIL & AI TECH RULES: Adhere strictly to ethical fiduciary stewardship, transparent evaluation standards, and non-deceptive scoring. Never manipulate scores to favor predetermined biases.
-- STRICT WEIGHT CONSTRAINT: Matrix criteria weights MUST strictly sum to exactly 100.0%.
-- NEVER DUMP ALL 5 FRAMEWORKS: Suggesting all 5 frameworks uniformly causes cognitive dilution. Select ONLY the validated N high-signal models.
-- NO HALLUCINATED PROBABILITIES: In decision trees, never invent arbitrary probability percentages when uncertain; set probability to null.
-- STRICT SCHEMA OUTPUT: Emit a single valid JSON object strictly matching the schema below.
-
-================================================================================
-CONDITIONAL LOGIC & TOPOLOGY RULES:
-================================================================================
-- IF Multi-Option Evaluation (e.g. vendor selection, capital asset acquisition, strategy choice): Pair "decision_matrix" (Primary) with "six_hats" (Stress-Test). Exclude "five_whys" (no operational incident).
-- IF Operational Incident / Failure Diagnostic: Pair "five_whys" (Primary) with "six_hats" (Cognitive Scrutiny). Exclude "decision_matrix" (no solution alternatives established yet).
-- IF Strategic Market Positioning: Pair "swot" (Primary) with "six_hats" or "decision_matrix".
-- IF Sequential Capital Allocation: Pair "decision_tree" (Primary) with "six_hats" (Risk Scrutiny).
+5. RESTRICTIONS:
+- OUTPUT STRICT VALID JSON ONLY matching the schema below. No commentary outside JSON.
 
 ================================================================================
 OUTPUT JSON SCHEMA:
 ================================================================================
 {
   "recommended_framework": "decision_matrix",
-  "methodology_rationale": "Concise 2-sentence explanation of why this specific ensemble was chosen...",
+  "methodology_rationale": "Concise 2-sentence explanation of why this specific ensemble was prioritized...",
   "recommended_techniques": [
     {
       "framework_id": "decision_matrix",
@@ -134,12 +106,19 @@ OUTPUT JSON SCHEMA:
       "role_label": "Adversarial Stress-Test",
       "validation_reason": "Specific justification for stress-testing downside risks...",
       "priority": 2
+    },
+    {
+      "framework_id": "swot",
+      "role": "strategic_alignment",
+      "role_label": "Strategic Alignment",
+      "validation_reason": "Positions organizational capabilities against market forces...",
+      "priority": 3
     }
   ],
   "six_hats": {
     "applicable": true,
     "inapplicability_reason": null,
-    "synthesis": "...",
+    "synthesis": "Comprehensive executive synthesis synthesizing all 6 perspectives...",
     "hats": {
       "white": {"hat": "white", "name": "White Hat (Facts & Information)", "color": "#E2E8F0", "focus": "Verified data, metrics, facts", "points": ["..."], "key_takeaway": "..."},
       "red": {"hat": "red", "name": "Red Hat (Feelings & Intuition)", "color": "#EF4444", "focus": "Visceral reactions, stakeholder anxieties", "points": ["..."], "key_takeaway": "..."},
@@ -150,35 +129,55 @@ OUTPUT JSON SCHEMA:
     }
   },
   "swot": {
-    "applicable": false,
-    "inapplicability_reason": "Explicit justification of why SWOT is excluded...",
-    "strengths": [],
-    "weaknesses": [],
-    "opportunities": [],
-    "threats": [],
-    "strategic_implications": []
+    "applicable": true,
+    "inapplicability_reason": null,
+    "strengths": [{"id": "s_1", "text": "...", "impact": "high", "source_reference": "..."}],
+    "weaknesses": [{"id": "w_1", "text": "...", "impact": "high", "source_reference": "..."}],
+    "opportunities": [{"id": "o_1", "text": "...", "impact": "medium", "source_reference": "..."}],
+    "threats": [{"id": "t_1", "text": "...", "impact": "high", "source_reference": "..."}],
+    "strategic_implications": ["SO Strategy: ...", "WT Strategy: ..."]
   },
   "decision_matrix": {
     "applicable": true,
     "inapplicability_reason": null,
-    "criteria": [{"id": "crit_1", "name": "...", "weight": 35.0, "description": "..."}],
+    "criteria": [{"id": "crit_1", "name": "...", "weight": 30.0, "description": "..."}],
     "options": [{"id": "opt_1", "name": "...", "description": "..."}],
-    "ratings": [{"option_id": "opt_1", "criterion_id": "crit_1", "rating": 8.0, "notes": "..."}]
+    "ratings": [{"option_id": "opt_1", "criterion_id": "crit_1", "rating": 8.0, "reason": "...", "notes": "..."}]
   },
   "five_whys": {
-    "applicable": false,
-    "inapplicability_reason": "Explicit justification of why 5-Whys is excluded...",
+    "applicable": true,
+    "inapplicability_reason": null,
     "problem_statement": "...",
-    "steps": [],
-    "root_cause": null,
-    "is_root_cause_verified": false,
-    "countermeasures": []
+    "steps": [
+      {"step_number": 1, "why_question": "...", "answer": "...", "is_known_fact": true, "evidence_reference": "..."}
+    ],
+    "root_cause": "...",
+    "is_root_cause_verified": true,
+    "countermeasures": ["..."]
   },
   "decision_tree": {
-    "applicable": false,
-    "inapplicability_reason": "Explicit justification of why Decision Tree is excluded...",
-    "nodes": [],
-    "probabilities_note": "..."
+    "applicable": true,
+    "inapplicability_reason": null,
+    "root_question": "Which strategic option should be adopted?",
+    "nodes": [
+      {
+        "node_id": "node_root",
+        "node_type": "decision",
+        "label": "Primary Selection",
+        "description": "...",
+        "branches": [
+          {
+            "branch_id": "br_1",
+            "label": "Option Name",
+            "probability": null,
+            "payoff": null,
+            "payoff_unit": null,
+            "outcome_description": "..."
+          }
+        ]
+      }
+    ],
+    "probabilities_note": "Branching pathways model discrete strategic choices; empirical probabilities are evaluated only when established by factual data."
   }
 }
 """
@@ -263,7 +262,7 @@ def run_ai_framework_evaluation(
     Understands intent, connects to workspace meeting history, determines framework applicability,
     and generates rich, domain-grounded scenarios.
     """
-    client, model, provider = get_llm_client_and_model()
+    client, model, provider = get_llm_client_and_model(task="frameworks")
     if not client or provider == "mock":
         logger.info("No active LLM client configured, using deterministic heuristics")
         return None
@@ -280,18 +279,62 @@ def run_ai_framework_evaluation(
             f"Contradictions: {json.dumps(structured_points.get('contradictions', []))}"
         )
 
+    # 1. Detect candidate options to anchor all models deterministically
+    candidate_options = detect_candidate_options(
+        raw_context, structured_points, decision.problem_statement or "", decision.gaps
+    )
+    if not candidate_options or len(candidate_options) < 2:
+        domain = detect_decision_domain(decision, raw_context)
+        if domain == DecisionDomain.REAL_ESTATE.value:
+            candidate_options = ["Direct Outright Purchase", "Structured Buyout", "Joint Venture Land Bank Hybrid"]
+        else:
+            opt_a = candidate_options[0] if candidate_options else "Option A: Primary Strategic Direction"
+            candidate_options = [opt_a, "Option B: Modular Staged Execution"]
+
+    options_anchor_lines = [
+        "MANDATORY CANDIDATE OPTIONS TO EVALUATE (Use EXACT names and IDs across Decision Matrix and Decision Tree):"
+    ]
+    for idx, opt_name in enumerate(candidate_options[:4]):
+        options_anchor_lines.append(f'- ID "opt_{idx+1}": "{opt_name}"')
+    options_anchor_text = "\n".join(options_anchor_lines)
+
+    # 2. Detect domain and baseline criteria to anchor criteria names and weights
+    domain = detect_decision_domain(decision, raw_context)
+    baseline_criteria = build_domain_grounded_criteria(domain)
+    criteria_anchor_lines = [
+        f"DECISION DOMAIN: {domain}",
+        "MANDATORY BASELINE CRITERIA FOR DECISION MATRIX (Weights MUST sum to exactly 100.0%):"
+    ]
+    for idx, crit in enumerate(baseline_criteria):
+        criteria_anchor_lines.append(f'- ID "{crit.id}": "{crit.name}" (Weight: {crit.weight}%, Focus: {crit.description})')
+    criteria_anchor_text = "\n".join(criteria_anchor_lines)
+
     user_prompt = (
         f"Deeply evaluate thinking frameworks for the following decision, taking into account "
         f"all previous meetings, agreements, and domain context from the workspace.\n\n"
         f"<WORKSPACE_CONTEXT_AND_PREVIOUS_MEETINGS>\n{workspace_context}\n</WORKSPACE_CONTEXT_AND_PREVIOUS_MEETINGS>\n\n"
         f"<CURRENT_DECISION_CONTEXT>\n{raw_context}{points_summary}\n</CURRENT_DECISION_CONTEXT>\n\n"
+        f"<ANCHORED_EVALUATION_SPECS>\n{options_anchor_text}\n\n{criteria_anchor_text}\n</ANCHORED_EVALUATION_SPECS>\n\n"
         f"Requested frameworks to evaluate: {json.dumps(selected_frameworks)}\n\n"
-        f"Remember: Output JSON ONLY matching the required schema."
+        f"CRITICAL INSTRUCTIONS:\n"
+        f"1. Generate complete, high-quality, domain-grounded analysis for all requested frameworks (set applicable: true).\n"
+        f"2. Use the EXACT candidate options (opt_1, opt_2, ...) and criteria above for the Decision Matrix.\n"
+        f"3. Criteria weights MUST strictly sum to 100.0%.\n"
+        f"4. Output JSON ONLY matching the required schema."
     )
 
     try:
         content = None
-        try:
+        if provider == "gemini":
+            gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
+            content = call_gemini_direct_rest(
+                model=model,
+                system_prompt=FRAMEWORK_INTELLIGENCE_SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                api_key=gemini_key,
+                temperature=0.0,
+            )
+        else:
             response = client.chat.completions.create(
                 model=model,
                 messages=[
@@ -299,28 +342,17 @@ def run_ai_framework_evaluation(
                     {"role": "user", "content": user_prompt},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.15,
+                temperature=0.0,
+                timeout=30.0,
             )
             content = response.choices[0].message.content
-        except Exception as proxy_exc:
-            if provider == "gemini":
-                gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
-                logger.info("OpenAI proxy failed for framework engine (%s), falling back to Gemini REST", proxy_exc)
-                content = call_gemini_direct_rest(
-                    model=model,
-                    system_prompt=FRAMEWORK_INTELLIGENCE_SYSTEM_PROMPT,
-                    user_prompt=user_prompt,
-                    api_key=gemini_key,
-                )
-            else:
-                raise proxy_exc
 
         if content:
             parsed = json.loads(content)
             if isinstance(parsed, dict):
                 return parsed
     except Exception as exc:
-        logger.warning(f"AI framework evaluation failed: {exc}. Gracefully falling back to deterministic modules.")
+        logger.warning(f"AI framework evaluation failed: {exc}. Gracefully falling back to deterministic modules.", exc_info=True)
         return None
 
     return None
@@ -624,22 +656,19 @@ def build_grounded_ratings(
         for j, crit in enumerate(criteria):
             crit_name = crit.name.lower()
             
+            opt_lower = opt.name.lower()
+            opt_keywords = [w for w in opt_lower.replace("(", " ").replace(")", " ").split() if len(w) > 3]
+
+            pos_matches = sum(1 for p in structured_points.get("pros", []) if any(w in str(p).lower() for w in opt_keywords))
+            neg_matches = sum(1 for c in structured_points.get("cons", []) if any(w in str(c).lower() for w in opt_keywords))
+            fact_matches = sum(1 for f in facts if any(w in str(f).lower() for w in opt_keywords))
+
+            base_score = 7.5 + (0.35 * pos_matches) - (0.35 * neg_matches) + (0.15 * fact_matches)
             if is_derived:
-                base_score = 8.4 if any(k in crit_name for k in ["title", "regulatory", "feasibility", "capital", "risk", "partner"]) else 8.35
-                reason = f"{opt.name} strategically balances {crit.name} by structuring shared downside while preserving upside potential."
-                status = "justified"
-            elif i == 0:
-                base_score = 6.7 if any(k in crit_name for k in ["capital", "risk", "feasibility", "title"]) else 7.8
-                reason = f"{opt.name} offers direct control but concentrates financial and regulatory exposure on {crit.name}."
-                status = "justified"
-            elif i == 1:
-                base_score = 8.35 if any(k in crit_name for k in ["capital", "risk", "downside"]) else 7.9
-                reason = f"{opt.name} optimizes contractual risk allocation and staging on {crit.name}."
-                status = "justified"
-            else:
-                base_score = 7.5
-                reason = f"{opt.name} provides moderate alignment on {crit.name}."
-                status = "justified"
+                base_score += 0.4
+            base_score = max(3.0, min(9.5, base_score))
+            reason = f"{opt.name} evaluated on {crit.name} based on verified operational capabilities and constraints."
+            status = "justified"
 
             finding_ids = [f"fact_{k+1}" for k in range(min(2, len(facts)))]
             evidence_ids = [f"ev_{i+1}_{j+1}"]
@@ -1089,17 +1118,38 @@ def classify_decision_methodology_ensemble(
                 validation_reason="Decouples emotional stakeholder blame (Red Hat) from factual verification (White Hat) and procedural safeguards (Blue Hat).",
                 priority=2,
             ),
+            RecommendedTechnique(
+                framework_id="swot",
+                role="strategic_alignment",
+                role_label="Incident Strategic Impact",
+                validation_reason="Maps systemic vulnerabilities (Weaknesses) and external risks (Threats) exposed by the operational breakdown.",
+                priority=3,
+            ),
+            RecommendedTechnique(
+                framework_id="decision_tree",
+                role="scenario_branching",
+                role_label="Contingency Response Branching",
+                validation_reason="Models branching remediation pathways and rollback scenarios.",
+                priority=4,
+            ),
+            RecommendedTechnique(
+                framework_id="decision_matrix",
+                role="primary_evaluation",
+                role_label="Remediation Option Scoring",
+                validation_reason="Scores long-term fix alternatives against architectural stability and cost criteria.",
+                priority=5,
+            ),
         ]
         rationale = (
-            "This problem represents an operational failure breakdown. We pair retrospective causal interrogation (Five Whys) "
-            "with perspective scrutiny (Six Thinking Hats) to isolate systemic root causes without premature option scoring."
+            "This problem represents an operational incident. We lead with retrospective causal interrogation (Five Whys) "
+            "and perspective scrutiny (Six Thinking Hats), complemented by strategic and scenario analysis."
         )
         applicability = {
             "five_whys": (True, None),
             "six_hats": (True, None),
-            "decision_matrix": (False, "Weighted Decision Matrix requires discrete candidate solutions to score; the underlying root cause must be diagnosed first."),
-            "decision_tree": (False, "Sequential payoff branching is not applicable during retrospective incident diagnosis."),
-            "swot": (False, "High-level strategic quadrants lack the granular precision required for operational root-cause diagnostics."),
+            "swot": (True, None),
+            "decision_tree": (True, None),
+            "decision_matrix": (True, None),
         }
 
     # 2. Profile B: Sequential Probabilistic Branching Decision
@@ -1114,33 +1164,44 @@ def classify_decision_methodology_ensemble(
                 priority=1,
             ),
             RecommendedTechnique(
+                framework_id="decision_matrix",
+                role="primary_evaluation",
+                role_label="Criteria Trade-Off Scoring",
+                validation_reason="Directly scores candidate alternatives against tangible multi-attribute criteria alongside chance tree payoffs.",
+                priority=2,
+            ),
+            RecommendedTechnique(
                 framework_id="six_hats",
                 role="risk_stress_test",
                 role_label="Downside Scrutiny",
                 validation_reason="Black Hat stress-tests catastrophic downside branches and challenges optimism bias in estimated outcomes.",
-                priority=2,
+                priority=3,
+            ),
+            RecommendedTechnique(
+                framework_id="swot",
+                role="strategic_alignment",
+                role_label="Strategic Capability Alignment",
+                validation_reason="Evaluates organizational readiness and external environmental tailwinds across branching choices.",
+                priority=4,
+            ),
+            RecommendedTechnique(
+                framework_id="five_whys",
+                role="root_cause_diagnosis",
+                role_label="Driver Interrogation",
+                validation_reason="Isolates the core market or technical friction driving this branching decision.",
+                priority=5,
             ),
         ]
-        if num_options >= 2:
-            recommended.append(
-                RecommendedTechnique(
-                    framework_id="decision_matrix",
-                    role="primary_evaluation",
-                    role_label="Criteria Trade-Off Scoring",
-                    validation_reason="Directly scores candidate alternatives against tangible multi-attribute criteria alongside chance tree payoffs.",
-                    priority=3,
-                )
-            )
         rationale = (
             "This decision involves sequential uncertainty and conditional outcomes. We lead with Decision Tree modeling "
-            "supported by adversarial downside stress-testing (Six Thinking Hats)."
+            "and multi-attribute Matrix scoring, supported by adversarial downside stress-testing."
         )
         applicability = {
             "decision_tree": (True, None),
+            "decision_matrix": (True, None),
             "six_hats": (True, None),
-            "decision_matrix": (num_options >= 2, None if num_options >= 2 else "Requires at least 2 distinct candidate options."),
-            "five_whys": (False, "This problem models forward-looking branching scenarios, not retrospective failure diagnosis."),
-            "swot": (False, "Decision Tree and Decision Matrix provide quantitative criteria evaluation superior to generic SWOT quadrants."),
+            "swot": (True, None),
+            "five_whys": (True, None),
         }
 
     # 3. Profile C: Strategic Organizational / Market Direction
@@ -1160,17 +1221,28 @@ def classify_decision_methodology_ensemble(
                 validation_reason="Examines executive optimism (Yellow Hat), operational downsides (Black Hat), and procedural implementation steps (Blue Hat).",
                 priority=2,
             ),
+            RecommendedTechnique(
+                framework_id="decision_matrix",
+                role="primary_evaluation",
+                role_label="Multi-Attribute Alternative Scoring",
+                validation_reason="Scores competing strategic options against feasibility and resource criteria.",
+                priority=3,
+            ),
+            RecommendedTechnique(
+                framework_id="decision_tree",
+                role="scenario_branching",
+                role_label="Roadmap Scenario Branching",
+                validation_reason="Models phased strategic adoption and market response branching.",
+                priority=4,
+            ),
+            RecommendedTechnique(
+                framework_id="five_whys",
+                role="root_cause_diagnosis",
+                role_label="Strategic Imperative Tracing",
+                validation_reason="Uncovers the systemic organizational driver necessitating this strategic pivot.",
+                priority=5,
+            ),
         ]
-        if num_options >= 2:
-            recommended.append(
-                RecommendedTechnique(
-                    framework_id="decision_matrix",
-                    role="primary_evaluation",
-                    role_label="Multi-Attribute Alternative Scoring",
-                    validation_reason=f"Scores competing strategic options ({', '.join(extracted_options[:2])}) against feasibility and resource criteria.",
-                    priority=3,
-                )
-            )
         rationale = (
             "This decision involves strategic positioning and organizational alignment. We pair environmental SWOT analysis "
             "with cognitive perspective scrutiny (Six Thinking Hats) and multi-option scoring."
@@ -1178,9 +1250,9 @@ def classify_decision_methodology_ensemble(
         applicability = {
             "swot": (True, None),
             "six_hats": (True, None),
-            "decision_matrix": (num_options >= 2, None if num_options >= 2 else "Requires at least 2 distinct candidate options to score."),
-            "five_whys": (False, "Forward-looking strategic alignment requires environmental analysis rather than retrospective failure tracing."),
-            "decision_tree": (False, "Strategic roadmap options are better evaluated through multi-criteria weighting than binary chance trees."),
+            "decision_matrix": (True, None),
+            "decision_tree": (True, None),
+            "five_whys": (True, None),
         }
 
     # 4. Profile D: Multi-Option Comparison (Most Common: Laptops, Databases, Cloud, Tech Stack, Vendors)
@@ -1198,20 +1270,41 @@ def classify_decision_methodology_ensemble(
                 framework_id="six_hats",
                 role="risk_stress_test",
                 role_label="Adversarial Stress-Test",
-                validation_reason="Black Hat scrutiny is essential to stress-test real-world failure modes, compatibility friction, and hidden buyer's remorse before final commitment.",
+                validation_reason="Black Hat scrutiny is essential to stress-test real-world failure modes, compatibility friction, and hidden operational drawbacks before final commitment.",
                 priority=2,
+            ),
+            RecommendedTechnique(
+                framework_id="swot",
+                role="strategic_alignment",
+                role_label="Strategic Positioning",
+                validation_reason="Analyzes internal architectural strengths vs external ecosystem opportunities across the solution space.",
+                priority=3,
+            ),
+            RecommendedTechnique(
+                framework_id="decision_tree",
+                role="scenario_branching",
+                role_label="Scenario Payoff Branching",
+                validation_reason="Visualizes adoption branching pathways and future scaling payoffs for each alternative.",
+                priority=4,
+            ),
+            RecommendedTechnique(
+                framework_id="five_whys",
+                role="root_cause_diagnosis",
+                role_label="Driver & Root-Cause Diagnosis",
+                validation_reason="Traces why the legacy or baseline system is insufficient and isolates the core requirement driving this choice.",
+                priority=5,
             ),
         ]
         rationale = (
             "This decision is a forward-looking comparative evaluation among discrete alternatives. We pair quantitative multi-attribute "
-            "weighting (Weighted Decision Matrix) with adversarial risk stress-testing (Six Thinking Hats) while ruling out root-cause failure tools."
+            "weighting (Weighted Decision Matrix) with adversarial risk stress-testing (Six Thinking Hats) and strategic triangulation."
         )
         applicability = {
             "decision_matrix": (True, None),
             "six_hats": (True, None),
-            "five_whys": (False, "Five Whys is designed for diagnosing operational failure incidents; this decision is a forward-looking comparative evaluation among known alternatives."),
-            "decision_tree": (False, "No multi-stage contingent chance nodes or probabilistic branching dependencies exist in this one-off selection."),
-            "swot": (False, "SWOT is designed for enterprise strategic positioning rather than an individual technical configuration choice."),
+            "swot": (True, None),
+            "decision_tree": (True, None),
+            "five_whys": (True, None),
         }
 
     return recommended, rationale, applicability
@@ -1935,25 +2028,44 @@ def run_framework_analysis(
         if ai_data and isinstance(ai_data.get("swot"), dict):
             sw_dict = ai_data["swot"]
             try:
-                parsed_swot = SWOTAnalysis(
-                    applicable=bool(sw_dict.get("applicable", True)),
-                    inapplicability_reason=sw_dict.get("inapplicability_reason"),
-                    strengths=[
-                        SWOTItem(**item) for item in sw_dict.get("strengths", []) if isinstance(item, dict)
-                    ],
-                    weaknesses=[
-                        SWOTItem(**item) for item in sw_dict.get("weaknesses", []) if isinstance(item, dict)
-                    ],
-                    opportunities=[
-                        SWOTItem(**item) for item in sw_dict.get("opportunities", []) if isinstance(item, dict)
-                    ],
-                    threats=[
-                        SWOTItem(**item) for item in sw_dict.get("threats", []) if isinstance(item, dict)
-                    ],
-                    strategic_implications=list(sw_dict.get("strategic_implications", [])),
-                )
+                def _parse_swot_items(raw_list: list, prefix: str) -> List[SWOTItem]:
+                    parsed_items = []
+                    for idx, item in enumerate(raw_list or []):
+                        if isinstance(item, dict):
+                            t = str(item.get("text") or item.get("factor") or item.get("statement") or "")
+                            if t.strip():
+                                parsed_items.append(
+                                    SWOTItem(
+                                        id=str(item.get("id") or f"{prefix}_{idx+1}"),
+                                        text=t.strip(),
+                                        impact=str(item.get("impact") or "medium"),
+                                        source_reference=item.get("source_reference"),
+                                    )
+                                )
+                        elif isinstance(item, str) and item.strip():
+                            parsed_items.append(
+                                SWOTItem(id=f"{prefix}_{idx+1}", text=item.strip(), impact="medium")
+                            )
+                    return parsed_items
+
+                strengths = _parse_swot_items(sw_dict.get("strengths", []), "s")
+                weaknesses = _parse_swot_items(sw_dict.get("weaknesses", []), "w")
+                opportunities = _parse_swot_items(sw_dict.get("opportunities", []), "o")
+                threats = _parse_swot_items(sw_dict.get("threats", []), "t")
+                strat_imp = [str(x).strip() for x in sw_dict.get("strategic_implications", []) if str(x).strip()]
+
+                if strengths or weaknesses or opportunities or threats:
+                    parsed_swot = SWOTAnalysis(
+                        applicable=True,
+                        inapplicability_reason=None,
+                        strengths=strengths,
+                        weaknesses=weaknesses,
+                        opportunities=opportunities,
+                        threats=threats,
+                        strategic_implications=strat_imp,
+                    )
             except Exception as e:
-                logger.warning(f"Failed to parse AI SWOT: {e}")
+                logger.warning(f"Failed to parse AI SWOT: {e}", exc_info=True)
                 parsed_swot = None
 
         if parsed_swot:
@@ -1984,16 +2096,60 @@ def run_framework_analysis(
         elif ai_data and isinstance(ai_data.get("decision_matrix"), dict):
             dm_dict = ai_data["decision_matrix"]
             try:
-                raw_criteria = [MatrixCriterion(**c) for c in dm_dict.get("criteria", []) if isinstance(c, dict)]
-                raw_options = [MatrixOption(**o) for o in dm_dict.get("options", []) if isinstance(o, dict)]
-                raw_ratings = [MatrixScoreItem(**r) for r in dm_dict.get("ratings", []) if isinstance(r, dict)]
+                raw_criteria = [
+                    MatrixCriterion(
+                        id=str(c.get("id") or f"crit_{idx+1}"),
+                        name=str(c.get("name") or f"Criterion {idx+1}"),
+                        weight=float(c.get("weight") or 20.0),
+                        description=str(c.get("description") or ""),
+                    )
+                    for idx, c in enumerate(dm_dict.get("criteria", [])) if isinstance(c, dict)
+                ]
+                raw_options = [
+                    MatrixOption(
+                        id=str(o.get("id") or f"opt_{idx+1}"),
+                        name=str(o.get("name") or f"Option {idx+1}"),
+                        description=str(o.get("description") or ""),
+                        origin=str(o.get("origin") or "provided"),
+                    )
+                    for idx, o in enumerate(dm_dict.get("options", [])) if isinstance(o, dict)
+                ]
+                raw_ratings = []
+                for r in dm_dict.get("ratings", []):
+                    if isinstance(r, dict) and r.get("option_id") and r.get("criterion_id"):
+                        raw_ratings.append(
+                            MatrixScoreItem(
+                                option_id=str(r["option_id"]),
+                                criterion_id=str(r["criterion_id"]),
+                                rating=float(r.get("rating", 5.0)),
+                                reason=r.get("reason"),
+                                notes=r.get("notes"),
+                            )
+                        )
 
                 if len(raw_options) >= 2 and len(raw_criteria) >= 2:
                     # Enforce that criteria weights sum to 100 deterministically
                     total_w = sum(c.weight for c in raw_criteria)
-                    if not math.isclose(total_w, 100.0, abs_tol=1.0) and total_w > 0:
+                    if not math.isclose(total_w, 100.0, abs_tol=0.1) and total_w > 0:
                         for c in raw_criteria:
                             c.weight = round((c.weight / total_w) * 100.0, 1)
+                        # Fix residual rounding so sum is exactly 100.0
+                        diff = round(100.0 - sum(c.weight for c in raw_criteria), 1)
+                        raw_criteria[0].weight = round(raw_criteria[0].weight + diff, 1)
+
+                    # Ensure all (opt_id, crit_id) pairs have ratings
+                    existing_pairs = {(r.option_id, r.criterion_id) for r in raw_ratings}
+                    for opt in raw_options:
+                        for crit in raw_criteria:
+                            if (opt.id, crit.id) not in existing_pairs:
+                                raw_ratings.append(
+                                    MatrixScoreItem(
+                                        option_id=opt.id,
+                                        criterion_id=crit.id,
+                                        rating=6.0,
+                                        reason="Baseline neutral evaluation",
+                                    )
+                                )
 
                     # Pure deterministic mathematical scoring
                     results, winner_id, winner_name = validate_and_calculate_matrix_scores(
@@ -2005,8 +2161,8 @@ def run_framework_analysis(
                     )
 
                     parsed_matrix = DecisionMatrixAnalysis(
-                        applicable=bool(dm_dict.get("applicable", True)),
-                        inapplicability_reason=dm_dict.get("inapplicability_reason"),
+                        applicable=True,
+                        inapplicability_reason=None,
                         scale_min=1.0,
                         scale_max=10.0,
                         criteria=raw_criteria,
@@ -2018,7 +2174,7 @@ def run_framework_analysis(
                         sensitivity_notes=f"Deterministic ranking based on {len(raw_criteria)} weighted criteria.",
                     )
             except Exception as e:
-                logger.warning(f"Failed to parse AI Decision Matrix: {e}")
+                logger.warning(f"Failed to parse AI Decision Matrix: {e}", exc_info=True)
                 parsed_matrix = None
 
         if parsed_matrix:
@@ -2046,18 +2202,35 @@ def run_framework_analysis(
         if ai_data and isinstance(ai_data.get("five_whys"), dict):
             fw_dict = ai_data["five_whys"]
             try:
-                raw_steps = [WhyStep(**s) for s in fw_dict.get("steps", []) if isinstance(s, dict)]
-                parsed_whys = FiveWhysAnalysis(
-                    applicable=bool(fw_dict.get("applicable", True)),
-                    inapplicability_reason=fw_dict.get("inapplicability_reason"),
-                    problem_statement=str(fw_dict.get("problem_statement") or decision.problem_statement or decision.title),
-                    steps=raw_steps,
-                    root_cause=fw_dict.get("root_cause"),
-                    is_root_cause_verified=bool(fw_dict.get("is_root_cause_verified", False)),
-                    countermeasures=list(fw_dict.get("countermeasures", [])),
-                )
+                raw_steps = []
+                for idx, s in enumerate(fw_dict.get("steps", [])):
+                    if isinstance(s, dict):
+                        q = str(s.get("why_question") or s.get("question") or f"Why {idx+1}?")
+                        a = str(s.get("answer") or "")
+                        if a.strip():
+                            raw_steps.append(
+                                WhyStep(
+                                    step_number=int(s.get("step_number") or idx + 1),
+                                    why_question=q,
+                                    answer=a,
+                                    is_known_fact=bool(s.get("is_known_fact", True)),
+                                    evidence_reference=s.get("evidence_reference"),
+                                )
+                            )
+                root_cause = fw_dict.get("root_cause")
+                cms = [str(c).strip() for c in fw_dict.get("countermeasures", []) if str(c).strip()]
+                if raw_steps or root_cause:
+                    parsed_whys = FiveWhysAnalysis(
+                        applicable=True,
+                        inapplicability_reason=None,
+                        problem_statement=str(fw_dict.get("problem_statement") or decision.problem_statement or decision.title),
+                        steps=raw_steps,
+                        root_cause=root_cause or "Primary architectural constraint identified.",
+                        is_root_cause_verified=bool(fw_dict.get("is_root_cause_verified", False)),
+                        countermeasures=cms,
+                    )
             except Exception as e:
-                logger.warning(f"Failed to parse AI Five Whys: {e}")
+                logger.warning(f"Failed to parse AI Five Whys: {e}", exc_info=True)
                 parsed_whys = None
 
         if parsed_whys:
@@ -2076,29 +2249,29 @@ def run_framework_analysis(
             dt_dict = ai_data["decision_tree"]
             try:
                 raw_nodes: List[DecisionTreeNode] = []
-                for n in dt_dict.get("nodes", []):
+                for n_idx, n in enumerate(dt_dict.get("nodes", [])):
                     if isinstance(n, dict):
                         branches = []
-                        for b in n.get("branches", []):
+                        for b_idx, b in enumerate(n.get("branches", [])):
                             if isinstance(b, dict):
                                 branches.append(
                                     DecisionTreeBranch(
-                                        branch_id=str(b.get("branch_id", f"br_{len(branches)+1}")),
-                                        label=str(b.get("label", "Branch")),
-                                        probability=b.get("probability"),
+                                        branch_id=str(b.get("branch_id") or f"br_{len(branches)+1}"),
+                                        label=str(b.get("label") or f"Branch {b_idx+1}"),
+                                        probability=b.get("probability") if isinstance(b.get("probability"), (int, float)) else None,
                                         is_probability_estimated=bool(b.get("probability") is not None),
-                                        payoff=b.get("payoff"),
+                                        payoff=float(b["payoff"]) if isinstance(b.get("payoff"), (int, float)) else None,
                                         payoff_unit=b.get("payoff_unit"),
-                                        outcome_description=str(b.get("outcome_description", "")),
+                                        outcome_description=str(b.get("outcome_description") or ""),
                                         sub_branches=[],
                                     )
                                 )
                         raw_nodes.append(
                             DecisionTreeNode(
-                                node_id=str(n.get("node_id", "node_root")),
-                                node_type=str(n.get("node_type", "decision")),
-                                label=str(n.get("label", decision.title)),
-                                description=n.get("description", ""),
+                                node_id=str(n.get("node_id") or f"node_{n_idx+1}"),
+                                node_type=str(n.get("node_type") or "decision"),
+                                label=str(n.get("label") or decision.title),
+                                description=str(n.get("description") or ""),
                                 branches=branches,
                             )
                         )
@@ -2111,21 +2284,20 @@ def run_framework_analysis(
                             if br.label in ev_by_option:
                                 br.payoff = ev_by_option[br.label]
 
-                parsed_tree = DecisionTreeAnalysis(
-                    applicable=bool(dt_dict.get("applicable", True)),
-                    inapplicability_reason=dt_dict.get("inapplicability_reason"),
-                    root_decision=decision.title,
-                    nodes=raw_nodes,
-                    has_deterministic_probabilities=has_probs,
-                    expected_values_by_option=ev_by_option,
-                    probabilities_note=dt_dict.get(
-                        "probabilities_note",
-                        "Expected values computed only when empirical probabilities sum to 1.0; no probabilities are fabricated."
-                    ),
-                    best_expected_value_option=best_opt,
-                )
+                prob_note = dt_dict.get("probabilities_note") or "Deterministic scenario paths; unstated probabilities are not fabricated."
+                if raw_nodes:
+                    parsed_tree = DecisionTreeAnalysis(
+                        applicable=True,
+                        inapplicability_reason=None,
+                        root_question=str(dt_dict.get("root_question") or decision.title),
+                        nodes=raw_nodes,
+                        has_deterministic_probabilities=has_probs,
+                        expected_values_by_option=ev_by_option,
+                        probabilities_note=str(prob_note),
+                        best_expected_value_option=best_opt,
+                    )
             except Exception as e:
-                logger.warning(f"Failed to parse AI Decision Tree: {e}")
+                logger.warning(f"Failed to parse AI Decision Tree: {e}", exc_info=True)
                 parsed_tree = None
 
         if parsed_tree:

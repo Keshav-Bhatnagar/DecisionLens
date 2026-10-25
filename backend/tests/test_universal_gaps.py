@@ -379,3 +379,69 @@ def test_11_research_relevance_verification():
 
     is_rel, _ = check_evidence_relevance(gap_question, relevant_sources)
     assert is_rel, "Directly matching technical performance benchmark should pass relevance check"
+
+
+# ==============================================================================
+# TEST 12 — Precision Guardrail Sanitizer Verification
+# ==============================================================================
+def test_12_precision_guardrail_sanitizer():
+    from app.services.gaps import sanitize_gap_precision
+
+    # Case 1: Unsupported 12-month period
+    ctx1 = "We don't know peak concurrent users."
+    q1 = "What is the expected peak concurrent user count during the next 12 months?"
+    s1 = sanitize_gap_precision(q1, ctx1)
+    assert "during the next 12 months" not in s1
+    assert s1 == "What is the expected peak concurrent user count?"
+
+    # Case 2: Unsupported monthly budget
+    ctx2 = "Our initial infrastructure budget is limited."
+    q2 = "What is the maximum monthly infrastructure budget?"
+    s2 = sanitize_gap_precision(q2, ctx2)
+    assert "monthly" not in s2
+    assert "acceptable infrastructure budget" in s2
+
+    # Case 3: Unsupported timeframe 12–24 months
+    ctx3 = "The structure may change frequently."
+    q3 = "How frequently will the structures change over the next 12–24 months?"
+    s3 = sanitize_gap_precision(q3, ctx3)
+    assert "12–24" not in s3
+    assert "over the next" not in s3
+    assert s3.startswith("How frequently")
+
+    # Case 4: Unsupported peak traffic condition
+    ctx4 = "We don't know the read-to-write ratio."
+    q4 = "What is the expected read-to-write ratio during peak traffic?"
+    s4 = sanitize_gap_precision(q4, ctx4)
+    assert "during peak traffic" not in s4
+    assert s4 == "What is the expected read-to-write ratio?"
+
+    # Case 5: When context explicitly establishes timeframe, preserve it
+    ctx5 = "We need our plans for the next 12 months finalized."
+    q5 = "What is the expected peak concurrent user count during the next 12 months?"
+    s5 = sanitize_gap_precision(q5, ctx5)
+    assert "next 12 months" in s5
+
+
+# ==============================================================================
+# TEST 13 — Discovered Gaps Traceability (derived_from & discovery_reason)
+# ==============================================================================
+def test_13_traceability_metadata():
+    from app.schemas import GapItem
+
+    gap = GapItem(
+        id="gap_trace_1",
+        title="Schema Volatility Assessment",
+        question="How frequently are the relevant data structures expected to change?",
+        reason="Assesses whether schema flexibility justifies Document DB over Relational DB.",
+        gap_type="REQUIREMENT",
+        importance="high",
+        derived_from=["decision_context", "stage_2_pro", "stage_2_assumption"],
+        discovery_reason="Schema flexibility is presented as a potential benefit of MongoDB, but the actual degree of schema volatility has not been established.",
+        materiality_reason="Determines if frequent migrations will occur, directly impacting operational maintenance.",
+    )
+
+    assert "stage_2_pro" in gap.derived_from
+    assert "stage_2_assumption" in gap.derived_from
+    assert "degree of schema volatility has not been established" in gap.discovery_reason
+    assert gap.question.endswith("?")

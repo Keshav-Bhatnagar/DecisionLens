@@ -54,9 +54,10 @@ DecisionLens is a production-grade personal decision-intelligence platform that 
    - `JWT_SECRET`: Secret key for JWT session tokens (generate a random 32+ character string in production).
    - `DATABASE_URL`: `sqlite:///./decisionlens.db` for local SQLite or `postgresql+psycopg://user:pass@host:5432/db` for Postgres.
    - `STORAGE_DIR`: `./storage` (directory for uploaded files and audio).
-   - `OPENAI_API_KEY`: OpenAI API key for structuring, gap analysis, and synthesis (falls back safely to structured mocked responses if empty).
-   - `SEARCH_PROVIDER`: `tavily`, `serper`, or `mock` for external research.
-   - `TAVILY_API_KEY` / `SERPER_API_KEY`: API keys for research web search.
+   - `GEMINI_API_KEY`: Google Gemini API key (recommended free tier from [Google AI Studio](https://aistudio.google.com/app/apikey)).
+   - `OPENAI_API_KEY`: Optional OpenAI API key alternative.
+   - `SEARCH_PROVIDER`: `duckduckgo` (free, no API key required), `tavily`, `serper`, or `mock`.
+   - `TAVILY_API_KEY` / `SERPER_API_KEY`: API keys for commercial research search.
    - `GOOGLE_SPEECH_API_KEY`: Optional key for Chromium Google Speech API fallback.
 
 5. **Initialize Database & Start Backend Server:**

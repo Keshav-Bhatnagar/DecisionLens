@@ -48,7 +48,65 @@ Evaluate each candidate dimension against ALL available evidence (Stage 1 contex
 Is it KNOWN, PARTIALLY_KNOWN, UNKNOWN, CONFLICTING, or INSUFFICIENT?
 Stage 2 Unknowns are inputs, NOT the entire gap set. Discover missing information that Stage 2 did not explicitly identify.
 
-4. MATERIALITY & ANTI-HALLUCINATION FILTER:
+4. PRECISION GUARDRAIL — DO NOT INVENT MEASUREMENT PRECISION:
+CRITICAL PRINCIPLE: Stage 3 is allowed to discover a new information gap through reasoning, but it must NOT invent unsupported precision when formulating that gap.
+
+Valid reasoning flow:
+Source/context -> identify materially relevant dimension -> identify missing information -> formulate gap.
+
+The system must NOT add unsupported:
+- time periods (e.g. "during the next 12 months", "over the next 12–24 months", "in 3 years")
+- numerical thresholds (e.g. ">99.9% uptime", "<100ms")
+- units (e.g. "in USD", "in milliseconds", "in GB")
+- frequencies (e.g. "daily", "monthly", "hourly")
+- volumes (e.g. "millions of queries", "terabytes")
+- percentages (e.g. "20% growth", "99% availability")
+- currencies (e.g. "$", "€", "₹")
+- performance targets
+- geographic scopes (e.g. "across North America", "in India")
+- regulatory standards (e.g. "SOC2", "GDPR", "HIPAA")
+- technical metrics (e.g. "IOPS", "QPS", "p99")
+- operational conditions (e.g. "during peak traffic", "under high load")
+unless explicitly stated in the source or independently justified by the current decision context.
+
+EXAMPLES:
+- Source: "We don't know peak concurrent users."
+  VALID: "What is the expected peak concurrent user count?"
+  INVALID: "What is the expected peak concurrent user count during the next 12 months?" (12-month period was not established).
+
+- Source: "Our initial infrastructure budget is limited."
+  VALID: "What is the maximum acceptable infrastructure budget?"
+  INVALID: "What is the maximum monthly infrastructure budget?" (Monthly budget was not established).
+
+- Source: "The structure may change frequently."
+  VALID: "How frequently are the relevant data structures expected to change?"
+  INVALID: "How frequently will the structures change over the next 12–24 months?" (Timeframe was not established).
+
+- Source: "We don't know the read-to-write ratio."
+  VALID: "What is the expected read-to-write ratio?"
+  INVALID: "What is the expected read-to-write ratio during peak traffic?" (Peak traffic condition was not established).
+
+CORE PRINCIPLE:
+Reasoning-rich, but precision-conservative. Infer that information is needed; do NOT infer unsupported details about what the answer should look like.
+When precision is not available, formulate the gap at the appropriate level of abstraction.
+
+5. SEPARATE INDEPENDENT GAPS:
+Do NOT combine multiple independent unknowns into one compound question merely because they relate to the same decision dimension.
+Bad: "What is the peak concurrent user count and requests per second and expected latency?"
+Better:
+1. What is the expected peak concurrent user count?
+2. What request/transaction volume is expected during peak periods?
+3. What latency requirements must the platform meet?
+Each gap must be independently answerable and independently evaluable for materiality. Formulate each gap with exactly ONE focused question.
+
+6. DISCOVERED GAPS MUST BE TRACEABLE:
+If a gap was not explicitly stated as an Unknown in Stage 2, preserve why Stage 3 discovered it.
+Include:
+- derived_from: list of source elements (e.g. ["decision_context", "stage_2_pro", "stage_2_assumption", "stage_2_unknown"])
+- discovery_reason: clear explanation of why this gap was created (e.g. "Schema flexibility is presented as a potential benefit of MongoDB, but the actual degree of schema volatility has not been established.") without relying on generic domain checklists.
+The system must be able to explain: "Why did I create this gap?" without relying on generic domain knowledge.
+
+7. MATERIALITY & ANTI-HALLUCINATION FILTER:
 A candidate becomes a real gap ONLY if it satisfies all 6 criteria:
 A. Decision-relevant: Materially affects the analysis or outcome.
 B. Currently insufficient: Not already established in evidence.
@@ -59,20 +117,20 @@ F. Contextually justified: Derived from the actual decision context, NOT generic
 DO NOT INVENT: Never invent compliance requirements (SOC2/GDPR), hostel needs, arbitrary benchmarks, or imaginary metrics unless contextually justified.
 ZERO IS VALID: If the evidence is genuinely sufficient, output an empty list of gaps. Never manufacture filler gaps.
 
-5. CLASSIFY GAP TYPE:
+8. CLASSIFY GAP TYPE:
 Assign one of: CONTEXT, CONSTRAINT, GOAL, PREFERENCE, ELIGIBILITY, REQUIREMENT, QUANTITATIVE, COMPARATIVE, OPERATIONAL, RISK, TEMPORAL, STAKEHOLDER, EVIDENCE, CAUSAL.
 
-6. ASSIGN IMPORTANCE:
+9. ASSIGN IMPORTANCE:
 - critical: Without resolving this, meaningful analysis or decision synthesis is unsafe or impossible.
 - high: Could materially change the recommendation, ranking, or strategy.
 - medium: Useful nuance; analysis can proceed with explicit assumptions.
 - low: Minor refinement unlikely to change the decision.
 
-7. RESOLUTION ROUTING:
+10. RESOLUTION ROUTING:
 - "ask_user": For internal policy, stakeholder preferences, budget ceiling, success criteria, strategic priorities.
 - "web_research": For objective external benchmarks, market empirical data, published comparative metrics, vendor pricing.
 
-8. EXPLAINABILITY & PROVENANCE:
+11. EXPLAINABILITY & PROVENANCE:
 - reason: Clear explanation of why this missing information matters for THIS specific decision.
 - materiality_reason: How resolving this gap could swing the outcome or change the winning alternative.
 - affected_options: Stated alternatives affected by this uncertainty (empty list if no explicit options exist).
@@ -87,7 +145,7 @@ OUTPUT JSON SCHEMA:
     {
       "id": "gap_1",
       "title": "Short descriptive title of the gap",
-      "question": "Specific, actionable inquiry targeting a missing parameter...",
+      "question": "Specific, actionable inquiry targeting a single missing parameter (NO invented precision)...",
       "reason": "Explicit justification of why this datum has the leverage to alter the decision...",
       "gap_type": "REQUIREMENT",
       "importance": "critical/high/medium/low",
@@ -96,11 +154,54 @@ OUTPUT JSON SCHEMA:
       "affected_dimensions": ["Dimension 1"],
       "recommended_resolution_method": "ask_user/web_research",
       "dependencies": [],
+      "derived_from": ["decision_context", "stage_2_pro", "stage_2_assumption"],
+      "discovery_reason": "Contextual justification explaining why this gap was discovered...",
       "materiality_reason": "How the answer could change the recommendation or decision outcome..."
     }
   ]
 }
 """
+
+
+def sanitize_gap_precision(question: str, context_text: str) -> str:
+    """
+    Precision Guardrail Sanitizer:
+    Ensures that questions discovered in Stage 3 do NOT invent unsupported measurement precision:
+    - No unsupported future time periods (e.g. 'during the next 12 months', 'over the next 12-24 months')
+    - No unsupported monthly constraints (e.g. 'monthly budget' -> 'acceptable infrastructure budget')
+    - No unsupported operational conditions (e.g. 'during peak traffic' when not in context)
+    - Formulates the gap at the appropriate level of abstraction without unsupported specifics.
+    """
+    if not question:
+        return ""
+    q = question.strip()
+    ctx_lower = (context_text or "").lower()
+
+    # 1. Unsupported future time horizons: e.g. 'during the next 12 months', 'over the next 12–24 months'
+    time_window_pattern = r'\s+(?:during|over|in|across)\s+the\s+next\s+\d+(?:[–-]\d+)?\s*(?:months?|years?|weeks?|days?)\b'
+    match = re.search(time_window_pattern, q, re.IGNORECASE)
+    if match:
+        if not any(w in ctx_lower for w in ["next 12", "next 24", "12–24", "12-24", "12 months", "24 months"]):
+            q = re.sub(time_window_pattern, "", q, flags=re.IGNORECASE)
+
+    # 2. Unsupported monthly constraints: 'monthly infrastructure budget' -> 'acceptable infrastructure budget'
+    if re.search(r'\bmonthly\s+(?:infrastructure\s+)?budget\b', q, re.IGNORECASE):
+        if "monthly" not in ctx_lower and "per month" not in ctx_lower:
+            q = re.sub(r'\bmonthly\s+infrastructure\s+budget\b', "acceptable infrastructure budget", q, flags=re.IGNORECASE)
+            q = re.sub(r'\bmonthly\s+budget\b', "acceptable budget", q, flags=re.IGNORECASE)
+
+    # 3. Unsupported operational conditions: 'during peak traffic'
+    if re.search(r'\s+during\s+peak\s+traffic\b', q, re.IGNORECASE):
+        if "peak traffic" not in ctx_lower and "traffic spikes" not in ctx_lower:
+            q = re.sub(r'\s+during\s+peak\s+traffic\b', "", q, flags=re.IGNORECASE)
+
+    # 4. Clean up punctuation and spacing
+    q = re.sub(r'\s+\?', '?', q)
+    q = re.sub(r'\s{2,}', ' ', q)
+    if not q.endswith('?'):
+        q += '?'
+
+    return q
 
 
 def generate_universal_decision_gaps(
@@ -609,15 +710,24 @@ def detect_decision_gaps(
             detail="Cannot detect information gaps on empty decision. Please provide a problem statement or notes first.",
         )
 
-    # Retain existing answers from previously saved gaps
-    existing_gaps_map = {}
+    def _normalize_q(text: str) -> str:
+        return re.sub(r'[^a-z0-9]', '', (text or '').lower())
+
+    # Retain existing answers from previously saved gaps by question or gap ID
+    existing_gaps_by_q = {}
+    existing_gaps_by_id = {}
     if decision.gaps and "gaps" in decision.gaps:
         for g_dict in decision.gaps["gaps"]:
-            if isinstance(g_dict, dict) and "id" in g_dict:
-                existing_gaps_map[g_dict["id"]] = g_dict
+            if isinstance(g_dict, dict):
+                if "id" in g_dict and g_dict["id"]:
+                    existing_gaps_by_id[str(g_dict["id"])] = g_dict
+                if "question" in g_dict:
+                    nq = _normalize_q(g_dict["question"])
+                    if nq:
+                        existing_gaps_by_q[nq] = g_dict
 
     detected_gaps: List[GapItem] = []
-    client, model, provider = get_llm_client_and_model()
+    client, model, provider = get_llm_client_and_model(task="gaps")
 
     if force_mock:
         logger.info("Using universal mock gap detection engine (force_mock=True)")
@@ -648,7 +758,38 @@ def detect_decision_gaps(
             user_prompt = f"Analyze information completeness and identify prioritized information gaps for the following decision:\n\n{fenced_input}"
 
             content = None
-            try:
+            ai_origin = f"AI Engine: {provider.upper()} ({model})"
+
+            if provider == "gemini":
+                # Primary execution: native Gemini REST endpoint with candidate models for high reliability
+                gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
+                candidate_models = [model, "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
+                unique_candidates = []
+                for m in candidate_models:
+                    if m and m not in unique_candidates:
+                        unique_candidates.append(m)
+
+                last_err = None
+                for cand in unique_candidates:
+                    try:
+                        logger.info("Calling Gemini REST gap detection with model '%s'", cand)
+                        content = call_gemini_direct_rest(
+                            model=cand,
+                            system_prompt=GAP_DETECTION_SYSTEM_PROMPT,
+                            user_prompt=user_prompt,
+                            api_key=gemini_key,
+                            temperature=0.0,
+                        )
+                        if content:
+                            ai_origin = f"AI Engine: GEMINI ({cand})"
+                            break
+                    except Exception as rest_exc:
+                        last_err = rest_exc
+                        logger.warning("Gemini REST gap detection failed on model '%s': %s", cand, rest_exc)
+
+                if not content and last_err:
+                    raise last_err
+            else:
                 response = client.chat.completions.create(
                     model=model,
                     messages=[
@@ -656,36 +797,29 @@ def detect_decision_gaps(
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.1,
+                    temperature=0.0,
                 )
                 content = response.choices[0].message.content
-            except Exception as proxy_exc:
-                if provider == "gemini":
-                    gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
-                    logger.info("OpenAI proxy failed for gaps (%s), falling back to native Gemini REST endpoint", proxy_exc)
-                    content = call_gemini_direct_rest(
-                        model=model,
-                        system_prompt=GAP_DETECTION_SYSTEM_PROMPT,
-                        user_prompt=user_prompt,
-                        api_key=gemini_key,
-                    )
-                else:
-                    raise proxy_exc
 
             parsed = json.loads(content)
             now_str = datetime.now(timezone.utc).isoformat()
-            ai_origin = f"AI Engine: {provider.upper()} ({model})"
 
             for item in parsed.get("gaps", []):
                 method = str(item.get("recommended_resolution_method", "ask_user")).lower()
                 if method not in {"ask_user", "web_research"}:
                     method = "ask_user"
 
+                raw_q = str(item.get("question", "")).strip()
+                sanitized_q = sanitize_gap_precision(raw_q, raw_context)
+
+                derived_from_val = list(item.get("derived_from") or ["decision_context", "selection_requirement"])
+                discovery_reason_val = str(item.get("discovery_reason") or item.get("materiality_reason") or item.get("reason", ""))
+
                 detected_gaps.append(
                     GapItem(
                         id=str(item.get("id", f"gap_{len(detected_gaps)+1}")),
                         title=str(item.get("title", f"Gap {len(detected_gaps)+1}")),
-                        question=str(item.get("question", "")),
+                        question=sanitized_q,
                         reason=str(item.get("reason", "")),
                         gap_type=str(item.get("gap_type", "REQUIREMENT")).upper(),
                         importance=str(item.get("importance", "medium")).lower(),
@@ -695,6 +829,8 @@ def detect_decision_gaps(
                         recommended_resolution_method=method,
                         status="pending",
                         source_origin=ai_origin,
+                        derived_from=derived_from_val,
+                        discovery_reason=discovery_reason_val,
                         dependencies=list(item.get("dependencies", [])),
                         materiality_reason=str(item.get("materiality_reason", item.get("reason", ""))),
                         created_at=now_str,
@@ -707,10 +843,12 @@ def detect_decision_gaps(
             err_msg = f"{exc.__class__.__name__}: {str(exc)[:45]}"
             detected_gaps = generate_universal_decision_gaps(decision, origin_reason=f"Fallback: AI Error ({err_msg})", db=db)
 
-    # Merge in previously answered/skipped/queued states if gap IDs match
+    # Merge in previously answered/skipped/queued states using question or gap ID match
+    valid_researched_gap_ids = set()
     for gap in detected_gaps:
-        if gap.id in existing_gaps_map:
-            prev = existing_gaps_map[gap.id]
+        nq = _normalize_q(gap.question)
+        prev = existing_gaps_by_q.get(nq) or existing_gaps_by_id.get(gap.id)
+        if prev and (prev.get("answer") or prev.get("status") in ["answered", "skipped", "researched", "research_completed"]):
             gap.status = prev.get("status", gap.status)
             gap.answer = prev.get("answer")
             gap.research_query = prev.get("research_query")
@@ -718,6 +856,24 @@ def detect_decision_gaps(
                 gap.source_origin = prev.get("source_origin")
             if "updated_at" in prev:
                 gap.updated_at = prev["updated_at"]
+        else:
+            # Question is new or changed: must remain fresh pending state!
+            gap.status = "pending"
+            gap.answer = None
+            gap.research_query = None
+
+        if gap.status in ["researched", "research_completed"]:
+            valid_researched_gap_ids.add(gap.id)
+
+    # Prune stale research findings in decision.research for gaps whose questions changed
+    if decision.research and isinstance(decision.research, dict) and "findings" in decision.research:
+        active_findings = [
+            f for f in decision.research.get("findings", [])
+            if isinstance(f, dict) and f.get("gap_id") in valid_researched_gap_ids
+        ]
+        r_copy = dict(decision.research)
+        r_copy["findings"] = active_findings
+        decision.research = r_copy
 
     # Compute status counts
     pending_count = sum(1 for g in detected_gaps if g.status == "pending")

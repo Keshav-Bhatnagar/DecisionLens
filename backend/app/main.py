@@ -16,6 +16,7 @@ from app.api.roadmap import router as roadmap_router
 from app.api.outcomes import router as outcomes_router
 
 
+# Lifespan context manager for application initialization and teardown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Ensure storage directory exists
@@ -38,7 +39,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|.*\.trycloudflare\.com)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

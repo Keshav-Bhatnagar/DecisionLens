@@ -140,9 +140,9 @@ def generate_narrow_search_query(
             options_context = " vs ".join(valid_opts)
 
     if options_context and options_context.lower() not in clean_q.lower():
-        narrow = f"{options_context} {clean_q} benchmark documentation"
+        narrow = f"{options_context}: {clean_q}"
     else:
-        narrow = f"{clean_q} official benchmark documentation"
+        narrow = f"{clean_q}"
 
     # Normalize whitespace
     narrow = re.sub(r"\s+", " ", narrow).strip()
@@ -244,7 +244,60 @@ def get_mock_search_results(query: str) -> List[dict]:
     """
     q_lower = query.lower()
 
-    if "spanner" in q_lower or "aurora" in q_lower or "database" in q_lower:
+    if "postgres" in q_lower and "mongo" in q_lower:
+        return [
+            {
+                "title": "PostgreSQL vs MongoDB Performance & Scalability Benchmarks",
+                "url": "https://www.enterprisedb.com/benchmarks/postgres-vs-mongodb",
+                "content": "In high-concurrency read/write benchmarks, PostgreSQL delivers sub-15ms p99 response times for relational transactions, while MongoDB scales horizontally across document collections with sub-25ms latency.",
+                "raw_claims": [
+                    "PostgreSQL achieves sub-15ms p99 write latency with strict ACID compliance under heavy load.",
+                    "MongoDB provides flexible schema scaling across shards with 20% higher raw write throughput for denormalized documents."
+                ],
+            },
+            {
+                "title": "Official Performance Comparison: Relational vs Document Databases",
+                "url": "https://www.mongodb.com/compare/mongodb-postgresql",
+                "content": "PostgreSQL offers mature foreign keys and transactional integrity, whereas MongoDB excels in rapid document ingestion and elastic horizontal clustering.",
+                "raw_claims": [
+                    "Transactional ACID integrity is natively guaranteed in PostgreSQL without application-layer rollbacks.",
+                    "Horizontal sharding in MongoDB simplifies multi-node scaling for high-volume activity streams."
+                ],
+            },
+        ]
+    elif "latency" in q_lower or "throughput" in q_lower or "response time" in q_lower or "sla" in q_lower:
+        return [
+            {
+                "title": "Database Engine Response Time & SLA Performance Report",
+                "url": "https://www.percona.com/blog/database-latency-sla-benchmarks",
+                "content": "Production benchmarks under 50,000 active users indicate p95 read latency under 40ms and p99 write latency under 85ms for tuned relational instances.",
+                "raw_claims": [
+                    "Achieving p95 latency under 50ms requires in-memory caching or optimized connection pooling under peak events.",
+                    "Uncached relational queries face latency spikes exceeding 150ms during concurrent submission rushes."
+                ],
+            },
+            {
+                "title": "Cloud Database Latency & Throughput Baseline Standards",
+                "url": "https://cloud.google.com/architecture/database-performance-sla",
+                "content": "P99 latency SLA guarantees require distributed read replicas or Redis caching layers when concurrent transactions exceed 5,000 ops/second.",
+                "raw_claims": [
+                    "Redis caching offloads up to 80% of read traffic, preserving sub-20ms p99 response times during traffic spikes."
+                ],
+            },
+        ]
+    elif "compliance" in q_lower or "soc2" in q_lower or "iso" in q_lower or "residency" in q_lower:
+        return [
+            {
+                "title": "Cloud Provider Security & Compliance Certifications Overview",
+                "url": "https://aws.amazon.com/compliance/programs/",
+                "content": "Managed database platforms provide native ISO 27001, SOC 1/2/3, and regional data residency compliance controls.",
+                "raw_claims": [
+                    "SOC 2 Type II and ISO 27001 certifications are maintained by tier-1 managed database cloud providers.",
+                    "Data residency controls guarantee encrypted storage within specified geographical regions."
+                ],
+            },
+        ]
+    elif "spanner" in q_lower or "aurora" in q_lower:
         return [
             {
                 "title": "Google Cloud Spanner High Availability & Multi-Region SLAs",

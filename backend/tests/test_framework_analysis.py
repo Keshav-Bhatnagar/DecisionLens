@@ -11,6 +11,7 @@ from app.services.framework_engine import (
     validate_and_calculate_matrix_scores,
     DecisionTreeNode,
     DecisionTreeBranch,
+    detect_candidate_options,
 )
 
 
@@ -439,3 +440,123 @@ def test_cross_user_analysis_isolation(client: TestClient, auth_headers: dict, t
         json={"force_mock": True},
     )
     assert res.status_code == 404
+
+
+def test_detect_candidate_options_from_stage3_gaps():
+    """Gaps' affected_options are harvested with high fidelity."""
+    decision_gaps = {
+        "gaps": [
+            {"id": "g1", "question": "Cost?", "affected_options": ["AWS Fargate", "Google Cloud Run"]},
+            {"id": "g2", "question": "Security?", "affected_options": ["Google Cloud Run", "Azure Container Apps"]},
+        ]
+    }
+    options = detect_candidate_options(
+        context_text="",
+        structured_points={},
+        problem_statement="Evaluate serverless container platforms",
+        decision_gaps=decision_gaps,
+    )
+    assert options == ["AWS Fargate", "Google Cloud Run", "Azure Container Apps"]
+
+
+def test_detect_candidate_options_case_insensitive_deduplication():
+    """Duplicate candidate options with differing cases or spacing are unified."""
+    decision_gaps = {
+        "gaps": [
+            {"id": "g1", "affected_options": ["AWS", "aws", "  AWS  "]},
+            {"id": "g2", "affected_options": ["GCP", "gcp"]},
+        ]
+    }
+    options = detect_candidate_options(
+        context_text="",
+        structured_points={},
+        problem_statement="Choose cloud provider",
+        decision_gaps=decision_gaps,
+    )
+    assert options == ["AWS", "GCP"]
+
+
+def test_detect_candidate_options_union_with_text():
+    """Gaps options union cleanly with explicit text detection without dropping third choices."""
+    decision_gaps = {
+        "gaps": [
+            {"id": "g1", "affected_options": ["AWS Fargate", "Google Cloud Run"]},
+        ]
+    }
+    options = detect_candidate_options(
+        context_text="Evaluating microservices architecture vs monolith",
+        structured_points={},
+        problem_statement="Comparing deployments",
+        decision_gaps=decision_gaps,
+    )
+    # Gap options come first, followed by detected text options
+    assert "AWS Fargate" in options
+    assert "Google Cloud Run" in options
+    assert "Microservices Architecture" in options
+
+
+def test_detect_candidate_options_empty_gaps_fallback():
+    """When gaps produce no options, fallback to context text detection works as before."""
+    options = detect_candidate_options(
+        context_text="Evaluating whether to build in-house or buy commercial vendor.",
+        structured_points={},
+        problem_statement="Vendor procurement",
+        decision_gaps={"gaps": []},
+    )
+    assert options == ["Build In-House", "Purchase Commercial Vendor"]
+
+
+def test_decision_matrix_inherits_gap_affected_options_via_api(
+    client: TestClient,
+    auth_headers: dict,
+    test_decision_id: int,
+):
+    """The Decision Matrix API generates options inheriting from Stage 3 gaps."""
+    # 1. Trigger gaps detection on the decision
+    client.post(
+        f"/api/decisions/{test_decision_id}/gaps",
+        headers=auth_headers,
+        json={"force_mock": True},
+    )
+
+    # 2. Trigger framework evaluation
+    res = client.post(
+        f"/api/decisions/{test_decision_id}/analysis",
+        headers=auth_headers,
+        json={"selected_frameworks": ["decision_matrix"], "force_mock": True},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    matrix = data["decision_matrix"]
+    assert matrix is not None
+    assert matrix["applicable"] is True
+
+    # Options in matrix should be populated with options matching the decision's gaps or context
+    matrix_opt_names = [o["name"] for o in matrix["options"]]
+    assert len(matrix_opt_names) >= 2
+    # Verify results and ratings exist for all generated options
+    assert len(matrix["results"]) == len(matrix["options"])
+    assert matrix["winner_option_name"] in matrix_opt_names
+
+
+def test_curated_methodology_ensemble_recommendation(client: TestClient, auth_headers: dict, test_decision_id: int):
+    """Verify that the engine recommends N complementary techniques with validation reasons and methodology rationale."""
+    res = client.post(
+        f"/api/decisions/{test_decision_id}/analysis",
+        headers=auth_headers,
+        json={"force_mock": True},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "recommended_techniques" in data
+    assert len(data["recommended_techniques"]) >= 2
+    for tech in data["recommended_techniques"]:
+        assert "framework_id" in tech
+        assert "role" in tech
+        assert "role_label" in tech
+        assert "validation_reason" in tech
+        assert len(tech["validation_reason"]) > 10
+        assert tech["priority"] >= 1
+    assert data["methodology_rationale"] is not None
+    assert len(data["methodology_rationale"]) > 15
+

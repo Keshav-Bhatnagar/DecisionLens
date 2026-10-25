@@ -1097,8 +1097,9 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
     return findings
 
 
-def call_gemini_direct_rest(model: str, system_prompt: str, user_prompt: str, api_key: str) -> str:
-    """Direct REST caller for Google Gemini using the native generateContent API."""
+def call_gemini_direct_rest(model: str, system_prompt: str, user_prompt: str, api_key: str, temperature: float = 0.0) -> str:
+    """Direct REST caller for Google Gemini using the native generateContent API with transient error retry."""
+    import time
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     headers = {
         "x-goog-api-key": api_key,
@@ -1116,23 +1117,50 @@ def call_gemini_direct_rest(model: str, system_prompt: str, user_prompt: str, ap
         },
         "generationConfig": {
             "response_mime_type": "application/json",
-            "temperature": 0.1,
+            "temperature": temperature,
         },
     }
-    with httpx.Client(timeout=30.0) as client:
-        resp = client.post(url, headers=headers, json=payload)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+    last_exc = None
+    for attempt in range(3):
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                resp = client.post(url, headers=headers, json=payload)
+                if resp.status_code in (429, 500, 502, 503, 504) and attempt < 2:
+                    logger.warning("Gemini REST attempt %d returned %d, retrying...", attempt + 1, resp.status_code)
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                resp.raise_for_status()
+                data = resp.json()
+                return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except (httpx.TimeoutException, httpx.HTTPStatusError) as exc:
+            last_exc = exc
+            if attempt < 2:
+                logger.warning("Gemini REST attempt %d exception (%s), retrying...", attempt + 1, exc)
+                time.sleep(1.5 * (attempt + 1))
+            else:
+                raise exc
+
+    if last_exc:
+        raise last_exc
+    return ""
 
 
-def get_llm_client_and_model():
+def get_llm_client_and_model(task: str = "default"):
     """
     Returns (client, model_name, provider_name).
     Supports:
     - Google Gemini (via OpenAI-compatible endpoint with GEMINI_API_KEY / GOOGLE_API_KEY)
     - OpenAI (with OPENAI_API_KEY)
     - Mock fallback when neither is configured
+
+    Task-specific model routing:
+    - task == "structuring" (Stage 2 Cognitive Structuring):
+        Uses settings.gemini_structuring_model (default "gemini-3.5-flash")
+    - task == "frameworks" (Stage 4 Framework Analysis):
+        Uses settings.gemini_framework_model (default "gemini-3.1-flash-lite")
+    - default / synthesis / gaps:
+        Uses settings.gemini_model (default "gemini-3.5-flash")
     """
     provider = settings.active_ai_provider
 
@@ -1144,7 +1172,27 @@ def get_llm_client_and_model():
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             default_headers={"x-goog-api-key": gemini_key},
         )
-        return client, settings.gemini_model, "gemini"
+        if task == "structuring":
+            selected_model = (
+                getattr(settings, "gemini_structuring_model", None)
+                or settings.gemini_model
+                or "gemini-3.5-flash"
+            )
+        elif task == "gaps":
+            selected_model = (
+                getattr(settings, "gemini_gaps_model", None)
+                or settings.gemini_model
+                or "gemini-3.5-flash"
+            )
+        elif task == "frameworks":
+            selected_model = (
+                getattr(settings, "gemini_framework_model", None)
+                or "gemini-3.1-flash-lite"
+            )
+        else:
+            selected_model = settings.gemini_model or "gemini-3.5-flash"
+
+        return client, selected_model, "gemini"
 
     if provider == "openai":
         from openai import OpenAI
@@ -1183,7 +1231,7 @@ class AIService:
                 detail="Cannot structure empty input. Please provide a problem statement, notes, transcript, or document.",
             )
 
-        client, model, provider = get_llm_client_and_model()
+        client, model, provider = get_llm_client_and_model(task="structuring")
 
         # Use mock when not configured or force_mock is requested
         if force_mock or client is None:
@@ -1213,10 +1261,10 @@ class AIService:
             )
             response_content = response.choices[0].message.content
         except Exception as exc:
-            # 2. Resilient failover for Gemini: try direct REST endpoint with candidate models
+            # 2. Resilient failover for Gemini: try direct REST endpoint with candidate models (prioritizing 3.5)
             if provider == "gemini":
                 gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
-                candidate_models = [model, "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash-preview"]
+                candidate_models = [model, "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
                 unique_candidates = []
                 for m in candidate_models:
                     if m and m not in unique_candidates:
