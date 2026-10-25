@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     microsoft_client_secret: str = ""
 
     # Supabase Auth Configuration
-    supabase_url: str = "https://fzqlmmdfiiwaqawygkyf.supabase.co"
+    supabase_url: str = ""
     supabase_anon_key: str = ""
 
     @property

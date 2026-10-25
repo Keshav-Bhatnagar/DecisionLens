@@ -126,7 +126,7 @@ def change_password(
 )
 def get_oauth_providers(request: Request):
     """Return available OAuth providers, unified under Supabase OAuth with dynamic origin resolution."""
-    base_url = settings.supabase_url.rstrip("/") if settings.supabase_url else "https://fzqlmmdfiiwaqawygkyf.supabase.co"
+    base_url = settings.supabase_url.rstrip("/") if settings.supabase_url else ""
 
     # Dynamically determine frontend origin for redirect
     frontend_origin = "http://localhost:3000"
