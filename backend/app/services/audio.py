@@ -328,10 +328,9 @@ def transcribe_audio_gemini(audio_path: Path, language: str = "en") -> str:
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
         models_to_try = [
-            "gemini-3.1-flash-lite",
-            "gemini-3.5-transcribe",
-            "gemini-2.5-flash-lite",
-            "gemini-2.5-flash",
+            "gemini-flash-lite-latest",
+            "gemini-3.1-flash-lite-preview",
+            "gemini-flash-latest",
             settings.gemini_model,
         ]
         seen = set()
