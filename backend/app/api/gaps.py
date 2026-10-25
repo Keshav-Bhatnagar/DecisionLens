@@ -33,15 +33,18 @@ router = APIRouter(prefix="/decisions/{decision_id}", tags=["Gap Detection & Web
 
 
 def _recalculate_gap_counts(gaps_data: dict) -> dict:
-    """Helper to sync counts across pending, answered, skipped, research_queued, and researched."""
+    """Helper to sync counts across pending, answered, skipped, research_queued, researched, and unresolved_research."""
     gaps_list = gaps_data.get("gaps", [])
     gaps_data["total_gaps"] = len(gaps_list)
     gaps_data["pending_count"] = sum(1 for g in gaps_list if g.get("status") == "pending")
-    gaps_data["answered_count"] = sum(1 for g in gaps_list if g.get("status") == "answered")
-    gaps_data["skipped_count"] = sum(1 for g in gaps_list if g.get("status") == "skipped")
+    gaps_data["answered_count"] = sum(1 for g in gaps_list if g.get("status") in ["answered", "partially_resolved", "resolved"])
+    gaps_data["skipped_count"] = sum(1 for g in gaps_list if g.get("status") in ["skipped", "blocked"])
     gaps_data["research_queued_count"] = sum(1 for g in gaps_list if g.get("status") == "research_queued")
     gaps_data["researched_count"] = sum(
         1 for g in gaps_list if g.get("status") in ["researched", "research_completed"]
+    )
+    gaps_data["unresolved_research_count"] = sum(
+        1 for g in gaps_list if g.get("status") == "unresolved_research"
     )
     return gaps_data
 
@@ -320,7 +323,10 @@ def research_gap(
             })
 
         # Update gap status and answer in Stage 3 gaps layer (do NOT mutate Stage 2 decision.points)
-        target_gap["status"] = "researched"
+        if finding.is_verified and finding.consensus not in ["unsupported", "irrelevant_evidence"]:
+            target_gap["status"] = "researched"
+        else:
+            target_gap["status"] = "unresolved_research"
         target_gap["answer"] = finding.synthesis
 
     research_dict["requests"] = requests_list
@@ -443,7 +449,10 @@ def execute_gap_research_endpoint(
     )
 
     now_iso = datetime.now(timezone.utc).isoformat()
-    target_gap["status"] = "researched"
+    if finding.is_verified and finding.consensus not in ["unsupported", "irrelevant_evidence"]:
+        target_gap["status"] = "researched"
+    else:
+        target_gap["status"] = "unresolved_research"
     target_gap["research_query"] = narrow_query
     target_gap["answer"] = finding.synthesis
     target_gap["updated_at"] = now_iso

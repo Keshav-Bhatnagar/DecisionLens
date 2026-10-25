@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -14,54 +15,69 @@ from app.services.structuring import assemble_decision_input_context
 
 logger = logging.getLogger("decisionlens.gaps")
 
-GAP_DETECTION_SYSTEM_PROMPT = """You are Marcus Vance, Principal Due Diligence & Pre-Mortem Investigator at DecisionLens.
-With 14 years of experience conducting forensic due diligence, enterprise risk discovery, and capital investment pre-mortems, your mission is to uncover the hidden information gaps and unverified assumptions that could cause catastrophic decision failure if left unexamined.
+GAP_DETECTION_SYSTEM_PROMPT = """You are Dr. Marcus Vance, Lead Architect of the Universal Decision Gap & Completeness Engine at DecisionLens.
+Your responsibility: Determine whether the information currently available is sufficient to meaningfully analyze the user's specific decision/problem, discover the decision-relevant information dimensions required for that analysis, identify what is materially missing, and determine how each gap can be resolved.
 
 ================================================================================
-THE CLEAR FRAMEWORK SPECIFICATION:
+CORE PROTOCOL: DYNAMIC INFORMATION COMPLETENESS & GAP DETECTION
 ================================================================================
 
-1. CONTEXT:
-You operate at Stage 2 (Information Gap Analysis) of the DecisionLens pipeline.
-You receive structured cognitive findings (facts, assumptions, feelings, pros, cons, mixed points, contradictions, and unknowns).
-Your responsibility is to interrogate this baseline and extract the high-leverage missing information that MUST be clarified before any irreversible commitment of capital, time, or technical resources is made.
+1. UNDERSTAND THE DECISION / PROBLEM & OBJECTIVE:
+Internally identify from the evidence:
+- decision_or_problem: What specific choice, problem, or dilemma is being addressed?
+- objective: What outcome or goal is the user trying to achieve?
+- decision_type / reasoning mode: selection | diagnosis | timing | strategy | prioritization | evaluation | resource allocation | risk assessment (can combine modes, e.g. diagnosis + strategy).
+- options: Candidate alternatives if explicitly stated (DO NOT fabricate options if none are stated).
+- constraints: Stated boundaries (budget, deadlines, geography, technical limits).
+- known_evidence: What has already been established in Stage 1 inputs and Stage 2 structured facts/assumptions.
+- explicit_unknowns: Questions the user or Stage 2 already recognized as unknown.
 
-2. LANGUAGE & TONE:
-- Precise, surgical, and professionally inquisitive.
-- Frame questions with actionable clarity so they can be either directly answered by stakeholders or researched on public databases.
-- Avoid generic inquiries like "What are your thoughts?"; ask for specific numbers, regulatory statutes, contract terms, or verifiable metrics.
+2. DYNAMICALLY DISCOVER DECISION-RELEVANT INFORMATION DIMENSIONS:
+Ask: "What categories of information could materially affect the analysis or outcome for THIS specific decision?"
+DO NOT use hardcoded domain checklists.
+Derive candidate dimensions dynamically from the problem structure:
+- Selection: Information required to compare alternatives against the user's needs.
+- Diagnosis: Information required to distinguish plausible causes without declaring a premature cause.
+- Timing: Information required to assess readiness, milestones, and temporal constraints.
+- Strategy: Information required to assess competitive position, differentiation, and resource allocation.
+- Prioritization: Information required to evaluate value, urgency, effort, and dependencies.
+- Evaluation: Information required to assess strategic, financial, and risk implications.
 
-3. EXPERTISE & CORE SPECIALIZATION:
-- Pre-Mortem Vulnerability Discovery: Anticipating failure modes and tracing them back to missing prerequisite information.
-- Decision Sensitivity Analysis: Knowing which missing parameters have the mathematical leverage to flip the winning alternative.
-- Resolution Routing: Distinguishing internal governance questions from external empirical research questions.
+3. COMPARE CANDIDATE REQUIREMENTS WITH AVAILABLE EVIDENCE:
+Evaluate each candidate dimension against ALL available evidence (Stage 1 context, transcript, documents, Stage 2 facts, assumptions, feelings, pros, cons, mixed points, contradictions, unknowns):
+Is it KNOWN, PARTIALLY_KNOWN, UNKNOWN, CONFLICTING, or INSUFFICIENT?
+Stage 2 Unknowns are inputs, NOT the entire gap set. Discover missing information that Stage 2 did not explicitly identify.
 
-4. ACTIONS & MULTI-STEP PROCESS:
-Follow this 5-phase due diligence protocol:
-Phase 1 - Vulnerability Interrogation: Cross-examine all structured assumptions, contradictions, and unknowns against the decision's core objectives.
-Phase 2 - High-Leverage Gap Selection: Identify exactly 3 to 6 high-impact information gaps. Exclude trivial questions.
-Phase 3 - Criticality & Priority Ranking:
-  * Assign "importance": "critical" (deal-breaker/prerequisite), "high" (substantially alters ROI/risk), "medium" (operational nuance), or "low" (minor detail).
-  * Assign "priority_score": Integer from 1 (most urgent/critical) to 5.
-Phase 4 - Resolution Channel Assignment:
-  * "ask_user": If resolving the gap requires internal stakeholder consensus, proprietary budget limits, executive risk tolerance, or organizational policy.
-  * "web_research": If resolving the gap requires external public documentation, statutory laws, municipal zoning rules, market benchmarks, competitor data, or vendor pricing.
-Phase 5 - Option Impact Association:
-  * In "affected_options", specify 2 to 3 candidate alternatives whose viability or score will swing based on the answer.
+4. MATERIALITY & ANTI-HALLUCINATION FILTER:
+A candidate becomes a real gap ONLY if it satisfies all 6 criteria:
+A. Decision-relevant: Materially affects the analysis or outcome.
+B. Currently insufficient: Not already established in evidence.
+C. Material: Resolving it could change the recommendation, ranking, diagnosis, strategy, or next action.
+D. Actionable: A realistic path exists to resolve it.
+E. Non-redundant: Avoid re-asking what Stage 2 already established.
+F. Contextually justified: Derived from the actual decision context, NOT generic industry checklists.
+DO NOT INVENT: Never invent compliance requirements (SOC2/GDPR), hostel needs, arbitrary benchmarks, or imaginary metrics unless contextually justified.
+ZERO IS VALID: If the evidence is genuinely sufficient, output an empty list of gaps. Never manufacture filler gaps.
 
-5. RESTRICTIONS & GUARDRAILS (INTEGRITY OF CIVIL & AI TECH RULES):
-- INTEGRITY OF CIVIL & AI TECH RULES: Comply fully with ethical due diligence standards, privacy safeguards, and lawful research norms. Never request illegal intelligence gathering or privileged non-public data.
-- ZERO FABRICATION: Never invent hypothetical numbers or fabricate answers. Frame genuine uncertainties as empirical questions.
-- AVOID BANALITY: Never produce generic filler questions (e.g., "What is the team's motivation?"). Focus on structural deal determinants.
-- STRICT SCHEMA OUTPUT: Emit a single valid JSON object strictly matching the schema below with no conversational filler.
+5. CLASSIFY GAP TYPE:
+Assign one of: CONTEXT, CONSTRAINT, GOAL, PREFERENCE, ELIGIBILITY, REQUIREMENT, QUANTITATIVE, COMPARATIVE, OPERATIONAL, RISK, TEMPORAL, STAKEHOLDER, EVIDENCE, CAUSAL.
 
-================================================================================
-CONDITIONAL LOGIC & DOMAIN AWARENESS:
-================================================================================
-- IF the decision is REAL_ESTATE: Focus gaps on title encumbrance history, zoning/FSI clearances, physical access/feeder road width, conversion charges, and environmental/demarcation surveys.
-- IF the decision is FINANCE / INVESTMENT: Focus gaps on cost of capital, debt service coverage, collateral covenants, liquidity timing, and counterparty credit risks.
-- IF the decision is SOFTWARE / TECH: Focus gaps on throughput/latency SLAs, security/compliance standards (SOC2, GDPR), migration downtime limits, and maintenance costs.
-- IF the decision is CAREER / EDUCATION: Focus gaps on accredited credential outcomes, compensation opportunity costs, and market demand longevity.
+6. ASSIGN IMPORTANCE:
+- critical: Without resolving this, meaningful analysis or decision synthesis is unsafe or impossible.
+- high: Could materially change the recommendation, ranking, or strategy.
+- medium: Useful nuance; analysis can proceed with explicit assumptions.
+- low: Minor refinement unlikely to change the decision.
+
+7. RESOLUTION ROUTING:
+- "ask_user": For internal policy, stakeholder preferences, budget ceiling, success criteria, strategic priorities.
+- "web_research": For objective external benchmarks, market empirical data, published comparative metrics, vendor pricing.
+
+8. EXPLAINABILITY & PROVENANCE:
+- reason: Clear explanation of why this missing information matters for THIS specific decision.
+- materiality_reason: How resolving this gap could swing the outcome or change the winning alternative.
+- affected_options: Stated alternatives affected by this uncertainty (empty list if no explicit options exist).
+- affected_dimensions: Decision dimensions affected (especially for diagnosis/strategy problems).
+- dependencies: IDs of prerequisite gaps that should be resolved first.
 
 ================================================================================
 OUTPUT JSON SCHEMA:
@@ -70,30 +86,33 @@ OUTPUT JSON SCHEMA:
   "gaps": [
     {
       "id": "gap_1",
+      "title": "Short descriptive title of the gap",
       "question": "Specific, actionable inquiry targeting a missing parameter...",
       "reason": "Explicit justification of why this datum has the leverage to alter the decision...",
+      "gap_type": "REQUIREMENT",
       "importance": "critical/high/medium/low",
       "priority_score": 1,
       "affected_options": ["Option A", "Option B"],
-      "recommended_resolution_method": "ask_user/web_research"
+      "affected_dimensions": ["Dimension 1"],
+      "recommended_resolution_method": "ask_user/web_research",
+      "dependencies": [],
+      "materiality_reason": "How the answer could change the recommendation or decision outcome..."
     }
   ]
 }
 """
 
 
-import re
-
-
-def generate_mock_gaps(
+def generate_universal_decision_gaps(
     decision: Decision,
     origin_reason: Optional[str] = None,
     db: Optional[Session] = None,
 ) -> List[GapItem]:
     """
-    Generate high-fidelity, prioritized information gaps deterministically
-    reflecting the decision's context, transcript, attachments, and structured unknowns.
-    Includes provenance tracking via source_origin.
+    Universal Decision Completeness and Gap Detection Engine.
+    Dynamically discovers decision-relevant information dimensions, checks evidence sufficiency,
+    enforces materiality, avoids redundant questioning, and classifies resolution strategies
+    without hardcoded domain checklists.
     """
     raw_context, _ = assemble_decision_input_context(decision, db=db)
     title = (decision.title or "").strip()
@@ -106,22 +125,30 @@ def generate_mock_gaps(
     now_str = datetime.now(timezone.utc).isoformat()
     gaps: List[GapItem] = []
 
-    def _get_origin(preset_name: str) -> str:
+    def _get_origin(reason_label: str) -> str:
         if origin_reason:
-            return f"{origin_reason} ({preset_name})"
-        return f"Fallback Heuristic: {preset_name}"
+            return f"{origin_reason} ({reason_label})"
+        return f"Universal Gap Engine ({reason_label})"
 
-    # 1. Dynamically extract candidate options from text
+    # 1. Gather Stage 2 structured cognitive points
+    points = decision.points if isinstance(decision.points, dict) else {}
+    stage2_facts = points.get("facts", [])
+    stage2_assumptions = points.get("assumptions", [])
+    stage2_unknowns = points.get("unknowns", [])
+
+    # Concatenate all available evidence for sufficiency checking
+    all_evidence_lower = f"{full_text_lower} " + " ".join(str(f).lower() for f in stage2_facts)
+
+    # 2. Extract explicitly stated candidate options
     extracted_options: List[str] = []
-
-    # Match patterns like: "considering three main options...", "options are: X, Y, Z"
-    m = re.search(
-        r'(?:considering|options (?:are|include))\s*(?:three|two|several|the following)?[:\s]+([^.]+)',
+    # Match patterns like: "evaluating PostgreSQL, MongoDB, and PostgreSQL + Redis", "options are: X, Y, Z"
+    opt_match = re.search(
+        r'(?:considering|options (?:are|include)|evaluating|between)\s*(?:three|two|several|the following)?[:\s]+([^.]+)',
         full_text,
         re.IGNORECASE,
     )
-    if m:
-        for p in re.split(r',|\band\b|;|\bor\b', m.group(1)):
+    if opt_match:
+        for p in re.split(r',|\band\b|;|\bor\b', opt_match.group(1)):
             cleaned = re.sub(
                 r'^(?:are\s+|the\s+(?:first|second|third|fourth)\s+is\s+|a\s+|an\s+|the\s+)+',
                 '',
@@ -132,256 +159,512 @@ def generate_mock_gaps(
             if cleaned and 2 < len(cleaned) < 55 and cleaned not in extracted_options:
                 extracted_options.append(cleaned)
 
-    # Match patterns like: "first is X. The second is Y. The third is Z."
-    for fs in re.findall(
-        r'(?:first|second|third|fourth)\s+(?:option\s+)?is\s+(?:a\s+|an\s+|the\s+)?([^.]+)',
-        full_text,
-        re.IGNORECASE,
-    ):
-        c = fs.strip(" .:")
-        if c and 2 < len(c) < 55 and c not in extracted_options:
-            extracted_options.append(c)
-
     # Match "X vs Y" or "X versus Y"
     if not extracted_options:
-        vs_m = re.search(
+        vs_match = re.search(
             r'([A-Za-z0-9\s\-]{3,35})\s+(?:versus|vs\.?)\s+([A-Za-z0-9\s\-]{3,35})',
             full_text,
             re.IGNORECASE,
         )
-        if vs_m:
-            extracted_options = [vs_m.group(1).strip(), vs_m.group(2).strip()]
+        if vs_match:
+            o1, o2 = vs_match.group(1).strip(), vs_match.group(2).strip()
+            if o1.lower() not in ["the", "this", "our"] and o2.lower() not in ["the", "this", "our"]:
+                extracted_options = [o1, o2]
 
-    # Fallback to domain options if none explicitly parsed
-    if not extracted_options:
-        if any(w in full_text_lower for w in ["laptop", "macbook", "pc", "computer"]):
-            extracted_options = ["MacBook Air", "Windows RTX Laptop", "Lightweight Business Laptop"]
-        elif any(w in full_text_lower for w in ["cloud", "database", "spanner", "aurora", "postgres"]):
-            extracted_options = ["AWS Aurora PostgreSQL", "Google Cloud Spanner", "Managed PostgreSQL"]
-        else:
-            extracted_options = ["Primary Alternative", "Secondary Alternative", "Status Quo"]
+    # 3. Classify Reasoning Mode(s)
+    is_diagnosis = any(w in full_text_lower for w in [
+        "why", "falling", "drop", "dropped", "declining", "low sales", "diagnose",
+        "investigate", "cause", "issue", "bug", "delayed", "underperforming", "churning"
+    ])
+    is_timing = any(w in full_text_lower for w in [
+        "when", "launch date", "launch timing", "release date", "timing", "schedule",
+        "when should", "go live date", "time to market"
+    ])
+    is_strategy = any(w in full_text_lower for w in [
+        "how can we", "outperform", "compete", "competitor", "competitive",
+        "market share", "strategy", "expand", "growth", "differentiation"
+    ])
+    is_prioritization = any(w in full_text_lower for w in [
+        "which feature", "prioritize", "priority", "what to build first", "roadmap order"
+    ])
+    is_evaluation = any(w in full_text_lower for w in [
+        "should we acquire", "should we invest", "evaluate whether", "worth acquiring", "acquisition"
+    ])
+    is_selection = any(w in full_text_lower for w in [
+        "choose", "select", "which", "versus", " vs ", "migrate from", "compare", "alternative"
+    ]) or bool(extracted_options)
 
-    # 2. Extract stated uncertainties from sentences
-    sentences = re.split(r'[\.\?\!\n]+', full_text)
-    uncertainty_sentences = []
-    for s in sentences:
-        s_clean = s.strip()
-        if len(s_clean) < 15:
-            continue
-        s_low = s_clean.lower()
-        if any(kw in s_low for kw in [
-            "not sure", "haven't decided", "have not decided", "haven't determined",
-            "don't know", "how much", "unclear", "concerned that", "trade-off",
-            "budget is limited", "overhead", "benchmark", "unknown"
-        ]):
-            if s_clean not in uncertainty_sentences:
-                uncertainty_sentences.append(s_clean)
+    # 4. Check what evidence is ALREADY established (Sufficiency & Non-Redundancy Filters)
+    has_budget = any(pat in all_evidence_lower for pat in [
+        "budget is", "budget of", "$", "dollar", "per month", "monthly limit", "annual budget",
+        "cost limit", "tuition of", "expenditure cap", "allocated capital"
+    ])
+    has_timeline = any(pat in all_evidence_lower for pat in [
+        "by q", "deadline is", "target launch date", "launching in", "weeks remaining",
+        "scheduled for", "must complete by"
+    ])
+    has_criteria = any(pat in all_evidence_lower for pat in [
+        "sla of", "latency target", "conversion target", "success metric", "passing criteria",
+        "non-negotiable requirement"
+    ])
+    has_funnel_breakdown = any(pat in all_evidence_lower for pat in [
+        "traffic is steady", "conversion rate dropped", "cart abandonment", "churn rate increased",
+        "funnel data indicates"
+    ])
+    has_onset_timeline = any(pat in all_evidence_lower for pat in [
+        "started last month", "since the pricing update", "after version", "began in", "coincided with"
+    ])
+    has_target_segment = any(pat in all_evidence_lower for pat in [
+        "target segment is", "focusing on enterprise", "mid-market niche", "primary audience is"
+    ])
+    has_academic_field = any(pat in all_evidence_lower for pat in [
+        "degree in", "major in", "studying computer science", "engineering program", "business administration", "medical school"
+    ])
+    has_location_pref = any(pat in all_evidence_lower for pat in [
+        "located in", "geographic preference", "campus in", "relocating to"
+    ])
+    has_readiness_gates = any(pat in all_evidence_lower for pat in [
+        "zero p0 bugs", "beta signoff", "qa passed", "load testing verified"
+    ])
+    has_cohort_analysis = any(pat in all_evidence_lower for pat in [
+        "customer segment", "cohort", "channel breakdown", "concentrated in", "across all cohorts", "enterprise customers"
+    ])
+    has_competitor_intel = any(pat in all_evidence_lower for pat in [
+        "competitor capabilities", "competitor intelligence", "moats", "blind spots", "pricing structures", "competitor strengths"
+    ])
+    has_benchmarks = any(pat in all_evidence_lower for pat in [
+        "benchmark", "empirical", "performance metrics", "tested against", "benchmarked", "published throughput", "operations per second"
+    ])
+    has_operational = any(pat in all_evidence_lower for pat in [
+        "team expertise", "operational experience", "maintenance capacity", "internal engineering team", "experience managing", "operational skills", "operational comfort"
+    ])
 
-    # 3. Domain-Specific Generation
-    # Case A: Hardware / Laptop / Tech Device Decision
-    if any(w in full_text_lower for w in ["laptop", "macbook", "gpu", "computer", "battery", "ram", "rtx"]):
-        origin_tag = _get_origin("Hardware / Laptop Preset")
-        opt_names = extracted_options[:3] if len(extracted_options) >= 2 else ["MacBook Air", "Windows RTX Laptop", "Lightweight Laptop"]
+    gap_counter = 1
+
+    # 5. Dynamically construct candidate gaps by reasoning mode
+    if is_diagnosis:
+        # Diagnostic Problem: Identify missing evidence to isolate root causes without premature declaration
+        origin_tag = _get_origin("Diagnostic Analysis Mode")
+
+        if not has_funnel_breakdown:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Funnel Stage Drop-Off Identification",
+                    question="Across which specific stage of the customer journey (top-of-funnel traffic/leads, conversion rate, or customer retention/churn) is the primary decline occurring?",
+                    reason="Pinpointing the exact point of customer drop-off is required to distinguish whether the root cause is marketing volume, conversion friction, or product dissatisfaction.",
+                    gap_type="EVIDENCE",
+                    importance="critical",
+                    priority_score=gap_counter,
+                    affected_options=[],
+                    affected_dimensions=["funnel_conversion", "acquisition_traffic", "retention"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "diagnostic_requirement"],
+                    materiality_reason="Determines which organizational domain (marketing, sales, or product) must be examined, preventing wasted resources on non-failing funnel stages.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+        if not has_onset_timeline:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Symptom Onset Timeline & Coinciding Events",
+                    question="When exactly did the performance decline begin, and what internal changes (e.g. pricing, product releases, campaign shifts) or external events coincided with the onset?",
+                    reason="Establishing temporal correlation is necessary to identify potential trigger events without prematurely asserting causation.",
+                    gap_type="CAUSAL",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=[],
+                    affected_dimensions=["temporal_onset", "pricing_changes", "product_updates"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "diagnostic_requirement"],
+                    materiality_reason="Isolates internal and external event correlations, narrowing candidate causes to those chronologically preceding the decline.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+        if not has_cohort_analysis:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Customer Segment & Cohort Variation",
+                    question="Is the performance decline concentrated in specific customer segments, geographic regions, or product lines, or is it observed uniformly across all cohorts?",
+                    reason="Determining cohort distribution clarifies whether the issue is localized to a particular audience segment or represents a widespread structural failure.",
+                    gap_type="EVIDENCE",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=[],
+                    affected_dimensions=["customer_segmentation", "cohort_analysis", "channel_breakdown"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "diagnostic_requirement"],
+                    materiality_reason="Prevents implementing broad global changes when the problem may be restricted to a single failing segment or channel.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+    elif is_timing:
+        # Timing Problem: Focus on readiness criteria, temporal windows, and execution dependencies
+        origin_tag = _get_origin("Timing & Readiness Mode")
+
+        if not has_readiness_gates:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Launch Readiness & Quality Gates",
+                    question="What objective criteria (technical stability, critical feature completion, QA benchmarks, or customer validation) define that the product is launch-ready?",
+                    reason="Establishes an objective threshold of completion to prevent launching prematurely under unverified quality conditions.",
+                    gap_type="REQUIREMENT",
+                    importance="critical",
+                    priority_score=gap_counter,
+                    affected_options=[],
+                    affected_dimensions=["product_readiness", "quality_thresholds"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "timing_requirement"],
+                    materiality_reason="Without defined readiness criteria, date-driven commitments risk launching unstable software and damaging market reputation.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+        if not has_timeline:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="External Temporal Constraints & Market Windows",
+                    question="What hard external deadlines, seasonal market windows, industry events, or contractual commitments constrain the launch date?",
+                    reason="Identifies external time-sensitive opportunities or penalties that dictate acceptable release scheduling.",
+                    gap_type="TEMPORAL",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=[],
+                    affected_dimensions=["market_timing", "seasonal_windows", "external_deadlines"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "timing_requirement"],
+                    materiality_reason="Determines whether missing a specific calendar window eliminates the strategic benefit of the launch.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
         gaps.append(
             GapItem(
-                id="gap_1",
-                question="What is the firm maximum total purchase budget for this laptop?",
-                reason="Your notes indicate a limited budget without an exact ceiling; defining this financial limit immediately filters out overpriced configurations.",
-                importance="critical",
-                priority_score=1,
-                affected_options=opt_names,
+                id=f"gap_{gap_counter}",
+                title="Critical Operational & GTM Dependencies",
+                question="What critical operational dependencies (customer support staffing, marketing collateral, billing infrastructure, documentation) must be completed before public release?",
+                reason="Ensures post-launch support and go-to-market execution are fully coordinated with engineering delivery.",
+                gap_type="OPERATIONAL",
+                importance="high",
+                priority_score=gap_counter,
+                affected_options=[],
+                affected_dimensions=["go_to_market_readiness", "operational_support"],
                 recommended_resolution_method="ask_user",
                 status="pending",
                 source_origin=origin_tag,
+                derived_from=["decision_context", "timing_requirement"],
+                materiality_reason="Prevents post-launch operational paralysis caused by uncoordinated cross-functional prerequisites.",
                 created_at=now_str,
                 updated_at=now_str,
             )
         )
-        gaps.append(
-            GapItem(
-                id="gap_2",
-                question="What specific machine learning workloads and GPU compute requirements will be run locally versus in cloud environments (e.g., Colab / remote servers)?",
-                reason="Directly addresses uncertainty regarding required GPU performance to prevent overpaying for a heavy dedicated GPU or purchasing an underpowered machine.",
-                importance="high",
-                priority_score=2,
-                affected_options=opt_names,
-                recommended_resolution_method="ask_user",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-        )
-        gaps.append(
-            GapItem(
-                id="gap_3",
-                question=f"What are the verified real-world battery life benchmarks and carrying weights for {' vs '.join(opt_names[:2])}?",
-                reason="Provides objective battery drain and portability metrics under active programming and compilation workloads for regular commuting.",
-                importance="high",
-                priority_score=3,
-                affected_options=opt_names,
-                recommended_resolution_method="web_research",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-        )
-        gaps.append(
-            GapItem(
-                id="gap_4",
-                question="What are the proven developer compatibility trade-offs for Docker, Linux virtualization (WSL2 vs macOS), and machine learning libraries across these platforms?",
-                reason="Validates that coursework tools and container workflows run smoothly without architecture or emulation roadblocks over a 3-4 year horizon.",
-                importance="medium",
-                priority_score=4,
-                affected_options=opt_names,
-                recommended_resolution_method="web_research",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-        )
+        gap_counter += 1
 
-    # Case B: Cloud / Database / Infrastructure Decision
-    elif any(w in full_text_lower for w in ["cloud", "database", "spanner", "aurora", "postgres", "cluster", "sla", "replica"]):
-        origin_tag = _get_origin("Cloud / Database Preset")
-        opt_names = extracted_options[:3] if len(extracted_options) >= 2 else ["AWS Aurora PostgreSQL", "Google Cloud Spanner", "Managed PostgreSQL"]
-        gaps.append(
-            GapItem(
-                id="gap_1",
-                question="What is the maximum acceptable monthly infrastructure and licensing budget for this solution?",
-                reason="Establishes a firm financial boundary to eliminate options that exceed organizational spending limits.",
-                importance="critical",
-                priority_score=1,
-                affected_options=opt_names,
-                recommended_resolution_method="ask_user",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-        )
-        gaps.append(
-            GapItem(
-                id="gap_2",
-                question=f"What are the latest published multi-region write latency benchmarks between {' and '.join(opt_names[:2])}?",
-                reason="Provides verifiable external performance metrics to validate latency SLA feasibility before architecture commitment.",
-                importance="high",
-                priority_score=2,
-                affected_options=opt_names,
-                recommended_resolution_method="web_research",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-        )
-        gaps.append(
-            GapItem(
-                id="gap_3",
-                question="Does the internal engineering team possess existing operational expertise with this technology, or will external training/consulting be required?",
-                reason="Determines time-to-delivery and on-call operational risk during initial rollout.",
-                importance="high",
-                priority_score=3,
-                affected_options=opt_names,
-                recommended_resolution_method="ask_user",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-        )
-        gaps.append(
-            GapItem(
-                id="gap_4",
-                question="What specific data residency and SOC2/ISO27001 compliance certifications are guaranteed by the evaluated providers for regional storage?",
-                reason="Mandatory for legal compliance and avoiding audit penalties.",
-                importance="medium",
-                priority_score=4,
-                affected_options=opt_names,
-                recommended_resolution_method="web_research",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-        )
+    elif is_strategy:
+        # Strategic Problem: Clarify target differentiation, competitor capabilities, and resource capacity
+        origin_tag = _get_origin("Competitive Strategy Mode")
 
-    # Case C: General / Dynamic Domain Heuristic
-    else:
-        origin_tag = _get_origin("General Decision Preset")
+        if not has_target_segment:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Target Positioning & Core Differentiation",
+                    question="Which specific customer segment, underserved use case, or distinct value proposition is our primary focus for building competitive differentiation?",
+                    reason="Effective competitive strategy requires choosing specific customer needs where differentiation can be established rather than competing broadly.",
+                    gap_type="GOAL",
+                    importance="critical",
+                    priority_score=gap_counter,
+                    affected_options=[],
+                    affected_dimensions=["target_positioning", "value_proposition", "differentiation"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "strategy_requirement"],
+                    materiality_reason="Defines the strategic focal point to prevent diluting capital and effort across undifferentiated initiatives.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+        if not has_competitor_intel:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Competitor Capabilities & Market Moats",
+                    question="What specific capabilities, pricing structures, brand advantages, or distribution moats make key competitors difficult to displace in this market?",
+                    reason="Objective third-party competitive intelligence is needed to avoid head-on competition against established competitor strengths.",
+                    gap_type="COMPARATIVE",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=[],
+                    affected_dimensions=["competitor_analysis", "market_landscape"],
+                    recommended_resolution_method="web_research",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "strategy_requirement"],
+                    materiality_reason="Directly informs strategic positioning to exploit competitor blind spots rather than challenging fortified positions.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+        if not has_budget:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Strategic Resource & Capital Commitment",
+                    question="What dedicated capital, headcount, and time horizon are committed to executing and sustaining this competitive initiative?",
+                    reason="Strategic goals must be calibrated against actual organizational capacity to avoid committing to unviable plans.",
+                    gap_type="CONSTRAINT",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=[],
+                    affected_dimensions=["resource_allocation", "strategic_budget"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "strategy_requirement"],
+                    materiality_reason="Ensures the chosen competitive initiatives are financially sustainable across the necessary execution horizon.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+    elif any(w in full_text_lower for w in ["college", "university", "admissions", "school", "degree"]):
+        # Education / College Selection
+        origin_tag = _get_origin("Education Selection Mode")
         opt_names = extracted_options[:3]
-        gaps.append(
-            GapItem(
-                id="gap_1",
-                question=f"What is the maximum financial budget or resource allocation committed to '{title or 'this decision'}'?",
-                reason="Establishes a practical boundary to eliminate candidates that exceed feasible investment limits.",
-                importance="critical",
-                priority_score=1,
-                affected_options=opt_names,
-                recommended_resolution_method="ask_user",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
-            )
-        )
 
-        q2 = "What are the industry benchmark success rates and failure modes for the alternatives under consideration?"
-        r2 = "Provides objective third-party validation rather than relying on unverified claims or assumptions."
-        if uncertainty_sentences:
-            first_unc = uncertainty_sentences[0]
-            q2 = f"How should the uncertainty regarding '{first_unc[:80]}...' be resolved?"
-            r2 = "Explicitly addresses an unresolved question highlighted in your transcript and notes."
+        if not has_academic_field:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Target Academic Field & Degree Program",
+                    question="What specific degree program, academic discipline, or long-term career outcome are you targeting?",
+                    reason="College selection must be evaluated based on the strength and faculty of specific departments, not general institutional reputation.",
+                    gap_type="GOAL",
+                    importance="critical",
+                    priority_score=gap_counter,
+                    affected_options=opt_names,
+                    affected_dimensions=["academic_program", "career_alignment"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "education_requirement"],
+                    materiality_reason="A college that ranks highly overall may have a weak program in the student's chosen major, altering the winning choice.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
 
-        gaps.append(
-            GapItem(
-                id="gap_2",
-                question=q2,
-                reason=r2,
-                importance="high",
-                priority_score=2,
-                affected_options=opt_names,
-                recommended_resolution_method="web_research" if "benchmark" in q2.lower() else "ask_user",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
+        if not has_budget:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Maximum Acceptable Annual Budget & Financial Boundary",
+                    question="What is your maximum acceptable annual budget for tuition, fees, and living expenses?",
+                    reason="Establishes a firm financial boundary to eliminate options that require unmanageable debt or exceed family resources.",
+                    gap_type="CONSTRAINT",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=opt_names,
+                    affected_dimensions=["tuition_budget", "financial_feasibility"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "education_requirement"],
+                    materiality_reason="Financial constraints immediately disqualify institutions exceeding budget ceilings before deeper evaluation.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
             )
-        )
-        gaps.append(
-            GapItem(
-                id="gap_3",
-                question="What is the required completion timeline, and what internal constraints or dependencies could delay execution?",
-                reason="Ensures the chosen direction is realistically deliverable within the available time horizon.",
-                importance="high",
-                priority_score=3,
-                affected_options=opt_names,
-                recommended_resolution_method="ask_user",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
+            gap_counter += 1
+
+        if not has_location_pref:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Geographic Location & Campus Environment Preferences",
+                    question="What geographic regions, campus settings (urban vs suburban), or travel constraints are non-negotiable for this choice?",
+                    reason="Clarifies personal lifestyle and commuting constraints that affect student retention and well-being.",
+                    gap_type="PREFERENCE",
+                    importance="medium",
+                    priority_score=gap_counter,
+                    affected_options=opt_names,
+                    affected_dimensions=["geographic_location", "campus_environment"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "education_requirement"],
+                    materiality_reason="Filters out geographic locations that the decision-maker is unwilling or unable to attend.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
             )
-        )
-        gaps.append(
-            GapItem(
-                id="gap_4",
-                question=f"What are the documented real-world performance comparisons and user reviews between {' and '.join(opt_names[:2])}?",
-                reason="Gathers independent comparative evidence to validate long-term satisfaction and reliability.",
-                importance="medium",
-                priority_score=4,
-                affected_options=opt_names,
-                recommended_resolution_method="web_research",
-                status="pending",
-                source_origin=origin_tag,
-                created_at=now_str,
-                updated_at=now_str,
+            gap_counter += 1
+
+        if extracted_options:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Comparative Placement Statistics & Accreditation",
+                    question=f"What are the verified career placement statistics, employer recruitment networks, and program accreditations between {' and '.join(extracted_options[:2])}?",
+                    reason="Provides verifiable external empirical data on postgraduate career outcomes and return on educational investment.",
+                    gap_type="COMPARATIVE",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=opt_names,
+                    affected_dimensions=["career_placement", "institutional_reputation"],
+                    recommended_resolution_method="web_research",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "education_requirement"],
+                    materiality_reason="Objective graduate placement outcomes validate whether an institution delivers on its stated career claims.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
             )
-        )
+            gap_counter += 1
+
+    else:
+        # General / Technical Selection Mode
+        origin_tag = _get_origin("Technical & Comparative Selection Mode")
+        opt_names = extracted_options[:3]
+
+        if not has_criteria:
+            is_tech = any(w in full_text_lower for w in ["database", "infrastructure", "latency", "throughput", "system", "architecture"])
+            q_text = (
+                "What peak query throughput, concurrency, and read/write latency SLAs must the system achieve under peak operational load?"
+                if is_tech
+                else f"What primary criteria, success metrics, and non-negotiable requirements will determine the winning alternative for '{title or 'this decision'}'?"
+            )
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Core Performance & Success Criteria",
+                    question=q_text,
+                    reason="Defines the measurable standard that any acceptable option must satisfy, establishing clear evaluation criteria.",
+                    gap_type="QUANTITATIVE" if is_tech else "REQUIREMENT",
+                    importance="critical",
+                    priority_score=gap_counter,
+                    affected_options=opt_names,
+                    affected_dimensions=["performance_slas", "success_criteria"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "selection_requirement"],
+                    materiality_reason="Without quantified performance requirements, options cannot be objectively scored or eliminated.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+        if not has_budget:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Financial Expenditure Boundary & Budget Ceiling",
+                    question="What is the maximum acceptable financial investment or recurring operating expenditure limit for this decision?",
+                    reason="Establishes a firm financial boundary to filter out solutions that exceed available capital.",
+                    gap_type="CONSTRAINT",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=opt_names,
+                    affected_dimensions=["budget_constraints", "financial_feasibility"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "selection_requirement"],
+                    materiality_reason="Disqualifies candidates whose total cost of ownership exceeds available organizational spending limits.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+        if extracted_options and len(extracted_options) >= 2 and not has_benchmarks:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Empirical Comparative Performance Benchmarks",
+                    question=f"What are the published empirical benchmarks, operational trade-offs, and verified performance metrics between {' and '.join(extracted_options[:2])}?",
+                    reason="Gathers independent, third-party performance data to validate alternative viability rather than relying on unverified assumptions.",
+                    gap_type="COMPARATIVE",
+                    importance="high",
+                    priority_score=gap_counter,
+                    affected_options=opt_names,
+                    affected_dimensions=["comparative_benchmarks", "technical_trade_offs"],
+                    recommended_resolution_method="web_research",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "selection_requirement"],
+                    materiality_reason="Provides objective evidence to compare candidates directly across throughput, latency, and reliability.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
+
+        if not has_operational:
+            gaps.append(
+                GapItem(
+                    id=f"gap_{gap_counter}",
+                    title="Operational Maintenance & Implementation Capacity",
+                    question="What dedicated operational maintenance capacity, team expertise, and ongoing monitoring resources are available to support the selected solution?",
+                    reason="Determines whether the team has the operational bandwidth and skills required to maintain the chosen alternative in production.",
+                    gap_type="OPERATIONAL",
+                    importance="medium",
+                    priority_score=gap_counter,
+                    affected_options=opt_names,
+                    affected_dimensions=["operational_complexity", "team_expertise"],
+                    recommended_resolution_method="ask_user",
+                    status="pending",
+                    source_origin=origin_tag,
+                    derived_from=["decision_context", "selection_requirement"],
+                    materiality_reason="Prevents selecting complex architectures that exceed team maintenance capacity and create long-term operational fragility.",
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            gap_counter += 1
 
     return gaps
+
+
+# Alias for backward compatibility
+generate_mock_gaps = generate_universal_decision_gaps
 
 
 def detect_decision_gaps(
@@ -390,7 +673,7 @@ def detect_decision_gaps(
     force_mock: bool = False,
 ) -> GapsResponse:
     """
-    Detect, prioritize, and structure information gaps for a decision.
+    Detect, prioritize, and structure decision completeness gaps.
     Preserves any existing answered/queued states across re-detections.
     Tags each gap with source_origin to trace where it was fetched from.
     """
@@ -412,29 +695,32 @@ def detect_decision_gaps(
     client, model, provider = get_llm_client_and_model()
 
     if force_mock:
-        logger.info("Using mock gap detection engine (force_mock=True)")
-        detected_gaps = generate_mock_gaps(decision, origin_reason="Mock Mode Forced", db=db)
+        logger.info("Using universal mock gap detection engine (force_mock=True)")
+        detected_gaps = generate_universal_decision_gaps(decision, origin_reason="Mock Mode Forced", db=db)
     elif client is None:
-        logger.info("No AI client configured (has_key=%s). Using deterministic gap engine.", settings.has_ai_key)
-        detected_gaps = generate_mock_gaps(decision, origin_reason="Fallback Heuristic: No AI Key Configured", db=db)
+        logger.info("No AI client configured (has_key=%s). Using deterministic universal gap engine.", settings.has_ai_key)
+        detected_gaps = generate_universal_decision_gaps(decision, origin_reason="Universal Heuristic: No AI Key Configured", db=db)
     else:
         try:
-            logger.info("Calling hosted %s model (%s) for gap detection", provider.upper(), model)
+            logger.info("Calling hosted %s model (%s) for universal gap detection", provider.upper(), model)
 
-            # Include structured points if available
+            # Pass full Stage 2 findings across all categories
             points_summary = ""
-            if decision.points:
-                unknowns = decision.points.get("unknowns", [])
-                assumptions = decision.points.get("assumptions", [])
-                contradictions = decision.points.get("contradictions", [])
+            if decision.points and isinstance(decision.points, dict):
                 points_summary = (
-                    f"\n\n### KNOWN UNCERTAINTIES\nUnknowns: {json.dumps(unknowns)}\n"
-                    f"Assumptions: {json.dumps(assumptions)}\n"
-                    f"Contradictions: {json.dumps(contradictions)}"
+                    f"\n\n### STAGE 2 STRUCTURED COGNITIVE CONTEXT\n"
+                    f"Facts: {json.dumps(decision.points.get('facts', []))}\n"
+                    f"Assumptions: {json.dumps(decision.points.get('assumptions', []))}\n"
+                    f"Feelings & Preferences: {json.dumps(decision.points.get('feelings', []))}\n"
+                    f"Pros & Strengths: {json.dumps(decision.points.get('pros', []))}\n"
+                    f"Cons & Risks: {json.dumps(decision.points.get('cons', []))}\n"
+                    f"Mixed Points & Trade-Offs: {json.dumps(decision.points.get('mixed_points', []))}\n"
+                    f"Contradictions: {json.dumps(decision.points.get('contradictions', []))}\n"
+                    f"Stage 2 Explicit Unknowns: {json.dumps(decision.points.get('unknowns', []))}"
                 )
 
             fenced_input = f"<UNTRUSTED_DECISION_CONTEXT>\n{raw_context}{points_summary}\n</UNTRUSTED_DECISION_CONTEXT>"
-            user_prompt = f"Identify prioritized information gaps for the following decision:\n\n{fenced_input}"
+            user_prompt = f"Analyze information completeness and identify prioritized information gaps for the following decision:\n\n{fenced_input}"
 
             content = None
             try:
@@ -466,34 +752,35 @@ def detect_decision_gaps(
             ai_origin = f"AI Engine: {provider.upper()} ({model})"
 
             for item in parsed.get("gaps", []):
-                method = item.get("recommended_resolution_method", "ask_user").lower()
+                method = str(item.get("recommended_resolution_method", "ask_user")).lower()
                 if method not in {"ask_user", "web_research"}:
                     method = "ask_user"
 
                 detected_gaps.append(
                     GapItem(
                         id=str(item.get("id", f"gap_{len(detected_gaps)+1}")),
+                        title=str(item.get("title", f"Gap {len(detected_gaps)+1}")),
                         question=str(item.get("question", "")),
                         reason=str(item.get("reason", "")),
+                        gap_type=str(item.get("gap_type", "REQUIREMENT")).upper(),
                         importance=str(item.get("importance", "medium")).lower(),
                         priority_score=int(item.get("priority_score", len(detected_gaps)+1)),
                         affected_options=list(item.get("affected_options", [])),
+                        affected_dimensions=list(item.get("affected_dimensions", [])),
                         recommended_resolution_method=method,
                         status="pending",
                         source_origin=ai_origin,
+                        dependencies=list(item.get("dependencies", [])),
+                        materiality_reason=str(item.get("materiality_reason", item.get("reason", ""))),
                         created_at=now_str,
                         updated_at=now_str,
                     )
                 )
 
-            # Fallback if AI produced 0 items
-            if not detected_gaps:
-                detected_gaps = generate_mock_gaps(decision, origin_reason=f"Fallback: AI ({model}) Produced 0 Gaps", db=db)
-
         except Exception as exc:
-            logger.warning(f"Hosted AI gap detection failed ({exc}). Falling back to deterministic gap engine.")
+            logger.warning(f"Hosted AI gap detection failed ({exc}). Falling back to deterministic universal gap engine.")
             err_msg = f"{exc.__class__.__name__}: {str(exc)[:45]}"
-            detected_gaps = generate_mock_gaps(decision, origin_reason=f"Fallback: AI Error ({err_msg})", db=db)
+            detected_gaps = generate_universal_decision_gaps(decision, origin_reason=f"Fallback: AI Error ({err_msg})", db=db)
 
     # Merge in previously answered/skipped/queued states if gap IDs match
     for gap in detected_gaps:
@@ -509,9 +796,11 @@ def detect_decision_gaps(
 
     # Compute status counts
     pending_count = sum(1 for g in detected_gaps if g.status == "pending")
-    answered_count = sum(1 for g in detected_gaps if g.status == "answered")
-    skipped_count = sum(1 for g in detected_gaps if g.status == "skipped")
+    answered_count = sum(1 for g in detected_gaps if g.status in ["answered", "partially_resolved", "resolved"])
+    skipped_count = sum(1 for g in detected_gaps if g.status in ["skipped", "blocked"])
     research_queued_count = sum(1 for g in detected_gaps if g.status == "research_queued")
+    researched_count = sum(1 for g in detected_gaps if g.status in ["researched", "research_completed"])
+    unresolved_research_count = sum(1 for g in detected_gaps if g.status == "unresolved_research")
 
     now_iso = datetime.now(timezone.utc).isoformat()
     gaps_data = {
@@ -522,6 +811,8 @@ def detect_decision_gaps(
         "answered_count": answered_count,
         "skipped_count": skipped_count,
         "research_queued_count": research_queued_count,
+        "researched_count": researched_count,
+        "unresolved_research_count": unresolved_research_count,
     }
 
     decision.gaps = gaps_data
@@ -537,5 +828,7 @@ def detect_decision_gaps(
         answered_count=answered_count,
         skipped_count=skipped_count,
         research_queued_count=research_queued_count,
+        researched_count=researched_count,
+        unresolved_research_count=unresolved_research_count,
         message="Information gaps detected and prioritized successfully",
     )

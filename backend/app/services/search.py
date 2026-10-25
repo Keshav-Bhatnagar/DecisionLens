@@ -1,7 +1,7 @@
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import httpx
@@ -196,6 +196,47 @@ def _call_serper_search(query: str, api_key: str) -> List[dict]:
     return results
 
 
+def _call_duckduckgo_search(query: str) -> List[dict]:
+    """Execute live search via DuckDuckGo HTML without requiring API keys."""
+    url = "https://html.duckduckgo.com/html/"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
+    with httpx.Client(timeout=12.0, follow_redirects=True) as client:
+        resp = client.post(url, data={"q": query}, headers=headers)
+        resp.raise_for_status()
+        html = resp.text
+
+    matches = re.findall(
+        r'<a class="result__snippet[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)</a>',
+        html,
+        re.DOTALL,
+    )
+    from urllib.parse import unquote
+    results = []
+    for href, raw_snip in matches[:6]:
+        actual_url = href
+        if "uddg=" in href:
+            try:
+                actual_url = unquote(href.split("uddg=")[1].split("&")[0])
+            except Exception:
+                actual_url = href
+        clean_snip = re.sub(r"<[^>]+>", "", raw_snip).strip()
+        parsed_url = urlparse(actual_url)
+        domain = parsed_url.netloc or "Web Source"
+        title = f"{domain.replace('www.', '').capitalize()} - {query[:40]}"
+        results.append({
+            "title": title,
+            "url": actual_url,
+            "content": clean_snip,
+            "raw_claims": [clean_snip[:300]] if clean_snip else [],
+        })
+    return results
+
+
 def get_mock_search_results(query: str) -> List[dict]:
     """
     Deterministic mock web search results tailored for tests and offline execution.
@@ -277,19 +318,30 @@ def get_mock_search_results(query: str) -> List[dict]:
 def execute_web_search(query: str, force_mock: bool = False) -> List[dict]:
     """
     Execute web search against the configured provider:
-    - Checks settings.search_provider ('tavily', 'serper', 'mock').
+    - Checks settings.active_search_provider ('duckduckgo', 'tavily', 'serper', 'mock').
     - If provider is not mock and credentials are missing, raises SearchProviderNotConfiguredError.
     - If force_mock is True, runs deterministic mock provider.
+    - DuckDuckGo provides live web search with zero API key requirement.
     """
-    provider = (settings.search_provider or "tavily").strip().lower()
+    provider = settings.active_search_provider
 
     if force_mock or provider == "mock":
         logger.info(f"Using mock web search provider for query: '{query}'")
         return get_mock_search_results(query)
 
-    api_key = settings.search_api_key or settings.tavily_api_key or settings.serper_api_key
+    if provider == "duckduckgo":
+        try:
+            logger.info("Executing live DuckDuckGo web search for query: '%s'", query)
+            results = _call_duckduckgo_search(query)
+            if results:
+                return results
+            logger.warning("DuckDuckGo returned 0 results, falling back to mock search")
+            return get_mock_search_results(query)
+        except Exception as exc:
+            logger.warning("DuckDuckGo search error (%s), falling back to mock search", exc)
+            return get_mock_search_results(query)
 
-    if provider == "tavily":
+    elif provider == "tavily":
         tavily_key = settings.tavily_api_key or settings.search_api_key
         if not tavily_key or not tavily_key.strip():
             raise SearchProviderNotConfiguredError(
@@ -327,8 +379,38 @@ def execute_web_search(query: str, force_mock: bool = False) -> List[dict]:
         # Default fallback if unknown provider configured
         raise SearchProviderNotConfiguredError(
             provider=provider,
-            message=f"Unsupported or unconfigured search provider '{provider}'. Allowed: tavily, serper, mock.",
+            message=f"Unsupported or unconfigured search provider '{provider}'. Allowed: duckduckgo, tavily, serper, mock.",
         )
+
+
+def check_evidence_relevance(question: str, sources: List[ResearchSourceItem]) -> Tuple[bool, str]:
+    """
+    Evaluate whether retrieved sources and claims actually address the specific gap question.
+    Returns (is_relevant, explanation).
+    """
+    if not sources:
+        return False, "No sources retrieved."
+
+    stopwords = {
+        "what", "when", "where", "which", "does", "have", "with", "from", "that", "this",
+        "these", "those", "their", "there", "about", "between", "under", "could", "would",
+        "should", "into", "than", "more", "most", "been", "being", "were", "some", "such",
+    }
+    q_words = set(re.findall(r"\b[a-zA-Z0-9_\-\u0900-\u097F]{4,}\b", question.lower())) - stopwords
+    if not q_words:
+        return True, "Broad question accepted."
+
+    all_claims_text = " ".join(
+        [c for s in sources for c in s.relevant_claims] + [s.source_title for s in sources]
+    ).lower()
+
+    matching_words = {w for w in q_words if w in all_claims_text}
+
+    # If question terms are completely absent from retrieved text, evidence is irrelevant
+    if len(matching_words) == 0 and len(q_words) >= 2:
+        return False, f"Retrieved search content did not mention key question concepts ({', '.join(list(q_words)[:3])})."
+
+    return True, "Retrieved evidence addresses question terms."
 
 
 def analyze_evidence_and_synthesize(
@@ -385,6 +467,30 @@ def analyze_evidence_and_synthesize(
                 relevant_claims=claims_list,
                 reliability_label=reliability,
             )
+        )
+
+    # Relevance check: Does evidence actually answer the original gap?
+    is_relevant, relevance_msg = check_evidence_relevance(question, sources)
+    if not is_relevant:
+        return ResearchFindingItem(
+            id=f"res_{gap_id}_{int(datetime.now(timezone.utc).timestamp())}",
+            gap_id=gap_id,
+            question=question,
+            narrow_query=narrow_query,
+            synthesis=f"Research conducted ({narrow_query}), but retrieved evidence was irrelevant or did not address the specific question: {relevance_msg}",
+            consensus="irrelevant_evidence",
+            is_verified=False,  # Strict invariant
+            sources=sources,
+            claims=[
+                ResearchClaimItem(
+                    claim=f"Retrieved content failed relevance check: {relevance_msg}",
+                    sources_count=len(sources),
+                    evidence_type="low_confidence",
+                    consensus="irrelevant_evidence",
+                    is_verified=False,
+                )
+            ],
+            created_at=now_iso,
         )
 
     # Sort sources: prefer primary sources first, then secondary, then community

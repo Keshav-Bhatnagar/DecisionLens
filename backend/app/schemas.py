@@ -496,8 +496,13 @@ class StructuringResponse(BaseModel):
 
 class GapItem(BaseModel):
     id: str = Field(..., description="Unique gap identifier (e.g. gap_1)")
+    title: Optional[str] = Field(None, description="Concise label describing the information gap")
     question: str = Field(..., description="Targeted question to resolve the information deficit")
     reason: str = Field(..., description="Explanation of why this information matters for the decision")
+    gap_type: Optional[str] = Field(
+        "REQUIREMENT",
+        description="Dynamic classification: CONTEXT, CONSTRAINT, GOAL, PREFERENCE, ELIGIBILITY, REQUIREMENT, QUANTITATIVE, COMPARATIVE, OPERATIONAL, RISK, TEMPORAL, STAKEHOLDER, EVIDENCE, CAUSAL",
+    )
     importance: str = Field(
         ..., description="'critical', 'high', 'medium', or 'low'"
     )
@@ -505,16 +510,35 @@ class GapItem(BaseModel):
     affected_options: List[str] = Field(
         default_factory=list, description="Alternative decision options impacted by this uncertainty"
     )
+    affected_dimensions: List[str] = Field(
+        default_factory=list, description="Decision dimensions impacted when explicit options are absent"
+    )
     recommended_resolution_method: str = Field(
-        "ask_user", description="'ask_user' (internal/preference) or 'web_research' (external/benchmark facts)"
+        "ask_user", description="'ask_user' (internal/preference/criteria) or 'web_research' (external/benchmark facts)"
     )
     status: str = Field(
-        "pending", description="'pending', 'answered', 'skipped', 'research_queued', or 'researched'"
+        "pending",
+        description="'pending', 'answered', 'skipped', 'research_queued', 'researched', 'unresolved_research', 'partially_resolved', or 'blocked'",
     )
     answer: Optional[str] = Field(None, description="User-provided answer or research synthesis")
     research_query: Optional[str] = Field(None, description="Validated web research query")
     source_origin: Optional[str] = Field(
-        None, description="Temporary tag indicating provenance / origin of gap generation (e.g., 'LLM: Gemini', 'Fallback: Heuristic Preset')"
+        None, description="Provenance tag indicating origin of gap generation"
+    )
+    source_ids: List[str] = Field(
+        default_factory=list, description="IDs of source inputs/transcripts supporting this gap"
+    )
+    source_spans: List[str] = Field(
+        default_factory=list, description="Substrings or excerpts from source text that motivated the gap"
+    )
+    derived_from: List[str] = Field(
+        default_factory=list, description="Origin derivation: e.g. ['decision_context', 'stage_2_unknown', 'missing_requirement']"
+    )
+    dependencies: List[str] = Field(
+        default_factory=list, description="IDs of prerequisite gaps that must be resolved first"
+    )
+    materiality_reason: Optional[str] = Field(
+        None, description="Explicit justification of how resolving this gap could change the recommendation, strategy, or outcome"
     )
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
@@ -550,6 +574,7 @@ class GapsResponse(BaseModel):
     skipped_count: int = 0
     research_queued_count: int = 0
     researched_count: int = 0
+    unresolved_research_count: int = 0
     message: Optional[str] = None
 
 
