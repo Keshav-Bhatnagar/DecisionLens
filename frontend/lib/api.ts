@@ -359,6 +359,24 @@ export async function uploadAttachment(decisionId: number, file: File): Promise<
   return response.json() as Promise<Attachment>;
 }
 
+export interface GoogleDriveImportPayload {
+  drive_url?: string;
+  file_id?: string;
+  access_token?: string;
+  original_name?: string;
+  mime_type?: string;
+}
+
+export async function importGoogleDriveAttachment(
+  decisionId: number,
+  payload: GoogleDriveImportPayload
+): Promise<Attachment> {
+  return fetchApi<Attachment>(`/api/decisions/${decisionId}/attachments/google-drive`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function deleteAttachment(
   decisionId: number,
   attachmentId: number

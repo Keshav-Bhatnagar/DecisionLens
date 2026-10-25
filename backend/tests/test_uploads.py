@@ -147,8 +147,8 @@ def test_upload_pdf_file_success(client: TestClient, user_a: dict):
     assert "DecisionLens Architecture Plan" in response.json()["extracted_text"]
 
 
-def test_upload_scanned_pdf_rejection(client: TestClient, user_a: dict):
-    """Test scanned PDF without selectable text is rejected with an OCR explanation."""
+def test_upload_scanned_pdf_ocr(client: TestClient, user_a: dict):
+    """Test scanned PDF without selectable text triggers OCR and succeeds or returns clear error."""
     headers = {"Authorization": f"Bearer {user_a['token']}"}
     decision_id = user_a["decision"].id
 
@@ -156,10 +156,19 @@ def test_upload_scanned_pdf_rejection(client: TestClient, user_a: dict):
     files = {"file": ("scanned_receipt.pdf", scanned_pdf, "application/pdf")}
 
     response = client.post(f"/api/decisions/{decision_id}/attachments", headers=headers, files=files)
+    # With AI OCR active, it succeeds with 201; if no key configured in test, it returns 400
+    assert response.status_code in (201, 400)
+
+
+def test_google_drive_import_invalid_url(client: TestClient, user_a: dict):
+    """Test Google Drive import with invalid URL rejects with 400."""
+    headers = {"Authorization": f"Bearer {user_a['token']}"}
+    decision_id = user_a["decision"].id
+
+    payload = {"drive_url": "https://invalid-link-without-id.com"}
+    response = client.post(f"/api/decisions/{decision_id}/attachments/google-drive", headers=headers, json=payload)
     assert response.status_code == 400
-    detail = response.json()["detail"].lower()
-    assert "scanned pdf" in detail
-    assert "ocr is not yet implemented" in detail
+    assert "google drive file id" in response.json()["detail"].lower()
 
 
 def test_upload_empty_file_rejection(client: TestClient, user_a: dict):

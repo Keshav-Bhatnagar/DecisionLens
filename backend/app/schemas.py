@@ -210,6 +210,14 @@ class AttachmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class GoogleDriveImportRequest(BaseModel):
+    file_id: Optional[str] = None
+    drive_url: Optional[str] = None
+    access_token: Optional[str] = None
+    original_name: Optional[str] = None
+    mime_type: Optional[str] = None
+
+
 # ==========================================
 # Audio & Transcription Schemas (Phase 5)
 # ==========================================
