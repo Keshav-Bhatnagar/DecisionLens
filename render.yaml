@@ -1,0 +1,70 @@
+services:
+  # ============================================================================
+  # 1. FastAPI Backend Service
+  # ============================================================================
+  - type: web
+    name: decisionlens-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        fromService:
+          type: web
+          name: decisionlens-frontend
+          property: host
+
+  # ============================================================================
+  # 2. Next.js Frontend Service
+  # ============================================================================
+  - type: web
+    name: decisionlens-frontend
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm run start -- -p $PORT"
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.x
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: decisionlens-backend
+          property: host
+      - key: INTERNAL_API_URL
+        fromService:
+          type: web
+          name: decisionlens-backend
+          property: host
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
