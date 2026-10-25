@@ -255,6 +255,11 @@ class GroundedCognitiveItem(BaseModel):
         description="Cognitive category (facts, assumptions, feelings, pros, cons, mixed_points, contradictions, unknowns)",
     )
     text: str = Field(..., description="The epistemically precise statement text")
+    statement: Optional[str] = Field(None, description="Alias for statement text")
+    source_statement: Optional[str] = Field(
+        None,
+        description="Verbatim or near-verbatim quote of what the user actually said in the source",
+    )
     source_spans: List[str] = Field(
         default_factory=list,
         description="Verbatim or near-verbatim quote/excerpt from source material supporting this claim",
@@ -265,11 +270,11 @@ class GroundedCognitiveItem(BaseModel):
     )
     derivation_type: str = Field(
         "direct_extraction",
-        description="Derivation type: direct_extraction, normalized_extraction, explicit_user_inference, model_inference, or analytical_derivation",
+        description="Derivation type: direct_extraction, normalized_extraction, inference, model_inference, explicit_user_inference, or analytical_derivation",
     )
     epistemic_status: str = Field(
         "confirmed_fact",
-        description="Epistemic status: confirmed_fact, estimate, expectation, projection, target, aspiration, hypothesis, unvalidated_premise, subjective_preference, explicit_risk, inferred_risk, trade_off, true_contradiction, or open_question",
+        description="Epistemic status: stated, assumed, uncertain, inferred, unknown, confirmed_fact, estimate, expectation, projection, target, aspiration, hypothesis, unvalidated_premise, subjective_preference, explicit_risk, inferred_risk, trade_off, true_contradiction, or open_question",
     )
     confidence: float = Field(
         0.95,
@@ -281,6 +286,20 @@ class GroundedCognitiveItem(BaseModel):
         True,
         description="True if directly extracted from source without model-driven extrapolation",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_statement_and_text(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "statement" in data and "text" not in data:
+                data["text"] = data["statement"]
+            elif "text" in data and "statement" not in data:
+                data["statement"] = data["text"]
+            if "source_statement" in data and not data.get("source_spans"):
+                data["source_spans"] = [str(data["source_statement"])]
+            elif data.get("source_spans") and not data.get("source_statement"):
+                data["source_statement"] = data["source_spans"][0]
+        return data
 
 
 class PrivateTranscriptFeedback(BaseModel):
@@ -364,7 +383,7 @@ class StructuredFindings(BaseModel):
             if raw_list and isinstance(raw_list, list):
                 for item in raw_list:
                     if isinstance(item, dict):
-                        text = str(item.get("text", "")).strip()
+                        text = str(item.get("text") or item.get("statement") or "").strip()
                         if text:
                             normalized_strings.append(text)
                             if not any(

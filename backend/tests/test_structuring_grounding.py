@@ -322,3 +322,31 @@ def test_end_to_end_structuring_api_endpoint(client: TestClient, auth_headers: d
     assert "grounded_items" in findings
     assert "facts" in findings["grounded_items"]
     assert len(findings["grounded_items"]["facts"]) == len(findings["facts"])
+
+
+def test_source_traceability_structure_with_statement_and_source_statement():
+    """
+    Verify traceability structure matches the contract:
+    {
+      "statement": "...",
+      "source_ids": ["..."],
+      "derivation_type": "direct_extraction | normalized_extraction | inference | analytical_derivation",
+      "epistemic_status": "stated | assumed | uncertain | inferred | unknown"
+    }
+    """
+    raw_item = {
+        "statement": "The team has stronger experience with PostgreSQL and MongoDB.",
+        "source_statement": "The team has stronger experience with PostgreSQL and MongoDB. Nobody has production Redis experience.",
+        "source_ids": ["transcript_sec_1"],
+        "derivation_type": "direct_extraction",
+        "epistemic_status": "stated",
+        "category": "facts",
+    }
+    item = GroundedCognitiveItem.model_validate(raw_item)
+    assert item.statement == "The team has stronger experience with PostgreSQL and MongoDB."
+    assert item.text == "The team has stronger experience with PostgreSQL and MongoDB."
+    assert item.source_statement == "The team has stronger experience with PostgreSQL and MongoDB. Nobody has production Redis experience."
+    assert item.source_spans == ["The team has stronger experience with PostgreSQL and MongoDB. Nobody has production Redis experience."]
+    assert item.derivation_type == "direct_extraction"
+    assert item.epistemic_status == "stated"
+
