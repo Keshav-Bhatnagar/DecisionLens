@@ -437,7 +437,8 @@ def transcribe_audio_azure_speech(
     Supports English ('en-US') and Hindi ('hi-IN').
     """
     speech_key = (key or settings.azure_speech_key).strip()
-    speech_region = (region or settings.azure_speech_region).strip()
+    raw_region = (region or settings.azure_speech_region).strip()
+    speech_region = raw_region.lower().replace(" ", "").replace("-", "")
     if not speech_key or not speech_region:
         return ""
 
