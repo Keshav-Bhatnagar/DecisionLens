@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -112,13 +112,16 @@ export default function Sidebar({
     }
   };
 
+  const onCloseMobileRef = useRef(onCloseMobile);
+  onCloseMobileRef.current = onCloseMobile;
+
   const closeMobile = useCallback(() => {
-    if (onCloseMobile) {
-      onCloseMobile();
+    if (onCloseMobileRef.current) {
+      onCloseMobileRef.current();
     } else {
       setInternalMobileOpen(false);
     }
-  }, [onCloseMobile]);
+  }, []);
 
   // Lock body scroll and listen for Escape key when mobile sidebar is open
   useEffect(() => {
@@ -169,10 +172,6 @@ export default function Sidebar({
   useEffect(() => {
     loadSidebarData();
   }, [loadSidebarData]);
-
-  useEffect(() => {
-    closeMobile();
-  }, [pathname, closeMobile]);
 
   const handleLogout = () => {
     closeMobile();

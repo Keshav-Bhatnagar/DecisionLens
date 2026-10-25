@@ -99,6 +99,10 @@ export default function AppShell({
     onRefresh?.();
   };
 
+  const handleCloseMobile = useCallback(() => {
+    setMobileOpen(false);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#F5F1E8] text-[#161E33] flex flex-col antialiased font-ui">
       {/* Sidebar Component */}
@@ -112,7 +116,7 @@ export default function AppShell({
         collapsed={collapsed}
         onToggleCollapse={handleToggleCollapse}
         mobileOpen={mobileOpen}
-        onCloseMobile={() => setMobileOpen(false)}
+        onCloseMobile={handleCloseMobile}
         showMobileHeader={false}
       />
 

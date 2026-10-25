@@ -174,12 +174,18 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
 
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
-      scope: "https://www.googleapis.com/auth/drive.readonly",
+      scope: "https://www.googleapis.com/auth/drive.file",
       callback: (tokenResponse: any) => {
         if (tokenResponse && tokenResponse.access_token) {
           createAndShowPicker(tokenResponse.access_token);
         } else if (tokenResponse && tokenResponse.error) {
-          setDriveError(`Google authorization error: ${tokenResponse.error}`);
+          if (tokenResponse.error === "access_denied") {
+            setDriveError(
+              "Google Access Denied (403): Your Google Cloud OAuth is in 'Testing' mode. Please add your Gmail under 'Test users' in Google Cloud Console -> OAuth consent screen. Or simply paste the Google Docs / Drive link directly in the box above (zero setup needed)!"
+            );
+          } else {
+            setDriveError(`Google authorization error: ${tokenResponse.error}`);
+          }
         }
       },
     });
