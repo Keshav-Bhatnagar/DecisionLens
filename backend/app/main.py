@@ -13,6 +13,7 @@ from app.api.structuring import router as structuring_router
 from app.api.gaps import router as gaps_router
 from app.api.analysis import router as analysis_router
 from app.api.roadmap import router as roadmap_router
+from app.api.outcomes import router as outcomes_router
 
 
 @asynccontextmanager
@@ -99,6 +100,7 @@ app.include_router(structuring_router, prefix="/api")
 app.include_router(gaps_router, prefix="/api")
 app.include_router(analysis_router, prefix="/api")
 app.include_router(roadmap_router, prefix="/api")
+app.include_router(outcomes_router, prefix="/api")
 
 
 @app.get("/", tags=["General"])

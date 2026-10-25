@@ -77,6 +77,18 @@ def get_folder_precedents(
                     if phase_title:
                         roadmap_phases.append(phase_title.strip())
 
+            # Extract latest real-world outcome review
+            outcome_info = None
+            if hasattr(rec, "outcomes") and rec.outcomes:
+                latest_outcome = rec.outcomes[-1]
+                outcome_info = {
+                    "implementation_status": latest_outcome.implementation_status,
+                    "chosen_option": latest_outcome.chosen_option,
+                    "utility_rating": latest_outcome.utility_rating,
+                    "lessons_learned": latest_outcome.lessons_learned,
+                    "unexpected_challenges": latest_outcome.unexpected_challenges,
+                }
+
             precedent_data = {
                 "id": rec.id,
                 "title": rec.title or f"Record #{rec.id}",
@@ -90,6 +102,7 @@ def get_folder_precedents(
                 "verdict_summary": (rec_recommendation.get("recommendation_text") or "")[:280].strip(),
                 "answered_gaps": answered_gaps[:4],
                 "active_roadmap_phases": roadmap_phases[:3],
+                "outcome_info": outcome_info,
             }
             precedents.append(precedent_data)
 
@@ -145,6 +158,18 @@ def format_folder_precedents_for_prompt(precedents: List[Dict[str, Any]]) -> str
         if p["active_roadmap_phases"]:
             lines.append(f"- Active Roadmap Initiatives: {', '.join(p['active_roadmap_phases'])}")
 
+        if p.get("outcome_info"):
+            oi = p["outcome_info"]
+            lines.append(f"- Real-World Outcome Follow-up (Client Rating: {oi['utility_rating']}/5):")
+            lines.append(f"  * Status: {oi['implementation_status']} (Chosen Option: {oi['chosen_option']})")
+            if oi.get("lessons_learned"):
+                lines.append(f"  * Lessons Learned: {oi['lessons_learned']}")
+            if oi.get("unexpected_challenges"):
+                challenges_str = ", ".join(str(c) for c in oi["unexpected_challenges"][:3] if c)
+                if challenges_str:
+                    lines.append(f"  * Production Challenges: {challenges_str}")
+
         lines.append("")
 
     return "\n".join(lines).strip()
+

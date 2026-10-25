@@ -20,6 +20,9 @@ class User(Base):
         String(255), unique=True, index=True, nullable=False
     )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    oauth_provider: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default=None)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True, default=None)
+    display_name: Mapped[Optional[str]] = mapped_column(String(150), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now
     )
@@ -76,6 +79,7 @@ class Decision(Base):
     problem_statement: Mapped[str] = mapped_column(Text, default="", nullable=False)
     record_type: Mapped[str] = mapped_column(String(30), default="decision")  # "decision" or "meeting"
     status: Mapped[str] = mapped_column(String(40), default="draft")  # draft, evaluating, decided, archived
+    domain: Mapped[str] = mapped_column(String(50), default="BUSINESS", nullable=False)  # REAL_ESTATE, FINANCE, SOFTWARE, etc.
     language: Mapped[str] = mapped_column(String(10), default="en")  # "en" or "hi"
     raw_input: Mapped[str] = mapped_column(Text, default="", nullable=False)
     transcript: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -107,6 +111,9 @@ class Decision(Base):
     )
     roadmaps: Mapped[List["RoadmapRecord"]] = relationship(
         "RoadmapRecord", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
+    )
+    outcomes: Mapped[List["DecisionOutcome"]] = relationship(
+        "DecisionOutcome", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
     )
 
     def __repr__(self) -> str:
@@ -226,3 +233,38 @@ class RoadmapRecord(Base):
 
     def __repr__(self) -> str:
         return f"<RoadmapRecord id={self.id} decision_id={self.decision_id} v={self.version}>"
+
+
+class DecisionOutcome(Base):
+    __tablename__ = "decision_outcomes"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    decision_id: Mapped[int] = mapped_column(
+        ForeignKey("decisions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    owner_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    implementation_status: Mapped[str] = mapped_column(
+        String(50), default="implemented_as_recommended", nullable=False
+    )  # implemented_as_recommended, pivoted_to_alternative, delayed, abandoned
+    chosen_option: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    utility_rating: Mapped[int] = mapped_column(default=5, nullable=False)  # 1 to 5 stars
+    predicted_vs_actual: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    unexpected_challenges: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    what_worked_well: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    lessons_learned: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    would_recommend_tool: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    days_since_decision: Mapped[int] = mapped_column(default=30, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+    decision: Mapped["Decision"] = relationship("Decision", back_populates="outcomes")
+    owner: Mapped["User"] = relationship("User")
+
+    def __repr__(self) -> str:
+        return f"<DecisionOutcome id={self.id} decision_id={self.decision_id} rating={self.utility_rating}>"

@@ -1053,6 +1053,52 @@ class SnapshotDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# ==========================================
+# Post-Decision Follow-up & Outcome Schemas
+# ==========================================
+
+class DecisionOutcomeCreate(BaseModel):
+    implementation_status: str = Field(
+        "implemented_as_recommended",
+        description="One of: implemented_as_recommended, pivoted_to_alternative, delayed, abandoned",
+    )
+    chosen_option: Optional[str] = Field(None, description="The option actually adopted and implemented")
+    utility_rating: int = Field(5, ge=1, le=5, description="Client utility score from 1 to 5 stars")
+    predicted_vs_actual: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Metric comparisons (e.g. cost, latency, timeline)"
+    )
+    unexpected_challenges: Optional[List[str]] = Field(
+        default_factory=list, description="Surprise failure modes or obstacles encountered in production"
+    )
+    what_worked_well: Optional[str] = Field("", description="What succeeded during rollout")
+    lessons_learned: Optional[str] = Field("", description="Strategic lessons for subsequent organizational decisions")
+    would_recommend_tool: Optional[bool] = Field(True, description="Would recommend this structured decision process")
+    days_since_decision: Optional[int] = Field(30, ge=0, description="Estimated days elapsed since decision was made")
 
 
+class DecisionOutcomeResponse(BaseModel):
+    id: int
+    decision_id: int
+    owner_id: int
+    implementation_status: str
+    chosen_option: str
+    utility_rating: int
+    predicted_vs_actual: Dict[str, Any]
+    unexpected_challenges: List[str]
+    what_worked_well: str
+    lessons_learned: str
+    would_recommend_tool: bool
+    days_since_decision: int
+    created_at: datetime
+    updated_at: datetime
 
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FolderOutcomesInsights(BaseModel):
+    total_decisions: int
+    total_outcomes_recorded: int
+    average_utility_rating: float
+    implementation_rate_pct: float
+    common_lessons: List[str]
+    unforeseen_pitfalls: List[str]

@@ -16,6 +16,7 @@ import {
   updateActiveRoadmap,
 } from "@/lib/api";
 import { AlertTriangle, ExternalLink, Check } from "lucide-react";
+import OutcomeTrackingCard from "@/components/OutcomeTrackingCard";
 
 interface SynthesisPanelProps {
   decisionId: number;
@@ -1022,8 +1023,18 @@ export default function SynthesisPanel({
               </div>
             </div>
           )}
+
+          {/* Stage 6: Post-Decision Outcome & Follow-up Review */}
+          <OutcomeTrackingCard
+            decisionId={decisionId}
+            canonicalWinner={
+              displaySynthesis.canonical_result?.winner_option_name ||
+              displaySynthesis.headline
+            }
+          />
         </div>
       ) : (
+
         /* Empty State */
         <div className="bg-[#FCFBF8] rounded border border-dashed border-[#D9D2C3] p-12 text-center">
           <div className="w-10 h-10 rounded-full bg-[#EFEADF] border border-[#D9D2C3] text-[#161E33] flex items-center justify-center mx-auto mb-3 text-sm font-mono font-bold">

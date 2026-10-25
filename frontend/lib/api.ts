@@ -1266,5 +1266,77 @@ export async function saveDecisionReportExport(
   );
 }
 
+// ==========================================
+// Post-Decision Follow-up & Outcomes API
+// ==========================================
 
+export interface DecisionOutcome {
+  id: number;
+  decision_id: number;
+  owner_id: number;
+  implementation_status: "implemented_as_recommended" | "pivoted_to_alternative" | "delayed" | "abandoned" | string;
+  chosen_option: string;
+  utility_rating: number;
+  predicted_vs_actual: Record<string, any>;
+  unexpected_challenges: string[];
+  what_worked_well: string;
+  lessons_learned: string;
+  would_recommend_tool: boolean;
+  days_since_decision: number;
+  created_at: string;
+  updated_at: string;
+}
 
+export interface DecisionOutcomeCreate {
+  implementation_status?: string;
+  chosen_option?: string;
+  utility_rating: number;
+  predicted_vs_actual?: Record<string, any>;
+  unexpected_challenges?: string[];
+  what_worked_well?: string;
+  lessons_learned?: string;
+  would_recommend_tool?: boolean;
+  days_since_decision?: number;
+}
+
+export interface FolderOutcomesInsights {
+  total_decisions: number;
+  total_outcomes_recorded: number;
+  average_utility_rating: number;
+  implementation_rate_pct: number;
+  common_lessons: string[];
+  unforeseen_pitfalls: string[];
+}
+
+export async function getDecisionOutcomes(decisionId: number): Promise<DecisionOutcome[]> {
+  return fetchApi<DecisionOutcome[]>(`/api/decisions/${decisionId}/outcomes`);
+}
+
+export async function getLatestDecisionOutcome(decisionId: number): Promise<DecisionOutcome | null> {
+  return fetchApi<DecisionOutcome | null>(`/api/decisions/${decisionId}/outcomes/latest`);
+}
+
+export async function createDecisionOutcome(
+  decisionId: number,
+  data: DecisionOutcomeCreate
+): Promise<DecisionOutcome> {
+  return fetchApi<DecisionOutcome>(`/api/decisions/${decisionId}/outcomes`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteDecisionOutcome(
+  decisionId: number,
+  outcomeId: number
+): Promise<void> {
+  return fetchApi<void>(`/api/decisions/${decisionId}/outcomes/${outcomeId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getFolderOutcomesInsights(
+  folderId: number
+): Promise<FolderOutcomesInsights> {
+  return fetchApi<FolderOutcomesInsights>(`/api/folders/${folderId}/outcomes/insights`);
+}
