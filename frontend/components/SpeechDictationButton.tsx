@@ -109,19 +109,15 @@ export default function SpeechDictationButton({
     };
   }, []);
 
-  if (!isSupported) {
-    return null;
-  }
-
   return (
     <button
       type="button"
       onClick={toggleListening}
       title={isListening ? "Listening... Click to stop" : title}
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded transition-all focus:outline-none ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded transition-all focus:outline-none cursor-pointer ${
         isListening
           ? "bg-red-50 text-red-600 border border-red-200 animate-pulse font-medium shadow-xs"
-          : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 bg-white"
+          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 bg-white shadow-2xs"
       } ${className}`}
     >
       {isListening ? (
@@ -132,8 +128,8 @@ export default function SpeechDictationButton({
         </>
       ) : (
         <>
-          <Mic className="w-3.5 h-3.5 text-slate-500" />
-          <span className="text-[11px] text-slate-600">Voice mic</span>
+          <Mic className="w-3.5 h-3.5 text-slate-500 hover:text-indigo-600" />
+          <span className="text-[11px] font-medium text-slate-600">Voice mic</span>
         </>
       )}
     </button>
