@@ -270,7 +270,10 @@ def transcribe_audio_google_free(audio_path: Path, language: str = "en") -> str:
             chunks = sorted(list(Path(tmpdir).glob("chunk_*.flac")))
 
         results = []
-        for chunk in chunks:
+        consecutive_errors = 0
+        for chunk in chunks[:6]:
+            if consecutive_errors >= 2:
+                break
             if chunk.stat().st_size < 100:
                 continue
             flac_bytes = chunk.read_bytes()
@@ -280,7 +283,7 @@ def transcribe_audio_google_free(audio_path: Path, language: str = "en") -> str:
                 headers={"Content-Type": "audio/x-flac; rate=16000"}
             )
             try:
-                with urllib.request.urlopen(req, timeout=20, context=ssl_context) as resp:
+                with urllib.request.urlopen(req, timeout=4.0, context=ssl_context) as resp:
                     body = resp.read().decode("utf-8", errors="ignore")
                 lines = [l.strip() for l in body.split("\n") if l.strip()]
                 for line in lines:
@@ -290,9 +293,11 @@ def transcribe_audio_google_free(audio_path: Path, language: str = "en") -> str:
                             alt = data["result"][0]["alternative"][0]["transcript"]
                             if alt.strip():
                                 results.append(alt.strip())
+                                consecutive_errors = 0
                     except Exception:
                         pass
             except Exception as exc:
+                consecutive_errors += 1
                 logger.debug(f"Google speech chunk recognition error: {exc}")
 
         return " ".join(results).strip()
@@ -355,9 +360,10 @@ def transcribe_audio_gemini(
         audio_bytes = audio_path.read_bytes()
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
-        # gemini-3.5-flash is Google's top-tier multimodal model with state-of-the-art audio speech recognition
+        # Active Google multimodal models
         models_to_try = [
             "gemini-3.5-flash",
+            "gemini-3.8-flash",
             "gemini-flash-latest",
         ]
 
@@ -386,28 +392,32 @@ def transcribe_audio_gemini(
                     "temperature": 0.0,
                 },
             }
-            with httpx.Client(timeout=25.0) as client:
-                resp = client.post(url, headers=headers, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts and "text" in parts[0]:
-                            raw_text = parts[0]["text"].strip()
-                            clean_text = clean_noise_tokens(raw_text)
-                            if clean_text:
-                                logger.info(
-                                    f"Successfully transcribed audio via Gemini ({model_name}, {len(clean_text)} chars)"
-                                )
-                                return clean_text
-                            else:
-                                logger.info(f"Gemini output was noise/silence token ({raw_text}) - treating as silent")
-                                return ""
-                else:
-                    logger.warning(
-                        f"Gemini STT with model {model_name} returned HTTP {resp.status_code}: {resp.text[:200]}"
-                    )
+            try:
+                with httpx.Client(timeout=20.0) as client:
+                    resp = client.post(url, headers=headers, json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts and "text" in parts[0]:
+                                raw_text = parts[0]["text"].strip()
+                                clean_text = clean_noise_tokens(raw_text)
+                                if clean_text:
+                                    logger.info(
+                                        f"Successfully transcribed audio via Gemini ({model_name}, {len(clean_text)} chars)"
+                                    )
+                                    return clean_text
+                                else:
+                                    logger.info(f"Gemini output was noise/silence token ({raw_text}) - treating as silent")
+                                    return ""
+                    else:
+                        logger.warning(
+                            f"Gemini STT with model {model_name} returned HTTP {resp.status_code}: {resp.text[:200]}"
+                        )
+            except Exception as model_err:
+                logger.warning(f"Gemini STT with model {model_name} exception: {model_err}")
+                continue
     except Exception as exc:
         logger.warning(f"Gemini audio transcription error: {exc}")
 
