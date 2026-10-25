@@ -624,8 +624,8 @@ export default function Sidebar({
 
       {/* Modal: New Workspace */}
       {showNewFolderModal && (
-        <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
-          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-xl">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-ui">
+          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
               <h3 className="text-[17px] font-medium text-[#161E33]">
                 New workspace
@@ -696,8 +696,8 @@ export default function Sidebar({
 
       {/* Modal: New Decision or Meeting */}
       {showNewDecisionModal && (
-        <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 font-ui">
-          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-xl">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-ui">
+          <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
               <h3 className="text-[17px] font-medium text-[#161E33]">
                 {newRecordType === "meeting" ? "Record new meeting" : "New decision analysis"}

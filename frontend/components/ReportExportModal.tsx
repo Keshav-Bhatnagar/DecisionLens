@@ -193,7 +193,7 @@ export default function ReportExportModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#161E33]/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+    <div className="fixed inset-0 z-[100] bg-[#161E33]/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
       <div className="bg-[#FCFBF8] rounded-xl border border-[#D9D2C3] shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden my-auto">
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-[#D9D2C3] flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#EFEADF]/50">
