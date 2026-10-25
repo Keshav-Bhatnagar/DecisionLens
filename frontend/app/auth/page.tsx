@@ -155,7 +155,7 @@ export default function AuthPage() {
   }, []);
 
   // Open OAuth Dialog or Direct Redirect
-  const handleTriggerOAuth = (provider: "google" | "github" | "microsoft" | "supabase") => {
+  const handleTriggerOAuth = async (provider: "google" | "github" | "microsoft" | "supabase") => {
     setError(null);
     setSuccessMsg(null);
     setActiveOAuthProvider(provider);
@@ -164,9 +164,32 @@ export default function AuthPage() {
       sessionStorage.setItem("oauth_provider", provider);
     }
 
-    const provInfo = oauthProviders.find((p) => p.id === provider);
+    let provInfo = oauthProviders.find((p) => p.id === provider);
+    if (!provInfo) {
+      try {
+        const fresh = await getOAuthProviders();
+        setOauthProviders(fresh);
+        provInfo = fresh.find((p) => p.id === provider);
+      } catch {
+        // fallback continues below
+      }
+    }
+
     if (provInfo?.configured && provInfo.auth_url) {
       window.location.href = provInfo.auth_url;
+      return;
+    }
+
+    // Direct Google OAuth fallback if client ID is set in environment
+    const googleClientId =
+      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+      "736536505245-um5hebvich2ccvme3lds6ahnqdh22l86.apps.googleusercontent.com";
+
+    if (provider === "google" && googleClientId) {
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+      const redirectUri = encodeURIComponent(`${origin}/auth/callback`);
+      const googleUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=select_account`;
+      window.location.href = googleUrl;
       return;
     }
 

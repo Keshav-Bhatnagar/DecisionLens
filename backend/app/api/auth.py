@@ -138,13 +138,23 @@ def get_oauth_providers(request: Request):
             if parsed.scheme and parsed.netloc:
                 frontend_origin = f"{parsed.scheme}://{parsed.netloc}"
 
+    google_auth_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={settings.google_client_id}&"
+        f"redirect_uri={frontend_origin}/auth/callback&"
+        f"response_type=code&"
+        f"scope=openid%20email%20profile&"
+        f"access_type=offline&"
+        f"prompt=select_account"
+    ) if settings.google_client_id else f"{base_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to={frontend_origin}/auth/callback"
+
     providers: List[OAuthProviderInfo] = [
         OAuthProviderInfo(
             id="google",
             name="Google Workspace",
-            configured=True,
+            configured=bool(settings.google_client_id),
             client_id=settings.google_client_id or None,
-            auth_url=f"{base_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to={frontend_origin}/auth/callback",
+            auth_url=google_auth_url,
         ),
         OAuthProviderInfo(
             id="microsoft",
