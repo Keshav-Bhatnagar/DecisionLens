@@ -14,7 +14,7 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ ./
-RUN npm run build
+RUN mkdir -p public && npm run build
 
 # ------------------------------------------------------------------------------
 # Stage 2: Final Production Runner (Python 3.11 + Node 20 Runtime)
