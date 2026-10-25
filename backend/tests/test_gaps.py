@@ -107,13 +107,13 @@ def test_answer_gap_ask_me_flow(client: TestClient, auth_headers: dict, decision
     assert get_res.status_code == 200
     assert get_res.json()["answered_count"] == 1
 
-    # Verify answer was incorporated into decision points
+    # Verify Stage 2 Source Boundary: answering a gap updates Stage 3 gaps, NEVER mutating Stage 2 decision.points
     dec_res = client.get(f"/api/decisions/{decision_id}", headers=auth_headers)
-    assert any(user_answer in str(f) for f in dec_res.json()["points"].get("facts", []))
+    assert not any(user_answer in str(f) for f in dec_res.json()["points"].get("facts", []))
 
 
 def test_skip_gap_keeps_marked_unknown(client: TestClient, auth_headers: dict, decision_id: int):
-    """Test that skipping a gap sets status to 'skipped' and keeps it explicitly marked as unknown."""
+    """Test that skipping a gap sets status to 'skipped' and keeps it explicitly marked as unknown in gaps layer."""
     detect_res = client.post(
         f"/api/decisions/{decision_id}/gaps/detect?force_mock=true",
         headers=auth_headers,
@@ -136,10 +136,10 @@ def test_skip_gap_keeps_marked_unknown(client: TestClient, auth_headers: dict, d
     get_res = client.get(f"/api/decisions/{decision_id}/gaps", headers=auth_headers)
     assert get_res.json()["skipped_count"] >= 1
 
-    # Verify decision points unknowns retains it
+    # Verify Stage 2 Source Boundary: skipping a gap updates Stage 3 gaps, NEVER injecting into Stage 2 decision.points
     dec_res = client.get(f"/api/decisions/{decision_id}", headers=auth_headers)
     unknowns = dec_res.json()["points"].get("unknowns", [])
-    assert any("Unresolved Gap" in u for u in unknowns)
+    assert not any("Unresolved Gap" in u for u in unknowns)
 
 
 def test_missing_gap_id_returns_404(client: TestClient, auth_headers: dict, decision_id: int):

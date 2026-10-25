@@ -264,11 +264,10 @@ def test_research_persistence_and_retrieval(client: TestClient, auth_headers: di
     assert res_data["total_findings"] >= 1
     assert any(f["gap_id"] == gap_id for f in res_data["findings"])
 
-    # Verify decision points received verified fact
+    # Verify Stage 2 Source Boundary: external research must NOT mutate Stage 2 decision.points
     dec_res = client.get(f"/api/decisions/{researched_decision_id}", headers=auth_headers)
     pts = dec_res.json()["points"]
-    assert "facts" in pts
-    assert any("Web Researched" in f for f in pts["facts"])
+    assert not any("Web Researched" in str(f) for f in pts.get("facts", []))
 
 
 def test_research_missing_gap_returns_404(client: TestClient, auth_headers: dict, researched_decision_id: int):

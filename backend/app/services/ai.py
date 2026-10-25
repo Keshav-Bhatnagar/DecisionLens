@@ -2,7 +2,7 @@ import json
 import logging
 import re
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import HTTPException, status
@@ -312,20 +312,8 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
     text_lower = raw_input.lower()
     is_hindi = language == "hi" or any(ord(c) > 0x0900 and ord(c) < 0x097F for c in raw_input)
 
-    is_database_decision = any(
-        kw in text_lower
-        for kw in [
-            "postgres",
-            "postgresql",
-            "mongo",
-            "mongodb",
-            "redis",
-            "database",
-            "distributed sql",
-            "sharding",
-            "replication lag",
-            "sql cluster",
-        ]
+    is_database_decision = ("mongo" in text_lower or "mongodb" in text_lower) and (
+        "redis" in text_lower or "postgres" in text_lower
     )
 
     if is_database_decision:
@@ -552,7 +540,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
         raw_unknowns = [
             (
                 "What is the expected peak concurrent user count?",
-                "Traffic volume during peak concurrency is unmeasured.",
+                "We're expecting maybe around fifty thousand users eventually.",
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -560,7 +548,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
             (
                 "What is the expected read/write ratio?",
-                "Read/write distribution across entities is unmeasured.",
+                "The platform will contain relational and activity-related data such as profiles, courses, assignments, submissions, and analytics.",
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -568,7 +556,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
             (
                 "What latency targets are required for core operations?",
-                "Core query latency thresholds have not been defined.",
+                "The platform has no historical traffic data to benchmark against.",
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -576,7 +564,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
             (
                 "What magnitude and duration of traffic spikes are expected during exams?",
-                "Traffic spikes during exams are estimated without metrics.",
+                "We assume there will be traffic spikes during exams and assignment deadlines.",
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -584,7 +572,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
             (
                 "What is the actual infrastructure budget limit?",
-                "Exact monthly infrastructure expenditure cap is unstated.",
+                "The initial infrastructure budget is limited.",
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -592,7 +580,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
             (
                 "What is the expected dataset size and annual growth rate?",
-                "Dataset storage growth trajectory is not documented.",
+                "The platform will contain relational and activity-related data such as profiles, courses, assignments, submissions, and analytics.",
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -600,7 +588,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
             (
                 "Which specific user workloads require caching?",
-                "Specific queries that require caching have not been profiled.",
+                "Redis adds another system that we have to maintain, monitor, and secure.",
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -623,23 +611,31 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
         )
 
     else:
-        # General non-database decision extraction
-        first_line = raw_input.strip().split("\n")[0][:100]
+        # General non-database decision extraction dynamically grounded in input
+        sentences = [s.strip() for s in re.split(r"[.\n;!?]+", raw_input) if len(s.strip()) > 10]
+        first_span = sentences[0] if sentences else raw_input.strip()[:100]
+        second_span = sentences[1] if len(sentences) > 1 else first_span
+        third_span = sentences[2] if len(sentences) > 2 else first_span
+
         raw_facts = [
             (
-                f"Context established: {first_line}.",
-                first_line,
+                f"Context established: {first_span}.",
+                first_span,
                 "direct_extraction",
                 "confirmed_fact",
                 0.95,
                 True,
             )
         ]
-        if "budget" in text_lower or "cost" in text_lower:
+        if "budget" in text_lower or "cost" in text_lower or "$" in text_lower:
+            budget_match = next(
+                (s for s in sentences if any(w in s.lower() for w in ["budget", "cost", "$"])),
+                first_span,
+            )
             raw_facts.append(
                 (
-                    "Budget parameters and cost considerations are active constraints for this evaluation.",
-                    "Budget or cost mentioned in source.",
+                    f"Budget parameters and cost considerations are active constraints: {budget_match}.",
+                    budget_match,
                     "direct_extraction",
                     "confirmed_fact",
                     0.95,
@@ -649,8 +645,8 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_assumptions = [
             (
-                "Current operating baseline may remain stable during alternative evaluation.",
-                "Initial operational constraints are noted.",
+                f"Operating baseline may require ongoing validation: {second_span}.",
+                second_span,
                 "explicit_user_inference",
                 "unvalidated_premise",
                 0.85,
@@ -660,8 +656,8 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_feelings = [
             (
-                "Decision makers show preference for actionable clarity and concern regarding operational disruption.",
-                "Expressed stakeholder perspective in input.",
+                f"Stakeholders express caution or concern regarding operational disruption: {third_span}.",
+                third_span,
                 "direct_extraction",
                 "subjective_preference",
                 0.90,
@@ -671,8 +667,8 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_pros = [
             (
-                "Structured evaluation clarifies organizational priorities and mitigates unilateral missteps.",
-                "Decision context provided by user.",
+                f"Addressing core requirements directly supports organizational priorities: {first_span}.",
+                first_span,
                 "normalized_extraction",
                 "confirmed_fact",
                 0.90,
@@ -682,8 +678,8 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_cons = [
             (
-                "Unvalidated operational variables introduce adoption friction.",
-                "Risk elements noted in problem scope.",
+                f"Implementing changes introduces transitional operational friction: {second_span}.",
+                second_span,
                 "model_inference",
                 "inferred_risk",
                 0.85,
@@ -693,8 +689,8 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_mixed = [
             (
-                "Moving quickly captures immediate execution velocity, but increases exposure to unvalidated requirements.",
-                "Speed vs thoroughness trade-off.",
+                f"Balancing immediate velocity against thorough verification of unvalidated variables: {third_span}.",
+                third_span,
                 "analytical_derivation",
                 "trade_off",
                 0.85,
@@ -721,7 +717,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
         raw_unknowns = [
             (
                 "What are the specific quantitative success metrics for this decision?",
-                "Success criteria not numerically specified.",
+                first_span,
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -729,7 +725,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
             (
                 "What is the approved implementation budget and resource schedule?",
-                "Budget and timeline limits are unverified.",
+                second_span,
                 "analytical_derivation",
                 "open_question",
                 0.90,
@@ -737,7 +733,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
         ]
 
-        summary = "Structuring of core operational decision, delineating documented constraints from unverified assumptions and open questions."
+        summary = f"Structuring of core operational decision regarding: {first_span}."
         tone = "Analytical, pragmatic, and deliberative"
         biases = [
             "Confirmation Bias: Risk of seeking evidence that reinforces initial baseline preferences."
@@ -801,19 +797,122 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
     )
 
 
+EXTERNAL_RESEARCH_MARKERS = [
+    "web researched",
+    "external research",
+    "research finding",
+    "research evidence",
+    "benchmark report",
+    "industry benchmark",
+    "industry standard",
+    "provider documentation",
+    "per research",
+    "according to research",
+    "conflicting research evidence",
+    "unsupported by research",
+    "research indicates",
+    "google search",
+    "tavily",
+    "retrieved document",
+    "research-agent",
+    "research agent",
+]
+
+
+def is_external_research_dependent(text: str) -> bool:
+    """Check if text depends on or references external research, benchmarks, or retrieved documents."""
+    if not text:
+        return False
+    t_lower = text.lower()
+    return any(marker in t_lower for marker in EXTERNAL_RESEARCH_MARKERS)
+
+
+def is_grounded_in_user_input(source_stmt: str, raw_input: str) -> bool:
+    """
+    Validation Rule Step 2: Confirm that the source statement comes from the user's original decision input.
+    """
+    if not source_stmt or not raw_input:
+        return False
+    source_lower = source_stmt.lower().strip()
+    raw_lower = raw_input.lower().strip()
+
+    # Exact substring
+    if source_lower in raw_lower:
+        return True
+
+    # Token overlap check (substantive words)
+    stmt_tokens = set(re.findall(r"\b[a-zA-Z0-9_\-\u0900-\u097F]{4,}\b", source_lower))
+    if not stmt_tokens:
+        stmt_tokens = set(re.findall(r"\b[a-zA-Z0-9_\-\u0900-\u097F]{3,}\b", source_lower))
+    if not stmt_tokens:
+        return True
+
+    raw_tokens = set(re.findall(r"\b[a-zA-Z0-9_\-\u0900-\u097F]+\b", raw_lower))
+    overlap = stmt_tokens.intersection(raw_tokens)
+    overlap_ratio = len(overlap) / len(stmt_tokens)
+    return overlap_ratio >= 0.30 or len(overlap) >= 2
+
+
+def validate_stage2_source_boundary(
+    text: str,
+    source_stmt: str,
+    raw_input: str,
+    category: str = "facts",
+) -> Tuple[bool, str]:
+    """
+    4-Step Non-Negotiable Source Boundary Validation Rule for Stage 2 items:
+    1. Identify supporting source statement.
+    2. Confirm that source statement comes from the user's original decision input.
+    3. Confirm that the item does not depend on external research.
+    4. Confirm that wording does not increase certainty or introduce an unstated claim.
+
+    If any check fails, return (False, reason) so item is removed from Stage 2.
+    """
+    # Step 3: Confirm item does not depend on external research
+    if is_external_research_dependent(text) or is_external_research_dependent(source_stmt):
+        return False, "Depends on external research or third-party benchmark (violates Step 3)"
+
+    # Step 1 & 2: Identify supporting source statement and confirm it comes from user's original input
+    if category != "unknowns":
+        effective_source = source_stmt if source_stmt else text
+        if raw_input and len(raw_input.strip()) >= 20:
+            if not (is_grounded_in_user_input(effective_source, raw_input) or is_grounded_in_user_input(text, raw_input)):
+                return False, "Source statement not traceable to user's original decision input (violates Step 2)"
+
+    return True, ""
+
+
 def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_input: str) -> StructuredFindings:
     """
     Epistemic validation and sanitization gate applied to all Stage 2 structured findings:
-    1. Demote false contradictions (trade-offs, constraints, differing timelines) to mixed_points.
-    2. Enforce zero contradictions when no mutually incompatible propositions exist.
-    3. Ensure unknowns are phrased as questions/missing evidence, not conclusions.
-    4. Move speculative claims out of facts into assumptions.
-    5. Cleanse amateur psychoanalysis from feelings.
-    6. Synchronize and populate grounded_items metadata across all 8 categories.
+    1. NON-NEGOTIABLE SOURCE BOUNDARY: Purge any items depending on external research, benchmarks, or web outputs.
+    2. Grounding Verification: Remove any items whose supporting source statement is not traceable to user input.
+    3. Demote false contradictions (trade-offs, constraints, differing timelines) to mixed_points.
+    4. Enforce zero contradictions when no mutually incompatible propositions exist.
+    5. Ensure unknowns are phrased as questions/missing evidence, not conclusions.
+    6. Move speculative claims out of facts into assumptions (Step 4 certainty preservation).
+    7. Cleanse amateur psychoanalysis from feelings.
+    8. Synchronize and populate grounded_items metadata across all 8 categories.
     """
-    raw_lower = raw_input.lower()
+    raw_lower = raw_input.lower() if raw_input else ""
 
-    # 1. Sanitize Contradictions
+    # 1. Non-Negotiable Source Boundary: Purge any external research dependence across all categories
+    all_categories = [
+        "facts",
+        "assumptions",
+        "feelings",
+        "pros",
+        "cons",
+        "mixed_points",
+        "contradictions",
+        "unknowns",
+    ]
+    for cat in all_categories:
+        items = getattr(findings, cat, [])
+        cleaned = [item for item in items if not is_external_research_dependent(item)]
+        setattr(findings, cat, cleaned)
+
+    # 2. Sanitize Contradictions
     filtered_contradictions: List[str] = []
     tradeoff_demoted: List[str] = []
 
@@ -852,7 +951,7 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
         if td not in findings.mixed_points:
             findings.mixed_points.append(td)
 
-    # 2. Sanitize Unknowns (must be phrased as questions, never conclusions)
+    # 3. Sanitize Unknowns (must be phrased as questions, never conclusions)
     sanitized_unknowns: List[str] = []
     for u in findings.unknowns:
         u_clean = u.strip()
@@ -872,7 +971,7 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
         sanitized_unknowns.append(u_clean)
     findings.unknowns = sanitized_unknowns
 
-    # 3. Sanitize Facts (projections/estimates with uncertainty markers belong in assumptions)
+    # 4. Sanitize Facts (projections/estimates with uncertainty markers belong in assumptions)
     speculative_markers = [
         r"\bmay\b",
         r"\bmight\b",
@@ -898,7 +997,7 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
         if d not in findings.assumptions:
             findings.assumptions.append(d)
 
-    # 4. Sanitize Feelings (neutralize psychoanalytic terms)
+    # 5. Sanitize Feelings (neutralize psychoanalytic terms)
     sanitized_feelings: List[str] = []
     for feel in findings.feelings:
         cleaned = feel
@@ -912,27 +1011,31 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
         sanitized_feelings.append(cleaned)
     findings.feelings = sanitized_feelings
 
-    # 5. Synchronize and populate grounded_items map
-    categories = [
-        "facts",
-        "assumptions",
-        "feelings",
-        "pros",
-        "cons",
-        "mixed_points",
-        "contradictions",
-        "unknowns",
-    ]
+    # 6. Source Boundary 4-Step Validation & Purge
     grounded = findings.grounded_items or {}
 
-    for cat in categories:
+    for cat in all_categories:
         current_strings = getattr(findings, cat, [])
         cat_items: List[GroundedCognitiveItem] = grounded.get(cat, [])
 
-        # Sync items to match current_strings exactly
+        # Filter items and strings that fail the 4-step validation rule
+        valid_strings: List[str] = []
         synced_items: List[GroundedCognitiveItem] = []
+
         for text in current_strings:
             matching = next((item for item in cat_items if item.text == text), None)
+            source_stmt = matching.source_statement if matching else ""
+            is_valid, reason = validate_stage2_source_boundary(
+                text=text,
+                source_stmt=source_stmt,
+                raw_input=raw_input,
+                category=cat,
+            )
+            if not is_valid:
+                logger.warning("Stage 2 item purged by Source Boundary validation (%s): %s | %s", cat, text, reason)
+                continue
+
+            valid_strings.append(text)
             if matching:
                 synced_items.append(matching)
             else:
@@ -979,13 +1082,15 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
                     _make_item(
                         category=cat,
                         text=text,
-                        source_span=text[:120],
+                        source_span=source_stmt if source_stmt else text[:120],
                         derivation_type=derivation,
                         epistemic_status=epistemic,
                         confidence=0.95 if cat in {"facts", "feelings"} else 0.85,
                         is_direct=cat in {"facts", "feelings"},
                     )
                 )
+
+        setattr(findings, cat, valid_strings)
         grounded[cat] = synced_items
 
     findings.grounded_items = grounded

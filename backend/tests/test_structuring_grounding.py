@@ -350,3 +350,116 @@ def test_source_traceability_structure_with_statement_and_source_statement():
     assert item.derivation_type == "direct_extraction"
     assert item.epistemic_status == "stated"
 
+
+def test_stage2_source_boundary_purges_external_research_markers():
+    """
+    NON-NEGOTIABLE SOURCE BOUNDARY:
+    External web research, retrieved documents, industry knowledge, benchmarks, standards,
+    provider information, or research-agent outputs MUST NOT be inserted into Stage 2 categories.
+    """
+    raw_user_input = "We are choosing between PostgreSQL and MongoDB for our user activity database. Budget is limited."
+    
+    findings = StructuredFindings(
+        facts=[
+            "PostgreSQL is being evaluated for user activity database.",
+            "Web Researched (gap_1): PostgreSQL connection pool sizing benchmark shows 50-100 max connections.",
+            "Industry standard benchmark suggests MongoDB is better for document stores.",
+        ],
+        assumptions=[
+            "Budget constraints are strict.",
+            "External research indicates AWS RDS costs are rising.",
+        ],
+        feelings=[
+            "Decision makers are cautious about operational overhead.",
+        ],
+        pros=[
+            "Structured evaluation clarifies priorities.",
+            "Per research, PostgreSQL has extensive community extensions.",
+        ],
+        cons=[
+            "Conflicting research evidence on replication lag across availability zones.",
+        ],
+        mixed_points=[
+            "PostgreSQL familiarity vs MongoDB document model flexibility.",
+        ],
+        contradictions=[
+            "Unsupported by research: Database must be simultaneously on-prem and serverless cloud.",
+        ],
+        unknowns=[
+            "What is the expected read/write ratio?",
+            "Web Researched: Unverified third-party SLA metrics.",
+        ],
+        summary="Database selection evaluation.",
+    )
+
+    sanitized = validate_and_sanitize_grounded_findings(findings, raw_input=raw_user_input)
+
+    # 1. Facts must NOT contain external research or benchmarks
+    assert len(sanitized.facts) == 1
+    assert "Web Researched" not in sanitized.facts[0]
+    assert "Industry standard" not in sanitized.facts[0]
+
+    # 2. Assumptions must NOT contain external research
+    assert all("External research" not in a for a in sanitized.assumptions)
+
+    # 3. Pros and Cons must NOT contain external research or conflicting research evidence
+    assert all("Per research" not in p for p in sanitized.pros)
+    assert all("Conflicting research" not in c for c in sanitized.cons)
+
+    # 4. Contradictions must NOT contain research markers
+    assert all("Unsupported by research" not in ct for ct in sanitized.contradictions)
+
+    # 5. Unknowns must NOT contain external research findings
+    assert all("Web Researched" not in u for u in sanitized.unknowns)
+
+
+def test_stage2_source_boundary_purges_ungrounded_fabricated_claims():
+    """
+    Validation Rule Step 1 & 2:
+    For every Stage 2 item, identify supporting source statement and confirm it comes
+    from user's original input. If completely ungrounded, remove item from Stage 2.
+    """
+    raw_user_input = (
+        "We are evaluating PostgreSQL versus MongoDB for our educational platform. "
+        "The team knows PostgreSQL well, but has zero Redis experience. "
+        "Our cloud budget is limited to $2,000 monthly."
+    )
+
+    findings = StructuredFindings(
+        facts=[
+            "The team has stronger familiarity with PostgreSQL.",
+            "Our cloud budget is limited to $2,000 monthly.",
+            "The company is planning an acquisition of an enterprise oracle license in Tokyo.",
+        ],
+        assumptions=[
+            "Initial operational constraints are noted.",
+            "Competitor XYZ is losing market share in Latin America.",
+        ],
+        feelings=[
+            "Stakeholders are cautious about adopting unfamiliar technology.",
+        ],
+        pros=[
+            "PostgreSQL leverages existing team expertise.",
+        ],
+        cons=[
+            "Adopting Redis introduces maintenance complexity for an inexperienced team.",
+        ],
+        mixed_points=[
+            "Team familiarity with PostgreSQL vs flexibility of MongoDB.",
+        ],
+        contradictions=[],
+        unknowns=["What is the peak query latency requirement?"],
+        summary="Evaluation of database architecture.",
+    )
+
+    sanitized = validate_and_sanitize_grounded_findings(findings, raw_input=raw_user_input)
+
+    # Grounded items matching raw_user_input should remain
+    assert any("PostgreSQL" in f for f in sanitized.facts)
+    assert any("budget" in f.lower() for f in sanitized.facts)
+
+    # Fabricated / completely foreign claims must be purged by 4-step validation
+    assert not any("acquisition" in f.lower() for f in sanitized.facts)
+    assert not any("latin america" in a.lower() for a in sanitized.assumptions)
+
+

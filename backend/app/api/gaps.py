@@ -68,7 +68,22 @@ def detect_gaps(
 
     verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
 
-    return detect_decision_gaps(decision, db, force_mock=force_mock)
+    resp = detect_decision_gaps(decision, db, force_mock=force_mock)
+    if decision.analysis and isinstance(decision.analysis, dict):
+        a_copy = dict(decision.analysis)
+        a_copy["is_stale"] = True
+        if "canonical_result" in a_copy and isinstance(a_copy["canonical_result"], dict):
+            a_copy["canonical_result"]["is_stale"] = True
+        decision.analysis = a_copy
+
+    if decision.recommendation and isinstance(decision.recommendation, dict):
+        r_copy = dict(decision.recommendation)
+        r_copy["is_stale"] = True
+        decision.recommendation = r_copy
+
+    db.commit()
+    db.refresh(decision)
+    return resp
 
 
 @router.get(
@@ -148,38 +163,31 @@ def answer_gap(
 
     # Process Skip vs Answer
     if payload.skip or (not payload.answer or not payload.answer.strip()):
-        # Skipped gaps remain explicitly marked as unknown
+        # Skipped gaps remain explicitly marked as skipped in Stage 3 gaps layer
         target_gap["status"] = "skipped"
         target_gap["answer"] = None
-
-        # Ensure points['unknowns'] retains this item
-        if decision.points and isinstance(decision.points, dict):
-            pts = dict(decision.points)
-            unknowns = list(pts.get("unknowns", []))
-            unresolved_note = f"Unresolved Gap: {target_gap['question']}"
-            if unresolved_note not in unknowns:
-                unknowns.append(unresolved_note)
-            pts["unknowns"] = unknowns
-            decision.points = pts
     else:
-        # User provided an answer
+        # User provided an answer for Stage 3 gap resolution
         clean_answer = payload.answer.strip()
         target_gap["status"] = "answered"
         target_gap["answer"] = clean_answer
 
-        # Incorporate user answer into decision points as a verified fact
-        if decision.points and isinstance(decision.points, dict):
-            pts = dict(decision.points)
-            facts = list(pts.get("facts", []))
-            new_fact = f"User Verified ({target_gap['question']}): {clean_answer}"
-            if new_fact not in facts:
-                facts.append(new_fact)
-            pts["facts"] = facts
-            decision.points = pts
-
     # Recalculate summary stats
     gaps_data["gaps"] = gaps_list
     decision.gaps = _recalculate_gap_counts(gaps_data)
+
+    # Invalidate downstream framework analysis and synthesis
+    if decision.analysis and isinstance(decision.analysis, dict):
+        a_copy = dict(decision.analysis)
+        a_copy["is_stale"] = True
+        if "canonical_result" in a_copy and isinstance(a_copy["canonical_result"], dict):
+            a_copy["canonical_result"]["is_stale"] = True
+        decision.analysis = a_copy
+
+    if decision.recommendation and isinstance(decision.recommendation, dict):
+        r_copy = dict(decision.recommendation)
+        r_copy["is_stale"] = True
+        decision.recommendation = r_copy
 
     db.commit()
     db.refresh(decision)
@@ -311,32 +319,9 @@ def research_gap(
                 "finding_id": finding.id,
             })
 
-        # Update gap status and answer
+        # Update gap status and answer in Stage 3 gaps layer (do NOT mutate Stage 2 decision.points)
         target_gap["status"] = "researched"
         target_gap["answer"] = finding.synthesis
-
-        # Integrate verified claims into decision context
-        if decision.points and isinstance(decision.points, dict):
-            pts = dict(decision.points)
-            if finding.is_verified:
-                facts = list(pts.get("facts", []))
-                res_fact = f"Web Researched ({target_gap['question']}): {finding.synthesis}"
-                if res_fact not in facts:
-                    facts.append(res_fact)
-                pts["facts"] = facts
-            elif finding.consensus == "conflicting_evidence":
-                contradictions = list(pts.get("contradictions", []))
-                conflict_note = f"Conflicting Research Evidence ({target_gap['question']}): {finding.synthesis}"
-                if conflict_note not in contradictions:
-                    contradictions.append(conflict_note)
-                pts["contradictions"] = contradictions
-            elif finding.consensus == "unsupported":
-                unknowns = list(pts.get("unknowns", []))
-                unsupp_note = f"Unsupported by Research ({target_gap['question']}): No credible evidence found"
-                if unsupp_note not in unknowns:
-                    unknowns.append(unsupp_note)
-                pts["unknowns"] = unknowns
-            decision.points = pts
 
     research_dict["requests"] = requests_list
     research_dict["findings"] = findings_list
@@ -345,6 +330,19 @@ def research_gap(
     # Recalculate summary stats
     gaps_data["gaps"] = gaps_list
     decision.gaps = _recalculate_gap_counts(gaps_data)
+
+    # Invalidate downstream framework analysis and synthesis
+    if decision.analysis and isinstance(decision.analysis, dict):
+        a_copy = dict(decision.analysis)
+        a_copy["is_stale"] = True
+        if "canonical_result" in a_copy and isinstance(a_copy["canonical_result"], dict):
+            a_copy["canonical_result"]["is_stale"] = True
+        decision.analysis = a_copy
+
+    if decision.recommendation and isinstance(decision.recommendation, dict):
+        r_copy = dict(decision.recommendation)
+        r_copy["is_stale"] = True
+        decision.recommendation = r_copy
 
     db.commit()
     db.refresh(decision)
@@ -478,28 +476,7 @@ def execute_gap_research_endpoint(
             "finding_id": finding.id,
         })
 
-    # Integrate into decision context
-    if decision.points and isinstance(decision.points, dict):
-        pts = dict(decision.points)
-        if finding.is_verified:
-            facts = list(pts.get("facts", []))
-            res_fact = f"Web Researched ({target_gap['question']}): {finding.synthesis}"
-            if res_fact not in facts:
-                facts.append(res_fact)
-            pts["facts"] = facts
-        elif finding.consensus == "conflicting_evidence":
-            contradictions = list(pts.get("contradictions", []))
-            conflict_note = f"Conflicting Research Evidence ({target_gap['question']}): {finding.synthesis}"
-            if conflict_note not in contradictions:
-                contradictions.append(conflict_note)
-            pts["contradictions"] = contradictions
-        elif finding.consensus == "unsupported":
-            unknowns = list(pts.get("unknowns", []))
-            unsupp_note = f"Unsupported by Research ({target_gap['question']}): No credible evidence found"
-            if unsupp_note not in unknowns:
-                unknowns.append(unsupp_note)
-            pts["unknowns"] = unknowns
-        decision.points = pts
+    # Stage 3 research result is stored in decision.research and decision.gaps (never mutating Stage 2 decision.points)
 
     research_dict["requests"] = requests_list
     research_dict["findings"] = findings_list
