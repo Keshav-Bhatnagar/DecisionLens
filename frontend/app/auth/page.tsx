@@ -180,10 +180,10 @@ export default function AuthPage() {
       return;
     }
 
-    // Direct Google OAuth fallback if client ID is set in environment
+    // Direct Google OAuth fallback if client ID is set in environment or server
     const googleClientId =
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-      "736536505245-um5hebvich2ccvme3lds6ahnqdh22l86.apps.googleusercontent.com";
+      provInfo?.client_id;
 
     if (provider === "google" && googleClientId) {
       const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";

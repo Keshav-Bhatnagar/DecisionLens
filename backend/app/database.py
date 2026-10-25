@@ -4,6 +4,10 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from app.config import settings
 
+import logging
+
+logger = logging.getLogger("decisionlens.database")
+
 # Engine setup with appropriate connection arguments
 db_url = settings.database_url
 if db_url.startswith("postgres://"):
@@ -51,9 +55,19 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Create all database tables and ensure SQLite schema migrations."""
+    """Create all database tables and ensure SQLite schema migrations with graceful fallback."""
+    global engine, SessionLocal, is_sqlite
     import app.models  # noqa: F401 - ensure models are registered on Base.metadata
-    Base.metadata.create_all(bind=engine)
+
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:
+        logger.error(f"Failed to connect to primary database ({exc}). Falling back to local SQLite.")
+        sqlite_url = "sqlite:///./decisionlens.db"
+        is_sqlite = True
+        engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
+        SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
+        Base.metadata.create_all(bind=engine)
 
     # Apply incremental column additions for local SQLite development if tables were created earlier
     if is_sqlite:
