@@ -96,17 +96,18 @@ async def upload_and_transcribe_audio(
             client_transcript=client_transcript,
         )
     except Exception as exc:
-        if used_enhanced and enhanced_path:
-            logger.warning(f"Transcription on enhanced audio failed ({exc}). Retrying with unenhanced original audio.")
-            transcript_text = transcribe_audio_file(
-                audio_path=original_path,
-                language=norm_lang,
-                force_mock=force_mock,
-                client_transcript=client_transcript,
-            )
-            used_enhanced = False
-        else:
-            raise exc
+        logger.warning(f"Primary audio transcription failed ({exc}). Attempting fallback.")
+        try:
+            if used_enhanced and enhanced_path and original_path.exists():
+                transcript_text = transcribe_audio_file(
+                    audio_path=original_path,
+                    language=norm_lang,
+                    force_mock=force_mock,
+                    client_transcript=client_transcript,
+                )
+                used_enhanced = False
+        except Exception as retry_exc:
+            logger.warning(f"Audio transcription fallback also failed ({retry_exc}). Using client transcript fallback.")
 
     if not transcript_text or not transcript_text.strip():
         if client_transcript and client_transcript.strip():
