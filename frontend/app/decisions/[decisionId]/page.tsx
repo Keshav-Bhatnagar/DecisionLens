@@ -468,6 +468,7 @@ export default function DecisionDetailPage({
 
                     <div id="transcript-editor-section" className="scroll-mt-24">
                       <TranscriptEditor
+                        key={`transcript-${decision.id}-${(decision.transcript || "").length}-${(decision.transcript || "").slice(0, 30)}`}
                         decisionId={decisionId}
                         initialTranscript={decision.transcript || ""}
                         isReviewed={decision.transcript_reviewed}
