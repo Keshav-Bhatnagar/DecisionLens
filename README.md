@@ -1,165 +1,197 @@
-# DecisionLens — AI-Powered Decision Intelligence Platform
+# DecisionLens — Enterprise Decision Intelligence & Institutional Memory Platform
 
-DecisionLens is a production-grade personal decision-intelligence platform that transforms unstructured thoughts, documents, and meeting audio recordings into structured analysis, evidence-backed reasoning, and an actionable roadmap.
+[![CI/CD Azure Pipeline](https://github.com/Keshav-Bhatnagar/Sem3/actions/workflows/deploy-azure.yml/badge.svg)](https://github.com/Keshav-Bhatnagar/Sem3/actions/workflows/deploy-azure.yml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14.2-black.svg?logo=next.js&logoColor=white)](https://nextjs.org)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg?logo=python&logoColor=white)](https://python.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](https://docker.com)
+[![Azure](https://img.shields.io/badge/Azure-Container%20Apps-0078D4.svg?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com)
 
----
+**DecisionLens** transforms chaotic human meetings, audio recordings, and complex business documents into mathematically proven, auditable, and continuous organizational decisions. 
 
-## Architecture & Subsystems
-
-| Subsystem | Technology | Port / URL | Status |
-| :--- | :--- | :--- | :--- |
-| **Backend** | FastAPI + Python 3.12 + SQLAlchemy | `http://localhost:8000` | Fully Verified (82/82 Tests Pass) |
-| **Frontend** | Next.js 14 (App Router) + TypeScript + Tailwind CSS | `http://localhost:3000` | Fully Verified (Lint, Typecheck & Build Pass) |
-| **Database** | SQLite (Dev) / PostgreSQL (Production) | `./decisionlens.db` | Foreign Keys Enabled + Cascading Deletes |
-| **AI Engine** | OpenAI GPT-4o-mini / Hosted AI Service | Configurable API | Anti-Prompt Injection + Fenced Untrusted Input |
-| **Search Engine**| Tavily / Serper / Mock Provider | Configurable API | Primary-source prioritization + Claim audit |
+Unlike generic AI chatbots that hallucinate calculations and suffer from conversational amnesia, DecisionLens introduces **Epistemic Source-Grounding**, a deterministic **Multi-Attribute Utility Theory (MAUT)** mathematical decision engine with zero hallucination, and **Workspace-Scoped Precedent Chaining** so every meeting builds on the institutional memory of the last.
 
 ---
 
-## Clean Setup & Deployment Instructions
+## 🌟 Key Innovations & Architecture
+
+```
+[ MULTI-MODAL INGESTION ]       [ INSTITUTIONAL MEMORY ]         [ DETERMINISTIC MATH ]
+ • Web Speech API (Client)       • folder_context.py              • framework_engine.py / mcda.py
+ • Azure AI Speech / FFmpeg      • Chronological Precedents       • Multi-Attribute Utility (MAUT)
+ • PDF, DOCX, CSV Extractors     • 6 Inherited Dimensions         • Sensitivity Analysis (±20%)
+              │                               │                               │
+              └───────────────────────┬───────┴───────────────────────────────┘
+                                      ▼
+                        [ COGNITIVE AI PIPELINE ]
+                         • ai.py (Dr. Evelyn Vance)
+                         • Google Gemini 2.5 Flash / 1.5 Pro
+                         • 8 Grounded Cognitive Buckets
+                         • Few-Shot Contrastive Guardrails
+                                      ▼
+                        [ BOARDROOM PUBLISHING ]
+                         • ReportLab Vector PDF Generator
+                         • Executive LaTeX Summaries
+                         • Jira / Notion Markdown & JSON
+```
+
+### 1. Epistemic Source-Grounding (`ai.py`)
+- Strictly enforces: **What Was Said → What Was Inferred → What Is Unknown**.
+- Categorizes discussions into **8 isolated cognitive buckets**: `facts`, `assumptions`, `feelings`, `pros`, `cons`, `mixed_points`, `contradictions`, and `unknowns`.
+- Every fact, pro, and con includes a verbatim speaker quote (`source_statement`) and epistemic status (`confirmed_fact`, `projection`, `subjective_preference`).
+- **Prompt Injection Defense**: All user texts are strictly fenced within `<UNTRUSTED_USER_INPUT>` XML boundaries.
+
+### 2. Zero-Hallucination Mathematical Decision Engine (`framework_engine.py`)
+- LLMs are decoupled from candidate ranking.
+- Scoring is computed using **Multi-Attribute Utility Theory (MAUT)**:
+  $$U(Option_i) = \sum_{j=1}^{n} \left(\frac{w_j}{100} \times \text{Score}_{ij}\right)$$
+- Enforces strict weight normalization ($\sum w_j = 100\%$).
+- **Sensitivity Analysis ($\pm 20\%$)**: Mathematically simulates criteria weight swings to identify fragile winners and calculate exact rank inversion thresholds.
+
+### 3. Workspace-Scoped Precedent Chaining (`folder_context.py`)
+- Project folders serve as continuous institutional memory containers.
+- Meeting $N+1$ automatically queries the prior 5 chronological records in the workspace to inherit:
+  1. **Established Facts** (eliminates redundant questioning).
+  2. **Answered Gaps** (tracks empirical facts resolved previously).
+  3. **Carried-Over Unknowns** (automatically brought forward into the new gap analysis).
+  4. **Prior Matrix Winner** (remembers previously approved architectural paths).
+  5. **Active Roadmap Milestones** (chains implementation phases).
+  6. **Production Outcome Reviews** (recycles real-world lessons back into future meetings).
+
+### 4. Autonomous Web Research (`search.py`)
+- Resolves critical empirical unknowns (pricing, compliance, technical specs) using **Tavily**, **Serper (Google SERP)**, or free **DuckDuckGo** HTML search.
+- Categorizes evidence by domain authority (e.g., Tier 1: `aws.amazon.com`, `rfc-editor.org`, `nist.gov`).
+
+---
+
+## 🛠️ Complete Technology Stack
+
+| Tier | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | **Next.js 14 (App Router), React 18, TypeScript** | High-performance SSR, client components, and stateful routing. |
+| **Styling & UI** | **Tailwind CSS, Lucide Icons, Headless UI** | Dark/light design system with `ModalPortal` (`z-[9999]`) decoupled from stacking contexts. |
+| **Client Audio** | **Web Speech API (`webkitSpeechRecognition`)** | Zero-latency real-time microphone dictation ($0.00 cloud cost). |
+| **Backend API** | **FastAPI, Uvicorn, Python 3.11** | Asynchronous REST endpoints and Server-Sent Events (SSE). |
+| **Database** | **PostgreSQL (Supabase / RDS) + SQLite (Dev)** | SQLAlchemy 2.0 ORM, strict multi-tenant isolation, foreign key cascades. |
+| **Cognitive AI** | **Google Gemini 2.5 Flash & 1.5 Pro, Azure OpenAI** | High-throughput structuring and executive synthesis. |
+| **Audio Pipeline** | **Azure AI Speech Services, FFmpeg** | 16kHz mono PCM transcoding and multi-speaker transcription. |
+| **File Parsing** | **pypdf, python-docx, pandas** | Digital text extraction with Gemini Vision OCR fallback for scanned PDFs. |
+| **Reporting** | **ReportLab + TeX Live (`pdflatex`)** | Publication-grade vector PDF generation, Markdown, and JSON exports. |
+| **DevOps & Cloud** | **Docker, GitHub Actions, Microsoft Azure** | Automated CI/CD pushing to GHCR and running on Azure Container Apps. |
+
+---
+
+## 🚀 Quickstart & Local Setup
 
 ### Prerequisites
-- **Python 3.12+**
-- **Node.js 18.x or 20.x+** and **npm 9+**
-- **FFmpeg** (Optional, recommended for transcoding `.m4a` / `.mp3` audio files)
+- **Python 3.11+**
+- **Node.js 20+** and **npm 9+**
+- **FFmpeg** (Recommended for audio downsampling)
 
 ---
 
-### 1. Backend Setup
+### Option A: Run via Docker Compose (Recommended)
 
-1. **Navigate to the backend directory:**
-   ```bash
-   cd backend
-   ```
-
-2. **Create and activate a virtual environment:**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   # Windows (PowerShell): .venv\Scripts\Activate.ps1
-   # Windows (CMD): .venv\Scripts\activate.bat
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
-
-4. **Configure environment variables:**
-   ```bash
-   cp .env.example .env
-   ```
-   *Key variables in `.env`:*
-   - `JWT_SECRET`: Secret key for JWT session tokens (generate a random 32+ character string in production).
-   - `DATABASE_URL`: `sqlite:///./decisionlens.db` for local SQLite or `postgresql+psycopg://user:pass@host:5432/db` for Postgres.
-   - `STORAGE_DIR`: `./storage` (directory for uploaded files and audio).
-   - `GEMINI_API_KEY`: Google Gemini API key (recommended free tier from [Google AI Studio](https://aistudio.google.com/app/apikey)).
-   - `OPENAI_API_KEY`: Optional OpenAI API key alternative.
-   - `SEARCH_PROVIDER`: `duckduckgo` (free, no API key required), `tavily`, `serper`, or `mock`.
-   - `TAVILY_API_KEY` / `SERPER_API_KEY`: API keys for commercial research search.
-   - `GOOGLE_SPEECH_API_KEY`: Optional key for Chromium Google Speech API fallback.
-
-5. **Initialize Database & Start Backend Server:**
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-   *Tables and schema are initialized automatically on application startup.*
-   - Root Health Probe: [http://localhost:8000/api/health](http://localhost:8000/api/health)
-   - Interactive OpenAPI Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-6. **Run Backend Test Suite:**
-   ```bash
-   pytest tests/ -v
-   ```
+Start the entire full-stack environment with a single command:
+```bash
+docker compose up --build
+```
+- Frontend UI: `http://localhost:3000`
+- FastAPI Backend: `http://localhost:8000`
+- API Documentation: `http://localhost:8000/docs`
 
 ---
 
-### 2. Frontend Setup
+### Option B: Local Manual Setup
 
-1. **Navigate to the frontend directory:**
-   ```bash
-   cd frontend
-   ```
+#### 1. Backend Setup
+```bash
+cd backend
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate       # On Windows: .venv\Scripts\activate
 
-3. **Configure environment variables:**
-   ```bash
-   cp .env.example .env.local
-   ```
-   Ensure `NEXT_PUBLIC_API_URL=http://localhost:8000` points to the active FastAPI backend.
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
 
-4. **Run Code Quality & Type Checks:**
-   ```bash
-   # Run ESLint (0 errors, 0 warnings)
-   npm run lint
+# Configure environment variables
+cp .env.example .env
 
-   # Run TypeScript strict type-checking
-   npm run type-check
-   ```
+# Run database migrations and start server
+uvicorn app.main:app --reload --port 8000
+```
 
-5. **Build for Production:**
-   ```bash
-   npm run build
-   ```
+#### 2. Frontend Setup
+```bash
+cd frontend
 
-6. **Start Frontend Server:**
-   - **Development mode:**
-     ```bash
-     npm run dev
-     ```
-     Access at [http://localhost:3000](http://localhost:3000).
-   - **Production mode:**
-     ```bash
-     npm start
-     ```
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp .env.example .env.local
+
+# Start Next.js development server
+npm run dev
+```
+Access the application at `http://localhost:3000`.
 
 ---
 
-## Security & Verification Summary
+## ☁️ Production Deployment (Azure & Render)
 
-1. **User Isolation & Cross-Tenant Data Access:**
-   - Every single endpoint is protected by JWT authentication via `get_current_user`.
-   - All folder, decision, attachment, gap, research, framework, and roadmap records are strictly scoped to the requesting user (`user_id`).
-   - Cross-user access attempts return `404 Not Found` to prevent ID enumeration and metadata leakage.
-   - Moving a decision across folders strictly validates ownership of both the decision and the destination folder.
+### 1. Microsoft Azure Container Apps (Automated CI/CD)
+The repository includes a production multi-stage [`Dockerfile`](./Dockerfile), [`start.sh`](./start.sh) process supervisor, and automated GitHub Actions workflow [`.github/workflows/deploy-azure.yml`](./.github/workflows/deploy-azure.yml):
+1. Pushing to `main` builds a unified production container (Node 20 + Python 3.11).
+2. The image is published to GitHub Container Registry (`ghcr.io`).
+3. Deploy to Azure Container Apps with a single command:
+   ```bash
+   az containerapp create \
+     --name decisionlens \
+     --resource-group DecisionLensRG \
+     --image ghcr.io/<your-username>/sem3:latest \
+     --target-port 3000 \
+     --ingress external \
+     --env-vars DATABASE_URL="..." GEMINI_API_KEY="..." JWT_SECRET="..."
+   ```
 
-2. **Database Integrity & Cascading Deletion:**
-   - SQLite enforces foreign keys via `PRAGMA foreign_keys = ON` on every connection.
-   - All relationship models use `ondelete="CASCADE"` and `cascade="all, delete-orphan"`. Deleting a folder or decision cascades clean removal to all attachments, findings, gaps, research logs, framework runs, recommendations, and roadmaps.
-
-3. **Safe File Uploads & Audio:**
-   - Strict file extension whitelist (`.pdf`, `.docx`, `.txt`, `.md`, `.wav`, `.mp3`, `.m4a`, `.webm`, `.ogg`).
-   - Maximum upload size enforced (25 MB default).
-   - Server-side UUID generation (`uuid.uuid4().hex`) for stored files, preventing path traversal attacks and file overwrites.
-   - Deleting attachments removes the physical file from disk.
-
-4. **Prompt Injection & Untrusted Data Protection:**
-   - User-supplied texts are wrapped in `<UNTRUSTED_USER_INPUT>` boundaries with strict system guardrails forbidding execution of nested instructions or system overrides.
-   - Strict anti-hallucination prompts prohibit the AI engine from fabricating missing information, probabilities, or sources.
-
-5. **Error Sanitization:**
-   - Production error responses never leak internal stack traces or database structures.
-   - Standard HTTP exceptions and Pydantic validation errors return structured JSON details.
+### 2. Render PaaS (`render.yaml`)
+DecisionLens includes a complete Blueprint manifest:
+- Backend Web Service (Python 3.11) with automated health probes on `/health`.
+- Frontend Web Service (Node 20).
+- Push to GitHub and deploy via the Render Dashboard using **Blueprints**.
 
 ---
 
-## Completed Phases
+## 🧪 Testing & Verification
 
-- [x] **Phase 0:** Architecture Blueprint & Inspection
-- [x] **Phase 1:** Project Scaffold, Configuration & Health Check
-- [x] **Phase 2:** Database Models, Authentication, and User Isolation
-- [x] **Phase 3:** Folders, Decisions, and Persistence CRUD
-- [x] **Phase 4:** Document Uploads & Text Extraction (PDF, DOCX, TXT, MD)
-- [x] **Phase 5:** Audio Recording, Enhancement & Bilingual (EN/HI) Transcription
-- [x] **Phase 6:** Cognitive Structuring (8 Categories) & Private Feedback
-- [x] **Phase 7:** Information Gap Detection & Interactive Resolution Flow
-- [x] **Phase 8:** External Web Research Provider & Evidence Retrieval
-- [x] **Phase 9:** 5 Thinking Frameworks (Six Hats, SWOT, Decision Matrix, 5 Whys, Decision Tree)
-- [x] **Phase 10:** Decision Synthesis, Immutable Snapshots & Interactive Roadmap
-- [x] **Phase 11:** Connected Frontend Workflow, Stepper, & Markdown/JSON Export
-- [x] **Phase 12:** Security Audit, Quality Gate Verification & Hardening
+DecisionLens features comprehensive automated test coverage verifying mathematical accuracy, multi-tenant security, and precedent chaining:
+
+```bash
+# Run backend test suite
+cd backend
+pytest tests/ -v
+```
+
+Key verified test suites:
+- `test_folder_memory.py`: Multi-session chronological chaining and tenant isolation.
+- `test_mcda.py`: Multi-Attribute Utility Theory (MAUT) mathematical scorecards.
+- `test_research.py`: Tavily, Serper, and DuckDuckGo empirical research dispatching.
+- `test_audio.py` & `test_file_parser.py`: FFmpeg transcoding and PDF/Word parsing.
+- `test_report_generation.py`: Publication-grade PDF compilation integrity.
+
+---
+
+## 🔒 Security & Data Governance
+
+1. **Multi-Tenant User Isolation**: Every endpoint enforces JWT token validation (`@get_current_user`). Workspaces and decision records are strictly isolated by `owner_id`.
+2. **Cascading Relational Deletion**: All child entities (`attachments`, `mcda_options`, `criteria`, `gap_analyses`, `outcome_reviews`) use `ondelete="CASCADE"`, ensuring clean data removal without orphaned records.
+3. **Prompt Injection & Untrusted Input Protection**: External file texts and notes are wrapped in `<UNTRUSTED_USER_INPUT>` boundaries with strict instructions forbidding prompt execution.
+4. **Audit Trail**: Full provenance tracking for every fact and matrix rating back to source audio timestamps and document lines.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
