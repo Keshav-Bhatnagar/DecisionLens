@@ -11,9 +11,27 @@ from urllib.parse import urlparse, urlunparse
 logger = logging.getLogger("decisionlens.database")
 
 # Engine setup with appropriate connection arguments
+try:
+    import psycopg  # psycopg v3
+    has_psycopg3 = True
+except ImportError:
+    has_psycopg3 = False
+
+try:
+    import psycopg2
+    has_psycopg2 = True
+except ImportError:
+    has_psycopg2 = False
+
 db_url = settings.database_url
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+if db_url.startswith("postgresql://") and not db_url.startswith("postgresql+"):
+    if has_psycopg3:
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    elif has_psycopg2:
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 # Dynamically route Supabase direct IPv6 URLs to IPv4 connection pooler for cloud hosts like Render
 try:
@@ -85,7 +103,15 @@ def init_db() -> None:
         SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
         Base.metadata.create_all(bind=engine)
 
-    # Apply incremental column additions for local SQLite development if tables were created earlier
+    # Apply incremental column additions for PostgreSQL/Supabase and SQLite development
+    if not is_sqlite:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS fault_lines JSONB DEFAULT '{}'::jsonb;"))
+                conn.commit()
+        except Exception as exc:
+            logger.debug(f"Postgres incremental column check skipped: {exc}")
+
     if is_sqlite:
         try:
             with engine.connect() as conn:
@@ -115,6 +141,8 @@ def init_db() -> None:
                     conn.execute(text("ALTER TABLE decisions ADD COLUMN points_reviewed BOOLEAN DEFAULT 0;"))
                 if "domain" not in decision_cols:
                     conn.execute(text("ALTER TABLE decisions ADD COLUMN domain VARCHAR(50) DEFAULT 'BUSINESS';"))
+                if "fault_lines" not in decision_cols:
+                    conn.execute(text("ALTER TABLE decisions ADD COLUMN fault_lines JSON DEFAULT '{}';"))
 
                 # Check attachments columns
                 attach_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(attachments);")).fetchall()]

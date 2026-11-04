@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 :root {
-  /* Printed Dossier Editorial Tokens */
+  /* Signature Printed Dossier (Light / Cream Parchment) */
   --bg-page: #F5F1E8;
   --bg-surface: #FCFBF8;
   --bg-sidebar: #EFEADF;
@@ -35,6 +35,34 @@
   --primary-foreground: #FFFFFF;
 }
 
+.dark {
+  /* Warm Antique Obsidian Library (Dark / Candlelit Walnut Dossier) */
+  --bg-page: #181614;
+  --bg-surface: #221F1C;
+  --bg-sidebar: #1C1917;
+  --ink: #F0EAE1;
+  --ink-secondary: #A89F91;
+  --ink-tertiary: #6E665B;
+  --accent: #D4AA50;
+  --accent-hover: #E5BE64;
+  --border: #38332C;
+
+  --page-bg: #181614;
+  --surface: #221F1C;
+  --text-primary: #F0EAE1;
+  --text-secondary: #A89F91;
+  --text-tertiary: #6E665B;
+  --border-subtle: #38332C;
+
+  --background: #181614;
+  --foreground: #F0EAE1;
+  --card: #221F1C;
+  --card-foreground: #F0EAE1;
+  --ring: #D4AA50;
+  --primary: #D4AA50;
+  --primary-foreground: #181614;
+}
+
 body {
   color: var(--ink);
   background-color: var(--bg-page);
@@ -42,6 +70,15 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Glass panel compatibility */
+.glass-panel,
+.glass-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
 }
 
 /* Custom Scrollbars */
@@ -58,6 +95,13 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #C4BCAC;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #38332C;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #50483E;
 }
 
 /* Hide scrollbar while preserving scroll functionality */
@@ -86,4 +130,25 @@ body {
 
 .font-courier {
   font-family: 'Courier Prime', Courier, monospace;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 250ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn {
+    animation: none;
+  }
 }

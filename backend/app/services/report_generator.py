@@ -107,7 +107,7 @@ def generate_decision_markdown_report(decision: Decision) -> str:
     if feedback and isinstance(feedback, dict):
         lines.extend([
             "### Private Reflective Feedback",
-            f"- **Tone Observations:** {feedback.get('tone_observations', 'Objective and measured.')}",
+            f"- **Discussion Dynamics & Alignment:** {feedback.get('tone_observations', 'Objective and measured.')}",
             f"- **Clarity Rating:** {feedback.get('clarity_rating', 'Medium')}",
             f"- **Cognitive Biases Detected:** {', '.join(feedback.get('potential_biases', ['None detected']))}",
             f"- **Strategic Feedback Notes:** {feedback.get('feedback_notes', 'N/A')}",

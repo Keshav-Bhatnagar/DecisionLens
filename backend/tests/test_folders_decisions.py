@@ -234,3 +234,63 @@ def test_persistence_after_reload(client: TestClient, user_a: dict, db_session: 
     assert decision_in_db.title == "Persistent Decision"
     assert decision_in_db.problem_statement == "Core problem statement"
     assert decision_in_db.folder_id == folder_id
+
+
+
+def test_folder_and_decision_allowed_members(client: TestClient, user_a: dict):
+    """Test managing allowed collaborators and stakeholders in workspace."""
+    headers = {"Authorization": f"Bearer {user_a['token']}"}
+
+    # 1. Create folder and decision
+    f_res = client.post("/api/folders", headers=headers, json={"name": "Multi-User Infra Workspace"})
+    folder_id = f_res.json()["id"]
+
+    d_res = client.post(
+        "/api/decisions",
+        headers=headers,
+        json={"folder_id": folder_id, "title": "Kafka vs Pulsar Architecture"},
+    )
+    decision_id = d_res.json()["id"]
+
+    # 2. Check initial allowed members (Owner should always be returned as member #1)
+    m_res = client.get(f"/api/folders/{folder_id}/members", headers=headers)
+    assert m_res.status_code == 200
+    members = m_res.json()
+    assert len(members) >= 1
+    assert members[0]["role"] == "owner"
+    assert members[0]["email"] == user_a["user"].email
+
+    # 3. Add an allowed team collaborator (DevOps / SRE Lead)
+    add_res = client.post(
+        f"/api/folders/{folder_id}/members",
+        headers=headers,
+        json={
+            "email": "sneha.devops@company.com",
+            "display_name": "Sneha Patel",
+            "role": "editor",
+            "authority_role": "DevOps / SRE",
+        },
+    )
+    assert add_res.status_code == 201
+    member = add_res.json()
+    assert member["email"] == "sneha.devops@company.com"
+    assert member["authority_role"] == "DevOps / SRE"
+    member_id = member["id"]
+
+    # 4. Check decision members reflects the folder's allowed members
+    dec_m_res = client.get(f"/api/decisions/{decision_id}/members", headers=headers)
+    assert dec_m_res.status_code == 200
+    dec_members = dec_m_res.json()
+    assert len(dec_members) == 2
+    emails = [m["email"] for m in dec_members]
+    assert user_a["user"].email in emails
+    assert "sneha.devops@company.com" in emails
+
+    # 5. Remove collaborator
+    del_m_res = client.delete(f"/api/folders/{folder_id}/members/{member_id}", headers=headers)
+    assert del_m_res.status_code == 200
+    assert del_m_res.json()["status"] == "deleted"
+
+    # Verify collaborator is removed
+    updated_m = client.get(f"/api/folders/{folder_id}/members", headers=headers).json()
+    assert len(updated_m) == 1

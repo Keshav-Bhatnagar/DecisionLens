@@ -806,12 +806,18 @@ def validate_and_calculate_matrix_scores(
     if scale_min >= scale_max:
         raise ValueError(f"scale_min ({scale_min}) must be strictly less than scale_max ({scale_max}).")
 
-    # 1. Enforce criteria weights summing to 100
+    # 1. Enforce criteria weights summing to 100 (with auto-normalization for floating point / 1-decimal rounding)
     total_weight = sum(c.weight for c in criteria)
-    if not math.isclose(total_weight, 100.0, abs_tol=0.05):
-        raise ValueError(
-            f"Criteria weights must strictly sum to 100. Current sum is {total_weight:.2f} across {len(criteria)} criteria."
-        )
+    if not math.isclose(total_weight, 100.0, abs_tol=0.2):
+        if 90.0 <= total_weight <= 110.0 and len(criteria) > 0:
+            scale = 100.0 / total_weight
+            for c in criteria:
+                c.weight = round(c.weight * scale, 2)
+            total_weight = sum(c.weight for c in criteria)
+        else:
+            raise ValueError(
+                f"Criteria weights must strictly sum to 100. Current sum is {total_weight:.2f} across {len(criteria)} criteria."
+            )
 
     for c in criteria:
         if c.weight < 0:

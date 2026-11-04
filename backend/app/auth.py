@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 import jwt
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pwdlib import PasswordHash
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from app.models import User
 # Argon2 password hasher
 password_hasher = PasswordHash.recommended()
 bearer_scheme = HTTPBearer(auto_error=True)
+optional_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -99,6 +100,47 @@ def get_current_user(
     return user
 
 
+
+
+
+
+def get_current_user_from_header_or_query(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme),
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+) -> User:
+    """Dependency supporting standard Bearer header OR query param token (e.g. for HTML5 audio streaming)."""
+    raw_token = credentials.credentials if credentials else token
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials were not provided",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    payload = decode_token(raw_token)
+    user_id_raw = payload.get("sub")
+    if not user_id_raw:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token subject missing",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    try:
+        user_id = int(user_id_raw)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token subject",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
 
 
 def verify_ownership(

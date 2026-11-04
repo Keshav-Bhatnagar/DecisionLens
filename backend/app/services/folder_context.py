@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
@@ -40,9 +41,31 @@ def get_folder_precedents(
 
         records = query.order_by(Decision.created_at.asc(), Decision.id.asc()).all()
 
-        # Take the most recent `limit` prior records
+        # Prioritize semantically if there are more records than limit and current decision has context
         if len(records) > limit:
-            records = records[-limit:]
+            query_text = f"{decision.title or ''} {decision.problem_statement or ''} {decision.description or ''}".strip()
+            if query_text:
+                try:
+                    from app.services.rag.embeddings import get_embedding_engine
+                    engine = get_embedding_engine()
+                    query_vec = engine.encode(query_text)
+
+                    def compute_sim(rec: Decision) -> float:
+                        rec_text = f"{rec.title or ''} {rec.problem_statement or ''} {rec.description or ''}"
+                        if not rec_text.strip():
+                            return 0.0
+                        rec_vec = engine.encode(rec_text)
+                        return sum(q * d for q, d in zip(query_vec, rec_vec))
+
+                    scored = [(compute_sim(r), r) for r in records]
+                    scored.sort(key=lambda item: item[0], reverse=True)
+                    records = [item[1] for item in scored[:limit]]
+                    records.sort(key=lambda r: (r.created_at or datetime.min, r.id or 0))
+                except Exception as exc:
+                    logger.warning("Semantic precedent ranking failed, falling back to chronological: %s", exc)
+                    records = records[-limit:]
+            else:
+                records = records[-limit:]
 
         precedents: List[Dict[str, Any]] = []
         for rec in records:

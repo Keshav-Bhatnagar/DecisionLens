@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
@@ -14,9 +14,14 @@ import SynthesisPanel from "@/components/SynthesisPanel";
 import WorkflowStepper, { WorkflowStage } from "@/components/WorkflowStepper";
 import ReportExportModal from "@/components/ReportExportModal";
 import SpeechDictationButton from "@/components/SpeechDictationButton";
+import LiveMeetingRoom from "@/components/LiveMeetingRoom";
+import ExpressADRCard from "@/components/ExpressADRCard";
+import AutoPilotModal from "@/components/AutoPilotModal";
+import DecisionInspector from "@/components/DecisionInspector";
 import {
   getDecision,
   updateDecision,
+  updateTranscript,
   deleteDecision,
   getFolder,
   getAttachments,
@@ -28,8 +33,6 @@ import {
   DecisionSynthesis,
 } from "@/lib/api";
 import {
-  Compass,
-  Users,
   Save,
   Trash2,
   CheckCircle2,
@@ -39,31 +42,21 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
-  Sparkles,
   Share2,
   RefreshCw,
   Mic,
   ArrowRight,
   ArrowLeft,
-  Check,
-  Upload,
+  Layers,
 } from "lucide-react";
 
-// export default function DecisionDetailPage({
-//   params,
-// }: {
-//   params: Promise<{ decisionId: string }>;
-// }) {
-//   const router = useRouter();
-//   const { decisionId: decisionIdStr } = use(params);
-//   const decisionId = parseInt(decisionIdStr, 10);
 export default function DecisionDetailPage({
   params,
 }: {
-  params: { decisionId: string };
+  params: Promise<{ decisionId: string }>;
 }) {
   const router = useRouter();
-  const { decisionId: decisionIdStr } = params;
+  const { decisionId: decisionIdStr } = use(params);
   const decisionId = parseInt(decisionIdStr, 10);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [folder, setFolder] = useState<Folder | null>(null);
@@ -86,9 +79,13 @@ export default function DecisionDetailPage({
   // Workflow stepper & step navigation state
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage>("ingestion");
   const [viewMode, setViewMode] = useState<"step" | "all">("step");
-  const [ingestionTab, setIngestionTab] = useState<"voice" | "docs" | "context">("voice");
+  const [viewTrack, setViewTrack] = useState<"express" | "deep">("deep");
+  const [ingestionTab, setIngestionTab] = useState<"meeting" | "voice" | "docs" | "context">("context");
   const [stageManuallySelected, setStageManuallySelected] = useState(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showAutoPilotModal, setShowAutoPilotModal] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
   const stepContentRef = useRef<HTMLDivElement>(null);
 
   const workflowStagesList: { id: WorkflowStage; label: string; number: string }[] = [
@@ -100,13 +97,49 @@ export default function DecisionDetailPage({
   ];
   const currentStageIdx = workflowStagesList.findIndex((s) => s.id === workflowStage);
 
+  const scrollToActiveStage = (smooth: boolean = true) => {
+    setTimeout(() => {
+      const elem = document.getElementById("active-stage-viewport");
+      if (elem) {
+        elem.scrollIntoView({
+          behavior: smooth ? "smooth" : "auto",
+          block: "start",
+        });
+      }
+    }, 80);
+  };
+
   const handleSelectStage = (stage: WorkflowStage) => {
     setStageManuallySelected(true);
     setWorkflowStage(stage);
-    setTimeout(() => {
-      stepContentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
+    if (stage !== "ingestion") {
+      setIsHeaderCollapsed(true);
+    }
+    scrollToActiveStage(true);
   };
+
+  // Keyboard shortcut 'I' to toggle inspector
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if ((e.key === "i" || e.key === "I") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setInspectorOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const loadData = useCallback(async (silent: boolean = false) => {
     if (!silent) setLoading(true);
@@ -115,7 +148,7 @@ export default function DecisionDetailPage({
       const d = await getDecision(decisionId);
       setDecision(d);
       setTitle(d.title);
-      setProblemStatement(d.problem_statement || "");
+      setProblemStatement(d.problem_statement || d.title || "");
       setDescription(d.description || "");
       setStatus(d.status || "draft");
       setRecordType(d.record_type || "decision");
@@ -152,7 +185,6 @@ export default function DecisionDetailPage({
         }
       }
     } catch (err: unknown) {
-
       setError(err instanceof Error ? err.message : "Failed to load decision");
     } finally {
       if (!silent) setLoading(false);
@@ -233,174 +265,131 @@ export default function DecisionDetailPage({
         { label: decision?.title || "Decision Analysis", href: `/decisions/${decisionId}` },
         { label: `Step ${currentStageIdx + 1}: ${workflowStagesList[currentStageIdx]?.label}` },
       ]}
+      actions={
+        <button
+          type="button"
+          onClick={() => setInspectorOpen((prev) => !prev)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-courier font-bold uppercase tracking-wider rounded-none border transition-colors cursor-pointer ${
+            inspectorOpen
+              ? "bg-[#7a4e10] text-[#F4F0E6] border-[#7a4e10] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50]"
+              : "bg-[#EDE7D6] hover:bg-[#E5DEC9] text-[#1d1d1b] border-[#cfc7b2] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] dark:text-[#F0EAE1] dark:border-[#38332C]"
+          }`}
+          title="Toggle Deliberation Dossier Inspector [I]"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Inspector</span>
+        </button>
+      }
       onRefresh={loadData}
-      maxWidthClass="max-w-7xl"
+      maxWidthClass="max-w-[1560px]"
     >
-
-        {error ? (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-700 text-sm flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => loadData()}
-                className="text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 rounded-lg flex items-center gap-1 transition"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Retry
-              </button>
-              <Link
-                href="/dashboard"
-                className="text-xs font-semibold px-3 py-1.5 bg-white border border-red-200 rounded-lg hover:bg-red-100"
-              >
-                Back to Dashboard
-              </Link>
-            </div>
+      {error ? (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-700 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span>{error}</span>
           </div>
-        ) : loading ? (
-          <div className="space-y-6 animate-pulse">
-            <div className="h-28 bg-white rounded-2xl border border-slate-200" />
-            <div className="h-96 bg-white rounded-2xl border border-slate-200" />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => loadData()}
+              className="text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 rounded-lg flex items-center gap-1 transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Retry
+            </button>
+            <Link
+              href="/dashboard"
+              className="text-xs font-semibold px-3 py-1.5 bg-white border border-red-200 rounded-lg hover:bg-red-100"
+            >
+              Back to Dashboard
+            </Link>
           </div>
-        ) : decision ? (
-          <form onSubmit={handleSave} className="space-y-6">
-            {/* Header & Title Card */}
-            <div className="glass-panel rounded-2xl specular-edge p-6 sm:p-8 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-100 mb-6">
+        </div>
+      ) : loading ? (
+        <div className="space-y-6 animate-pulse">
+          <div className="h-20 bg-white rounded-2xl border border-slate-200" />
+          <div className="h-96 bg-white rounded-2xl border border-slate-200" />
+        </div>
+      ) : decision ? (
+        <div className="flex flex-col xl:flex-row items-start gap-6 pt-1">
+          {/* Main Working Canvas (Center Focus) */}
+          <div className="flex-1 min-w-0 w-full space-y-5">
+            {/* Clean Studio Header Strip */}
+            <div className="pt-1 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full ${recordType === "meeting"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                      }`}
-                  >
-                    {recordType === "meeting" ? (
-                      <>
-                        <Users className="w-3.5 h-3.5" /> Meeting Record
-                      </>
-                    ) : (
-                      <>
-                        <Compass className="w-3.5 h-3.5" /> Decision Analysis
-                      </>
-                    )}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Created {new Date(decision.created_at).toLocaleDateString()}
+                  <span className="w-5 h-[2px] bg-[#7a4e10] dark:bg-[#D4AA50]" />
+                  <span className="font-courier text-xs font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#D4AA50]">
+                    {folder?.name ? `${folder.name} / ` : ""}#{decisionId} • {recordType === "meeting" ? "MEETING DELIBERATION" : "DECISION DELIBERATION"}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {savedSuccess && (
-                    <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 animate-in fade-in">
-                      <CheckCircle2 className="w-4 h-4" /> Saved!
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowExportModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl shadow-2xs transition"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    {recordType === "meeting" ? "Export Minutes" : "Export Brief"}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-sm transition-all disabled:opacity-50 ${
-                      recordType === "meeting"
-                        ? "bg-emerald-600 hover:bg-emerald-700"
-                        : "bg-indigo-600 hover:bg-indigo-700"
-                    }`}
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    {saving ? "Saving..." : "Save Changes"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    title="Delete record"
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-xl transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {/* Mobile / Tablet Quick Inspector Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setInspectorOpen((prev) => !prev)}
+                  className="xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-courier font-bold uppercase tracking-wider rounded-none border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1]"
+                >
+                  <Layers className="w-3 h-3" />
+                  <span>{inspectorOpen ? "Hide Details" : "Details"}</span>
+                </button>
               </div>
 
-              {/* Title input */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                    {recordType === "meeting" ? "Meeting Subject / Title" : "Decision Title"}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full text-xl sm:text-2xl font-extrabold text-slate-900 border-0 border-b-2 border-transparent hover:border-slate-300 focus:border-indigo-600 focus:ring-0 px-0 py-1 transition-all rounded-none bg-transparent"
-                    placeholder={
-                      recordType === "meeting"
-                        ? "Meeting Title (e.g. Weekly Strategy Sync, Vendor Evaluation Call)"
-                        : "Decision Title (e.g. Choose between Kubernetes vs Cloud Run)"
-                    }
-                  />
-                </div>
+              {/* Large Inline Editable Title */}
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter decision title..."
+                aria-label="Decision Title"
+                className="w-full font-newsreader text-[28px] sm:text-[36px] font-normal leading-tight tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1] bg-transparent border-0 border-b border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
+              />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Status
-                    </label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full text-xs font-semibold border border-slate-200/90 rounded-xl px-3.5 py-2.5 bg-white/80 backdrop-blur-xs text-slate-800 shadow-2xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
-                    >
-                      {recordType === "meeting" ? (
-                        <>
-                          <option value="draft">Draft / Scheduled</option>
-                          <option value="evaluating">Discussion Active / In Review</option>
-                          <option value="decided">Minutes Finalized & Logged</option>
-                          <option value="archived">Archived</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="draft">Draft</option>
-                          <option value="evaluating">Evaluating Options</option>
-                          <option value="decided">Decided</option>
-                          <option value="archived">Archived</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">
-                      Record Type
-                    </label>
-                    <select
-                      value={recordType}
-                      onChange={(e) => setRecordType(e.target.value)}
-                      className="w-full text-xs font-semibold border border-slate-200/90 rounded-xl px-3.5 py-2.5 bg-white/80 backdrop-blur-xs text-slate-800 shadow-2xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
-                    >
-                      <option value="decision">Decision Analysis</option>
-                      <option value="meeting">Meeting Discussion</option>
-                    </select>
-                  </div>
-                </div>
+              {/* Core Dilemma Secondary Inline Editable Line */}
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="font-courier text-[11px] uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
+                  Core Dilemma:
+                </span>
+                <input
+                  type="text"
+                  value={problemStatement}
+                  onChange={(e) => setProblemStatement(e.target.value)}
+                  placeholder="Refine specific technical dilemma or architectural tension..."
+                  className="flex-1 font-newsreader text-sm text-[#4f4b40] dark:text-[#C5BDB0] italic bg-transparent border-0 border-b border-dashed border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
+                />
               </div>
             </div>
 
-            {/* Phase 11: End-to-End Guided Workflow Stepper */}
-            <div ref={stepContentRef} className="scroll-mt-20">
+            {/* Express Boardroom ADR Card */}
+            {Boolean(decision.recommendation && typeof decision.recommendation === "object" && "headline" in decision.recommendation) && (
+              <div className="mb-4">
+                <ExpressADRCard
+                  decision={decision}
+                  onOpenExportModal={() => setShowExportModal(true)}
+                  onSwitchToDeepAudit={() => {
+                    setViewTrack("deep");
+                    const elem = document.getElementById("deep-audit-section");
+                    if (elem) elem.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  recordType={recordType}
+                />
+              </div>
+            )}
+
+            {/* Phase 11: End-to-End Guided Workflow Stepper (Sticky on scroll) */}
+            <div
+              id="deep-audit-section"
+              ref={stepContentRef}
+              className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md pt-2 pb-2 -mx-2 px-2 sm:-mx-4 sm:px-4 border-b border-[#cfc7b2] dark:border-[#38332C] shadow-2xs transition-all font-courier"
+            >
               <WorkflowStepper
                 currentStage={workflowStage}
                 onSelectStage={(stage) => handleSelectStage(stage)}
                 viewMode={viewMode}
                 onToggleViewMode={() => setViewMode(viewMode === "step" ? "all" : "step")}
                 onOpenExportModal={() => setShowExportModal(true)}
+                onOpenAutoPilot={() => setShowAutoPilotModal(true)}
                 hasTranscript={Boolean(decision.transcript && decision.transcript.trim().length > 0)}
                 isTranscriptReviewed={Boolean(decision.transcript_reviewed)}
                 isPointsReviewed={Boolean(decision.points_reviewed)}
@@ -415,531 +404,429 @@ export default function DecisionDetailPage({
               />
             </div>
 
-            {/* STAGE 1: Ingestion & Input (Context, Docs, Voice, Transcript) */}
-            {(viewMode === "all" || workflowStage === "ingestion") && (
-              <div className="space-y-5 animate-in fade-in duration-200">
-                {/* Stage 1 Sub-Tab Selector for clean, uncluttered input */}
-                {viewMode === "step" && (
-                  <div className="flex flex-wrap items-center gap-2 p-1.5 glass-panel rounded-2xl specular-edge shadow-2xs">
-                    <button
-                      type="button"
-                      onClick={() => setIngestionTab("voice")}
-                      className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition ${
-                        ingestionTab === "voice"
-                          ? recordType === "meeting"
-                            ? "bg-emerald-600 text-white shadow-sm"
-                            : "bg-indigo-600 text-white shadow-sm"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Mic className="w-4 h-4" />
-                      <span>{recordType === "meeting" ? "1. Meeting Audio & Voice" : "1. Voice & Audio"}</span>
-                      {Boolean(decision.transcript) && (
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            ingestionTab === "voice" ? "bg-emerald-300" : "bg-emerald-500"
-                          }`}
-                          title="Transcript recorded"
-                        />
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIngestionTab("docs")}
-                      className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition ${
-                        ingestionTab === "docs"
-                          ? recordType === "meeting"
-                            ? "bg-emerald-600 text-white shadow-sm"
-                            : "bg-indigo-600 text-white shadow-sm"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Paperclip className="w-4 h-4" />
-                      <span>
-                        {recordType === "meeting"
-                          ? `2. Meeting Documents (${attachments.length})`
-                          : `2. Reference Documents (${attachments.length})`}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIngestionTab("context")}
-                      className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition ${
-                        ingestionTab === "context"
-                          ? recordType === "meeting"
-                            ? "bg-emerald-600 text-white shadow-sm"
-                            : "bg-indigo-600 text-white shadow-sm"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                      }`}
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>{recordType === "meeting" ? "3. Agenda & Attendees" : "3. Problem Statement & Notes"}</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Sub-Tab 1: Voice Recording & Editable Transcript */}
-                {(viewMode === "all" || ingestionTab === "voice") && (
-                  <div className="space-y-5">
-                    <AudioRecorder
-                      decisionId={decisionId}
-                      initialLanguage={decision.language || "en"}
-                      onTranscriptionSuccess={async (res) => {
-                        if (res && res.transcript) {
-                          setDecision((prev) =>
-                            prev
-                              ? {
-                                  ...prev,
-                                  transcript: res.transcript,
-                                  language: res.language || prev.language,
-                                  transcript_reviewed: res.transcript_reviewed ?? false,
-                                }
-                              : prev
-                          );
-                        }
-                        // Explicitly pin to Ingestion -> Voice tab so the transcript never disappears
-                        setWorkflowStage("ingestion");
-                        setIngestionTab("voice");
-                        setStageManuallySelected(true);
-                        await loadData(true);
-
-                        // Smooth scroll directly to the transcript editor
-                        setTimeout(() => {
-                          const elem = document.getElementById("transcript-editor-section");
-                          if (elem) {
-                            elem.scrollIntoView({ behavior: "smooth", block: "start" });
-                          }
-                        }, 150);
-                      }}
-                    />
-
-                    <div id="transcript-editor-section" className="scroll-mt-24">
-                      <TranscriptEditor
-                        key={`transcript-${decision.id}-${(decision.transcript || "").length}-${(decision.transcript || "").slice(0, 30)}`}
-                        decisionId={decisionId}
-                        initialTranscript={decision.transcript || ""}
-                        isReviewed={decision.transcript_reviewed}
-                        language={decision.language || "en"}
-                        onTranscriptSaved={() => loadData(true)}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Sub-Tab 2: Document Attachments & Extracted Text Preview */}
-                {(viewMode === "all" || ingestionTab === "docs") && (
-                  <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
-                    <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                          <Paperclip className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h2 className="text-base font-bold text-slate-900">
-                            Documents & Reference Files
-                          </h2>
-                          <p className="text-xs text-slate-500">
-                            Upload reference documents (PDF, DOCX, TXT, MD) to incorporate into analysis.
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">
-                        {attachments.length} {attachments.length === 1 ? "document" : "documents"}
-                      </span>
-                    </div>
-
-                    {/* Upload Dropzone */}
-                    <FileUploader
-                      decisionId={decisionId}
-                      onUploadSuccess={(att) => {
-                        setAttachments([att, ...attachments]);
-                        loadData();
-                      }}
-                    />
-
-                    {/* Attachments List with Extracted Text Preview */}
-                    {attachments.length > 0 && (
-                      <div className="space-y-3 pt-2">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                          Uploaded Attachments
-                        </h3>
-                        {attachments.map((att) => {
-                          const isExpanded = expandedAttachmentId === att.id;
-                          const wordCount = att.extracted_text
-                            ? att.extracted_text.split(/\s+/).filter(Boolean).length
-                            : 0;
-
-                          return (
-                            <div
-                              key={att.id}
-                              className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50 hover:bg-slate-50 transition-colors"
-                            >
-                              <div className="p-4 flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-bold shrink-0">
-                                    <FileText className="w-4 h-4 text-indigo-600" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-semibold text-slate-900 truncate">
-                                      {att.original_name}
-                                    </p>
-                                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                                      <span>{formatFileSize(att.file_size)}</span>
-                                      <span>•</span>
-                                      <span>{wordCount} words extracted</span>
-                                      <span>•</span>
-                                      <span>{new Date(att.created_at).toLocaleDateString()}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => setExpandedAttachmentId(isExpanded ? null : att.id)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
-                                  >
-                                    {isExpanded ? (
-                                      <>
-                                        Hide Text <ChevronUp className="w-3.5 h-3.5" />
-                                      </>
-                                    ) : (
-                                      <>
-                                        View Extracted Text <ChevronDown className="w-3.5 h-3.5" />
-                                      </>
-                                    )}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteAttachment(att.id)}
-                                    title="Delete document"
-                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {isExpanded && (
-                                <div className="p-4 bg-white border-t border-slate-200 space-y-3">
-                                  <div className="flex items-center justify-between text-xs text-slate-500">
-                                    <span className="font-semibold text-slate-700">
-                                      Extracted Text Preview
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCopyText(att.extracted_text, att.id)}
-                                      className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium"
-                                    >
-                                      {copiedId === att.id ? (
-                                        <>
-                                          <CheckCircle2 className="w-3.5 h-3.5" /> Copied!
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy className="w-3.5 h-3.5" /> Copy Text
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-
-                                  <div className="max-h-60 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-800 whitespace-pre-wrap leading-relaxed select-text">
-                                    {att.extracted_text}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Sub-Tab 3: Problem Statement & Background Notes */}
-                {(viewMode === "all" || ingestionTab === "context") && (
-                  <div className="space-y-5">
-                    {/* Problem Statement / Agenda Card */}
-                    <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
+            {/* Dedicated Active Stage Viewport with Auto-Focus Anchor */}
+            <div id="active-stage-viewport" className="scroll-mt-24 space-y-6">
+              {/* STAGE 1: Supporting Evidence & Context (Zero Duplication) */}
+              {(viewMode === "all" || workflowStage === "ingestion") && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  {/* Context & Reference Data (Optional) */}
+                  <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-none p-6 sm:p-7 shadow-2xs space-y-5 transition-colors">
+                    <div>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {recordType === "meeting" ? (
-                            <Users className="w-5 h-5 text-emerald-600" />
-                          ) : (
-                            <Compass className="w-5 h-5 text-indigo-600" />
-                          )}
-                          <h2 className="text-base font-bold text-slate-900">
-                            {recordType === "meeting"
-                              ? "Meeting Purpose & Agenda Objectives"
-                              : "Problem Statement & Core Dilemma"}
-                          </h2>
-                        </div>
-                        <SpeechDictationButton
-                          onTranscript={(text) =>
-                            setProblemStatement((prev) => (prev ? `${prev} ${text}` : text))
-                          }
-                          title="Dictate problem statement or goals"
-                        />
-                      </div>
-                      <p className="text-xs text-slate-500">
-                        {recordType === "meeting"
-                          ? "Articulate the central purpose, agenda items, and desired outcomes of this meeting discussion."
-                          : "Articulate the core problem to solve, the decision question, or the central goal of this decision."}
-                      </p>
-                      <textarea
-                        value={problemStatement}
-                        onChange={(e) => setProblemStatement(e.target.value)}
-                        rows={4}
-                        placeholder={
-                          recordType === "meeting"
-                            ? "e.g. Align on Q4 infrastructure scaling roadmap, review candidate cloud architectures, and assign follow-up action items..."
-                            : "Describe what decision needs to be made, why it matters, and what criteria are most critical..."
-                        }
-                        className={`w-full text-sm border border-slate-200 rounded-xl p-4 focus:ring-2 focus:outline-none ${
-                          recordType === "meeting"
-                            ? "focus:ring-emerald-500/20 focus:border-emerald-500"
-                            : "focus:ring-indigo-500 focus:border-indigo-500"
-                        }`}
-                      />
-                    </div>
-
-                    {/* Description & Context Card */}
-                    <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-slate-600" />
-                          <h2 className="text-base font-bold text-slate-900">
-                            {recordType === "meeting"
-                              ? "Attendees & Meeting Context"
-                              : "Background Context & Initial Notes"}
-                          </h2>
-                        </div>
-                        <SpeechDictationButton
-                          onTranscript={(text) =>
-                            setDescription((prev) => (prev ? `${prev} ${text}` : text))
-                          }
-                          title="Dictate notes and context"
-                        />
-                      </div>
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={3}
-                        placeholder={
-                          recordType === "meeting"
-                            ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
-                            : "Add initial notes, key stakeholders, constraints, or known deadlines..."
-                        }
-                        className={`w-full text-sm border border-slate-200 rounded-xl p-4 focus:ring-2 focus:outline-none ${
-                          recordType === "meeting"
-                            ? "focus:ring-emerald-500/20 focus:border-emerald-500"
-                            : "focus:ring-indigo-500 focus:border-indigo-500"
-                        }`}
-                      />
-                    </div>
-
-                    {/* Reference Documents & Attachments Card */}
-                    <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                            <Paperclip className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h2 className="text-base font-bold text-slate-900">
-                              Reference Documents & Uploaded Files
-                            </h2>
-                            <p className="text-xs text-slate-500">
-                              Documents attached to this {recordType === "meeting" ? "meeting" : "decision"} for fact-checking and analysis.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setIngestionTab("docs")}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>+ Upload / Add Documents</span>
-                          </button>
-                          <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">
-                            {attachments.length} {attachments.length === 1 ? "document" : "documents"}
+                        <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                          Supporting Evidence & Context{" "}
+                          <span className="font-courier text-xs text-[#7B8491] dark:text-[#A89F91] uppercase tracking-wider">
+                            (Optional)
                           </span>
-                        </div>
+                        </h2>
                       </div>
+                      <p className="text-xs font-courier text-[#4f4b40] dark:text-[#A89F91] mt-1">
+                        Your decision dilemma is framed above. Choose any source below to provide technical specifications, constraints, or meeting audio:
+                      </p>
+                    </div>
 
-                      {attachments.length === 0 ? (
-                        <div className="p-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/60">
-                          <Paperclip className="w-7 h-7 text-slate-400 mx-auto mb-2" />
-                          <p className="text-xs font-semibold text-slate-700">No reference documents attached yet</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">Upload PDFs, notes, or transcripts to ground this analysis in verified facts.</p>
-                          <button
-                            type="button"
-                            onClick={() => setIngestionTab("docs")}
-                            className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs transition-colors"
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>Upload Documents Now</span>
-                          </button>
+                    {/* 3 Clear, Mutually-Exclusive Modality Selector Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-courier">
+                      {/* Option 1: Written Notes */}
+                      <button
+                        type="button"
+                        onClick={() => setIngestionTab("context")}
+                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
+                          ingestionTab === "context"
+                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
+                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5" />
+                            Written Notes
+                          </span>
+                          {description.trim() ? (
+                            <span
+                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                                ingestionTab === "context"
+                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
+                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
+                              }`}
+                            >
+                              Filled
+                            </span>
+                          ) : null}
                         </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {attachments.map((att) => {
-                            const isExpanded = expandedAttachmentId === att.id;
-                            const wordCount = att.extracted_text
-                              ? att.extracted_text.split(/\s+/).filter(Boolean).length
-                              : 0;
+                        <p className="text-[11px] opacity-75 leading-snug">
+                          Add stakeholders, deadlines, budget limits, or known constraints.
+                        </p>
+                      </button>
 
-                            return (
-                              <div
-                                key={att.id}
-                                className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50 hover:bg-slate-50 transition-colors"
-                              >
-                                <div className="p-4 flex items-center justify-between gap-4">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-bold shrink-0">
-                                      <FileText className="w-4 h-4 text-indigo-600" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="text-sm font-semibold text-slate-900 truncate">
-                                        {att.original_name}
-                                      </p>
-                                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                                        <span>{formatFileSize(att.file_size)}</span>
-                                        <span>•</span>
-                                        <span>{wordCount} words extracted</span>
-                                        <span>•</span>
-                                        <span>{new Date(att.created_at).toLocaleDateString()}</span>
+                      {/* Option 2: Attach Specs */}
+                      <button
+                        type="button"
+                        onClick={() => setIngestionTab("docs")}
+                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
+                          ingestionTab === "docs"
+                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
+                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            <Paperclip className="w-3.5 h-3.5" />
+                            Attach Specs
+                          </span>
+                          {attachments.length > 0 ? (
+                            <span
+                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                                ingestionTab === "docs"
+                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
+                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
+                              }`}
+                            >
+                              {attachments.length} {attachments.length === 1 ? "doc" : "docs"}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-[11px] opacity-75 leading-snug">
+                          Upload architectural diagrams, PRDs, RFCs, or benchmark data.
+                        </p>
+                      </button>
+
+                      {/* Option 3: Voice & Call Sync */}
+                      <button
+                        type="button"
+                        onClick={() => setIngestionTab("voice")}
+                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
+                          ingestionTab === "voice" || ingestionTab === "meeting"
+                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
+                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            <Mic className="w-3.5 h-3.5" />
+                            Voice & Meetings
+                          </span>
+                          {Boolean(decision.transcript) ? (
+                            <span
+                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                                ingestionTab === "voice" || ingestionTab === "meeting"
+                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
+                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
+                              }`}
+                            >
+                              Transcribed
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-[11px] opacity-75 leading-snug">
+                          Record spoken notes, upload an audio file, or sync a live meeting call.
+                        </p>
+                      </button>
+                    </div>
+
+                    {/* Active Expanded Context Area */}
+                    <div className="pt-2">
+                      {/* Active Panel 1: Written Notes */}
+                      {ingestionTab === "context" && (
+                        <div className="space-y-3 animate-in fade-in duration-150">
+                          <div className="flex items-center justify-between">
+                            <label className="font-courier text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+                              Background Notes, Constraints & Deadlines:
+                            </label>
+                            <SpeechDictationButton
+                              onTranscript={(text) =>
+                                setDescription((prev) => (prev ? `${prev} ${text}` : text))
+                              }
+                              title="Dictate background notes"
+                            />
+                          </div>
+                          <textarea
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={4}
+                            placeholder={
+                              recordType === "meeting"
+                                ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
+                                : "Add initial notes, key stakeholders, technical constraints, budget limits, or known deadlines..."
+                            }
+                            className="w-full text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
+                          />
+                        </div>
+                      )}
+
+                      {/* Active Panel 2: Reference Docs */}
+                      {ingestionTab === "docs" && (
+                        <div className="space-y-5 animate-in fade-in duration-150">
+                          <FileUploader
+                            decisionId={decisionId}
+                            onUploadSuccess={(att) => {
+                              setAttachments([att, ...attachments]);
+                              loadData();
+                            }}
+                          />
+
+                          {/* Attachments List with Extracted Text Preview */}
+                          {attachments.length > 0 && (
+                            <div className="space-y-3 pt-2">
+                              <h3 className="text-xs font-courier font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                                Uploaded Attachments ({attachments.length})
+                              </h3>
+                              {attachments.map((att) => {
+                                const isExpanded = expandedAttachmentId === att.id;
+                                const wordCount = att.extracted_text
+                                  ? att.extracted_text.split(/\s+/).filter(Boolean).length
+                                  : 0;
+
+                                return (
+                                  <div
+                                    key={att.id}
+                                    className="border border-[#cfc7b2] dark:border-[#38332C] rounded-none overflow-hidden bg-[#F4F0E6] dark:bg-[#181614] transition-colors"
+                                  >
+                                    <div className="p-4 flex items-center justify-between gap-4">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-9 h-9 rounded-none bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
+                                          <FileText className="w-4 h-4" />
+                                        </div>
+                                        <div className="min-w-0 font-courier">
+                                          <p className="text-sm font-bold text-[#1d1d1b] dark:text-[#F0EAE1] truncate">
+                                            {att.original_name}
+                                          </p>
+                                          <div className="flex items-center gap-2 text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+                                            <span>{formatFileSize(att.file_size)}</span>
+                                            <span>•</span>
+                                            <span>{wordCount} words extracted</span>
+                                            <span>•</span>
+                                            <span>{new Date(att.created_at).toLocaleDateString()}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 shrink-0 font-courier">
+                                        <button
+                                          type="button"
+                                          onClick={() => setExpandedAttachmentId(isExpanded ? null : att.id)}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] rounded-none transition-colors"
+                                        >
+                                          {isExpanded ? (
+                                            <>
+                                              Hide Text <ChevronUp className="w-3.5 h-3.5" />
+                                            </>
+                                          ) : (
+                                            <>
+                                              View Extracted Text <ChevronDown className="w-3.5 h-3.5" />
+                                            </>
+                                          )}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteAttachment(att.id)}
+                                          title="Delete document"
+                                          className="p-1.5 text-[#7B8491] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
                                       </div>
                                     </div>
-                                  </div>
 
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    <button
-                                      type="button"
-                                      onClick={() => setExpandedAttachmentId(isExpanded ? null : att.id)}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors"
-                                    >
-                                      {isExpanded ? (
-                                        <>
-                                          Hide Text <ChevronUp className="w-3.5 h-3.5" />
-                                        </>
-                                      ) : (
-                                        <>
-                                          View Extracted Text <ChevronDown className="w-3.5 h-3.5" />
-                                        </>
-                                      )}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteAttachment(att.id)}
-                                      title="Delete document"
-                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </div>
+                                    {isExpanded && (
+                                      <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border-t border-[#cfc7b2] dark:border-[#38332C] space-y-3 font-courier">
+                                        <div className="flex items-center justify-between text-xs text-[#4f4b40] dark:text-[#A89F91]">
+                                          <span className="font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                                            Extracted Text Preview
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleCopyText(att.extracted_text, att.id)}
+                                            className="inline-flex items-center gap-1 text-[#2B4C8C] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline"
+                                          >
+                                            {copiedId === att.id ? (
+                                              <>
+                                                <CheckCircle2 className="w-3.5 h-3.5" /> Copied!
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Copy className="w-3.5 h-3.5" /> Copy Text
+                                              </>
+                                            )}
+                                          </button>
+                                        </div>
 
-                                {isExpanded && (
-                                  <div className="p-4 bg-white border-t border-slate-200 space-y-3">
-                                    <div className="flex items-center justify-between text-xs text-slate-500">
-                                      <span className="font-semibold text-slate-700">
-                                        Extracted Text Preview
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleCopyText(att.extracted_text, att.id)}
-                                        className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium"
-                                      >
-                                        {copiedId === att.id ? (
-                                          <>
-                                            <CheckCircle2 className="w-3.5 h-3.5" /> Copied!
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Copy className="w-3.5 h-3.5" /> Copy Text
-                                          </>
-                                        )}
-                                      </button>
-                                    </div>
-
-                                    <div className="max-h-60 overflow-y-auto bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-800 whitespace-pre-wrap leading-relaxed select-text">
-                                      {att.extracted_text}
-                                    </div>
+                                        <div className="max-h-60 overflow-y-auto bg-[#F4F0E6] dark:bg-[#181614] p-3 rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] whitespace-pre-wrap leading-relaxed select-text">
+                                          {att.extracted_text}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Active Panel 3: Voice & Call Sync */}
+                      {(ingestionTab === "voice" || ingestionTab === "meeting") && (
+                        <div className="space-y-4 animate-in fade-in duration-150 font-courier">
+                          <div className="flex items-center gap-2 border-b border-[#cfc7b2] dark:border-[#38332C] pb-3">
+                            <button
+                              type="button"
+                              onClick={() => setIngestionTab("voice")}
+                              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer transition-colors ${
+                                ingestionTab === "voice"
+                                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
+                              }`}
+                            >
+                              🎙️ Voice Memo & Audio Upload
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIngestionTab("meeting")}
+                              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer transition-colors ${
+                                ingestionTab === "meeting"
+                                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
+                              }`}
+                            >
+                              📹 Live Call & Anonymous Scribe
+                            </button>
+                          </div>
+
+                          {ingestionTab === "voice" ? (
+                            <div className="space-y-4">
+                              <AudioRecorder
+                                decisionId={decisionId}
+                                initialLanguage={decision.language || "en"}
+                                onTranscriptionSuccess={async (res) => {
+                                  if (res && res.transcript) {
+                                    setDecision((prev) =>
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            transcript: res.transcript,
+                                            language: res.language || prev.language,
+                                            transcript_reviewed: res.transcript_reviewed ?? false,
+                                          }
+                                        : prev
+                                    );
+                                  }
+                                  await loadData(true);
+                                }}
+                              />
+
+                              <div id="transcript-editor-section" className="scroll-mt-24">
+                                <TranscriptEditor
+                                  key={`transcript-${decision.id}-${(decision.transcript || "").length}-${(decision.transcript || "").slice(0, 30)}`}
+                                  decisionId={decisionId}
+                                  initialTranscript={decision.transcript || ""}
+                                  isReviewed={decision.transcript_reviewed}
+                                  language={decision.language || "en"}
+                                  onTranscriptSaved={() => loadData(true)}
+                                />
                               </div>
-                            );
-                          })}
+                            </div>
+                          ) : (
+                            <LiveMeetingRoom
+                              decisionId={decisionId}
+                              decisionTitle={title || decision.title}
+                              recordType={recordType}
+                              onFinishMeeting={async (data) => {
+                                if (data && data.transcript && data.transcript.trim()) {
+                                  try {
+                                    await updateTranscript(decisionId, data.transcript.trim(), true);
+                                  } catch (err) {
+                                    console.warn("Could not save live transcript:", err);
+                                  }
+                                }
+                                if (data && data.notes && data.notes.length > 0) {
+                                  const notesSummary = data.notes
+                                    .map((n) => `[${n.category.toUpperCase()}] ${n.content} (${n.isAnonymous ? "Anonymous" : n.author})`)
+                                    .join("\n");
+                                  const updatedDesc = description
+                                    ? `${description}\n\n### Anonymous Meeting Risks & Constraints:\n${notesSummary}`
+                                    : `### Anonymous Meeting Risks & Constraints:\n${notesSummary}`;
+                                  setDescription(updatedDesc);
+                                  await updateDecision(decisionId, { description: updatedDesc });
+                                }
+                                await loadData(true);
+                                setWorkflowStage("structuring");
+                                setStageManuallySelected(true);
+                                setTimeout(() => {
+                                  const elem = document.getElementById("deep-audit-section");
+                                  if (elem) elem.scrollIntoView({ behavior: "smooth", block: "start" });
+                                }, 150);
+                              }}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
 
-            {/* STAGE 2: 8-Category Cognitive Structuring & Private Feedback (Phase 6) */}
-            {(viewMode === "all" || workflowStage === "structuring") && (
-              <div className="animate-in fade-in duration-200">
-                <StructuredFindingsEditor
-                  decisionId={decisionId}
-                  initialFindings={decision.points as unknown as StructuredFindings}
-                  isReviewed={decision.points_reviewed || false}
-                  onFindingsUpdated={() => loadData()}
-                />
-              </div>
-            )}
+              {/* STAGE 2: 2-Sided Cognitive De-Biasing & Input Triage */}
+              {(viewMode === "all" || workflowStage === "structuring") && (
+                <div className="animate-in fade-in duration-200">
+                  <StructuredFindingsEditor
+                    decisionId={decisionId}
+                    initialFindings={decision.points as unknown as StructuredFindings}
+                    isReviewed={decision.points_reviewed || false}
+                    onFindingsUpdated={() => loadData()}
+                    problemStatement={problemStatement || decision.problem_statement || ""}
+                    transcript={decision.transcript || ""}
+                    attachmentCount={attachments.length}
+                    onAdvanceToGaps={() => handleSelectStage("gaps")}
+                  />
+                </div>
+              )}
 
-            {/* STAGE 3: Information Gap Detection & Resolution (Phase 7 & 8) */}
-            {(viewMode === "all" || workflowStage === "gaps") && (
-              <div className="animate-in fade-in duration-200">
-                <GapResolutionPanel
-                  decisionId={decisionId}
-                  initialGaps={decision.gaps}
-                  onGapsUpdated={() => loadData()}
-                />
-              </div>
-            )}
+              {/* STAGE 3: Information Gap Detection & Resolution (Phase 7 & 8) */}
+              {(viewMode === "all" || workflowStage === "gaps") && (
+                <div className="animate-in fade-in duration-200">
+                  <GapResolutionPanel
+                    decisionId={decisionId}
+                    initialGaps={decision.gaps}
+                    onGapsUpdated={() => loadData()}
+                  />
+                </div>
+              )}
 
-            {/* STAGE 4: Structured Thinking Frameworks (Phase 9) */}
-            {(viewMode === "all" || workflowStage === "frameworks") && (
-              <div className="animate-in fade-in duration-200">
-                <FrameworkPanel
-                  decisionId={decisionId}
-                  initialAnalysis={decision.analysis}
-                  onAnalysisUpdated={() => loadData()}
-                />
-              </div>
-            )}
+              {/* STAGE 4: Structured Thinking Frameworks (Phase 9) */}
+              {(viewMode === "all" || workflowStage === "frameworks") && (
+                <div className="animate-in fade-in duration-200">
+                  <FrameworkPanel
+                    decisionId={decisionId}
+                    initialAnalysis={decision.analysis}
+                    onAnalysisUpdated={() => loadData()}
+                  />
+                </div>
+              )}
 
-            {/* STAGE 5: Final Decision Synthesis & Actionable Roadmap (Phase 10) */}
-            {(viewMode === "all" || workflowStage === "synthesis") && (
-              <div className="animate-in fade-in duration-200">
-                <SynthesisPanel
-                  decisionId={decisionId}
-                  initialSynthesis={
-                    decision.recommendation && "headline" in decision.recommendation
-                      ? (decision.recommendation as unknown as DecisionSynthesis)
-                      : null
-                  }
-                  onSynthesisUpdated={() => loadData()}
-                />
-              </div>
-            )}
+              {/* STAGE 5: Final Decision Synthesis & Actionable Roadmap (Phase 10) */}
+              {(viewMode === "all" || workflowStage === "synthesis") && (
+                <div className="animate-in fade-in duration-200">
+                  <SynthesisPanel
+                    decisionId={decisionId}
+                    initialSynthesis={
+                      decision.recommendation && "headline" in decision.recommendation
+                        ? (decision.recommendation as unknown as DecisionSynthesis)
+                        : null
+                    }
+                    onSynthesisUpdated={() => loadData()}
+                  />
+                </div>
+              )}
+            </div>
 
             {/* Guided Bottom Stage Action Bar (In Step Mode) */}
             {viewMode === "step" && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 glass-panel rounded-2xl specular-edge shadow-sm mt-8">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-8 font-courier">
                 <button
                   type="button"
                   disabled={currentStageIdx === 0}
                   onClick={() => handleSelectStage(workflowStagesList[currentStageIdx - 1].id)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>
@@ -947,19 +834,22 @@ export default function DecisionDetailPage({
                   </span>
                 </button>
 
-                <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+                <div className="flex items-center gap-2 text-xs text-[#4f4b40] dark:text-[#A89F91] font-courier font-bold uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50] animate-pulse" />
                   <span>
                     Step {currentStageIdx + 1} of 5:{" "}
-                    <strong className="text-slate-800">{workflowStagesList[currentStageIdx]?.label}</strong>
+                    <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{workflowStagesList[currentStageIdx]?.label}</strong>
                   </span>
                 </div>
 
                 {currentStageIdx < workflowStagesList.length - 1 ? (
                   <button
                     type="button"
-                    onClick={() => handleSelectStage(workflowStagesList[currentStageIdx + 1].id)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm hover:shadow transition"
+                    onClick={() => {
+                      handleSave();
+                      handleSelectStage(workflowStagesList[currentStageIdx + 1].id);
+                    }}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
                   >
                     <span>Continue to {workflowStagesList[currentStageIdx + 1].label}</span>
                     <ArrowRight className="w-4 h-4" />
@@ -968,7 +858,7 @@ export default function DecisionDetailPage({
                   <button
                     type="button"
                     onClick={() => setShowExportModal(true)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 rounded-xl shadow-sm hover:shadow transition"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#1B4332] hover:bg-[#143225] dark:bg-[#52b788] dark:text-[#181614] rounded-none border border-[#1B4332] dark:border-[#52b788] transition-colors cursor-pointer"
                   >
                     <Share2 className="w-4 h-4" />
                     <span>Export Executive Brief</span>
@@ -976,53 +866,53 @@ export default function DecisionDetailPage({
                 )}
               </div>
             )}
+          </div>
 
-            {/* Pipeline Modules Status Card (shown only in All Steps view or on Stage 5) */}
-            {(viewMode === "all" || workflowStage === "synthesis") && (
-              <div className="bg-slate-900 text-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm">
-                <div className="flex items-center gap-2 mb-2 text-indigo-400">
-                  <Sparkles className="w-5 h-5" />
-                  <h3 className="text-sm font-bold uppercase tracking-wider">
-                    Decision Pipeline Status
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-400 mb-6">
-                  All 10 core pipeline modules active: from document/voice ingestion and structured cognitive classification, to gap research, 5 thinking frameworks, and final grounded synthesis roadmaps.
-                </p>
+          {/* Right Deliberation Dossier (Inspector Panel) */}
+          <DecisionInspector
+            decision={decision}
+            folder={folder}
+            status={status}
+            setStatus={setStatus}
+            recordType={recordType}
+            setRecordType={setRecordType}
+            attachments={attachments}
+            saving={saving}
+            savedSuccess={savedSuccess}
+            onSave={handleSave}
+            onDelete={handleDelete}
+            onOpenAutoPilot={() => setShowAutoPilotModal(true)}
+            onOpenExport={() => setShowExportModal(true)}
+            isOpen={inspectorOpen}
+            onToggle={() => setInspectorOpen(false)}
+            currentStage={workflowStage}
+            onSelectStage={handleSelectStage}
+            onSelectIngestionTab={setIngestionTab}
+          />
+        </div>
+      ) : null}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
-                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                      Phase 8 <Check className="w-2.5 h-2.5" />
-                    </span>
-                    <span className="font-semibold text-slate-300">External Web Research</span>
-                  </div>
-                  <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
-                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                      Phase 9 <Check className="w-2.5 h-2.5" />
-                    </span>
-                    <span className="font-semibold text-slate-300">5 Thinking Frameworks</span>
-                  </div>
-                  <div className="p-3 bg-slate-800/80 rounded-xl border border-emerald-500/50">
-                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                      Phase 10 <Check className="w-2.5 h-2.5" />
-                    </span>
-                    <span className="font-semibold text-emerald-300">Recommendation & Roadmap</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </form>
-        ) : null}
+      {/* Phase 11: Comprehensive Report Export Modal */}
+      <ReportExportModal
+        decisionId={decisionId}
+        decisionTitle={title || decision?.title || "Decision Analysis"}
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onReportSaved={() => loadData()}
+      />
 
-        {/* Phase 11: Comprehensive Report Export Modal */}
-        <ReportExportModal
-          decisionId={decisionId}
-          decisionTitle={title || decision?.title || "Decision Analysis"}
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          onReportSaved={() => loadData()}
-        />
+      {/* Autonomous Sequential Pipeline: Auto-Pilot Modal */}
+      <AutoPilotModal
+        decisionId={decisionId}
+        decisionTitle={title || decision?.title || "Decision Analysis"}
+        isOpen={showAutoPilotModal}
+        onClose={() => setShowAutoPilotModal(false)}
+        onComplete={async () => {
+          await loadData(true);
+          setWorkflowStage("synthesis");
+          setStageManuallySelected(true);
+        }}
+      />
     </AppShell>
   );
 }

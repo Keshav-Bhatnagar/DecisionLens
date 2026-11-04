@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     azure_speech_key: str = ""
     azure_speech_region: str = ""
 
+    # IIT Madras / AI4Bharat IndicASR & IndicWhisper Configuration
+    indic_asr_enabled: bool = True
+    indic_asr_endpoint: str = ""  # e.g., self-hosted / Bhashini / AI4Bharat inference endpoint
+    indic_asr_api_key: str = ""
+    indic_asr_model: str = "ai4bharat/indicwhisper-hindi"
+
     # External Web Search Provider (duckduckgo, tavily, serper, or mock)
     search_provider: str = "duckduckgo"
     search_api_key: str = ""

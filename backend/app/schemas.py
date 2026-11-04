@@ -171,6 +171,7 @@ class DecisionUpdate(BaseModel):
     language: Optional[str] = None
     domain: Optional[str] = None
     raw_input: Optional[str] = None
+    fault_lines: Optional[Dict[str, int]] = None
 
 
 class DecisionResponse(DecisionBase):
@@ -182,6 +183,7 @@ class DecisionResponse(DecisionBase):
     transcript_reviewed: bool
     points: Dict[str, Any]
     points_reviewed: bool = False
+    fault_lines: Dict[str, Any] = Field(default_factory=dict)
     gaps: Dict[str, Any]
     research: Dict[str, Any]
     analysis: Dict[str, Any]
@@ -290,6 +292,7 @@ class GroundedCognitiveItem(BaseModel):
         le=1.0,
         description="Epistemic confidence rating between 0.0 and 1.0",
     )
+    why_classified: Optional[str] = Field(None, description="Specific epistemic explanation justifying why this item belongs in this category")
     is_direct_extraction: bool = Field(
         True,
         description="True if directly extracted from source without model-driven extrapolation",
@@ -1113,3 +1116,59 @@ class FolderOutcomesInsights(BaseModel):
     implementation_rate_pct: float
     common_lessons: List[str]
     unforeseen_pitfalls: List[str]
+
+
+# --- Member & Workspace Collaborator Schemas ---
+class MemberResponse(BaseModel):
+    id: int
+    folder_id: int
+    user_id: Optional[int] = None
+    email: str
+    display_name: Optional[str] = None
+    role: str = "editor"  # owner, editor, reviewer, viewer
+    authority_role: str = "General / Team"  # DevOps / SRE, Lead Architect, Security & Compliance, Product Manager
+    status: str = "active"  # active, invited
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MemberCreate(BaseModel):
+    email: EmailStr
+    display_name: Optional[str] = None
+    role: Optional[str] = "editor"
+    authority_role: Optional[str] = "General / Team"
+
+
+# --- Meeting Takeaways & Executive Minutes Schemas ---
+class ActionItem(BaseModel):
+    task: str
+    owner: str = "Unassigned"
+    priority: str = "medium"
+    deadline: str = "TBD"
+
+
+class SilentRiskItem(BaseModel):
+    role: str
+    category: str
+    note: str
+    severity: str = "high"
+
+
+class MeetingTakeawaysRequest(BaseModel):
+    notes: Optional[List[dict]] = None
+    transcript: Optional[str] = None
+    agenda: Optional[str] = None
+    force_mock: Optional[bool] = False
+
+
+class MeetingTakeawaysResponse(BaseModel):
+    decision_id: int
+    meeting_title: str
+    executive_summary: str
+    decisions_made: List[str]
+    hidden_risks: List[SilentRiskItem]
+    action_items: List[ActionItem]
+    unresolved_questions: List[str]
+    slack_markdown: str
+    email_body: str

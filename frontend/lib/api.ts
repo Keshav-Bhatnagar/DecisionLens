@@ -2,12 +2,10 @@
  * DecisionLens Typed API Client
  */
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL !== undefined
-    ? process.env.NEXT_PUBLIC_API_URL
-    : typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
-    ? ""
-    : "http://localhost:8000";
+export const API_BASE_URL =
+  typeof window !== "undefined"
+    ? ""
+    : process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export interface HealthStatus {
   status: string;
@@ -76,6 +74,7 @@ export interface Decision {
   transcript_reviewed: boolean;
   points: Record<string, unknown>;
   points_reviewed?: boolean;
+  fault_lines?: Record<string, number>;
   gaps: Record<string, unknown>;
   research: Record<string, unknown>;
   analysis: Record<string, unknown>;
@@ -294,6 +293,7 @@ export async function updateDecision(
     status?: string;
     language?: string;
     raw_input?: string;
+    fault_lines?: Record<string, number>;
   }
 ): Promise<Decision> {
   return fetchApi<Decision>(`/api/decisions/${decisionId}`, {
@@ -539,6 +539,20 @@ export interface PrivateTranscriptFeedback {
   feedback_notes: string;
 }
 
+export interface GroundedCognitiveItem {
+  id?: string;
+  category?: string;
+  text?: string;
+  statement?: string;
+  source_statement?: string;
+  source_spans?: string[];
+  derivation_type?: string;
+  epistemic_status?: string;
+  confidence?: number;
+  is_direct_extraction?: boolean;
+  why_classified?: string;
+}
+
 export interface StructuredFindings {
   facts: string[];
   assumptions: string[];
@@ -548,6 +562,7 @@ export interface StructuredFindings {
   mixed_points: string[];
   contradictions: string[];
   unknowns: string[];
+  grounded_items?: Record<string, GroundedCognitiveItem[]>;
   private_feedback?: PrivateTranscriptFeedback;
   summary: string;
   reviewed: boolean;
@@ -1361,4 +1376,96 @@ export async function getFolderOutcomesInsights(
   folderId: number
 ): Promise<FolderOutcomesInsights> {
   return fetchApi<FolderOutcomesInsights>(`/api/folders/${folderId}/outcomes/insights`);
+}
+
+
+// --- Workspace & Folder Collaborators ---
+export interface WorkspaceMember {
+  id: number;
+  folder_id: number;
+  user_id?: number | null;
+  email: string;
+  display_name?: string | null;
+  role: string;
+  authority_role: string;
+  status: string;
+  created_at: string;
+}
+
+export async function getFolderMembers(folderId: number): Promise<WorkspaceMember[]> {
+  return fetchApi<WorkspaceMember[]>(`/api/folders/${folderId}/members`);
+}
+
+export async function addFolderMember(
+  folderId: number,
+  data: {
+    email: string;
+    display_name?: string;
+    role?: string;
+    authority_role?: string;
+  }
+): Promise<WorkspaceMember> {
+  return fetchApi<WorkspaceMember>(`/api/folders/${folderId}/members`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function removeFolderMember(
+  folderId: number,
+  memberId: number
+): Promise<{ status: string; id: number }> {
+  return fetchApi<{ status: string; id: number }>(
+    `/api/folders/${folderId}/members/${memberId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+export async function getDecisionMembers(decisionId: number): Promise<WorkspaceMember[]> {
+  return fetchApi<WorkspaceMember[]>(`/api/decisions/${decisionId}/members`);
+}
+
+
+// --- Meeting Takeaways & Executive Minutes API ---
+export interface ActionItem {
+  task: string;
+  owner: string;
+  priority: "low" | "medium" | "high" | "critical";
+  deadline: string;
+}
+
+export interface SilentRiskItem {
+  role: string;
+  category: string;
+  note: string;
+  severity: "low" | "medium" | "high" | "critical";
+}
+
+export interface MeetingTakeawaysResponse {
+  decision_id: number;
+  meeting_title: string;
+  executive_summary: string;
+  decisions_made: string[];
+  hidden_risks: SilentRiskItem[];
+  action_items: ActionItem[];
+  unresolved_questions: string[];
+  slack_markdown: string;
+  email_body: string;
+}
+
+export async function getMeetingTakeaways(
+  decisionId: number,
+  payload?: {
+    notes?: any[];
+    transcript?: string;
+    agenda?: string;
+    force_mock?: boolean;
+  }
+): Promise<MeetingTakeawaysResponse> {
+  return fetchApi<MeetingTakeawaysResponse>(`/api/decisions/${decisionId}/takeaways`, {
+    method: "POST",
+    body: JSON.stringify(payload || {}),
+  });
 }

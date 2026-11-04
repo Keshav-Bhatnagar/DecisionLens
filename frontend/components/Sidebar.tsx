@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import SpeechDictationButton from "@/components/SpeechDictationButton";
 import ModalPortal from "@/components/ModalPortal";
+import BrandLogo from "@/components/BrandLogo";
+import { useTheme } from "@/context/ThemeContext";
 import {
   LayoutDashboard,
   FileText,
@@ -17,9 +19,9 @@ import {
   LogOut,
   LogIn,
   X,
-  Menu,
   Users,
   Compass,
+  Video,
 } from "lucide-react";
 import {
   getFolders,
@@ -62,6 +64,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme } = useTheme();
 
   const [user, setUser] = useState<User | null>(null);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -75,91 +78,34 @@ export default function Sidebar({
 
   const collapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
   const mobileOpen = controlledMobileOpen !== undefined ? controlledMobileOpen : internalMobileOpen;
-  // On mobile (when drawer is open), always display fully expanded view.
-  // On desktop, follow the collapsed state.
   const isExpanded = !collapsed || mobileOpen;
 
-  // Modals
+  // New folder modal state
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
-  const [showNewDecisionModal, setShowNewDecisionModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderDesc, setNewFolderDesc] = useState("");
+
+  // New decision/meeting modal state
+  const [showNewDecisionModal, setShowNewDecisionModal] = useState(false);
   const [newDecisionTitle, setNewDecisionTitle] = useState("");
   const [newDecisionFolderId, setNewDecisionFolderId] = useState<number | "">("");
   const [newRecordType, setNewRecordType] = useState<"decision" | "meeting">("decision");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (controlledCollapsed === undefined) {
-      try {
-        const saved = localStorage.getItem("decisionlens_sidebar_collapsed");
-        if (saved !== null) {
-          setInternalCollapsed(saved === "true");
-        }
-      } catch {
-        // Ignore storage errors
-      }
-    }
-  }, [controlledCollapsed]);
-
-  const toggleCollapsed = () => {
-    if (onToggleCollapse) {
-      onToggleCollapse();
-    } else {
-      const next = !internalCollapsed;
-      setInternalCollapsed(next);
-      try {
-        localStorage.setItem("decisionlens_sidebar_collapsed", String(next));
-      } catch {
-        // Ignore
-      }
-    }
-  };
-
-  const onCloseMobileRef = useRef(onCloseMobile);
-  onCloseMobileRef.current = onCloseMobile;
-
-  const closeMobile = useCallback(() => {
-    if (onCloseMobileRef.current) {
-      onCloseMobileRef.current();
-    } else {
-      setInternalMobileOpen(false);
-    }
-  }, []);
-
-  // Lock body scroll and listen for Escape key when mobile sidebar is open
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = "hidden";
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
-          closeMobile();
-        }
-      };
-      window.addEventListener("keydown", handleKeyDown);
-      return () => {
-        document.body.style.overflow = "";
-        window.removeEventListener("keydown", handleKeyDown);
-      };
-    } else {
-      document.body.style.overflow = "";
-    }
-  }, [mobileOpen, closeMobile]);
-
   const loadSidebarData = useCallback(async () => {
     try {
-      const u = await getMe();
-      setUser(u);
-      if (u) {
-        const [folderList, decisionList] = await Promise.all([
+      const currentUser = await getMe();
+      setUser(currentUser);
+      if (currentUser) {
+        const [folderData, decisionData] = await Promise.all([
           getFolders().catch(() => []),
           getDecisions().catch(() => []),
         ]);
-        setFolders(folderList);
-        setDecisions(decisionList);
-        if (folderList.length > 0 && newDecisionFolderId === "") {
-          setNewDecisionFolderId(folderList[0].id);
+        setFolders(folderData);
+        setDecisions(decisionData);
+        if (folderData.length > 0 && newDecisionFolderId === "") {
+          setNewDecisionFolderId(folderData[0].id);
         }
       } else {
         setFolders([]);
@@ -178,14 +124,32 @@ export default function Sidebar({
     loadSidebarData();
   }, [loadSidebarData]);
 
+  const toggleCollapsed = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed((prev) => !prev);
+    }
+  };
+
+  const closeMobile = useCallback(() => {
+    if (onCloseMobile) {
+      onCloseMobile();
+    } else {
+      setInternalMobileOpen(false);
+    }
+  }, [onCloseMobile]);
+
   const handleLogout = () => {
-    closeMobile();
     clearStoredToken();
     setUser(null);
+    setFolders([]);
+    setDecisions([]);
+    closeMobile();
+    onRefresh?.();
     router.push("/auth");
   };
 
-  // Filtered lists
   const filteredFolders = useMemo(() => {
     if (!searchQuery.trim()) return folders;
     return folders.filter((f) =>
@@ -194,14 +158,8 @@ export default function Sidebar({
   }, [folders, searchQuery]);
 
   const recentDecisions = useMemo(() => {
-    const sorted = [...decisions].sort(
-      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    );
-    if (!searchQuery.trim()) return sorted.slice(0, 5);
-    return sorted
-      .filter((d) => d.title.toLowerCase().includes(searchQuery.toLowerCase()))
-      .slice(0, 5);
-  }, [decisions, searchQuery]);
+    return [...decisions].slice(0, 8);
+  }, [decisions]);
 
   const handleCreateNewFolder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +197,7 @@ export default function Sidebar({
       if (!targetFolderId) {
         const defaultFolder = await createFolder({
           name: "General Decisions",
-          description: "Primary workspace",
+          description: "Default workspace",
         });
         targetFolderId = defaultFolder.id;
       }
@@ -247,6 +205,7 @@ export default function Sidebar({
       const created = await createDecision({
         folder_id: Number(targetFolderId),
         title: newDecisionTitle.trim(),
+        problem_statement: newDecisionTitle.trim(),
         status: "evaluating",
         record_type: newRecordType,
       });
@@ -269,39 +228,33 @@ export default function Sidebar({
       {mobileOpen && (
         <div
           onClick={closeMobile}
-          className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-200"
+          className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity duration-200"
           aria-hidden="true"
         />
       )}
 
       {/* Sidebar Container: 280px drawer on mobile, 240px (or 64px collapsed) on desktop */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#EFEADF] border-r border-[#D9D2C3] text-[#161E33] transition-transform lg:transition-all duration-200 ease-in-out font-ui shadow-2xl lg:shadow-none w-[280px] max-w-[85vw] ${
+        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#E5DEC9] dark:bg-[#1C1917] border-r border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] transition-transform lg:transition-all duration-200 ease-in-out font-courier shadow-2xl lg:shadow-none w-[280px] max-w-[85vw] ${
           collapsed ? "lg:w-16" : "lg:w-[240px]"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
-        {/* Header: Logo + Name + Actions */}
-        <div className="h-14 px-4 border-b border-[#D9D2C3] flex items-center justify-between shrink-0">
-          <Link
-            href="/dashboard"
-            onClick={closeMobile}
-            className="flex items-center gap-2.5 overflow-hidden group"
-          >
-            <div className="w-6 h-6 rounded-[4px] bg-[#161E33] text-white flex items-center justify-center font-semibold text-xs shrink-0">
-              DL
-            </div>
-            {isExpanded && (
-              <span className="font-medium text-[15px] tracking-tight text-[#161E33]">
-                DecisionLens
-              </span>
-            )}
-          </Link>
+        {/* Header: Antique Magnifying Lens Logo + Actions */}
+        <div className="h-14 px-4 border-b border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-between shrink-0 bg-[#E5DEC9] dark:bg-[#1C1917]">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <BrandLogo
+              href="/dashboard"
+              theme={theme}
+              showWordmark={isExpanded}
+              iconSizeClass="w-[44px] h-[44px]"
+            />
+          </div>
 
           {/* Desktop collapse toggle */}
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-[4px] text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40 transition-colors"
+            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-[4px] text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/50 dark:hover:bg-[#38332C]/60 transition-colors"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -316,7 +269,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={closeMobile}
-            className="lg:hidden flex items-center justify-center w-8 h-8 rounded-[4px] text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/50 active:scale-95 transition-all"
+            className="lg:hidden flex items-center justify-center w-8 h-8 rounded-[4px] text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/50 dark:hover:bg-[#38332C]/50 active:scale-95 transition-all"
             title="Close sidebar"
             aria-label="Close sidebar"
           >
@@ -324,143 +277,65 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Action Buttons: Split Decision and Meeting buttons */}
-        <div className="p-3 border-b border-[#D9D2C3]">
+        {/* Action Button: Single Primary Action */}
+        <div className="p-3 border-b border-[#cfc7b2] dark:border-[#38332C] bg-[#E5DEC9] dark:bg-[#1C1917]">
           {!isExpanded ? (
-            <div className="flex flex-col gap-1.5 items-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setNewRecordType("decision");
-                  setShowNewDecisionModal(true);
-                }}
-                className="w-10 h-10 rounded-[4px] bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none"
-                title="New Decision"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewRecordType("meeting");
-                  setShowNewDecisionModal(true);
-                }}
-                className="w-10 h-10 rounded-[4px] bg-[#FCFBF8] border border-[#2D6A4F] hover:bg-[#E8F3EE] text-[#1B4332] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#2D6A4F]/25 focus:outline-none"
-                title="New Meeting"
-              >
-                <Users className="w-4 h-4 text-[#2D6A4F]" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const count = decisions.length;
+                setNewDecisionTitle(`Decision ${count + 1}`);
+                setShowNewDecisionModal(true);
+              }}
+              className="w-10 h-10 rounded-sm bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none shadow-xs mx-auto"
+              title="New Decision"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
           ) : (
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const defaultTitle = `Discussion ${recentDecisions.filter((d) => d.record_type !== "meeting").length + 1}`;
-                  setNewRecordType("decision");
-                  setNewDecisionTitle(defaultTitle);
-                  setShowNewDecisionModal(true);
-                  closeMobile();
-                }}
-                className="w-full py-2 px-2 rounded-[4px] bg-[#FCFBF8] border border-[#161E33] hover:bg-[#F5F1E8] text-[#161E33] font-medium text-[12px] flex items-center justify-center gap-1.5 transition-colors focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none shadow-2xs"
-                title="Start Decision Analysis"
-              >
-                <Plus className="w-3.5 h-3.5 text-[#2F5D8F]" />
-                <span>Decision</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const defaultTitle = `Meeting ${recentDecisions.filter((d) => d.record_type === "meeting").length + 1}`;
-                  setNewRecordType("meeting");
-                  setNewDecisionTitle(defaultTitle);
-                  setShowNewDecisionModal(true);
-                  closeMobile();
-                }}
-                className="w-full py-2 px-2 rounded-[4px] bg-[#FCFBF8] border border-[#2D6A4F] hover:bg-[#E8F3EE] text-[#1B4332] font-medium text-[12px] flex items-center justify-center gap-1.5 transition-colors focus:ring-2 focus:ring-[#2D6A4F]/25 focus:outline-none shadow-2xs"
-                title="Record Meeting Discussion"
-              >
-                <Users className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                <span>Meeting</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const count = decisions.length;
+                setNewDecisionTitle(`Decision ${count + 1}`);
+                setShowNewDecisionModal(true);
+                closeMobile();
+              }}
+              className="w-full py-2.5 px-3 rounded-sm bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] font-bold text-[12px] uppercase tracking-wider flex items-center justify-center gap-2 transition-colors focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none shadow-xs"
+              title="Challenge a new decision"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Decision</span>
+            </button>
           )}
         </div>
 
-        {/* Search input (expanded only) */}
-        {isExpanded && (
-          <div className="px-3 pt-3 pb-1 shrink-0">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8B909C]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[13px] text-[#161E33] placeholder-[#8B909C] pl-8 pr-2.5 py-1.5 focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
-              />
-            </div>
-          </div>
-        )}
-
         {/* Navigation Sections */}
-        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-5">
-          {/* Main Nav (Dashboard, Decision ledger, Profile & settings) */}
+        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+          {/* Main Nav (All Decisions / Ledger) */}
           <nav className="space-y-0.5">
             <Link
               href="/dashboard"
               onClick={closeMobile}
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
-                pathname === "/dashboard" && !pathname.includes("ledger")
-                  ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
-                  : "text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40"
+              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[13px] transition-colors ${
+                pathname === "/dashboard"
+                  ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                  : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
               }`}
-              title="Dashboard"
+              title="Workspaces Hub"
             >
               <LayoutDashboard className={`w-4 h-4 shrink-0 ${
-                pathname === "/dashboard" && !pathname.includes("ledger") ? "text-[#2F5D8F]" : "text-[#5A6275]"
+                pathname === "/dashboard" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#4f4b40] dark:text-[#A89F91]"
               }`} />
-              {isExpanded && <span>Dashboard</span>}
-            </Link>
-
-            <Link
-              href="/dashboard?view=ledger"
-              onClick={closeMobile}
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
-                pathname === "/dashboard" && pathname.includes("ledger")
-                  ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
-                  : "text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40"
-              }`}
-              title="Decision ledger"
-            >
-              <FileText className={`w-4 h-4 shrink-0 ${
-                pathname === "/dashboard" && pathname.includes("ledger") ? "text-[#2F5D8F]" : "text-[#5A6275]"
-              }`} />
-              {isExpanded && <span>Decision ledger</span>}
-            </Link>
-
-            <Link
-              href="/profile"
-              onClick={closeMobile}
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
-                pathname === "/profile"
-                  ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
-                  : "text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40"
-              }`}
-              title="Profile & settings"
-            >
-              <UserIcon className={`w-4 h-4 shrink-0 ${
-                pathname === "/profile" ? "text-[#2F5D8F]" : "text-[#5A6275]"
-              }`} />
-              {isExpanded && <span>Profile &amp; settings</span>}
+              {isExpanded && <span>Workspaces</span>}
             </Link>
           </nav>
 
           {/* Workspaces Section */}
           <div className="space-y-1">
             {isExpanded ? (
-              <div className="flex items-center justify-between px-2.5 mb-1">
-                <span className="font-courier text-[11px] font-medium text-[#5A6275] uppercase tracking-[0.08em]">
+              <div className="flex items-center justify-between px-2.5 mb-1 pt-2">
+                <span className="font-courier text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-[0.08em]">
                   Workspaces
                 </span>
                 <button
@@ -469,18 +344,18 @@ export default function Sidebar({
                     setShowNewFolderModal(true);
                     closeMobile();
                   }}
-                  className="p-1 rounded-[2px] text-[#8B909C] hover:text-[#161E33] transition-colors"
+                  className="p-1 rounded-[2px] text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 transition-colors"
                   title="New workspace"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
-              <div className="flex justify-center my-1">
+              <div className="flex justify-center my-1 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowNewFolderModal(true)}
-                  className="p-1 rounded-[4px] text-[#5A6275] hover:text-[#161E33]"
+                  className="p-1 rounded-[4px] text-[#7B8491] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                   title="Workspaces"
                 >
                   <FolderIcon className="w-4 h-4" />
@@ -490,140 +365,157 @@ export default function Sidebar({
 
             {isExpanded && (
               <div className="space-y-0.5">
-                {filteredFolders.length === 0 ? (
-                  <p className="text-[12px] text-[#8B909C] px-2.5 py-1">
+                {folders.length === 0 ? (
+                  <p className="text-[12px] font-courier text-[#7B8491] px-2.5 py-1">
                     No workspaces yet
                   </p>
                 ) : (
-                  filteredFolders.map((f) => {
+                  folders.map((f) => {
                     const isActive =
                       activeFolderId === f.id || pathname === `/folders/${f.id}`;
+                    const folderDecisions = decisions.filter((d) => d.folder_id === f.id);
+                    const count = folderDecisions.length;
                     return (
-                      <Link
-                        key={f.id}
-                        href={`/folders/${f.id}`}
-                        onClick={closeMobile}
-                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
-                          isActive
-                            ? "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
-                            : "text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40"
-                        }`}
-                      >
-                        <FolderIcon className="w-3.5 h-3.5 shrink-0 text-[#8B909C]" />
-                        <span className="truncate">{f.name}</span>
-                      </Link>
-                    );
-                  })
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Recent Records Section */}
-          <div className="space-y-1">
-            {isExpanded && (
-              <div className="px-2.5 mb-1">
-                <span className="font-courier text-[11px] font-medium text-[#5A6275] uppercase tracking-[0.08em]">
-                  Recent records
-                </span>
-              </div>
-            )}
-
-            {isExpanded && (
-              <div className="space-y-0.5">
-                {recentDecisions.length === 0 ? (
-                  <p className="text-[12px] text-[#8B909C] px-2.5 py-1">
-                    No recent records
-                  </p>
-                ) : (
-                  recentDecisions.map((d) => {
-                    const isActive =
-                      activeDecisionId === d.id || pathname === `/decisions/${d.id}`;
-                    const isMeeting = d.record_type === "meeting";
-                    return (
-                      <Link
-                        key={d.id}
-                        href={`/decisions/${d.id}`}
-                        onClick={closeMobile}
-                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[4px] text-[13px] transition-colors ${
-                          isActive
-                            ? isMeeting
-                              ? "text-[#1B4332] font-medium bg-[#2D6A4F]/[0.08]"
-                              : "text-[#2F5D8F] font-medium bg-[#2F5D8F]/[0.08]"
-                            : "text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40"
-                        }`}
-                        title={d.title}
-                      >
-                        <span
-                          className={`text-[9px] font-mono px-1 py-0.2 rounded font-bold shrink-0 ${
-                            isMeeting
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300/60"
-                              : "bg-[#2F5D8F]/10 text-[#2F5D8F] border border-[#2F5D8F]/20"
+                      <div key={f.id} className="space-y-0.5">
+                        <Link
+                          href={`/folders/${f.id}`}
+                          onClick={closeMobile}
+                          className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-none text-[13px] transition-colors border-l-2 ${
+                            isActive
+                              ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-bold bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/15 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40 border-l-transparent"
                           }`}
                         >
-                          {isMeeting ? "MTG" : "DEC"}
-                        </span>
-                        <span className="truncate flex-1">{d.title}</span>
-                      </Link>
+                          <div className="flex items-center gap-2 truncate min-w-0">
+                            <svg
+                              viewBox="0 0 24 24"
+                              className={`w-4 h-4 shrink-0 fill-none stroke-[1.7] ${
+                                isActive
+                                  ? "stroke-[#2B4C8C] dark:stroke-[#93b3ee]"
+                                  : "stroke-[#7B8491]"
+                              }`}
+                            >
+                              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            </svg>
+                            <span className="truncate">{f.name}</span>
+                          </div>
+                          {count > 0 && (
+                            <span className="font-courier text-[11px] text-[#7a4e10] dark:text-[#D4AA50] font-bold px-1 rounded-sm shrink-0">
+                              {count}
+                            </span>
+                          )}
+                        </Link>
+
+                        {/* Nested Decisions & Meetings when Workspace is Active */}
+                        {isActive && (
+                          <div className="ml-3 pl-2.5 border-l border-[#cfc7b2] dark:border-[#38332C] space-y-0.5 my-1 font-courier">
+                            {folderDecisions.length === 0 ? (
+                              <p className="text-[11px] font-courier text-[#7B8491] py-1 px-1">
+                                No records yet
+                              </p>
+                            ) : (
+                              folderDecisions.map((d) => {
+                                const isItemActive = activeDecisionId === d.id;
+                                const isMeeting = d.record_type === "meeting";
+                                return (
+                                  <Link
+                                    key={d.id}
+                                    href={`/decisions/${d.id}`}
+                                    onClick={closeMobile}
+                                    className={`group flex items-center justify-between gap-1.5 px-2 py-1 text-xs transition-colors rounded-none border-l-2 ${
+                                      isItemActive
+                                        ? "font-bold text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/20 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                                        : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 border-l-transparent"
+                                    }`}
+                                    title={d.title}
+                                  >
+                                    <div className="flex items-center gap-1.5 truncate min-w-0">
+                                      {isMeeting ? (
+                                        <Video className="w-3.5 h-3.5 text-[#2B4C8C] dark:text-[#93b3ee] shrink-0" />
+                                      ) : (
+                                        <Compass className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
+                                      )}
+                                      <span className="truncate font-newsreader text-[13px]">{d.title}</span>
+                                    </div>
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                        d.status === "decided"
+                                          ? "bg-emerald-500"
+                                          : d.status === "evaluating"
+                                          ? "bg-amber-500"
+                                          : "bg-[#7B8491]"
+                                      }`}
+                                      title={`Status: ${d.status}`}
+                                    />
+                                  </Link>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+                      </div>
                     );
                   })
                 )}
               </div>
             )}
           </div>
+
+          {/* RECENT Section: Up to 3 recent decisions */}
+          {isExpanded && decisions.length > 0 && (
+            <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 space-y-1">
+              <div className="px-2.5 mb-1 pt-1">
+                <span className="font-courier text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-[0.08em]">
+                  RECENT
+                </span>
+              </div>
+              <div className="space-y-1">
+                {decisions.slice(0, 3).map((d) => (
+                  <Link
+                    key={d.id}
+                    href={`/decisions/${d.id}`}
+                    onClick={closeMobile}
+                    className={`block px-2.5 py-1.5 text-[16px] font-newsreader leading-snug truncate transition-colors border-l ${
+                      activeDecisionId === d.id
+                        ? "border-l-[#7a4e10] dark:border-l-[#D4AA50] bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/15 text-[#1d1d1b] dark:text-[#F0EAE1]"
+                        : "border-l-[#cfc7b2] dark:border-l-[#38332C] text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40"
+                    }`}
+                    title={d.title}
+                  >
+                    {d.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* User's name/email row at the bottom with avatar and quiet logout icon */}
-        <div className="p-3 border-t border-[#D9D2C3] bg-[#EFEADF] shrink-0">
-          {user ? (
-            <div className="flex items-center justify-between gap-2">
-              <Link
-                href="/profile"
-                onClick={closeMobile}
-                className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-85 transition-opacity"
-                title="Profile & settings"
+        {/* Minimal Quiet Footer */}
+        <div className="relative z-20 p-3 border-t border-[#cfc7b2] dark:border-[#38332C] bg-[#DFD7C0] dark:bg-[#1C1917] shrink-0 font-courier">
+          {isExpanded ? (
+            <div className="flex items-center justify-between w-full">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#7a4e10] dark:text-[#D4AA50]">
+                DECISIONLENS
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-1 px-2 text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40 rounded-sm transition-colors flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider"
+                title="Sign out"
               >
-                <div className="w-7 h-7 rounded-full bg-[#FCFBF8] border border-[#D9D2C3] text-[#161E33] font-medium text-xs flex items-center justify-center shrink-0">
-                  {user.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={user.avatar_url} alt="Avatar" className="w-full h-full rounded-full object-cover" />
-                  ) : (
-                    (user.display_name || user.email).charAt(0).toUpperCase()
-                  )}
-                </div>
-                {isExpanded && (
-                  <div className="min-w-0 text-left">
-                    <p className="text-[13px] font-medium text-[#161E33] truncate leading-tight block">
-                      {formatDisplayName(user.display_name, user.email)}
-                    </p>
-                    <p className="text-[12px] text-[#8B909C] truncate leading-tight mt-0.5 block">
-                      {user.email}
-                    </p>
-                  </div>
-                )}
-              </Link>
-              {isExpanded && (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="p-1.5 text-[#8B909C] hover:text-[#161E33] rounded-[4px] transition-colors shrink-0"
-                  title="Log out"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              )}
+                <LogOut className="w-3 h-3" />
+                <span>Exit</span>
+              </button>
             </div>
           ) : (
-            isExpanded && (
-              <Link
-                href="/auth"
-                onClick={closeMobile}
-                className="w-full py-1.5 px-3 rounded-[4px] border border-[#161E33] bg-[#FCFBF8] hover:bg-[#F5F1E8] text-[13px] font-medium text-[#161E33] transition-colors flex items-center justify-center gap-1.5"
-              >
-                <LogIn className="w-3.5 h-3.5 text-[#5A6275]" />
-                <span>Sign in</span>
-              </Link>
-            )
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full flex justify-center p-1.5 text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+              title="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           )}
         </div>
       </aside>
@@ -631,214 +523,161 @@ export default function Sidebar({
       {/* Modal: New Workspace */}
       {showNewFolderModal && (
         <ModalPortal>
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-ui">
-            <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
-              <h3 className="text-[17px] font-medium text-[#161E33]">
-                New workspace
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowNewFolderModal(false)}
-                className="text-[#8B909C] hover:text-[#161E33] p-1 rounded-[2px]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {modalError && (
-              <div className="mb-3 p-2.5 rounded-[4px] bg-red-50 border border-red-200 text-red-700 text-xs">
-                {modalError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateNewFolder} className="space-y-4">
-              <div>
-                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
-                  Workspace name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  placeholder="e.g. Strategic Growth, Product Strategy"
-                  className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
-                  Description (optional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={newFolderDesc}
-                  onChange={(e) => setNewFolderDesc(e.target.value)}
-                  placeholder="Context or domain notes..."
-                  className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#D9D2C3]">
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier">
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
+              <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
+                <h3 className="font-newsreader text-[22px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  New workspace
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowNewFolderModal(false)}
-                  className="px-3 py-1.5 text-[13px] font-medium text-[#5A6275] hover:text-[#161E33] rounded-[4px]"
+                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-1.5 bg-[#161E33] hover:bg-[#232C47] text-white text-[13px] font-medium rounded-[4px] transition-colors disabled:opacity-50"
-                >
-                  {isSubmitting ? "Creating..." : "Create workspace"}
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      </ModalPortal>
-      )}
 
-      {/* Modal: New Decision or Meeting */}
-      {showNewDecisionModal && (
-        <ModalPortal>
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 font-ui">
-            <div className="bg-[#FCFBF8] rounded-[4px] border border-[#D9D2C3] max-w-md w-full p-6 relative shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
-              <h3 className="text-[17px] font-medium text-[#161E33]">
-                {newRecordType === "meeting" ? "Record new meeting" : "New decision analysis"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowNewDecisionModal(false)}
-                className="text-[#8B909C] hover:text-[#161E33] p-1 rounded-[2px]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+              {modalError && (
+                <div className="mb-3 p-2.5 rounded-sm bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-courier">
+                  {modalError}
+                </div>
+              )}
 
-            {/* Type selector toggle */}
-            <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#EFEADF] rounded-[4px] mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setNewRecordType("decision");
-                  if (!newDecisionTitle.trim() || newDecisionTitle.startsWith("Meeting") || newDecisionTitle.startsWith("Discussion")) {
-                    setNewDecisionTitle(`Discussion ${recentDecisions.filter((d) => d.record_type !== "meeting").length + 1}`);
-                  }
-                }}
-                className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
-                  newRecordType === "decision"
-                    ? "bg-[#FCFBF8] text-[#161E33] shadow-2xs font-semibold"
-                    : "text-[#5A6275] hover:text-[#161E33]"
-                }`}
-              >
-                <Compass className="w-3.5 h-3.5 text-[#2F5D8F]" />
-                <span>Decision</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewRecordType("meeting");
-                  if (!newDecisionTitle.trim() || newDecisionTitle.startsWith("Meeting") || newDecisionTitle.startsWith("Discussion")) {
-                    setNewDecisionTitle(`Meeting ${recentDecisions.filter((d) => d.record_type === "meeting").length + 1}`);
-                  }
-                }}
-                className={`py-1.5 px-3 rounded-[3px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors ${
-                  newRecordType === "meeting"
-                    ? "bg-[#FCFBF8] text-[#1B4332] shadow-2xs font-semibold"
-                    : "text-[#5A6275] hover:text-[#161E33]"
-                }`}
-              >
-                <Users className="w-3.5 h-3.5 text-[#2D6A4F]" />
-                <span>Meeting</span>
-              </button>
-            </div>
-
-            {modalError && (
-              <div className="mb-3 p-2.5 rounded-[4px] bg-red-50 border border-red-200 text-red-700 text-xs">
-                {modalError}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateNewDecision} className="space-y-4">
-              <div>
-                <label className="block text-[13px] font-medium text-[#161E33] mb-1">
-                  Workspace
-                </label>
-                <select
-                  value={newDecisionFolderId}
-                  onChange={(e) => setNewDecisionFolderId(Number(e.target.value))}
-                  className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
-                >
-                  {folders.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                  {folders.length === 0 && (
-                    <option value="">General Decisions (created automatically)</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[13px] font-medium text-[#161E33]">
-                    {newRecordType === "meeting" ? "Meeting title or subject" : "What decision are you weighing?"}
+              <form onSubmit={handleCreateNewFolder} className="space-y-4 font-courier text-xs sm:text-[13px]">
+                <div>
+                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                    Workspace name
                   </label>
-                  <SpeechDictationButton
-                    onTranscript={(text) =>
-                      setNewDecisionTitle((prev) => (prev ? `${prev} ${text}` : text))
-                    }
-                    title="Dictate title"
+                  <input
+                    type="text"
+                    required
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="e.g. Strategic Growth, Product Strategy"
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
                   />
                 </div>
-                <textarea
-                  rows={3}
-                  required
-                  value={newDecisionTitle}
-                  onChange={(e) => setNewDecisionTitle(e.target.value)}
-                  placeholder={
-                    newRecordType === "meeting"
-                      ? "e.g. Weekly Strategy Sync, Vendor Evaluation Call"
-                      : "e.g. Choose between Kubernetes vs Cloud Run for multi-region scale"
-                  }
-                  className="w-full px-3 py-2 text-[13px] bg-[#FCFBF8] border border-[#D9D2C3] rounded-[4px] text-[#161E33] placeholder-[#8B909C] focus:border-[#2F5D8F] focus:ring-2 focus:ring-[#2F5D8F]/25 focus:outline-none transition-colors"
-                />
-              </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#D9D2C3]">
+                <div>
+                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={newFolderDesc}
+                    onChange={(e) => setNewFolderDesc(e.target.value)}
+                    placeholder="Context or domain notes..."
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#cfc7b2] dark:border-[#38332C]">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewFolderModal(false)}
+                    className="px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[12px] font-bold font-courier uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50"
+                  >
+                    {isSubmitting ? "Creating..." : "Create workspace"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* Modal: Challenge a Decision */}
+      {showNewDecisionModal && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier">
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
+              <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
+                <div>
+                  <span className="font-courier text-[10px] tracking-[0.14em] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase block">
+                    REASONING SCRUTINY
+                  </span>
+                  <h3 className="font-newsreader text-[22px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                    Challenge a decision
+                  </h3>
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowNewDecisionModal(false)}
-                  className="px-3 py-1.5 text-[13px] font-medium text-[#5A6275] hover:text-[#161E33] rounded-[4px]"
+                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`px-4 py-1.5 text-white text-[13px] font-medium rounded-[4px] transition-colors disabled:opacity-50 ${
-                    newRecordType === "meeting"
-                      ? "bg-[#1B4332] hover:bg-[#2D6A4F]"
-                      : "bg-[#161E33] hover:bg-[#232C47]"
-                  }`}
-                >
-                  {isSubmitting
-                    ? "Creating..."
-                    : newRecordType === "meeting"
-                    ? "Record meeting"
-                    : "Start decision"}
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-            </form>
+
+              {modalError && (
+                <div className="mb-3 p-2.5 rounded-sm bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-courier">
+                  {modalError}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateNewDecision} className="space-y-4 font-courier text-xs sm:text-[13px]">
+                <div>
+                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                    Workspace
+                  </label>
+                  <select
+                    value={newDecisionFolderId}
+                    onChange={(e) => setNewDecisionFolderId(Number(e.target.value))}
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                  >
+                    {folders.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                    {folders.length === 0 && (
+                      <option value="">General Decisions (created automatically)</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                    What decision are you weighing?
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={newDecisionTitle}
+                    onChange={(e) => setNewDecisionTitle(e.target.value)}
+                    placeholder="e.g. Choose between Kubernetes vs Cloud Run for multi-region scale"
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#cfc7b2] dark:border-[#38332C]">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewDecisionModal(false)}
+                    className="px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[12px] font-bold uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50 shadow-xs"
+                  >
+                    {isSubmitting ? "Starting Scrutiny..." : "Challenge Decision →"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      </ModalPortal>
+        </ModalPortal>
       )}
     </>
   );

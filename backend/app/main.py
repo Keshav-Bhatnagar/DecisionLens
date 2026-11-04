@@ -59,12 +59,23 @@ from fastapi.exceptions import RequestValidationError
 logger = logging.getLogger("decisionlens.main")
 
 
+def _cors_headers_for(request: Request, extra_headers=None):
+    headers = dict(extra_headers) if extra_headers else {}
+    origin = request.headers.get("origin")
+    if origin:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+        headers["Access-Control-Allow-Methods"] = "*"
+        headers["Access-Control-Allow-Headers"] = "*"
+    return headers
+
+
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
-        headers=getattr(exc, "headers", None),
+        headers=_cors_headers_for(request, getattr(exc, "headers", None)),
     )
 
 
@@ -76,6 +87,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=422,
         content={"detail": jsonable_encoder(exc.errors())},
+        headers=_cors_headers_for(request),
     )
 
 
@@ -94,6 +106,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "detail": "Internal server error",
             "error": str(exc) if settings.debug else "An unexpected error occurred",
         },
+        headers=_cors_headers_for(request),
     )
 
 

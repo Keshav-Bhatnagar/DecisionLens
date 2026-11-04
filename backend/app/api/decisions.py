@@ -5,7 +5,14 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models import User, Folder, Decision
-from app.schemas import DecisionCreate, DecisionUpdate, DecisionResponse
+from app.schemas import (
+    DecisionCreate,
+    DecisionUpdate,
+    DecisionResponse,
+    MemberResponse,
+    MeetingTakeawaysRequest,
+    MeetingTakeawaysResponse,
+)
 from app.auth import get_current_user, verify_ownership
 
 router = APIRouter(prefix="/decisions", tags=["Decisions"])
@@ -39,7 +46,7 @@ def create_decision(
         folder_id=body.folder_id,
         title=clean_title,
         description=body.description.strip() if body.description else "",
-        problem_statement=body.problem_statement.strip() if body.problem_statement else "",
+        problem_statement=(body.problem_statement.strip() if (body.problem_statement and body.problem_statement.strip()) else clean_title),
         record_type=body.record_type or "decision",
         status=body.status or "draft",
         language=body.language or "en",
@@ -145,6 +152,8 @@ def update_decision(
         decision.language = body.language
     if body.raw_input is not None:
         decision.raw_input = body.raw_input
+    if body.fault_lines is not None:
+        decision.fault_lines = body.fault_lines
 
     db.commit()
     db.refresh(decision)
@@ -172,3 +181,62 @@ def delete_decision(
     db.commit()
 
     return {"status": "deleted", "id": decision_id}
+
+
+@router.get(
+    "/{decision_id}/members",
+    response_model=List[MemberResponse],
+    summary="List all allowed collaborators for this decision workspace",
+)
+def list_decision_members(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve all allowed collaborators for this decision's workspace."""
+    decision = db.get(Decision, decision_id)
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+
+    from app.api.folders import list_folder_members
+    return list_folder_members(folder_id=decision.folder_id, db=db, current_user=current_user)
+
+
+@router.post(
+    "/{decision_id}/takeaways",
+    response_model=MeetingTakeawaysResponse,
+    summary="Generate executive meeting takeaways, action matrix, and company memos",
+)
+def get_meeting_takeaways(
+    decision_id: int,
+    body: Optional[MeetingTakeawaysRequest] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Synthesize enterprise meeting takeaways, silent stakeholder caveats,
+    and action items into executive-ready outputs (Slack & Email formats).
+    """
+    decision = db.get(Decision, decision_id)
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+
+    from app.services.meeting_takeaways import generate_meeting_takeaways
+
+    notes = body.notes if body else None
+    transcript = body.transcript if body else None
+    agenda = body.agenda if body else None
+    force_mock = body.force_mock if body else False
+
+    return generate_meeting_takeaways(
+        decision=decision,
+        notes=notes,
+        transcript=transcript,
+        agenda=agenda,
+        force_mock=force_mock,
+        db=db,
+    )

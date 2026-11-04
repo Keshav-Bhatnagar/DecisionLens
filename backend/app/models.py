@@ -59,9 +59,38 @@ class Folder(Base):
     decisions: Mapped[List["Decision"]] = relationship(
         "Decision", back_populates="folder", cascade="all, delete-orphan", passive_deletes=True
     )
+    members: Mapped[List["FolderMember"]] = relationship(
+        "FolderMember", back_populates="folder", cascade="all, delete-orphan", passive_deletes=True
+    )
 
     def __repr__(self) -> str:
         return f"<Folder id={self.id} name={self.name} owner_id={self.owner_id}>"
+
+class FolderMember(Base):
+    __tablename__ = "folder_members"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        ForeignKey("folders.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    display_name: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    role: Mapped[str] = mapped_column(String(50), default="editor")  # owner, editor, reviewer, viewer
+    authority_role: Mapped[str] = mapped_column(String(50), default="General / Team")  # DevOps / SRE, Lead Architect, etc.
+    status: Mapped[str] = mapped_column(String(30), default="active")  # active, invited
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
+
+    folder: Mapped["Folder"] = relationship("Folder", back_populates="members")
+    user: Mapped[Optional["User"]] = relationship("User")
+
+    def __repr__(self) -> str:
+        return f"<FolderMember id={self.id} folder_id={self.folder_id} email={self.email} role={self.role}>"
+
 
 
 class Decision(Base):
@@ -86,6 +115,7 @@ class Decision(Base):
     transcript_reviewed: Mapped[bool] = mapped_column(Boolean, default=False)
     points: Mapped[dict] = mapped_column(JSON, default=dict)
     points_reviewed: Mapped[bool] = mapped_column(Boolean, default=False)
+    fault_lines: Mapped[dict] = mapped_column(JSON, default=dict)
     gaps: Mapped[dict] = mapped_column(JSON, default=dict)
     research: Mapped[dict] = mapped_column(JSON, default=dict)
     analysis: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -267,4 +297,4 @@ class DecisionOutcome(Base):
     owner: Mapped["User"] = relationship("User")
 
     def __repr__(self) -> str:
-        return f"<DecisionOutcome id={self.id} decision_id={self.decision_id} rating={self.utility_rating}>"
+        return f"<DecisionOutcome id={self.id} decision_id={self.decision_id} rating={self.utility_rating}>"

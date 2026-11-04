@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, get_current_user_from_header_or_query, verify_ownership
 from app.database import get_db
 from app.models import AudioRecording, Decision, User
 from app.schemas import (
@@ -354,7 +354,7 @@ def stream_audio_file(
     audio_id: int,
     use_original: bool = False,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_from_header_or_query),
 ):
     """Stream audio recording with ownership verification."""
     decision = db.get(Decision, decision_id)

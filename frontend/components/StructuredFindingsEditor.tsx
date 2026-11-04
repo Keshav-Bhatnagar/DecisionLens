@@ -1,46 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-import {
-  Sparkles,
-  CheckCircle2,
-  AlertTriangle,
-  Layers,
-  HelpCircle,
-  Plus,
-  Trash2,
-  Lock,
-  ChevronDown,
-  ChevronUp,
-  Save,
-  RotateCw,
-  Info,
-  ShieldCheck,
-  Brain,
-  Scale,
-  Zap,
-  ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Columns,
-  Square,
-  FileText,
-  Cloud,
-  Heart,
-  TrendingUp,
-  GitBranch,
-} from "lucide-react";
-import PointCircularGallery from "./PointCircularGallery";
+import { ChevronLeft, ChevronRight, RotateCw, ArrowRight } from "lucide-react";
+import PointCircularGallery, { CategoryTheme, ZoomMode } from "./PointCircularGallery";
 import {
   analyzeDecisionInputs,
   getStructuredFindings,
   updateStructuredFindings,
   StructuredFindings,
-  PrivateTranscriptFeedback,
-  StructuringResponse,
 } from "@/lib/api";
 
 interface StructuredFindingsEditorProps {
@@ -48,6 +15,10 @@ interface StructuredFindingsEditorProps {
   initialFindings?: StructuredFindings;
   isReviewed?: boolean;
   onFindingsUpdated: () => void;
+  problemStatement?: string;
+  transcript?: string;
+  attachmentCount?: number;
+  onAdvanceToGaps?: () => void;
 }
 
 export default function StructuredFindingsEditor({
@@ -55,9 +26,13 @@ export default function StructuredFindingsEditor({
   initialFindings,
   isReviewed = false,
   onFindingsUpdated,
+  problemStatement = "",
+  transcript = "",
+  attachmentCount = 0,
+  onAdvanceToGaps,
 }: StructuredFindingsEditorProps) {
   const [findings, setFindings] = useState<StructuredFindings | null>(
-    initialFindings && (initialFindings.facts?.length || initialFindings.summary)
+    initialFindings && (initialFindings.facts?.length || initialFindings.assumptions?.length || initialFindings.summary)
       ? initialFindings
       : null
   );
@@ -67,16 +42,16 @@ export default function StructuredFindingsEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [showPrivateFeedback, setShowPrivateFeedback] = useState(false);
 
-  // Dual-grid Card showcase and view navigation
-  const [activePairIndex, setActivePairIndex] = useState(0);
-  const [globalZoom, setGlobalZoom] = useState<"zoomOut" | "spacious" | "focus">("zoomOut");
-  const [layoutColumns, setLayoutColumns] = useState<1 | 2>(2);
+  // Active slide index in the 4-category executive briefing deck
+  const [activeSlide, setActiveSlide] = useState<number>(0);
+
+  // 3D Circular Gallery zoom mode
+  const [galleryZoom, setGalleryZoom] = useState<ZoomMode>("spacious");
 
   // Synchronize when initial props change
   useEffect(() => {
-    if (initialFindings && (initialFindings.facts?.length || initialFindings.summary)) {
+    if (initialFindings && (initialFindings.facts?.length || initialFindings.assumptions?.length || initialFindings.summary)) {
       setFindings(initialFindings);
     }
     setReviewed(isReviewed);
@@ -97,6 +72,31 @@ export default function StructuredFindingsEditor({
     };
   }, [decisionId]);
 
+  // Keyboard navigation across the 4 slides: Shift+ArrowLeft / Shift+ArrowRight
+  // (Plain ArrowLeft / ArrowRight are reserved for spinning the 3D circular carousel)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.shiftKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        setActiveSlide((prev) => Math.max(0, prev - 1));
+      } else if (e.shiftKey && e.key === "ArrowRight") {
+        e.preventDefault();
+        setActiveSlide((prev) => Math.min(3, prev + 1));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleRunAnalysis = async () => {
     setIsAnalyzing(true);
     setError(null);
@@ -109,7 +109,7 @@ export default function StructuredFindingsEditor({
       if (res.source_summary) {
         setSourceSummary(res.source_summary);
       }
-      setSuccessMsg("Inputs successfully categorized into 8 cognitive categories!");
+      setSuccessMsg("Evidence structured into the 3D circular orbit.");
       onFindingsUpdated();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
@@ -123,48 +123,6 @@ export default function StructuredFindingsEditor({
     }
   };
 
-  const handleUpdateItem = (
-    category: keyof Omit<StructuredFindings, "private_feedback" | "summary" | "reviewed" | "reviewed_at">,
-    index: number,
-    newValue: string
-  ) => {
-    if (!findings) return;
-    const list = [...(findings[category] || [])];
-    list[index] = newValue;
-    setFindings({
-      ...findings,
-      [category]: list,
-    });
-    // Any manual modification reverts reviewed state until approved
-    if (reviewed) setReviewed(false);
-  };
-
-  const handleDeleteItem = (
-    category: keyof Omit<StructuredFindings, "private_feedback" | "summary" | "reviewed" | "reviewed_at">,
-    index: number
-  ) => {
-    if (!findings) return;
-    const list = [...(findings[category] || [])];
-    list.splice(index, 1);
-    setFindings({
-      ...findings,
-      [category]: list,
-    });
-    if (reviewed) setReviewed(false);
-  };
-
-  const handleAddItem = (
-    category: keyof Omit<StructuredFindings, "private_feedback" | "summary" | "reviewed" | "reviewed_at">
-  ) => {
-    if (!findings) return;
-    const list = [...(findings[category] || []), ""];
-    setFindings({
-      ...findings,
-      [category]: list,
-    });
-    if (reviewed) setReviewed(false);
-  };
-
   const handleSaveAndApprove = async (approve: boolean = true) => {
     if (!findings) return;
 
@@ -173,17 +131,16 @@ export default function StructuredFindingsEditor({
     setSuccessMsg(null);
 
     try {
-      // Filter out empty items
       const cleanData = {
-        facts: findings.facts.filter((f) => f.trim().length > 0),
-        assumptions: findings.assumptions.filter((f) => f.trim().length > 0),
-        feelings: findings.feelings.filter((f) => f.trim().length > 0),
-        pros: findings.pros.filter((f) => f.trim().length > 0),
-        cons: findings.cons.filter((f) => f.trim().length > 0),
-        mixed_points: findings.mixed_points.filter((f) => f.trim().length > 0),
-        contradictions: findings.contradictions.filter((f) => f.trim().length > 0),
-        unknowns: findings.unknowns.filter((f) => f.trim().length > 0),
-        summary: findings.summary,
+        facts: (findings.facts || []).filter((f) => f.trim().length > 0),
+        assumptions: (findings.assumptions || []).filter((f) => f.trim().length > 0),
+        feelings: (findings.feelings || []).filter((f) => f.trim().length > 0),
+        pros: (findings.pros || []).filter((f) => f.trim().length > 0),
+        cons: (findings.cons || []).filter((f) => f.trim().length > 0),
+        mixed_points: (findings.mixed_points || []).filter((f) => f.trim().length > 0),
+        contradictions: (findings.contradictions || []).filter((f) => f.trim().length > 0),
+        unknowns: (findings.unknowns || []).filter((f) => f.trim().length > 0),
+        summary: findings.summary || "",
         private_feedback: findings.private_feedback,
         mark_reviewed: approve,
       };
@@ -193,8 +150,8 @@ export default function StructuredFindingsEditor({
       setReviewed(res.points_reviewed);
       setSuccessMsg(
         approve
-          ? "Findings successfully reviewed and approved! Ready for deeper analysis."
-          : "Draft findings saved."
+          ? "Ground truth locked for framework analysis."
+          : "Evidence draft saved."
       );
       onFindingsUpdated();
       setTimeout(() => setSuccessMsg(null), 4000);
@@ -207,295 +164,329 @@ export default function StructuredFindingsEditor({
     }
   };
 
-  // Category Configuration for visual distinction
-  const categoryConfigs: Array<{
-    key: keyof Omit<StructuredFindings, "private_feedback" | "summary" | "reviewed" | "reviewed_at">;
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    colorClasses: {
-      border: string;
-      headerBg: string;
-      badge: string;
-      accent: string;
-    };
-  }> = [
+  // Structured Lists for the 4 Slides
+  const factsList = findings?.facts || [];
+  const prosList = findings?.pros || [];
+  const groundTruthCombined = [...factsList, ...prosList];
+
+  const assumptionsList = findings?.assumptions || [];
+
+  const contradictionsList = findings?.contradictions || [];
+  const feelingsList = findings?.feelings || [];
+  const biasesCombined = [...contradictionsList, ...feelingsList];
+
+  const consList = findings?.cons || [];
+  const privateBiases = findings?.private_feedback?.potential_biases || [];
+  const feedbackNotes = findings?.private_feedback?.feedback_notes ? [findings.private_feedback.feedback_notes] : [];
+  const caveatsCombined = [...consList, ...privateBiases, ...feedbackNotes];
+
+  // Handlers for Slide 0: The Ground Truth (Facts + Assets)
+  const handleUpdateGroundTruth = (index: number, newValue: string) => {
+    if (!findings) return;
+    if (index < factsList.length) {
+      const list = [...factsList];
+      list[index] = newValue;
+      setFindings({ ...findings, facts: list });
+    } else {
+      const proIdx = index - factsList.length;
+      const list = [...prosList];
+      list[proIdx] = newValue;
+      setFindings({ ...findings, pros: list });
+    }
+    if (reviewed) setReviewed(false);
+  };
+
+  const handleDeleteGroundTruth = (index: number) => {
+    if (!findings) return;
+    if (index < factsList.length) {
+      const list = [...factsList];
+      list.splice(index, 1);
+      setFindings({ ...findings, facts: list });
+    } else {
+      const proIdx = index - factsList.length;
+      const list = [...prosList];
+      list.splice(proIdx, 1);
+      setFindings({ ...findings, pros: list });
+    }
+    if (reviewed) setReviewed(false);
+  };
+
+  const handleAddGroundTruth = () => {
+    if (!findings) return;
+    setFindings({ ...findings, facts: [...factsList, ""] });
+    if (reviewed) setReviewed(false);
+  };
+
+  // Handlers for Slide 1: Unverified Assumptions
+  const handleUpdateAssumption = (index: number, newValue: string) => {
+    if (!findings) return;
+    const list = [...assumptionsList];
+    list[index] = newValue;
+    setFindings({ ...findings, assumptions: list });
+    if (reviewed) setReviewed(false);
+  };
+
+  const handleDeleteAssumption = (index: number) => {
+    if (!findings) return;
+    const list = [...assumptionsList];
+    list.splice(index, 1);
+    setFindings({ ...findings, assumptions: list });
+    if (reviewed) setReviewed(false);
+  };
+
+  const handleAddAssumption = () => {
+    if (!findings) return;
+    setFindings({ ...findings, assumptions: [...assumptionsList, ""] });
+    if (reviewed) setReviewed(false);
+  };
+
+  // Handlers for Slide 2: Biases & Blindspots
+  const handleUpdateBias = (index: number, newValue: string) => {
+    if (!findings) return;
+    if (index < contradictionsList.length) {
+      const list = [...contradictionsList];
+      list[index] = newValue;
+      setFindings({ ...findings, contradictions: list });
+    } else {
+      const feelingIdx = index - contradictionsList.length;
+      const list = [...feelingsList];
+      list[feelingIdx] = newValue;
+      setFindings({ ...findings, feelings: list });
+    }
+    if (reviewed) setReviewed(false);
+  };
+
+  const handleDeleteBias = (index: number) => {
+    if (!findings) return;
+    if (index < contradictionsList.length) {
+      const list = [...contradictionsList];
+      list.splice(index, 1);
+      setFindings({ ...findings, contradictions: list });
+    } else {
+      const feelingIdx = index - contradictionsList.length;
+      const list = [...feelingsList];
+      list.splice(feelingIdx, 1);
+      setFindings({ ...findings, feelings: list });
+    }
+    if (reviewed) setReviewed(false);
+  };
+
+  const handleAddBias = () => {
+    if (!findings) return;
+    setFindings({ ...findings, contradictions: [...contradictionsList, ""] });
+    if (reviewed) setReviewed(false);
+  };
+
+  // Handlers for Slide 3: Meeting Caveats & Friction
+  const handleUpdateCaveat = (index: number, newValue: string) => {
+    if (!findings) return;
+    if (index < consList.length) {
+      const list = [...consList];
+      list[index] = newValue;
+      setFindings({ ...findings, cons: list });
+    } else if (index < consList.length + privateBiases.length) {
+      const bIdx = index - consList.length;
+      const list = [...privateBiases];
+      list[bIdx] = newValue;
+      const currentPrivate = findings.private_feedback || {
+        tone_observations: "",
+        potential_biases: [],
+        clarity_rating: "",
+        feedback_notes: "",
+      };
+      setFindings({
+        ...findings,
+        private_feedback: { ...currentPrivate, potential_biases: list },
+      });
+    } else {
+      const currentPrivate = findings.private_feedback || {
+        tone_observations: "",
+        potential_biases: [],
+        clarity_rating: "",
+        feedback_notes: "",
+      };
+      setFindings({
+        ...findings,
+        private_feedback: { ...currentPrivate, feedback_notes: newValue },
+      });
+    }
+    if (reviewed) setReviewed(false);
+  };
+
+  const handleDeleteCaveat = (index: number) => {
+    if (!findings) return;
+    if (index < consList.length) {
+      const list = [...consList];
+      list.splice(index, 1);
+      setFindings({ ...findings, cons: list });
+    }
+    if (reviewed) setReviewed(false);
+  };
+
+  const handleAddCaveat = () => {
+    if (!findings) return;
+    setFindings({ ...findings, cons: [...consList, ""] });
+    if (reviewed) setReviewed(false);
+  };
+
+  const wordCount = transcript ? transcript.trim().split(/\s+/).filter(Boolean).length : 0;
+
+  // Dynamic Epistemic Justification Resolver: Evaluates specific sentence metrics, constraints, and logic
+  const resolveEpistemicWhy = (
+    category: "facts" | "assumptions" | "biases" | "caveats",
+    index: number,
+    text: string
+  ): string => {
+    // 1. Check if backend / LLM provided item-level why_classified in grounded_items
+    const groundedList = findings?.grounded_items?.[category === "biases" ? "contradictions" : category === "caveats" ? "cons" : category];
+    if (groundedList && groundedList[index]?.why_classified) {
+      return groundedList[index].why_classified!;
+    }
+
+    const t = text.toLowerCase();
+
+    // 2. Dynamic heuristic classification based on concrete content:
+    if (category === "facts") {
+      if (t.includes("p99") || t.includes("iops") || t.includes("latency") || t.includes("cpu") || t.includes("gmv") || /\d+ms|\d+%|₹\d+/.test(text)) {
+        return "Direct Telemetry Metric: Contains empirical APM measurements, hardware limits, or financial metrics recorded in historical production.";
+      }
+      if (t.includes("[security constraint]") || t.includes("dpdp") || t.includes("rbi") || t.includes("compliance") || t.includes("mumbai") || t.includes("statutory")) {
+        return "Statutory Legal Constraint: Mandatory regulatory or data localization directive (RBI/DPDP) with zero architectural discretion.";
+      }
+      if (t.includes("[devops") || t.includes("sre") || t.includes("kubernetes") || t.includes("production experience") || t.includes("team of")) {
+        return "Hard Operational Capacity: Concrete team staffing boundary and production expertise baseline that cannot be bypassed.";
+      }
+      if (t.includes("week") || t.includes("month") || t.includes("deadline") || t.includes("sale") || /\d+\s*weeks/.test(t)) {
+        return "Fixed Calendar Deadline: Firm business deadline with zero margin for unbudgeted migration delay.";
+      }
+      if (index >= (findings?.facts?.length || 0)) {
+        return "Validated Baseline Strength: Demonstrated core organizational or architectural asset confirmed by team history.";
+      }
+      return "Direct Ground Reality: Explicitly verified metric, team constraint, or baseline agreement documented in source records.";
+    }
+
+    if (category === "assumptions") {
+      if (/\d+[\s,]*users|\d+k|\d+m/.test(t)) {
+        return "Unverified Capacity Target: Projected user scaling volume without concurrent load benchmarks or database sizing models.";
+      }
+      if (t.includes("faster") || t.includes("better") || t.includes("easier") || t.includes("latency") || t.includes("throughput")) {
+        return "Untested Performance Premise: Performance advantage assumed without staging load tests or comparative profiling.";
+      }
+      if (t.includes("will") || t.includes("expect") || t.includes("assume") || t.includes("eventually") || t.includes("may")) {
+        return "Forward Projection: Stated future expectation that lacks empirical verification under real production workloads.";
+      }
+      return "Unverified Working Hypothesis: Stated premise requiring empirical verification in Stage 3 Web Research before architectural lock.";
+    }
+
+    if (category === "biases") {
+      if (t.includes("3 weeks") || t.includes("already spent") || t.includes("spent") || t.includes("prototyp") || t.includes("invested")) {
+        return "Sunk Cost Fallacy: Past prototype time or sunk effort is cited to justify architecture adoption, despite severe operational mismatches.";
+      }
+      if (t.includes("prefer") || t.includes("feels") || t.includes("like") || t.includes("favorite") || t.includes("gut")) {
+        return "Preference / Status Quo Bias: Subjective developer preference prioritizing comfort over verified system requirements.";
+      }
+      if (t.includes("conflict") || t.includes("simultaneously") || t.includes("opposing")) {
+        return "Direct Logical Contradiction: Two mutually exclusive propositions asserted simultaneously that cannot both be satisfied.";
+      }
+      return "Decision Trap & Logic Risk: Cognitive blindspot or planning optimism where commitment precedes empirical verification.";
+    }
+
+    if (category === "caveats") {
+      if (t.includes("experience") || t.includes("zero") || t.includes("sre") || t.includes("toil") || t.includes("overhead")) {
+        return "Execution & Toil Risk: Severe operational friction caused by team skill deficit and maintenance toil under tight timeline.";
+      }
+      if (t.includes("hesitat") || t.includes("concern") || t.includes("reluctan") || t.includes("worr") || t.includes("anxious")) {
+        return "Recorded Stakeholder Friction: Team anxiety or reluctance regarding system complexity noted during meeting.";
+      }
+      return "Operational Guardrail: Real-world organizational constraint or recorded dissent that must be protected in Stage 5.";
+    }
+
+    return "Epistemic Justification: Verified against source statements and decision context.";
+  };
+
+  // 4 Core Briefing Dimensions
+  const slides = [
     {
-      key: "facts",
-      title: "Facts",
-      description: "Concrete verified data, constraints, and realities",
-      icon: <FileText className="w-4 h-4 text-sky-700" />,
-      colorClasses: {
-        border: "border-sky-200",
-        headerBg: "bg-sky-50/80",
-        badge: "bg-sky-100 text-sky-800",
-        accent: "focus:border-sky-500",
+      id: "ground_truth",
+      number: "01",
+      title: "The Ground Truth",
+      subtitle: `Direct facts (${factsList.length}) and validated realities (${prosList.length})`,
+      count: groundTruthCombined.length,
+      colorTheme: {
+        border: "border-[#cfc7b2] dark:border-[#38332C]",
+        badge: "bg-[#161E33] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]",
+        accent: "border-[#7a4e10] dark:border-[#D4AA50]",
       },
     },
     {
-      key: "assumptions",
-      title: "Assumptions",
-      description: "Unverified hypotheses, untested premises, projections",
-      icon: <Cloud className="w-4 h-4 text-purple-700" />,
-      colorClasses: {
-        border: "border-purple-200",
-        headerBg: "bg-purple-50/80",
-        badge: "bg-purple-100 text-purple-800",
-        accent: "focus:border-purple-500",
+      id: "assumptions",
+      number: "02",
+      title: "Working Assumptions",
+      subtitle: "Hypotheses that require validation in Stage 3 Web Research",
+      count: assumptionsList.length,
+      colorTheme: {
+        border: "border-[#cfc7b2] dark:border-[#38332C]",
+        badge: "bg-[#2F5D8F]/15 text-[#2F5D8F] dark:bg-[#2F5D8F]/30 dark:text-[#93B4D7]",
+        accent: "border-[#2F5D8F]",
       },
     },
     {
-      key: "feelings",
-      title: "Feelings & Sentiment",
-      description: "Emotional reactions, team sentiment, gut instincts, and morale",
-      icon: <Heart className="w-4 h-4 text-rose-700" />,
-      colorClasses: {
-        border: "border-rose-200",
-        headerBg: "bg-rose-50/80",
-        badge: "bg-rose-100 text-rose-800",
-        accent: "focus:border-rose-500",
+      id: "biases",
+      number: "03",
+      title: "Decision Traps & Blindspots",
+      subtitle: "Sunk costs, planning fallacies, and structural logic risks",
+      count: biasesCombined.length,
+      colorTheme: {
+        border: "border-[#cfc7b2] dark:border-[#38332C]",
+        badge: "bg-[#B4874B]/15 text-[#7a4e10] dark:bg-[#D4AA50]/20 dark:text-[#D4AA50]",
+        accent: "border-[#B4874B]",
       },
     },
     {
-      key: "pros",
-      title: "Pros & Strengths",
-      description: "Advantages, positive benefits, and favorable outcomes",
-      icon: <TrendingUp className="w-4 h-4 text-emerald-700" />,
-      colorClasses: {
-        border: "border-emerald-200",
-        headerBg: "bg-emerald-50/80",
-        badge: "bg-emerald-100 text-emerald-800",
-        accent: "focus:border-emerald-500",
-      },
-    },
-    {
-      key: "cons",
-      title: "Cons & Risks",
-      description: "Downsides, vulnerabilities, friction, and costs",
-      icon: <AlertTriangle className="w-4 h-4 text-red-700" />,
-      colorClasses: {
-        border: "border-red-200",
-        headerBg: "bg-red-50/80",
-        badge: "bg-red-100 text-red-800",
-        accent: "focus:border-red-500",
-      },
-    },
-    {
-      key: "mixed_points",
-      title: "Mixed Points & Trade-Offs",
-      description: "Nuanced points carrying both upsides and drawbacks",
-      icon: <Scale className="w-4 h-4 text-amber-700" />,
-      colorClasses: {
-        border: "border-amber-200",
-        headerBg: "bg-amber-50/80",
-        badge: "bg-amber-100 text-amber-800",
-        accent: "focus:border-amber-500",
-      },
-    },
-    {
-      key: "contradictions",
-      title: "Contradictions",
-      description: "Conflicting claims or opposing views across stakeholders",
-      icon: <Zap className="w-4 h-4 text-orange-700" />,
-      colorClasses: {
-        border: "border-orange-200",
-        headerBg: "bg-orange-50/80",
-        badge: "bg-orange-100 text-orange-800",
-        accent: "focus:border-orange-500",
-      },
-    },
-    {
-      key: "unknowns",
-      title: "Unknowns & Open Questions",
-      description: "Missing information, unanswered queries, and uncertainties",
-      icon: <HelpCircle className="w-4 h-4 text-indigo-700" />,
-      colorClasses: {
-        border: "border-indigo-200",
-        headerBg: "bg-indigo-50/80",
-        badge: "bg-indigo-100 text-indigo-800",
-        accent: "focus:border-indigo-500",
+      id: "caveats",
+      number: "04",
+      title: "Meeting Caveats & Friction",
+      subtitle: "Recorded dissent, operational constraints, and scribe notes",
+      count: caveatsCombined.length,
+      colorTheme: {
+        border: "border-[#cfc7b2] dark:border-[#38332C]",
+        badge: "bg-[#5A6275]/15 text-[#5A6275] dark:bg-[#5A6275]/30 dark:text-[#C5CBD8]",
+        accent: "border-[#5A6275]",
       },
     },
   ];
 
-  // 4 comparative dual-grid card pairs
-  const categoryPairs: Array<{
-    id: string;
-    pairNumber: number;
-    title: string;
-    subtitle: string;
-    iconA: React.ReactNode;
-    iconB: React.ReactNode;
-    first: (typeof categoryConfigs)[number];
-    second: (typeof categoryConfigs)[number];
-  }> = [
-    {
-      id: "pair-1",
-      pairNumber: 1,
-      title: "Facts & Assumptions",
-      subtitle: "Verified Reality vs Untested Hypotheses",
-      iconA: <FileText className="w-4 h-4 text-sky-700" />,
-      iconB: <Cloud className="w-4 h-4 text-purple-700" />,
-      first: categoryConfigs[0], // facts
-      second: categoryConfigs[1], // assumptions
-    },
-    {
-      id: "pair-2",
-      pairNumber: 2,
-      title: "Feelings & Strengths",
-      subtitle: "Team Sentiment vs Key Strategic Advantages",
-      iconA: <Heart className="w-4 h-4 text-rose-700" />,
-      iconB: <TrendingUp className="w-4 h-4 text-emerald-700" />,
-      first: categoryConfigs[2], // feelings
-      second: categoryConfigs[3], // pros
-    },
-    {
-      id: "pair-3",
-      pairNumber: 3,
-      title: "Risks & Trade-Offs",
-      subtitle: "Downsides & Friction vs Balanced Nuances",
-      iconA: <AlertTriangle className="w-4 h-4 text-red-700" />,
-      iconB: <Scale className="w-4 h-4 text-amber-700" />,
-      first: categoryConfigs[4], // cons
-      second: categoryConfigs[5], // mixed_points
-    },
-    {
-      id: "pair-4",
-      pairNumber: 4,
-      title: "Contradictions & Unknowns",
-      subtitle: "Stakeholder Conflicts vs Critical Information Gaps",
-      iconA: <Zap className="w-4 h-4 text-orange-700" />,
-      iconB: <HelpCircle className="w-4 h-4 text-indigo-700" />,
-      first: categoryConfigs[6], // contradictions
-      second: categoryConfigs[7], // unknowns
-    },
-  ];
-
-  const handlePrevPair = () => {
-    setActivePairIndex((prev) => Math.max(0, prev - 1));
-  };
-
-  const handleNextPair = () => {
-    setActivePairIndex((prev) =>
-      Math.min(categoryPairs.length - 1, prev + 1)
-    );
-  };
-
-  // Keyboard navigation for dual-grid card carousel
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        handlePrevPair();
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        handleNextPair();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  // Render a category grid column powered by 3D Circular Point Gallery for comfortable reading
-  const renderCategoryGridColumn = (
-    config: (typeof categoryConfigs)[number]
-  ) => {
-    if (!findings) return null;
-    const items = findings[config.key] || [];
-
-    return (
-      <div
-        key={config.key}
-        className={`border rounded-2xl overflow-hidden bg-white shadow-xs ${config.colorClasses.border} flex flex-col justify-between`}
-      >
-        <div>
-          {/* Category Header */}
-          <div
-            className={`px-5 py-3.5 border-b flex items-center justify-between ${config.colorClasses.headerBg} ${config.colorClasses.border}`}
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="p-2 bg-white rounded-lg shadow-2xs border border-slate-200 flex items-center justify-center shrink-0">
-                {config.icon}
-              </span>
-              <div className="min-w-0">
-                <span className="text-xs font-bold text-slate-900 block truncate">
-                  {config.title}
-                </span>
-                <span className="text-[10px] text-slate-500 block truncate">
-                  {config.description}
-                </span>
-              </div>
-            </div>
-
-            <span
-              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${config.colorClasses.badge}`}
-            >
-              {items.length} {items.length === 1 ? "point" : "points"}
-            </span>
-          </div>
-
-          {/* 3D Circular Point Gallery Canvas with Spacious Padding */}
-          <div className="p-4 sm:p-5 bg-slate-50/40">
-            <PointCircularGallery
-              categoryKey={config.key}
-              title={config.title}
-              description={config.description}
-              icon={config.icon}
-              colorClasses={config.colorClasses}
-              items={items}
-              zoomLevel={globalZoom}
-              onZoomChange={setGlobalZoom}
-              onUpdateItem={(index, newVal) =>
-                handleUpdateItem(config.key, index, newVal)
-              }
-              onDeleteItem={(index) => handleDeleteItem(config.key, index)}
-              onAddItem={() => handleAddItem(config.key)}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const currentSlide = slides[activeSlide];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
-      {/* Module Title and Run Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Brain className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-900">
-                Cognitive Structuring & De-Biasing
-              </h2>
-            </div>
-            <p className="text-xs text-slate-500">
-              Separates objective facts from assumptions, emotions, and unverified claims to eliminate bias before analysis.
-            </p>
-          </div>
+    <div className="bg-[#FCFBF8] dark:bg-[#181614] rounded-xl border border-[#D9D2C3] dark:border-[#38332C] p-6 sm:p-8 space-y-6 font-sans">
+      {/* Editorial Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-[#D9D2C3]/60 dark:border-[#38332C]">
+        <div>
+          <span className="text-xs font-mono font-bold tracking-wider text-[#7a4e10] dark:text-[#D4AA50] uppercase">
+            Stage 02 • Evidence &amp; Cognitive Triage
+          </span>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#161E33] dark:text-[#F0EAE1] tracking-tight mt-1">
+            The Evidence Orbit
+          </h2>
+          <p className="text-xs sm:text-sm text-[#5A6275] dark:text-[#A89F91] mt-1 max-w-2xl leading-relaxed">
+            Review direct facts, untested assumptions, and unspoken friction in a 3D rotating stage before committing to a decision.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 shrink-0">
           {findings && (
             <button
               type="button"
-              onClick={handleRunAnalysis}
-              disabled={isAnalyzing}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors disabled:opacity-50"
+              onClick={() => handleSaveAndApprove(!reviewed)}
+              disabled={isSaving}
+              className={`px-3.5 py-2 text-xs font-bold rounded-lg border transition-colors cursor-pointer ${
+                reviewed
+                  ? "bg-[#EDE7D6] text-[#7a4e10] border-[#cfc7b2] dark:bg-[#221F1C] dark:text-[#D4AA50] dark:border-[#38332C]"
+                  : "bg-[#F5F1E8] text-[#5A6275] border-[#D9D2C3] dark:bg-[#1A1815] dark:text-[#A89F91] dark:border-[#38332C]"
+              }`}
             >
-              <RotateCw className={`w-3.5 h-3.5 ${isAnalyzing ? "animate-spin" : ""}`} />
-              Re-analyze
+              {reviewed ? "Ground Truth Locked" : "Lock Ground Truth"}
             </button>
           )}
 
@@ -503,443 +494,367 @@ export default function StructuredFindingsEditor({
             type="button"
             onClick={handleRunAnalysis}
             disabled={isAnalyzing}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
-            {isAnalyzing
-              ? "Structuring Inputs..."
-              : findings
-              ? "Re-Run Structuring"
-              : "Structure Decision Inputs"}
+            {isAnalyzing && <RotateCw className="w-3.5 h-3.5 animate-spin" />}
+            <span>
+              {isAnalyzing
+                ? "Analyzing Evidence..."
+                : findings
+                ? "Re-evaluate Evidence"
+                : "Analyze Evidence"}
+            </span>
           </button>
         </div>
       </div>
 
-      {/* Sources & Folder Memory Banner */}
+      {/* Ingestion Sources Summary */}
       {sourceSummary && sourceSummary !== "None" && (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-paper-surface border border-border rounded text-xs text-ink-secondary">
-          <div className="flex items-center gap-2">
-            <Layers className="w-3.5 h-3.5 text-accent shrink-0" />
-            <span>
-              Context Sources: <strong className="font-semibold text-ink">{sourceSummary}</strong>
-            </span>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#EDE7D6]/50 dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#5A6275] dark:text-[#A89F91]">
+          <span>
+            Context Sources: <strong className="font-bold text-[#161E33] dark:text-[#F0EAE1]">{sourceSummary}</strong>
+          </span>
           {sourceSummary.includes("Folder Memory") && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono bg-accent/10 text-accent font-medium border border-accent/20">
-              <GitBranch className="w-3 h-3" />
-              Connected to Prior Folder Records
+            <span className="font-mono text-[11px] text-[#7a4e10] dark:text-[#D4AA50]">
+              [Linked to Prior Folder Decisions]
             </span>
           )}
-        </div>
-      )}
-
-      {/* Review Gate Alert Banner */}
-      {findings && (
-        <div
-          className={`p-4 rounded-xl border flex items-start justify-between gap-3 ${
-            reviewed
-              ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
-              : "bg-amber-50/80 border-amber-200 text-amber-900"
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            {reviewed ? (
-              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            ) : (
-              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            )}
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider">
-                  {reviewed ? "Findings Reviewed & Approved" : "User Review Required"}
-                </span>
-                {reviewed ? (
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                    Ready for Framework Analysis
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                    Review Gate Active
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-600 mt-1">
-                {reviewed
-                  ? "You have verified these categorized findings. Downstream analysis frameworks will use these approved points."
-                  : "Please review and edit the extracted points below. Ensure accuracy and click 'Approve & Save Structured Findings' before proceeding."}
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleSaveAndApprove(!reviewed)}
-            disabled={isSaving}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors shrink-0 ${
-              reviewed
-                ? "bg-white border-emerald-300 text-emerald-800 hover:bg-emerald-100"
-                : "bg-amber-600 border-transparent text-white hover:bg-amber-700 shadow-sm"
-            }`}
-          >
-            {reviewed ? "Mark Unreviewed" : "Approve Findings"}
-          </button>
         </div>
       )}
 
       {/* Notifications */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
-          <Info className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
+        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg text-xs text-red-800 dark:text-red-300">
+          {error}
         </div>
       )}
 
       {successMsg && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center gap-2 animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{successMsg}</span>
+        <div className="p-3 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#D4AA50]">
+          {successMsg}
         </div>
       )}
 
-      {/* Empty State when findings not yet generated */}
+      {/* COLD START: Signal Readiness Audit (When No Findings Yet) */}
       {!findings && !isAnalyzing && (
-        <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl space-y-3">
-          <div className="w-12 h-12 bg-white rounded-xl border border-slate-200 mx-auto flex items-center justify-center text-indigo-600 shadow-xs">
-            <Layers className="w-6 h-6" />
+        <div className="p-6 sm:p-8 bg-[#F5F1E8]/70 dark:bg-[#1A1815] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-[#161E33] dark:text-[#F0EAE1]">
+                Input Signal Readiness Audit
+              </h3>
+              <p className="text-xs text-[#5A6275] dark:text-[#A89F91] mt-0.5">
+                Aggregates your problem statement, meeting scribe, and dossier into 4 structured dimensions.
+              </p>
+            </div>
+            <span className="text-xs font-mono font-bold px-2.5 py-1 bg-[#EDE7D6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-md">
+              Ready to Structure
+            </span>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-800">No Structured Findings Yet</h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-              Click &quot;Structure Inputs into 8 Categories&quot; to aggregate the problem statement, notes, transcript, and attached documents into distinct cognitive categories.
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                Problem Statement
+              </span>
+              <p className="text-xs sm:text-sm text-[#161E33] dark:text-[#F0EAE1] line-clamp-2">
+                {problemStatement ? problemStatement : "Pending framing in Stage 1"}
+              </p>
+              <span className="text-[11px] text-[#5A6275] dark:text-[#A89F91] block font-mono">
+                {problemStatement ? `${problemStatement.split(/\s+/).length} words framed` : "0 words"}
+              </span>
+            </div>
+
+            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                Meeting Scribe &amp; Audio
+              </span>
+              <p className="text-xs sm:text-sm text-[#161E33] dark:text-[#F0EAE1]">
+                {wordCount > 0 ? `${wordCount} words transcribed` : "No voice recording uploaded"}
+              </p>
+              <span className="text-[11px] text-[#5A6275] dark:text-[#A89F91] block font-mono">
+                {wordCount > 0 ? "IIT Madras / IndicReady" : "Optional input"}
+              </span>
+            </div>
+
+            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                Document Dossier
+              </span>
+              <p className="text-xs sm:text-sm text-[#161E33] dark:text-[#F0EAE1]">
+                {attachmentCount > 0 ? `${attachmentCount} attachment(s) parsed` : "No attachments parsed"}
+              </p>
+              <span className="text-[11px] text-[#5A6275] dark:text-[#A89F91] block font-mono">
+                PDF, DOCX, TXT Evidence
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#D9D2C3]/60 dark:border-[#38332C]">
+            <p className="text-xs text-[#5A6275] dark:text-[#A89F91]">
+              Click below to initiate the 3D rotating evidence carousel.
             </p>
+            <button
+              type="button"
+              onClick={handleRunAnalysis}
+              className="w-full sm:w-auto px-5 py-2 text-xs font-bold text-[#F5F1E8] bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
+            >
+              Launch Evidence Orbit
+            </button>
           </div>
         </div>
       )}
 
-      {/* Structured Findings Card View */}
+      {/* THE 3D EVIDENCE ORBIT DECK */}
       {findings && (
-        <div className="space-y-6">
-          {(() => {
-              const activePair =
-                categoryPairs[activePairIndex] || categoryPairs[0];
-              const prevPair =
-                categoryPairs[
-                  (activePairIndex - 1 + categoryPairs.length) %
-                    categoryPairs.length
-                ];
-              const nextPair =
-                categoryPairs[
-                  (activePairIndex + 1) % categoryPairs.length
-                ];
-
-              const countFirst = (findings[activePair.first.key] || []).length;
-              const countSecond = (findings[activePair.second.key] || []).length;
-              const totalPairCount = countFirst + countSecond;
-
+        <div className="space-y-4">
+          {/* Top 4 Dimension Tabs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {slides.map((s, idx) => {
+              const isActive = activeSlide === idx;
               return (
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-300">
-                  {/* Card Pair Header */}
-                  <div className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-purple-50/15 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3.5">
-                      <div className="flex items-center gap-1.5 p-2 bg-white rounded-xl shadow-2xs border border-slate-200 shrink-0">
-                        {activePair.iconA}
-                        <span className="text-slate-300 font-light text-xs">/</span>
-                        {activePair.iconB}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <h3 className="text-xl font-bold text-slate-900 tracking-tight">
-                            {activePair.title}
-                          </h3>
-                          <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 rounded-full">
-                            {totalPairCount} points
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 mt-1">
-                          {activePair.subtitle}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Zoom, Layout & Navigation Controls */}
-                    <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-center">
-                      {/* Global Zoom Toolbar */}
-                      <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-                        <button
-                          type="button"
-                          onClick={() => setGlobalZoom("zoomOut")}
-                          className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition ${
-                            globalZoom === "zoomOut"
-                              ? "bg-indigo-50 text-indigo-700 font-semibold"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                          title="Zoom Out: Wide camera view"
-                        >
-                          <ZoomOut className="w-3.5 h-3.5" />
-                          <span className="hidden md:inline">Zoom Out</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setGlobalZoom("spacious")}
-                          className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition ${
-                            globalZoom === "spacious"
-                              ? "bg-indigo-50 text-indigo-700 font-semibold"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                          title="Spacious Box: Generous card height"
-                        >
-                          <Maximize2 className="w-3.5 h-3.5" />
-                          <span className="hidden md:inline">Spacious</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setGlobalZoom("focus")}
-                          className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition ${
-                            globalZoom === "focus"
-                              ? "bg-indigo-50 text-indigo-700 font-semibold"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                          title="Focus Zoom: Enlarged reading view"
-                        >
-                          <ZoomIn className="w-3.5 h-3.5" />
-                          <span className="hidden md:inline">Focus</span>
-                        </button>
-                      </div>
-
-                      {/* Layout Switcher: 2-Col Grid vs 1-Col Full Width */}
-                      <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-                        <button
-                          type="button"
-                          onClick={() => setLayoutColumns(2)}
-                          className={`p-1.5 rounded-lg text-xs transition ${
-                            layoutColumns === 2
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-500 hover:text-slate-900"
-                          }`}
-                          title="2 Columns: Side-by-side comparison"
-                        >
-                          <Columns className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setLayoutColumns(1)}
-                          className={`p-1.5 rounded-lg text-xs transition ${
-                            layoutColumns === 1
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-500 hover:text-slate-900"
-                          }`}
-                          title="1 Column: Maximum spacious width"
-                        >
-                          <Square className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      {/* Arrow Navigation */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={handlePrevPair}
-                          disabled={activePairIndex === 0}
-                          title={`Previous: ${prevPair.title}`}
-                          className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleNextPair}
-                          disabled={
-                            activePairIndex === categoryPairs.length - 1
-                          }
-                          title={`Next: ${nextPair.title}`}
-                          className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Body: Grids (1-col expanded or 2-col side-by-side) */}
-                  <div className="p-6 sm:p-8 bg-slate-50/30">
-                    <div
-                      className={`grid ${
-                        layoutColumns === 1
-                          ? "grid-cols-1 gap-8"
-                          : "grid-cols-1 lg:grid-cols-2 gap-6"
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setActiveSlide(idx)}
+                  className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                    isActive
+                      ? "bg-[#EDE7D6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-xs"
+                      : "bg-[#F5F1E8]/70 dark:bg-[#1A1815] border-[#D9D2C3] dark:border-[#38332C] hover:bg-[#EDE7D6]/50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50]">
+                      {s.number}
+                    </span>
+                    <span
+                      className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                        isActive
+                          ? "bg-[#161E33] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]"
+                          : "bg-[#D9D2C3]/70 dark:bg-[#2C2722] text-[#5A6275] dark:text-[#A89F91]"
                       }`}
                     >
-                      {renderCategoryGridColumn(activePair.first)}
-                      {renderCategoryGridColumn(activePair.second)}
-                    </div>
+                      {s.count} items
+                    </span>
                   </div>
-
-                  {/* Card Navigation Footer with Prev / Dots / Next */}
-                  <div className="p-4 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <button
-                      type="button"
-                      onClick={handlePrevPair}
-                      disabled={activePairIndex === 0}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      <span>Previous: {prevPair.title}</span>
-                    </button>
-
-                    {/* Step Dots Indicator for the 4 Cards */}
-                    <div className="flex items-center gap-2 py-1">
-                      {categoryPairs.map((p, i) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setActivePairIndex(i)}
-                          className={`h-2.5 rounded-full transition-all ${
-                            activePairIndex === i
-                              ? "w-8 bg-indigo-600 shadow-2xs"
-                              : "w-2.5 bg-slate-200 hover:bg-slate-300"
-                          }`}
-                          title={`Go to Card ${i + 1}: ${p.title}`}
-                        />
-                      ))}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleNextPair}
-                      disabled={
-                        activePairIndex === categoryPairs.length - 1
-                      }
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl disabled:opacity-30 disabled:pointer-events-none transition shadow-2xs"
-                    >
-                      <span>Next: {nextPair.title}</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                  <div className="text-xs sm:text-sm font-bold text-[#161E33] dark:text-[#F0EAE1] truncate mt-1.5">
+                    {s.title}
                   </div>
-                </div>
+                  <div className="text-[11px] text-[#5A6275] dark:text-[#A89F91] truncate mt-0.5">
+                    {s.subtitle}
+                  </div>
+                </button>
               );
-            })()}
+            })}
+          </div>
 
-          {/* Private Transcript Feedback Drawer (Collapsible) */}
-          {findings.private_feedback && (
-            <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-900 text-slate-200 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setShowPrivateFeedback(!showPrivateFeedback)}
-                className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-slate-800/60 transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                        Private Transcript Reflection
-                      </span>
-                      <span className="text-[10px] bg-slate-800 text-indigo-300 border border-indigo-400/30 px-2 py-0.5 rounded-full font-mono">
-                        Internal Feedback Only
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Private coaching notes on tone, potential biases, and clarity before final decision-making.
-                    </p>
+          {/* Active Dimension Orbit Stage */}
+          <div className="rounded-xl border border-[#D9D2C3] dark:border-[#38332C] bg-[#FCFBF8] dark:bg-[#1A1815] p-5 sm:p-6 space-y-4">
+            {/* Header: Title & Stepper */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#D9D2C3]/60 dark:border-[#38332C]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-bold text-[#161E33] dark:text-[#F0EAE1]">
+                    {currentSlide.title}
+                  </h3>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-[#EDE7D6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
+                    {currentSlide.count} items
+                  </span>
+                </div>
+                <p className="text-xs text-[#5A6275] dark:text-[#A89F91] mt-0.5">
+                  {currentSlide.subtitle}
+                </p>
+              </div>
+
+              {/* Stepper Controls */}
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <button
+                  type="button"
+                  disabled={activeSlide === 0}
+                  onClick={() => setActiveSlide((prev) => Math.max(0, prev - 1))}
+                  className="w-8 h-8 rounded-lg bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#161E33] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center cursor-pointer"
+                  title="Previous Category (Shift + ArrowLeft)"
+                  aria-label="Previous Category"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs font-mono font-bold text-[#5A6275] dark:text-[#A89F91] px-1">
+                  Category {activeSlide + 1} of 4
+                </span>
+                <button
+                  type="button"
+                  disabled={activeSlide === 3}
+                  onClick={() => setActiveSlide((prev) => Math.min(3, prev + 1))}
+                  className="w-8 h-8 rounded-lg bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#161E33] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center cursor-pointer"
+                  title="Next Category (Shift + ArrowRight)"
+                  aria-label="Next Category"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* 3D CIRCULAR GALLERY */}
+            <div className="pt-1">
+              {activeSlide === 0 && (
+                <div className="space-y-3">
+                  <PointCircularGallery
+                    categoryKey="facts"
+                    title="Ground Truth"
+                    description="Direct facts and validated realities anchoring your decision"
+                    colorClasses={currentSlide.colorTheme}
+                    items={groundTruthCombined}
+                    zoomLevel={galleryZoom}
+                    onZoomChange={setGalleryZoom}
+                    onUpdateItem={handleUpdateGroundTruth}
+                    onDeleteItem={handleDeleteGroundTruth}
+                    onAddItem={handleAddGroundTruth}
+                    whyClassified="Direct empirical baseline: verified system telemetry, legal compliance mandate, or immutable organizational constraint that cannot be disputed."
+                    getItemWhyClassified={(idx, text) => resolveEpistemicWhy("facts", idx, text)}
+                    downstreamDestination="Moves to Stage 4 & 5 as hard boundary conditions. Any architecture violating these is penalized."
+                  />
+
+                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#F0EAE1]">
+                    <span className="font-bold font-mono text-[10px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                      Stage 4 &amp; 5 Pipeline Destination
+                    </span>
+                    <span>
+                      These {groundTruthCombined.length} verified facts move to <strong>Stage 4 Multi-Criteria Scoring</strong> and <strong>Stage 5 Architecture Decision Record (ADR)</strong> as immutable boundary conditions. Architectural options that violate these facts are automatically penalized.
+                    </span>
                   </div>
                 </div>
+              )}
 
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span>{showPrivateFeedback ? "Collapse" : "Expand Insights"}</span>
-                  {showPrivateFeedback ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-              </button>
+              {activeSlide === 1 && (
+                <div className="space-y-3">
+                  <PointCircularGallery
+                    categoryKey="assumptions"
+                    title="Working Assumption"
+                    description="Untested hypotheses to verify in Stage 3 Web Research"
+                    colorClasses={currentSlide.colorTheme}
+                    items={assumptionsList}
+                    zoomLevel={galleryZoom}
+                    onZoomChange={setGalleryZoom}
+                    onUpdateItem={handleUpdateAssumption}
+                    onDeleteItem={handleDeleteAssumption}
+                    onAddItem={handleAddAssumption}
+                    whyClassified="Unverified forward projection: an expectation, performance goal, or capacity target not yet proven under real production load."
+                    getItemWhyClassified={(idx, text) => resolveEpistemicWhy("assumptions", idx, text)}
+                    downstreamDestination="Moves to Stage 3 Web Research to retrieve benchmarks & empirical proof."
+                  />
 
-              {showPrivateFeedback && (
-                <div className="p-5 border-t border-slate-800 space-y-4 bg-slate-950/60 text-xs text-slate-300">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Tone Assessment */}
-                    <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Discussion Tone Observations
+                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg flex items-center justify-between gap-3 text-xs text-[#161E33] dark:text-[#F0EAE1]">
+                    <div>
+                      <span className="font-bold font-mono text-[10px] text-[#2F5D8F] dark:text-[#93B4D7] uppercase tracking-wider block">
+                        Stage 3 Pipeline Destination
                       </span>
-                      <p className="text-slate-200 leading-relaxed">
-                        {findings.private_feedback.tone_observations || "Tone is balanced and professional."}
-                      </p>
-                    </div>
-
-                    {/* Clarity Rating */}
-                    <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Problem Clarity Rating
-                      </span>
-                      <span className="inline-block px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-900/50 text-indigo-300 border border-indigo-700/50">
-                        {findings.private_feedback.clarity_rating || "Medium"}
+                      <span>
+                        These {assumptionsList.length} unverified assumptions move to <strong>Stage 3 Web Research</strong>, where targeted queries are automatically formulated to retrieve external benchmarks and real-world case studies before committing.
                       </span>
                     </div>
-                  </div>
-
-                  {/* Potential Cognitive Biases */}
-                  {findings.private_feedback.potential_biases &&
-                    findings.private_feedback.potential_biases.length > 0 && (
-                      <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
-                          Detected Cognitive Biases & Blind Spots
-                        </span>
-                        <ul className="space-y-1.5">
-                          {findings.private_feedback.potential_biases.map((bias, i) => (
-                            <li key={i} className="flex items-start gap-2 text-slate-300">
-                              <span className="text-amber-400 shrink-0 mt-0.5">•</span>
-                              <span>{bias}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                    {onAdvanceToGaps && assumptionsList.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={onAdvanceToGaps}
+                        className="px-3 py-1.5 bg-[#2F5D8F] hover:bg-[#244870] text-white font-bold rounded-md transition-colors shrink-0 cursor-pointer"
+                      >
+                        Validate in Stage 3 →
+                      </button>
                     )}
+                  </div>
+                </div>
+              )}
 
-                  {/* Coaching Notes */}
-                  {findings.private_feedback.feedback_notes && (
-                    <div className="p-3 bg-indigo-950/40 rounded-xl border border-indigo-900/50 space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block">
-                        Actionable Guidance for Next Phases
-                      </span>
-                      <p className="text-slate-200 leading-relaxed">
-                        {findings.private_feedback.feedback_notes}
-                      </p>
-                    </div>
-                  )}
+              {activeSlide === 2 && (
+                <div className="space-y-3">
+                  <PointCircularGallery
+                    categoryKey="contradictions"
+                    title="Decision Trap"
+                    description="Sunk costs, planning fallacies, and structural logic risks"
+                    colorClasses={currentSlide.colorTheme}
+                    items={biasesCombined}
+                    zoomLevel={galleryZoom}
+                    onZoomChange={setGalleryZoom}
+                    onUpdateItem={handleUpdateBias}
+                    onDeleteItem={handleDeleteBias}
+                    onAddItem={handleAddBias}
+                    whyClassified="Structural logic fallacy: potential sunk-cost trap, planning overconfidence, or conflict between stated deadlines and team capacity."
+                    getItemWhyClassified={(idx, text) => resolveEpistemicWhy("biases", idx, text)}
+                    downstreamDestination="Moves to Stage 4 Pre-Mortem & Inversion analysis to stress-test your team."
+                  />
+
+                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#F0EAE1]">
+                    <span className="font-bold font-mono text-[10px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                      Stage 4 Pipeline Destination
+                    </span>
+                    <span>
+                      These {biasesCombined.length} logical blindspots move to <strong>Stage 4 Pre-Mortem &amp; Inversion Analysis</strong>, where the Shark Panel actively stress-tests your plan against Sunk Cost traps and premature commitment.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {activeSlide === 3 && (
+                <div className="space-y-3">
+                  <PointCircularGallery
+                    categoryKey="cons"
+                    title="Meeting Caveat"
+                    description="Recorded dissent, operational friction points, and confidential scribe notes"
+                    colorClasses={currentSlide.colorTheme}
+                    items={caveatsCombined}
+                    zoomLevel={galleryZoom}
+                    onZoomChange={setGalleryZoom}
+                    onUpdateItem={handleUpdateCaveat}
+                    onDeleteItem={handleDeleteCaveat}
+                    onAddItem={handleAddCaveat}
+                    whyClassified="Organizational & team friction: recorded dissent, operational toil limits, or unspoken developer hesitation."
+                    getItemWhyClassified={(idx, text) => resolveEpistemicWhy("caveats", idx, text)}
+                    downstreamDestination="Moves to Stage 5 Risk Register to enforce SRE safeguards & rollback criteria."
+                  />
+
+                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#F0EAE1]">
+                    <span className="font-bold font-mono text-[10px] text-[#5A6275] dark:text-[#A89F91] uppercase tracking-wider block">
+                      Stage 5 Pipeline Destination
+                    </span>
+                    <span>
+                      These {caveatsCombined.length} confidential friction notes move to <strong>Stage 5 Risk Mitigation &amp; Operational Safeguards</strong>, defining SRE toil caps, rollback criteria, and organizational governance guards.
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
-          )}
 
-          {/* Action Footer: Approve & Save Findings */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => handleSaveAndApprove(false)}
-              disabled={isSaving}
-              className="text-xs font-medium text-slate-600 hover:text-slate-900 px-4 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-            >
-              Save Draft (Keep Unreviewed)
-            </button>
+            {/* Bottom Actions */}
+            <div className="pt-4 border-t border-[#D9D2C3]/60 dark:border-[#38332C] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-xs text-[#5A6275] dark:text-[#A89F91]">
+                Use <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#161E33] dark:text-[#F0EAE1]">←</kbd> and <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#161E33] dark:text-[#F0EAE1]">→</kbd> to rotate points. Press <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#161E33] dark:text-[#F0EAE1]">Shift + ← / →</kbd> to switch categories.
+              </div>
 
-            <button
-              type="button"
-              onClick={() => handleSaveAndApprove(true)}
-              disabled={isSaving}
-              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-all disabled:opacity-50"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              {isSaving
-                ? "Saving & Approving..."
-                : reviewed
-                ? "Update Approved Findings"
-                : "Approve & Save Structured Findings"}
-            </button>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleSaveAndApprove(true)}
+                  disabled={isSaving}
+                  className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
+                >
+                  {isSaving ? "Saving..." : "Save Findings"}
+                </button>
+
+                {onAdvanceToGaps && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSaveAndApprove(true);
+                      onAdvanceToGaps();
+                    }}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
+                  >
+                    <span>Advance to Stage 3 Research</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

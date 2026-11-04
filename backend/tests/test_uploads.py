@@ -258,3 +258,31 @@ def test_attachment_cross_user_isolation(client: TestClient, user_a: dict, user_
 
     # Verify deleted
     assert client.get(f"/api/decisions/{decision_a_id}/attachments/{attachment_id}", headers=headers_a).status_code == 404
+
+
+def test_upload_vtt_and_srt_transcripts(client: TestClient, user_a: dict):
+    headers = {"Authorization": f"Bearer {user_a['token']}"}
+    decision_id = user_a["decision"].id
+
+    vtt_content = b"""WEBVTT
+Kind: captions
+Language: en
+
+00:00:01.000 --> 00:00:04.500
+<v Tech Lead>We need to decide whether to migrate to managed Kubernetes.
+
+00:00:05.000 --> 00:00:08.200
+<v DevOps>EKS will cost Rs 55,000 per month baseline before node costs.
+"""
+
+    res = client.post(
+        f"/api/decisions/{decision_id}/attachments",
+        headers=headers,
+        files={"file": ("meeting_transcript.vtt", vtt_content, "text/vtt")},
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert "Tech Lead: We need to decide whether to migrate to managed Kubernetes." in data["extracted_text"]
+    assert "DevOps: EKS will cost Rs 55,000 per month baseline before node costs." in data["extracted_text"]
+    assert "WEBVTT" not in data["extracted_text"]
+    assert "-->" not in data["extracted_text"]

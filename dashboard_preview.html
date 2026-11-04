@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DecisionLens Dashboard — Active Reasoning Ledger & Workspaces</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS Configuration MUST BE DEFINED BEFORE loading cdn.tailwindcss.com -->
+  <script>
+    window.tailwind = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            newsreader: ['Newsreader', 'Georgia', 'serif'],
+            courier: ['Courier Prime', 'Courier New', 'monospace'],
+          },
+          colors: {
+            parchment: '#F5F1E8',
+            parchmentDark: '#EFEADF',
+            ink: '#161E33',
+            inkSecondary: '#5A6275',
+            brass: '#b08a3c',
+            brassLight: '#e5a93c',
+            lensBlue: '#2F5D8F',
+            lensBlueLight: '#D4AA50',
+            darkBg: '#181614',
+            darkCard: '#221F1C',
+            darkSidebar: '#1C1917',
+            darkBorder: '#38332C',
+            darkText: '#F0EAE1',
+            darkMuted: '#A89F91',
+            darkGold: '#D4AA50',
+          }
+        }
+      }
+    };
+    tailwind = window.tailwind;
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(176, 138, 60, 0.4); border-radius: 3px; }
+    .shutter-open { transform: rotate(0deg) scale(1); }
+    .shutter-closed { transform: rotate(45deg) scale(0.68); }
+    
+    /* Hardening light mode guarantee */
+    html:not(.dark) body {
+      background-color: #F5F1E8 !important;
+      color: #161E33 !important;
+    }
+    html.dark body {
+      background-color: #181614 !important;
+      color: #F0EAE1 !important;
+    }
+  </style>
+</head>
+<body class="bg-[#F5F1E8] text-[#161E33] dark:bg-[#181614] dark:text-[#F0EAE1] font-sans antialiased min-h-screen transition-colors duration-200">
+
+  <div class="flex min-h-screen">
+    
+    <!-- SIDEBAR (Aged Parchment in Light / Turned Walnut in Dark) -->
+    <aside id="sidebar" class="w-[240px] shrink-0 bg-[#EFEADF] dark:bg-[#1C1917] border-r border-[#D9D2C3] dark:border-[#38332C] flex flex-col justify-between transition-colors duration-200">
+      <div>
+        <!-- Brand Logo Header -->
+        <div class="h-14 px-4 border-b border-[#D9D2C3] dark:border-[#38332C] flex items-center justify-between">
+          <a href="#" class="flex items-center gap-2.5">
+            <div class="relative w-7 h-7 flex-shrink-0">
+              <svg viewBox="0 0 44 44" class="w-full h-full drop-shadow-xs" fill="none">
+                <defs>
+                  <linearGradient id="brassG" x1="4" y1="4" x2="28" y2="28">
+                    <stop offset="0%" stop-color="#cfb06c" />
+                    <stop offset="100%" stop-color="#876222" />
+                  </linearGradient>
+                  <linearGradient id="woodG" x1="26" y1="26" x2="40" y2="40">
+                    <stop offset="0%" stop-color="#3d210b" />
+                    <stop offset="100%" stop-color="#120701" />
+                  </linearGradient>
+                </defs>
+                <line x1="24.5" y1="24.5" x2="26.8" y2="26.8" stroke="url(#brassG)" stroke-width="4.2" stroke-linecap="round" />
+                <line x1="26.5" y1="26.5" x2="38.5" y2="38.5" stroke="url(#woodG)" stroke-width="3.6" stroke-linecap="round" />
+                <circle cx="39" cy="39" r="2.2" fill="url(#brassG)" />
+                <circle cx="16" cy="16" r="12.5" stroke="url(#brassG)" stroke-width="2.4" />
+                <circle cx="16" cy="16" r="11.5" fill="#315C8A" fill-opacity="0.12" />
+                <circle cx="16" cy="16" r="1.8" fill="#e5a93c" />
+                <path d="M8.5 14 A 9 9 0 0 1 14 8.5" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" opacity="0.75" />
+              </svg>
+            </div>
+            <span class="font-newsreader text-[21px] font-medium tracking-tight text-[#161E33] dark:text-[#F0EAE1]">
+              DecisionLens<span class="text-[#315C8A] dark:text-[#D4AA50]">.</span>
+            </span>
+          </a>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="p-3 border-b border-[#D9D2C3] dark:border-[#38332C]">
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="openModal('decision')" class="w-full py-2 px-2 rounded-[4px] bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#161E33] dark:border-[#38332C] hover:bg-[#F5F1E8] dark:hover:bg-[#2A2622] text-[#161E33] dark:text-[#F0EAE1] font-medium text-[12px] flex items-center justify-center gap-1.5 transition-colors shadow-2xs">
+              <span class="text-[#2F5D8F] dark:text-[#D4AA50] font-bold">+</span>
+              <span>Decision</span>
+            </button>
+            <button onclick="openModal('meeting')" class="w-full py-2 px-2 rounded-[4px] bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#2D6A4F] dark:border-[#2D6A4F]/60 hover:bg-[#E8F3EE] dark:hover:bg-[#1A261C] text-[#1B4332] dark:text-[#52b788] font-medium text-[12px] flex items-center justify-center gap-1.5 transition-colors shadow-2xs">
+              <span class="text-[#2D6A4F] dark:text-[#52b788] font-bold">●</span>
+              <span>Meeting</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Nav Links -->
+        <nav class="p-2 space-y-1 text-[13px]">
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[#2F5D8F] dark:text-[#D4AA50] font-medium bg-[#2F5D8F]/10 dark:bg-[#D4AA50]/15">
+            <span>Dashboard</span>
+          </a>
+          <a href="#" onclick="switchView('ledger')" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] hover:bg-[#D9D2C3]/40 dark:hover:bg-[#38332C]/40 transition-colors">
+            <span>Decision ledger</span>
+          </a>
+          <a href="#" onclick="switchView('workspaces')" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] hover:bg-[#D9D2C3]/40 dark:hover:bg-[#38332C]/40 transition-colors">
+            <span>Workspaces</span>
+          </a>
+        </nav>
+
+        <!-- Workspaces List -->
+        <div class="px-2 pt-4">
+          <div class="flex items-center justify-between px-2.5 mb-1.5 font-courier text-[11px] font-bold text-[#5A6275] dark:text-[#A89F91] uppercase tracking-[0.08em]">
+            <span>Workspaces</span>
+            <button onclick="openModal('workspace')" class="text-xs hover:text-[#161E33] dark:hover:text-[#F0EAE1]">+</button>
+          </div>
+          <div class="space-y-0.5 text-[13px]">
+            <a href="#" onclick="switchView('workspaces')" class="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[#161E33] dark:text-[#F0EAE1] hover:bg-[#D9D2C3]/40 dark:hover:bg-[#38332C]/40">
+              <span class="text-[#8B909C]">📁</span>
+              <span>Infrastructure Strategy</span>
+            </a>
+            <a href="#" onclick="switchView('workspaces')" class="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[#161E33] dark:text-[#F0EAE1] hover:bg-[#D9D2C3]/40 dark:hover:bg-[#38332C]/40">
+              <span class="text-[#8B909C]">📁</span>
+              <span>Executive Hiring</span>
+            </a>
+            <a href="#" onclick="switchView('workspaces')" class="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[#161E33] dark:text-[#F0EAE1] hover:bg-[#D9D2C3]/40 dark:hover:bg-[#38332C]/40">
+              <span class="text-[#8B909C]">📁</span>
+              <span>GTM & Expansion</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- User footer -->
+      <div class="p-3 border-t border-[#D9D2C3] dark:border-[#38332C] flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-[#161E33] dark:bg-[#D4AA50] text-white dark:text-[#181614] flex items-center justify-center font-bold text-xs">
+            K
+          </div>
+          <div class="truncate">
+            <p class="font-medium truncate leading-tight text-[#161E33] dark:text-[#F0EAE1]">keshav (demo@decisionlens.org)</p>
+            <p class="text-[11px] text-[#8B909C] truncate">Team Lead</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN DASHBOARD CONTENT -->
+    <div class="flex-1 flex flex-col min-w-0">
+      
+      <!-- Topbar Header -->
+      <header class="h-14 px-6 border-b border-[#D9D2C3] dark:border-[#38332C] bg-[#F5F1E8]/95 dark:bg-[#1C1917]/95 backdrop-blur-xs flex items-center justify-between transition-colors duration-200">
+        <!-- Breadcrumbs -->
+        <div class="flex items-center gap-2 text-[13px] text-[#5A6275] dark:text-[#A89F91]">
+          <span>Workspaces</span>
+          <span>/</span>
+          <span id="breadcrumbSection" class="text-[#161E33] dark:text-[#F0EAE1] font-medium">Overview</span>
+        </div>
+
+        <!-- Right: Actions + Aperture Theme Shutter Toggle + Profile at Extreme Right -->
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-courier text-[#5A6275] dark:text-[#A89F91] hidden sm:inline">REASONING SCRUTINY ENGINE</span>
+          
+          <div class="pl-3 border-l border-[#D9D2C3] dark:border-[#38332C] flex items-center">
+            <button id="themeToggleBtn" type="button" class="group relative flex items-center justify-center p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D8F]" title="Toggle theme via optical aperture">
+              <div class="relative w-6 h-6 flex-shrink-0 transition-transform duration-300 group-hover:scale-105">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="11" class="stroke-[#b08a3c] dark:stroke-[#d4aa50]" stroke-width="1.6" />
+                  <circle cx="12" cy="12" r="9.5" class="stroke-[#876222] dark:stroke-[#a68233]" stroke-width="0.6" stroke-dasharray="1.5 1.5" stroke-opacity="0.8" />
+                  <g id="irisGroup" class="origin-center transition-transform duration-500 ease-out shutter-open" style="transform-origin: 12px 12px;">
+                    <path d="M12 4 C15 4 18 6 18 9 C15 8 13 8 12 4 Z" class="fill-[#876222] dark:fill-[#8f6e2a]" opacity="0.85" />
+                    <path d="M18 9 C19 12 18 16 16 18 C16 15 15 13 18 9 Z" class="fill-[#a0752a] dark:fill-[#a88334]" opacity="0.85" />
+                    <path d="M16 18 C14 20 10 20 7 18 C10 17 12 16 16 18 Z" class="fill-[#876222] dark:fill-[#8f6e2a]" opacity="0.85" />
+                    <path d="M7 18 C5 16 4 12 6 9 C7 12 9 14 7 18 Z" class="fill-[#a0752a] dark:fill-[#a88334]" opacity="0.85" />
+                    <path d="M6 9 C8 6 10 4 12 4 C11 7 10 9 6 9 Z" class="fill-[#876222] dark:fill-[#8f6e2a]" opacity="0.85" />
+                  </g>
+                  <circle id="coreCircle" cx="12" cy="12" r="4.2" fill="#FFC83B" class="transition-all duration-400 ease-out" />
+                  <circle id="specularGlint" cx="11.2" cy="11.2" r="1.4" fill="#FFFFFF" opacity="0.85" class="pointer-events-none" />
+                </svg>
+              </div>
+            </button>
+          </div>
+
+          <!-- Extreme Right: User Account Profile -->
+          <div class="pl-3 border-l border-[#D9D2C3] dark:border-[#38332C] flex items-center gap-2 cursor-pointer" title="Signed in as keshav (Account Profile)">
+            <div class="w-7 h-7 rounded-full bg-[#161E33] dark:bg-[#D4AA50] text-[#F5F1E8] dark:text-[#181614] font-bold text-xs flex items-center justify-center uppercase shadow-2xs">
+              K
+            </div>
+            <span class="hidden sm:inline text-xs font-semibold text-[#161E33] dark:text-[#F0EAE1]">
+              keshav
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Dashboard Main -->
+      <main class="flex-1 max-w-[1100px] w-full mx-auto px-6 sm:px-10 py-8 space-y-8">
+        
+        <!-- Header Row -->
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#D9D2C3] dark:border-[#38332C] pb-6">
+          <div>
+            <div class="font-courier text-[10px] tracking-[0.14em] font-bold text-[#2F5D8F] dark:text-[#D4AA50] uppercase mb-1">
+              ACTIVE REASONING LEDGER
+            </div>
+            <h1 id="pageTitle" class="font-newsreader text-[36px] sm:text-[40px] font-normal tracking-tight text-[#161E33] dark:text-[#F0EAE1] leading-tight">
+              Your decisions
+            </h1>
+            <p class="text-xs sm:text-sm font-courier text-[#5A6275] dark:text-[#A89F91] mt-1">
+              Track what you're weighing, surface untested premises, and verify reasoning with evidence.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <button onclick="openModal('workspace')" class="px-3.5 py-2 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#161E33] dark:border-[#38332C] hover:bg-[#F5F1E8] dark:hover:bg-[#2A2622] text-[13px] font-medium text-[#161E33] dark:text-[#F0EAE1] rounded-[4px] transition-colors">
+              New workspace
+            </button>
+            <button onclick="openModal('meeting')" class="px-3.5 py-2 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#2D6A4F] dark:border-[#2D6A4F]/70 hover:bg-[#E8F3EE] dark:hover:bg-[#1A261C] text-[#1B4332] dark:text-[#52b788] text-[13px] font-medium rounded-[4px] transition-colors flex items-center gap-1.5">
+              <span>●</span>
+              <span>Record meeting</span>
+            </button>
+            <button onclick="openModal('decision')" class="px-4 py-2 bg-[#161E33] hover:bg-[#232C47] text-white dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[13px] font-medium rounded-[4px] transition-colors flex items-center gap-1.5">
+              <span>+</span>
+              <span>New decision</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Inline Stats Strip -->
+        <div class="bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-[4px] py-4 px-6 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#D9D2C3] dark:divide-[#38332C] transition-colors shadow-2xs">
+          <div class="py-2 sm:py-0 sm:px-4 first:pl-0">
+            <div class="font-newsreader text-[28px] font-normal leading-tight text-[#161E33] dark:text-[#F0EAE1]">
+              3
+            </div>
+            <div class="text-[12px] font-courier uppercase tracking-wider text-[#5A6275] dark:text-[#A89F91] mt-0.5">
+              Decisions
+            </div>
+          </div>
+          <div class="py-2 sm:py-0 sm:px-4">
+            <div class="font-newsreader text-[28px] font-normal leading-tight text-[#1B4332] dark:text-[#52b788]">
+              2
+            </div>
+            <div class="text-[12px] font-courier uppercase tracking-wider text-[#5A6275] dark:text-[#A89F91] mt-0.5">
+              Meeting records
+            </div>
+          </div>
+          <div class="py-2 sm:py-0 sm:px-4">
+            <div class="font-newsreader text-[28px] font-normal leading-tight text-[#8A5A14] dark:text-[#E5B565]">
+              2
+            </div>
+            <div class="text-[12px] font-courier uppercase tracking-wider text-[#5A6275] dark:text-[#A89F91] mt-0.5">
+              Needs evidence
+            </div>
+          </div>
+          <div class="py-2 sm:py-0 sm:px-4 last:pr-0">
+            <div class="font-newsreader text-[28px] font-normal leading-tight text-[#2F5D8F] dark:text-[#D4AA50]">
+              7
+            </div>
+            <div class="text-[12px] font-courier uppercase tracking-wider text-[#5A6275] dark:text-[#A89F91] mt-0.5">
+              Open questions
+            </div>
+          </div>
+        </div>
+
+        <!-- Ledger Table & Search Bar -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <input type="text" placeholder="Search decisions or workspaces..." class="max-w-md w-full px-3 py-1.5 text-[13px] bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-[4px] text-[#161E33] dark:text-[#F0EAE1] focus:outline-none transition-colors" />
+            <div class="flex items-center gap-1 border border-[#D9D2C3] dark:border-[#38332C] rounded-[4px] p-0.5 bg-[#FCFBF8] dark:bg-[#221F1C] text-[13px] transition-colors">
+              <button id="tabLedgerBtn" onclick="switchView('ledger')" class="px-3 py-1 rounded-[4px] bg-[#F5F1E8] dark:bg-[#2C2723] font-medium text-[#161E33] dark:text-[#F0EAE1] transition-colors">All records</button>
+              <button id="tabWorkspacesBtn" onclick="switchView('workspaces')" class="px-3 py-1 rounded-[4px] text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] transition-colors">Workspaces</button>
+            </div>
+          </div>
+
+          <!-- LEDGER VIEW -->
+          <div id="ledgerView" class="bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-[4px] overflow-hidden transition-colors shadow-2xs">
+            <table class="w-full text-left border-collapse text-[13px]">
+              <thead>
+                <tr class="border-b border-[#D9D2C3] dark:border-[#38332C] font-courier text-[11px] text-[#5A6275] dark:text-[#A89F91] font-medium uppercase tracking-[0.08em] bg-[#F5F1E8]/50 dark:bg-[#181614]/50">
+                  <th class="py-3 px-4">RECORD</th>
+                  <th class="py-3 px-4">TYPE</th>
+                  <th class="py-3 px-4">WORKSPACE</th>
+                  <th class="py-3 px-4">STATUS</th>
+                  <th class="py-3 px-4 text-right">DATE</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#D9D2C3] dark:divide-[#38332C]">
+                <tr class="hover:bg-[#F5F1E8] dark:hover:bg-[#2A2622] transition-colors cursor-pointer">
+                  <td class="py-3.5 px-4 max-w-md">
+                    <div class="flex items-start gap-2">
+                      <span class="font-newsreader text-base font-normal text-[#161E33] dark:text-[#F0EAE1] leading-snug">
+                        Should we migrate our core infrastructure to multi-region cloud?
+                      </span>
+                      <span class="font-courier text-[10px] px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shrink-0">
+                        4 Gaps
+                      </span>
+                    </div>
+                    <p class="text-[12px] font-courier text-[#5A6275] dark:text-[#A89F91] line-clamp-1 mt-0.5">
+                      Premise: Cloud migration reduces spend within 12 months without headcount increase.
+                    </p>
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-[#2F5D8F]/10 dark:bg-[#D4AA50]/15 text-[#2F5D8F] dark:text-[#D4AA50] border border-[#2F5D8F]/20 dark:border-[#D4AA50]/30">
+                      Decision
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-[#5A6275] dark:text-[#A89F91] whitespace-nowrap">
+                    Infrastructure Strategy
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="inline-flex items-center font-courier text-[11px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 rounded-[2px] border text-[#8A5A14] dark:text-[#E5B565] bg-[#F4ECDC] dark:bg-[#2A2318] border-[#E3D3AE] dark:border-[#8A5A14]/50">
+                      Needs evidence
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-courier text-[11px] text-[#5A6275] dark:text-[#A89F91] uppercase tracking-[0.08em] whitespace-nowrap">
+                    Nov 2
+                  </td>
+                </tr>
+
+                <tr class="hover:bg-[#F5F1E8] dark:hover:bg-[#2A2622] transition-colors cursor-pointer">
+                  <td class="py-3.5 px-4 max-w-md">
+                    <div class="flex items-start gap-2">
+                      <span class="font-newsreader text-base font-normal text-[#161E33] dark:text-[#F0EAE1] leading-snug">
+                        Sprint Architecture Sync & Ingestion Contention
+                      </span>
+                    </div>
+                    <p class="text-[12px] font-courier text-[#5A6275] dark:text-[#A89F91] line-clamp-1 mt-0.5">
+                      Discussion notes on IOPS burst ceilings and transactional table locks.
+                    </p>
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800/60">
+                      Meeting
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-[#5A6275] dark:text-[#A89F91] whitespace-nowrap">
+                    Infrastructure Strategy
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="inline-flex items-center font-courier text-[11px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 rounded-[2px] border text-[#2F5D8F] dark:text-[#D4AA50] bg-[#E6EDF5] dark:bg-[#1E262A] border-[#C5D4E6] dark:border-[#D4AA50]/40">
+                      Under scrutiny
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-courier text-[11px] text-[#5A6275] dark:text-[#A89F91] uppercase tracking-[0.08em] whitespace-nowrap">
+                    Oct 29
+                  </td>
+                </tr>
+
+                <tr class="hover:bg-[#F5F1E8] dark:hover:bg-[#2A2622] transition-colors cursor-pointer">
+                  <td class="py-3.5 px-4 max-w-md">
+                    <div class="flex items-start gap-2">
+                      <span class="font-newsreader text-base font-normal text-[#161E33] dark:text-[#F0EAE1] leading-snug">
+                        External Enterprise Tech Lead vs Internal Star Elevation
+                      </span>
+                      <span class="font-courier text-[10px] px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shrink-0">
+                        3 Gaps
+                      </span>
+                    </div>
+                    <p class="text-[12px] font-courier text-[#5A6275] dark:text-[#A89F91] line-clamp-1 mt-0.5">
+                      Evaluates domain ramp-up timeline (120 days) vs coaching internal top performer.
+                    </p>
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-[#2F5D8F]/10 dark:bg-[#D4AA50]/15 text-[#2F5D8F] dark:text-[#D4AA50] border border-[#2F5D8F]/20 dark:border-[#D4AA50]/30">
+                      Decision
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-[#5A6275] dark:text-[#A89F91] whitespace-nowrap">
+                    Executive Hiring
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="inline-flex items-center font-courier text-[11px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 rounded-[2px] border text-[#8A5A14] dark:text-[#E5B565] bg-[#F4ECDC] dark:bg-[#2A2318] border-[#E3D3AE] dark:border-[#8A5A14]/50">
+                      Needs evidence
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-courier text-[11px] text-[#5A6275] dark:text-[#A89F91] uppercase tracking-[0.08em] whitespace-nowrap">
+                    Oct 27
+                  </td>
+                </tr>
+
+                <tr class="hover:bg-[#F5F1E8] dark:hover:bg-[#2A2622] transition-colors cursor-pointer">
+                  <td class="py-3.5 px-4 max-w-md">
+                    <div class="flex items-start gap-2">
+                      <span class="font-newsreader text-base font-normal text-[#161E33] dark:text-[#F0EAE1] leading-snug">
+                        Q4 Enterprise Pilot Launch & Security Compliance Guardrails
+                      </span>
+                    </div>
+                    <p class="text-[12px] font-courier text-[#5A6275] dark:text-[#A89F91] line-clamp-1 mt-0.5">
+                      Recommendation finalized: Mandate immutable audit logs before release.
+                    </p>
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-[#2F5D8F]/10 dark:bg-[#D4AA50]/15 text-[#2F5D8F] dark:text-[#D4AA50] border border-[#2F5D8F]/20 dark:border-[#D4AA50]/30">
+                      Decision
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-[#5A6275] dark:text-[#A89F91] whitespace-nowrap">
+                    GTM & Expansion
+                  </td>
+                  <td class="py-3.5 px-4 whitespace-nowrap">
+                    <span class="inline-flex items-center font-courier text-[11px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 rounded-[2px] border text-[#2F6B4F] dark:text-[#52b788] bg-[#E6EFE9] dark:bg-[#1A261C] border-[#C5DACD] dark:border-[#2D6A4F]/60">
+                      Decided
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-courier text-[11px] text-[#5A6275] dark:text-[#A89F91] uppercase tracking-[0.08em] whitespace-nowrap">
+                    Oct 24
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- WORKSPACES VIEW -->
+          <div id="workspacesView" class="hidden space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Workspace 1 -->
+              <div class="bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] hover:border-[#2F5D8F] dark:hover:border-[#D4AA50] rounded-[4px] p-5 flex flex-col justify-between transition-colors shadow-2xs group cursor-pointer">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="font-newsreader text-lg font-normal text-[#161E33] dark:text-[#F0EAE1] group-hover:text-[#2F5D8F] dark:group-hover:text-[#D4AA50] transition-colors">
+                      Infrastructure Strategy
+                    </span>
+                    <span class="font-courier text-[10px] uppercase tracking-[0.08em] text-[#8B909C]">
+                      2 DECISIONS
+                    </span>
+                  </div>
+                  <p class="text-[12px] font-courier text-[#5A6275] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
+                    Cloud migration, architectural trade-offs, database locks, and latency bounds.
+                  </p>
+                </div>
+                <div class="pt-3 mt-4 border-t border-[#D9D2C3] dark:border-[#38332C] text-[12px] font-courier text-[#2F5D8F] dark:text-[#D4AA50] font-bold flex items-center justify-between">
+                  <span>Open workspace</span>
+                  <span class="transition-transform group-hover:translate-x-1">→</span>
+                </div>
+              </div>
+
+              <!-- Workspace 2 -->
+              <div class="bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] hover:border-[#2F5D8F] dark:hover:border-[#D4AA50] rounded-[4px] p-5 flex flex-col justify-between transition-colors shadow-2xs group cursor-pointer">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="font-newsreader text-lg font-normal text-[#161E33] dark:text-[#F0EAE1] group-hover:text-[#2F5D8F] dark:group-hover:text-[#D4AA50] transition-colors">
+                      Executive Hiring
+                    </span>
+                    <span class="font-courier text-[10px] uppercase tracking-[0.08em] text-[#8B909C]">
+                      1 DECISION
+                    </span>
+                  </div>
+                  <p class="text-[12px] font-courier text-[#5A6275] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
+                    Leadership hires, compensation vesting models, and ramp-up execution risk.
+                  </p>
+                </div>
+                <div class="pt-3 mt-4 border-t border-[#D9D2C3] dark:border-[#38332C] text-[12px] font-courier text-[#2F5D8F] dark:text-[#D4AA50] font-bold flex items-center justify-between">
+                  <span>Open workspace</span>
+                  <span class="transition-transform group-hover:translate-x-1">→</span>
+                </div>
+              </div>
+
+              <!-- Workspace 3 -->
+              <div class="bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] hover:border-[#2F5D8F] dark:hover:border-[#D4AA50] rounded-[4px] p-5 flex flex-col justify-between transition-colors shadow-2xs group cursor-pointer">
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="font-newsreader text-lg font-normal text-[#161E33] dark:text-[#F0EAE1] group-hover:text-[#2F5D8F] dark:group-hover:text-[#D4AA50] transition-colors">
+                      GTM & Expansion
+                    </span>
+                    <span class="font-courier text-[10px] uppercase tracking-[0.08em] text-[#8B909C]">
+                      1 DECISION
+                    </span>
+                  </div>
+                  <p class="text-[12px] font-courier text-[#5A6275] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
+                    Enterprise rollout schedules, RBAC compliance milestones, and SOC-2 barriers.
+                  </p>
+                </div>
+                <div class="pt-3 mt-4 border-t border-[#D9D2C3] dark:border-[#38332C] text-[12px] font-courier text-[#2F5D8F] dark:text-[#D4AA50] font-bold flex items-center justify-between">
+                  <span>Open workspace</span>
+                  <span class="transition-transform group-hover:translate-x-1">→</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Interactive Script for Theme & View Switching -->
+  <script>
+    // Always start in default Cream Parchment Light Mode
+    let isDark = false;
+    document.documentElement.classList.remove('dark');
+
+    const btn = document.getElementById('themeToggleBtn');
+    const iris = document.getElementById('irisGroup');
+    const core = document.getElementById('coreCircle');
+    const glint = document.getElementById('specularGlint');
+
+    function applyApertureTheme(dark) {
+      if (dark) {
+        document.documentElement.classList.add('dark');
+        iris.classList.remove('shutter-open');
+        iris.classList.add('shutter-closed');
+        core.setAttribute('r', '1.6');
+        core.setAttribute('fill', '#e5a93c');
+        if (glint) glint.style.opacity = '0';
+      } else {
+        document.documentElement.classList.remove('dark');
+        iris.classList.remove('shutter-closed');
+        iris.classList.add('shutter-open');
+        core.setAttribute('r', '4.2');
+        core.setAttribute('fill', '#FFC83B');
+        if (glint) glint.style.opacity = '0.85';
+      }
+    }
+
+    btn.addEventListener('click', () => {
+      isDark = !isDark;
+      applyApertureTheme(isDark);
+    });
+
+    function switchView(mode) {
+      const ledger = document.getElementById('ledgerView');
+      const workspaces = document.getElementById('workspacesView');
+      const ledgerBtn = document.getElementById('tabLedgerBtn');
+      const wsBtn = document.getElementById('tabWorkspacesBtn');
+      const breadcrumb = document.getElementById('breadcrumbSection');
+      const pageTitle = document.getElementById('pageTitle');
+
+      if (mode === 'workspaces') {
+        ledger.classList.add('hidden');
+        workspaces.classList.remove('hidden');
+        wsBtn.className = 'px-3 py-1 rounded-[4px] bg-[#F5F1E8] dark:bg-[#2C2723] font-medium text-[#161E33] dark:text-[#F0EAE1] transition-colors';
+        ledgerBtn.className = 'px-3 py-1 rounded-[4px] text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] transition-colors';
+        breadcrumb.textContent = 'All Workspaces';
+        pageTitle.textContent = 'Your workspaces';
+      } else {
+        workspaces.classList.add('hidden');
+        ledger.classList.remove('hidden');
+        ledgerBtn.className = 'px-3 py-1 rounded-[4px] bg-[#F5F1E8] dark:bg-[#2C2723] font-medium text-[#161E33] dark:text-[#F0EAE1] transition-colors';
+        wsBtn.className = 'px-3 py-1 rounded-[4px] text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] transition-colors';
+        breadcrumb.textContent = 'Overview';
+        pageTitle.textContent = 'Your decisions';
+      }
+    }
+
+    function openModal(type) {
+      alert(`Opening ${type.toUpperCase()} Modal in DecisionLens Dashboard!\n\nHere you specify the strategic decision premise, choose between Decision vs Meeting, and submit it for epistemic scrutiny.`);
+    }
+
+    // Auto-launch modal if navigated with ?action=new
+    window.addEventListener('DOMContentLoaded', () => {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('action') === 'new' || p.get('challenge') === 'true') {
+        setTimeout(() => openModal('decision'), 300);
+      }
+    });
+  </script>
+</body>
+</html>

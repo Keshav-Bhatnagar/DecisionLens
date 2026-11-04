@@ -16,6 +16,7 @@ import {
   FileAudio,
   Loader2,
   Check,
+  Radio,
 } from "lucide-react";
 import { uploadAudio, TranscriptionResponse } from "@/lib/api";
 
@@ -119,284 +120,195 @@ export default function AudioRecorder({
   const startRecording = async () => {
     setError(null);
     setSuccessMsg(null);
-    setAudioBlob(null);
     setLiveSpeechText("");
     setLiveInterimText("");
     liveTranscriptRef.current = "";
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-      setAudioUrl(null);
-    }
-    audioChunksRef.current = [];
 
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error(
-          "Microphone access is not supported by your browser or is blocked in this context."
-        );
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : "audio/mp4";
 
-      // Determine supported mimeType
-      const mimeTypes = [
-        "audio/webm;codecs=opus",
-        "audio/webm",
-        "audio/ogg;codecs=opus",
-        "audio/mp4",
-      ];
-      const selectedMime =
-        mimeTypes.find((m) => MediaRecorder.isTypeSupported(m)) || "";
-
-      const options = selectedMime ? { mimeType: selectedMime } : undefined;
-      const mediaRecorder = new MediaRecorder(stream, options);
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
+        if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        const mime = selectedMime || "audio/webm";
-        const blob = new Blob(audioChunksRef.current, { type: mime });
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
 
-        // Stop all audio tracks in media stream
         stream.getTracks().forEach((track) => track.stop());
       };
 
-      mediaRecorder.start(250); // Slice every 250ms
+      mediaRecorder.start(250);
       setIsRecording(true);
       setIsPaused(false);
       setRecordingDuration(0);
 
-      // Start browser SpeechRecognition in parallel if supported (Chrome/Safari/Edge)
-      const SpeechRec =
-        typeof window !== "undefined" &&
-        ((window as any).SpeechRecognition ||
-          (window as any).webkitSpeechRecognition);
-
-      if (SpeechRec) {
-        try {
-          const rec = new SpeechRec();
-          rec.continuous = true;
-          rec.interimResults = true;
-          rec.lang = language === "hi" ? "hi-IN" : "en-US";
-          let transcriptAccumulator = "";
-
-          rec.onresult = (event: any) => {
-            let interim = "";
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              const text = event.results[i][0].transcript;
-              if (event.results[i].isFinal) {
-                transcriptAccumulator = (
-                  transcriptAccumulator +
-                  " " +
-                  text
-                ).trim();
-              } else {
-                interim += " " + text;
-              }
-            }
-            setLiveSpeechText(transcriptAccumulator);
-            setLiveInterimText(interim);
-            liveTranscriptRef.current = (
-              transcriptAccumulator +
-              " " +
-              interim
-            ).trim();
-          };
-
-          rec.onerror = (event: any) => {
-            console.warn("Browser SpeechRecognition notice:", event?.error);
-          };
-
-          rec.start();
-          speechRecognitionRef.current = rec;
-        } catch (e) {
-          console.warn("Could not start Web Speech Recognition:", e);
-        }
-      }
-
+      // Start timer
       timerIntervalRef.current = setInterval(() => {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
+
+      // Start live web speech recognition if supported
+      const SpeechRecognition =
+        (window as any).SpeechRecognition ||
+        (window as any).webkitSpeechRecognition;
+
+      if (SpeechRecognition) {
+        try {
+          const recognizer = new SpeechRecognition();
+          recognizer.continuous = true;
+          recognizer.interimResults = true;
+          recognizer.lang = language === "hi" ? "hi-IN" : "en-US";
+
+          recognizer.onresult = (event: any) => {
+            let interim = "";
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                liveTranscriptRef.current += event.results[i][0].transcript + " ";
+                setLiveSpeechText(liveTranscriptRef.current);
+              } else {
+                interim += event.results[i][0].transcript;
+              }
+            }
+            setLiveInterimText(interim);
+          };
+
+          recognizer.onerror = () => {
+            // SpeechRecognition warning handled silently
+          };
+
+          recognizer.start();
+          speechRecognitionRef.current = recognizer;
+        } catch (_) {}
+      }
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Could not access microphone. Please check browser permissions.";
-      setError(msg);
-      setIsRecording(false);
+      setError(
+        "Microphone access denied or unavailable. Check browser audio permissions."
+      );
     }
   };
 
   const pauseRecording = () => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "recording"
-    ) {
+    if (mediaRecorderRef.current && isRecording && !isPaused) {
       mediaRecorderRef.current.pause();
       setIsPaused(true);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     }
-    if (speechRecognitionRef.current) {
-      try {
-        speechRecognitionRef.current.stop();
-      } catch (_) {}
-    }
   };
 
   const resumeRecording = () => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "paused"
-    ) {
+    if (mediaRecorderRef.current && isRecording && isPaused) {
       mediaRecorderRef.current.resume();
       setIsPaused(false);
       timerIntervalRef.current = setInterval(() => {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
     }
-    if (speechRecognitionRef.current) {
-      try {
-        speechRecognitionRef.current.start();
-      } catch (_) {}
-    }
   };
 
   const stopRecording = () => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
+    if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
-    }
-    if (speechRecognitionRef.current) {
-      try {
-        speechRecognitionRef.current.stop();
-      } catch (_) {}
-    }
-    setIsRecording(false);
-    setIsPaused(false);
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
+      setIsRecording(false);
+      setIsPaused(false);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
+      if (speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.stop();
+        } catch (_) {}
+      }
     }
   };
 
   const resetRecording = () => {
-    stopRecording();
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioBlob(null);
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-      setAudioUrl(null);
-    }
-    if (speechRecognitionRef.current) {
-      try {
-        speechRecognitionRef.current.abort();
-      } catch (_) {}
-      speechRecognitionRef.current = null;
-    }
+    setAudioUrl(null);
+    setRecordingDuration(0);
+    setIsRecording(false);
+    setIsPaused(false);
     setLiveSpeechText("");
     setLiveInterimText("");
     liveTranscriptRef.current = "";
-    setRecordingDuration(0);
     setError(null);
+    setSuccessMsg(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     setSuccessMsg(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validExts = [".wav", ".mp3", ".m4a", ".webm", ".ogg"];
-    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-
-    if (!validExts.includes(ext)) {
-      setError(
-        `Unsupported audio extension '${ext}'. Allowed: .wav, .mp3, .m4a, .webm, .ogg`
-      );
-      setSelectedFile(null);
-      return;
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const maxBytes = 25 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        setError(`Audio file size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds 25MB.`);
+        return;
+      }
+      setSelectedFile(file);
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      setAudioUrl(URL.createObjectURL(file));
     }
-
-    if (file.size > 25 * 1024 * 1024) {
-      setError(
-        `File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds 25MB limit.`
-      );
-      setSelectedFile(null);
-      return;
-    }
-
-    setSelectedFile(file);
-    const url = URL.createObjectURL(file);
-    setAudioUrl(url);
   };
 
   const handleTranscribe = async () => {
-    const payload = activeTab === "record" ? audioBlob : selectedFile;
-    if (!payload) {
-      setError("Please record audio or select an audio file first.");
-      return;
+    setError(null);
+    setSuccessMsg(null);
+    setLastTranscribedText(null);
+
+    let fileToUpload: File | null = null;
+
+    if (activeTab === "record") {
+      if (!audioBlob) {
+        setError("Please record audio before initiating transcription.");
+        return;
+      }
+      const extension = audioBlob.type.includes("mp4") ? "m4a" : "webm";
+      fileToUpload = new File([audioBlob], `recorded_memo_${Date.now()}.${extension}`, {
+        type: audioBlob.type,
+      });
+    } else {
+      if (!selectedFile) {
+        setError("Please select an audio file to transcribe.");
+        return;
+      }
+      fileToUpload = selectedFile;
     }
 
     setIsProcessing(true);
-    setProcessingElapsed(0);
-    setProcessingStep(1);
-    setError(null);
-    setSuccessMsg(null);
 
     try {
-      const filename =
-        activeTab === "record"
-          ? `mic_recording_${Date.now()}.webm`
-          : selectedFile?.name || "audio_upload.wav";
-
-      const clientCapturedText =
-        (liveTranscriptRef.current || liveSpeechText || "").trim();
-
-      const res = await uploadAudio(decisionId, payload, {
+      const res = await uploadAudio(decisionId, fileToUpload, {
         language,
         applyEnhancement,
-        filename,
-        clientTranscript: clientCapturedText || undefined,
       });
-
-      if (res?.transcript) {
-        setLastTranscribedText(res.transcript);
-      }
-      setSuccessMsg("Audio successfully transcribed & updated in Meeting Transcript below!");
+      const wordCount = res.transcript
+        ? res.transcript.split(/\s+/).filter(Boolean).length
+        : 0;
+      setSuccessMsg(
+        `Transcription complete: ${wordCount} words transcribed successfully.`
+      );
+      setLastTranscribedText(res.transcript);
       onTranscriptionSuccess(res);
-
-      // Clean up after successful transcription
-      if (activeTab === "record") {
-        setAudioBlob(null);
-      } else {
-        setSelectedFile(null);
-      }
-
-      // Smooth scroll to Meeting Transcript & Voice Notes section
-      setTimeout(() => {
-        const transcriptSection = document.getElementById("transcript-editor-section");
-        if (transcriptSection) {
-          transcriptSection.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 300);
     } catch (err: unknown) {
       setError(
-        err instanceof Error ? err.message : "Audio transcription failed."
+        err instanceof Error
+          ? err.message
+          : "Transcription failed. Please retry or adjust audio settings."
       );
     } finally {
       setIsProcessing(false);
@@ -404,35 +316,33 @@ export default function AudioRecorder({
   };
 
   return (
-    <div className="glass-panel rounded-2xl specular-edge p-6 sm:p-8 shadow-sm space-y-6">
+    <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-none p-6 sm:p-8 shadow-2xs space-y-6 transition-colors">
       {/* Header with Title and Mode Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Mic className="w-5 h-5" />
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#cfc7b2]/70 dark:border-[#38332C]/70">
+        <div className="flex items-center gap-2.5">
+          <Mic className="w-5 h-5 text-[#7a4e10] dark:text-[#D4AA50]" />
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
               Voice Recording & Speech-to-Text
             </h2>
-            <p className="text-xs text-slate-500">
-              Record meeting notes or upload voice memos with FFmpeg normalization.
+            <p className="text-xs font-courier text-[#4f4b40] dark:text-[#A89F91]">
+              Record deliberation dialogue or ingest audio memos with FFmpeg EBU R128 normalization.
             </p>
           </div>
         </div>
 
         {/* Mode Selector */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+        <div className="flex items-center border border-[#cfc7b2] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#181614] rounded-none font-courier text-xs font-bold uppercase tracking-wider">
           <button
             type="button"
             onClick={() => {
               setActiveTab("record");
               setError(null);
             }}
-            className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 transition-colors flex items-center gap-1.5 cursor-pointer rounded-none ${
               activeTab === "record"
-                ? "bg-white text-indigo-600 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1]"
             }`}
           >
             <Mic className="w-3.5 h-3.5" /> Live Microphone
@@ -443,47 +353,51 @@ export default function AudioRecorder({
               setActiveTab("upload");
               setError(null);
             }}
-            className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 transition-colors flex items-center gap-1.5 cursor-pointer rounded-none ${
               activeTab === "upload"
-                ? "bg-white text-indigo-600 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1]"
             }`}
           >
-            <Upload className="w-3.5 h-3.5" /> Upload Audio File
+            <Upload className="w-3.5 h-3.5" /> Ingest Audio File
           </button>
         </div>
       </div>
 
       {/* Language Controls & FFmpeg Enhancement Settings */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F4F0E6] dark:bg-[#181614] p-4 border border-[#cfc7b2] dark:border-[#38332C] text-xs font-courier">
         {/* Language Selection */}
         <div>
-          <label className="block font-semibold text-slate-700 mb-1.5">
-            Spoken Language (Strictly Restricted)
+          <label className="block font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] mb-2">
+            Spoken Language (Restricted)
           </label>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setLanguage("en")}
-              className={`flex items-center justify-center gap-2 p-2 rounded-lg border font-medium transition-all ${
+              className={`flex items-center justify-center gap-2 p-2 border font-bold uppercase tracking-wider transition-colors cursor-pointer rounded-none ${
                 language === "en"
-                  ? "border-[#2F5D8F] bg-white text-[#2F5D8F] font-bold shadow-xs"
-                  : "border-[#D9D2C3] bg-[#EFEADF]/40 text-[#5A6275] hover:bg-white"
+                  ? "border-[#7a4e10] dark:border-[#D4AA50] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1]"
+                  : "border-[#cfc7b2] dark:border-[#38332C] text-[#4f4b40] dark:text-[#A89F91] hover:bg-[#EDE7D6]/50"
               }`}
             >
-              <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-[#EFEADF] text-[#161E33] border border-[#D9D2C3]">EN</span>
+              <span className="font-mono text-[11px] px-1 py-0.2 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]">
+                EN
+              </span>
               <span>English (en)</span>
             </button>
             <button
               type="button"
               onClick={() => setLanguage("hi")}
-              className={`flex items-center justify-center gap-2 p-2 rounded-lg border font-medium transition-all ${
+              className={`flex items-center justify-center gap-2 p-2 border font-bold uppercase tracking-wider transition-colors cursor-pointer rounded-none ${
                 language === "hi"
-                  ? "border-[#2F5D8F] bg-white text-[#2F5D8F] font-bold shadow-xs"
-                  : "border-[#D9D2C3] bg-[#EFEADF]/40 text-[#5A6275] hover:bg-white"
+                  ? "border-[#7a4e10] dark:border-[#D4AA50] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1]"
+                  : "border-[#cfc7b2] dark:border-[#38332C] text-[#4f4b40] dark:text-[#A89F91] hover:bg-[#EDE7D6]/50"
               }`}
             >
-              <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-[#EFEADF] text-[#161E33] border border-[#D9D2C3]">HI</span>
+              <span className="font-mono text-[11px] px-1 py-0.2 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]">
+                HI
+              </span>
               <span>Hindi (hi)</span>
             </button>
           </div>
@@ -491,22 +405,22 @@ export default function AudioRecorder({
 
         {/* FFmpeg Enhancement Toggle */}
         <div>
-          <label className="block font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
-            <Sliders className="w-3.5 h-3.5 text-slate-500" />
+          <label className="block font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] mb-2 flex items-center gap-1.5">
+            <Sliders className="w-3.5 h-3.5" />
             Audio Enhancement Pipeline
           </label>
-          <label className="flex items-start gap-2.5 p-2 bg-white rounded-lg border border-slate-200 cursor-pointer hover:border-indigo-300 transition-colors">
+          <label className="flex items-start gap-2.5 p-2 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] cursor-pointer hover:border-[#7a4e10] dark:hover:border-[#D4AA50] transition-colors rounded-none">
             <input
               type="checkbox"
               checked={applyEnhancement}
               onChange={(e) => setApplyEnhancement(e.target.checked)}
-              className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+              className="mt-0.5 accent-[#7a4e10] dark:accent-[#D4AA50] w-4 h-4 cursor-pointer"
             />
             <div className="leading-tight">
-              <span className="font-semibold text-slate-800 block">
+              <span className="font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] block">
                 FFmpeg Normalization & High-Pass Filter
               </span>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
                 EBU R128 volume leveling + 200Hz rumble reduction.
               </span>
             </div>
@@ -514,36 +428,36 @@ export default function AudioRecorder({
         </div>
       </div>
 
-      {/* Mode 1: Live Browser Recording */}
+      {/* Mode 1: Live Browser Recording Console */}
       {activeTab === "record" && (
-        <div className="border border-slate-200 rounded-xl p-6 bg-slate-50/50 space-y-5">
+        <div className="border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-6 bg-[#F4F0E6] dark:bg-[#181614] space-y-5">
           <div className="flex flex-col items-center justify-center py-4 space-y-4">
             {/* Visual Pulsing Recording Indicator */}
             {isRecording && (
-              <div className="flex items-center gap-2 text-xs font-semibold text-red-600 animate-pulse">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-600" />
+              <div className="flex items-center gap-2 font-courier text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 animate-pulse">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600 dark:bg-rose-500" />
                 <span>
-                  {isPaused ? "Recording Paused" : "Recording Audio Live..."}
+                  {isPaused ? "Recording Suspended" : "Live Deliberation Ingest Active..."}
                 </span>
               </div>
             )}
 
             {/* Timer Display */}
-            <div className="text-3xl font-mono font-extrabold text-slate-900 tracking-wider">
+            <div className="text-4xl sm:text-5xl font-mono font-bold text-[#1d1d1b] dark:text-[#F0EAE1] tracking-widest">
               {formatTime(recordingDuration)}
             </div>
 
-            {/* Simulated Animated Waveform Bars */}
+            {/* Simulated Analog Audio Level Meter Bars */}
             {isRecording && !isPaused && (
-              <div className="flex items-center gap-1 h-8">
-                {[40, 70, 95, 60, 85, 30, 90, 65, 80, 45, 100, 55, 75, 40].map(
+              <div className="flex items-center gap-1.5 h-9 px-4 py-1.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C]">
+                {[35, 65, 95, 50, 80, 40, 90, 70, 85, 45, 100, 60, 75, 40, 60, 30].map(
                   (height, i) => (
                     <div
                       key={i}
-                      className="w-1 bg-indigo-500 rounded-full animate-pulse"
+                      className="w-1.5 bg-[#7a4e10] dark:bg-[#D4AA50] transition-all duration-75"
                       style={{
                         height: `${height}%`,
-                        animationDelay: `${(i % 5) * 150}ms`,
+                        opacity: height > 80 ? 1 : 0.6,
                       }}
                     />
                   )
@@ -551,39 +465,37 @@ export default function AudioRecorder({
               </div>
             )}
 
-            {/* Live Real-time Speech Captioning */}
+            {/* Live Streaming Speech Preview */}
             {(liveSpeechText || liveInterimText) && (
-              <div className="w-full max-w-md mx-auto bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-xs text-indigo-950 flex items-start gap-2.5 shadow-xs">
-                <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5 animate-pulse" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-indigo-800 text-[11px] uppercase tracking-wider mb-0.5">
-                    Live Speech Detected ({language === "hi" ? "Hindi" : "English"})
-                  </div>
-                  <p className="text-slate-800 font-medium break-words leading-relaxed">
-                    <span>{liveSpeechText}</span>
-                    <span className="text-indigo-600/70 font-normal">{liveInterimText}</span>
-                  </p>
-                </div>
+              <div className="w-full max-w-xl p-3 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-courier text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed max-h-28 overflow-y-auto">
+                <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block mb-1">
+                  Live Verbatim Stream:
+                </span>
+                <span>{liveSpeechText}</span>
+                <span className="italic opacity-60"> {liveInterimText}</span>
               </div>
             )}
 
-            {/* Control Buttons */}
-            <div className="flex items-center gap-3 pt-2">
-              {!isRecording && !audioBlob ? (
+            {/* Controls Bar */}
+            <div className="flex items-center gap-3 pt-2 font-courier">
+              {!isRecording && !audioUrl && (
                 <button
                   type="button"
                   onClick={startRecording}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-full shadow-sm hover:shadow transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] rounded-none shadow-2xs transition-colors cursor-pointer"
                 >
-                  <Mic className="w-4 h-4" /> Start Recording
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping mr-0.5" />
+                  <span>Start Recording</span>
                 </button>
-              ) : isRecording ? (
+              )}
+
+              {isRecording ? (
                 <>
                   {isPaused ? (
                     <button
                       type="button"
                       onClick={resumeRecording}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-full shadow-xs"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
                     >
                       <Play className="w-3.5 h-3.5" /> Resume
                     </button>
@@ -591,65 +503,68 @@ export default function AudioRecorder({
                     <button
                       type="button"
                       onClick={pauseRecording}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-full shadow-xs"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
                     >
                       <Pause className="w-3.5 h-3.5" /> Pause
                     </button>
                   )}
+
                   <button
                     type="button"
                     onClick={stopRecording}
-                    className="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-full shadow-xs"
+                    className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-rose-800 hover:bg-rose-900 rounded-none shadow-2xs transition-colors cursor-pointer"
                   >
                     <Square className="w-3.5 h-3.5" /> Stop & Review
                   </button>
                 </>
               ) : (
-                <button
-                  type="button"
-                  onClick={resetRecording}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" /> Reset & Record Again
-                </button>
+                audioUrl && (
+                  <button
+                    type="button"
+                    onClick={resetRecording}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Reset & Re-Record
+                  </button>
+                )
               )}
             </div>
           </div>
 
           {/* Audio Preview Player */}
           {audioUrl && !isRecording && (
-            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                <span className="flex items-center gap-1.5">
-                  <Volume2 className="w-4 h-4 text-indigo-600" /> Recorded Audio Preview
+            <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-2 font-courier">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+                <span className="flex items-center gap-1.5 text-[#7a4e10] dark:text-[#D4AA50]">
+                  <Volume2 className="w-4 h-4" /> Recorded Audio Master
                 </span>
-                <span className="text-slate-400 font-mono">
-                  {formatTime(recordingDuration)}
+                <span className="text-[#4f4b40] dark:text-[#A89F91]">
+                  Duration: {formatTime(recordingDuration)}
                 </span>
               </div>
-              <audio src={audioUrl} controls className="w-full h-10" />
+              <audio src={audioUrl} controls className="w-full h-10 rounded-none accent-[#7a4e10]" />
             </div>
           )}
         </div>
       )}
 
-      {/* Mode 2: File Upload */}
+      {/* Mode 2: Audio File Upload */}
       {activeTab === "upload" && (
-        <div className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-8 text-center bg-slate-50/50 transition-colors space-y-3">
-          <div className="w-12 h-12 bg-white rounded-xl border border-slate-200 mx-auto flex items-center justify-center text-indigo-600 shadow-xs">
+        <div className="border-2 border-dashed border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] rounded-none p-8 text-center bg-[#F4F0E6] dark:bg-[#181614] transition-colors space-y-3 font-courier">
+          <div className="w-12 h-12 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] mx-auto flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] shadow-2xs rounded-none">
             <FileAudio className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">
-              Select or drop an audio file
+            <p className="font-newsreader text-lg text-[#1d1d1b] dark:text-[#F0EAE1]">
+              Select or drop an audio recording
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Supported formats: .wav, .mp3, .m4a, .webm, .ogg (Max: 25MB)
+            <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+              Formats: .wav, .mp3, .m4a, .webm, .ogg · Maximum 25MB
             </p>
           </div>
 
           <label className="inline-block mt-2">
-            <span className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold shadow-xs cursor-pointer inline-flex items-center gap-1.5">
+            <span className="px-4 py-2 bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] text-xs font-bold uppercase tracking-wider shadow-2xs cursor-pointer inline-flex items-center gap-1.5 rounded-none">
               <Upload className="w-3.5 h-3.5" /> Browse Audio File
             </span>
             <input
@@ -661,13 +576,13 @@ export default function AudioRecorder({
           </label>
 
           {selectedFile && (
-            <div className="mt-4 p-3 bg-white rounded-xl border border-indigo-200 max-w-md mx-auto flex items-center justify-between text-xs">
+            <div className="mt-4 p-3 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] max-w-md mx-auto flex items-center justify-between text-xs rounded-none">
               <div className="flex items-center gap-2 truncate">
-                <FileAudio className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span className="font-semibold text-slate-800 truncate">
+                <FileAudio className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
+                <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1] truncate">
                   {selectedFile.name}
                 </span>
-                <span className="text-slate-400">
+                <span className="text-[#4f4b40] dark:text-[#A89F91]">
                   ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
                 </span>
               </div>
@@ -680,7 +595,7 @@ export default function AudioRecorder({
                     setAudioUrl(null);
                   }
                 }}
-                className="text-slate-400 hover:text-red-600 ml-2"
+                className="text-rose-700 dark:text-rose-400 hover:underline font-bold uppercase ml-2 text-[11px]"
               >
                 Clear
               </button>
@@ -691,24 +606,25 @@ export default function AudioRecorder({
 
       {/* Notifications */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+        <div className="p-3.5 bg-red-950/10 dark:bg-red-950/40 border border-red-400 dark:border-red-900 text-xs font-courier text-red-800 dark:text-red-300 flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-          <span>{successMsg}</span>
+        <div className="p-3.5 bg-[#E5DEC9] dark:bg-[#2C2723] border border-[#7a4e10]/40 dark:border-[#D4AA50]/40 text-xs font-courier text-[#7a4e10] dark:text-[#D4AA50] flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span className="font-bold">{successMsg}</span>
         </div>
       )}
 
+      {/* Verbatim Speech Transcript Preview */}
       {lastTranscribedText && (
-        <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl space-y-2.5 animate-in fade-in">
-          <div className="flex items-center justify-between text-xs font-semibold text-emerald-900">
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <div className="p-5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-3 font-courier rounded-none">
+          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+            <span className="flex items-center gap-1.5 text-[#7a4e10] dark:text-[#D4AA50]">
+              <CheckCircle2 className="w-4 h-4" />
               Verbatim Speech Transcript ({lastTranscribedText.split(/\s+/).filter(Boolean).length} words)
             </span>
             <div className="flex items-center gap-2">
@@ -719,23 +635,23 @@ export default function AudioRecorder({
                   setCopiedTranscript(true);
                   setTimeout(() => setCopiedTranscript(false), 2000);
                 }}
-                className="text-xs text-emerald-700 hover:text-emerald-900 font-medium px-2 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 transition"
+                className="text-xs text-[#1d1d1b] dark:text-[#F0EAE1] hover:underline font-bold uppercase px-2 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer"
               >
                 {copiedTranscript ? "Copied!" : "Copy"}
               </button>
-              <span className="text-[11px] font-medium bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+              <span className="text-[11px] font-bold uppercase px-2 py-0.5 bg-[#E5DEC9] dark:bg-[#2C2723] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
                 Synced to Editor
               </span>
             </div>
           </div>
-          <div className="bg-white/95 rounded-xl p-3.5 border border-emerald-100 text-xs sm:text-sm text-slate-800 leading-relaxed max-h-56 overflow-y-auto whitespace-pre-wrap font-sans select-text shadow-2xs">
+          <div className="bg-[#EDE7D6] dark:bg-[#221F1C] p-4 border border-[#cfc7b2] dark:border-[#38332C] text-xs text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed max-h-56 overflow-y-auto whitespace-pre-wrap select-text font-mono">
             {lastTranscribedText}
           </div>
         </div>
       )}
 
       {/* Transcribe Action Button */}
-      <div className="flex items-center justify-end gap-3 pt-2">
+      <div className="flex items-center justify-end gap-3 pt-2 font-courier">
         <button
           type="button"
           disabled={
@@ -745,140 +661,27 @@ export default function AudioRecorder({
             (activeTab === "upload" && !selectedFile)
           }
           onClick={handleTranscribe}
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] rounded-none shadow-2xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
-          <Sparkles className="w-4 h-4" />
-          {isProcessing
-            ? "Processing & Transcribing..."
-            : "Transcribe Voice Audio"}
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>
+                {processingStep === 1
+                  ? `Ingesting Audio (${processingElapsed}s)...`
+                  : processingStep === 2
+                  ? `FFmpeg Normalization (${processingElapsed}s)...`
+                  : `Transcribing (${processingElapsed}s)...`}
+              </span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3.5 h-3.5 text-[#D4AA50] dark:text-[#181614]" />
+              <span>Transcribe Voice Audio</span>
+            </>
+          )}
         </button>
       </div>
-
-      {/* Interactive Transcription Loading Window Modal */}
-      {isProcessing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full p-6 sm:p-8 space-y-6 text-center relative overflow-hidden">
-            {/* Top decorative gradient bar */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 animate-pulse" />
-
-            {/* Glowing Pulsing Icon */}
-            <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
-              <div className="absolute inset-1 rounded-full bg-indigo-500/10 animate-pulse" />
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-                <Mic className="w-8 h-8 animate-bounce" />
-              </div>
-            </div>
-
-            {/* Title and Status Badge */}
-            <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
-                <span>AI Speech-to-Text Pipeline</span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight">
-                Transcribing Voice Recording
-              </h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Running neural speech recognition in{" "}
-                <span className="font-semibold text-slate-700">
-                  {language === "hi" ? "Hindi (hi-IN)" : "English (en-US)"}
-                </span>
-                .
-              </p>
-            </div>
-
-            {/* Step-by-Step Progress Pipeline */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-left space-y-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 pb-1 border-b border-slate-200/60">
-                <span>PIPELINE PROGRESS</span>
-                <span className="font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
-                  {processingElapsed}s elapsed
-                </span>
-              </div>
-
-              {/* Step 1 */}
-              <div className="flex items-center gap-3 text-xs">
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
-                    processingStep > 1
-                      ? "bg-emerald-500 text-white"
-                      : processingStep === 1
-                      ? "bg-indigo-600 text-white animate-pulse"
-                      : "bg-slate-200 text-slate-500"
-                  }`}
-                >
-                  {processingStep > 1 ? <Check className="w-3.5 h-3.5" /> : "1"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-800">
-                    Audio Leveling & FFmpeg Noise Gate
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    {processingStep > 1 ? "Completed" : "Optimizing loudness & frequencies..."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="flex items-center gap-3 text-xs">
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
-                    processingStep > 2
-                      ? "bg-emerald-500 text-white"
-                      : processingStep === 2
-                      ? "bg-indigo-600 text-white animate-pulse"
-                      : "bg-slate-200 text-slate-500"
-                  }`}
-                >
-                  {processingStep > 2 ? <Check className="w-3.5 h-3.5" /> : "2"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-800">
-                    Multimodal AI Transcription
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    {processingStep > 2
-                      ? "Completed"
-                      : processingStep === 2
-                      ? "Extracting verbatim speech into text..."
-                      : "Waiting for audio preprocessing"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="flex items-center gap-3 text-xs">
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
-                    processingStep === 3
-                      ? "bg-indigo-600 text-white animate-pulse"
-                      : "bg-slate-200 text-slate-500"
-                  }`}
-                >
-                  3
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-800">
-                    Sync to Meeting Transcript & Voice Notes
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    Populating editable editor below...
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Guidance */}
-            <div className="bg-indigo-50/70 border border-indigo-100/80 rounded-xl p-3 text-xs text-indigo-900 flex items-center gap-2 text-left">
-              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
-              <span>
-                Speech output will appear immediately in <strong>Meeting Transcript & Voice Notes</strong> below for your review before structuring.
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -100,6 +100,15 @@ async def upload_attachment(
     db.commit()
     db.refresh(attachment)
 
+    # Automatically chunk and index into DocumentRAGService
+    try:
+        from app.services.rag.document_rag import get_document_rag_service
+        rag_svc = get_document_rag_service()
+        all_atts = db.query(Attachment).filter(Attachment.decision_id == decision.id).all()
+        rag_svc.index_attachments(decision.id, all_atts)
+    except Exception as exc:
+        logger.warning(f"RAG auto-indexing failed for decision {decision.id}: {exc}")
+
     return AttachmentResponse.model_validate(attachment)
 
 
@@ -279,6 +288,15 @@ async def import_google_drive(
     db.commit()
     db.refresh(attachment)
 
+    # Automatically chunk and index into DocumentRAGService
+    try:
+        from app.services.rag.document_rag import get_document_rag_service
+        rag_svc = get_document_rag_service()
+        all_atts = db.query(Attachment).filter(Attachment.decision_id == decision.id).all()
+        rag_svc.index_attachments(decision.id, all_atts)
+    except Exception as exc:
+        logger.warning(f"RAG auto-indexing failed for decision {decision.id}: {exc}")
+
     return AttachmentResponse.model_validate(attachment)
 
 
@@ -367,5 +385,14 @@ def delete_attachment(
 
     db.delete(attachment)
     db.commit()
+
+    # Re-index remaining attachments for this decision
+    try:
+        from app.services.rag.document_rag import get_document_rag_service
+        rag_svc = get_document_rag_service()
+        remaining_atts = db.query(Attachment).filter(Attachment.decision_id == decision_id).all()
+        rag_svc.index_attachments(decision_id, remaining_atts)
+    except Exception as exc:
+        logger.warning(f"RAG re-indexing failed after deletion for decision {decision_id}: {exc}")
 
     return {"status": "deleted", "id": attachment_id}

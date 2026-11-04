@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import zipfile
 import base64
 import logging
@@ -13,7 +14,42 @@ from app.config import settings
 
 logger = logging.getLogger("decisionlens.file_parser")
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md", ".markdown"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md", ".markdown", ".vtt", ".srt"}
+
+
+def parse_transcript_cues(text: str) -> str:
+    """
+    Parses WebVTT (.vtt) and SubRip (.srt) transcript exports (e.g. from Zoom, Google Meet, MS Teams).
+    Strips cue numbers, timestamp lines, and WebVTT headers while preserving speaker tags and dialogue.
+    Merges sequential dialogue from the same speaker to produce readable, compact meeting notes.
+    """
+    lines = text.splitlines()
+    cleaned_lines = []
+
+    timestamp_pattern = re.compile(
+        r"^\s*(?:\d+:)?\d{2}:\d{2}[\.,]\d{3}\s*-->\s*(?:\d+:)?\d{2}:\d{2}[\.,]\d{3}.*$"
+    )
+    vtt_tag_pattern = re.compile(r"<\/?(?:v\s+([^>]+)|[^>]+)>")
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.upper() == "WEBVTT" or stripped.upper().startswith("NOTE ") or stripped.isdigit():
+            continue
+        if timestamp_pattern.match(stripped):
+            continue
+
+        def replace_vtt_tag(match):
+            speaker = match.group(1)
+            return f"{speaker}: " if speaker else ""
+
+        cleaned = vtt_tag_pattern.sub(replace_vtt_tag, stripped).strip()
+        if cleaned:
+            if not cleaned_lines or cleaned_lines[-1] != cleaned:
+                cleaned_lines.append(cleaned)
+
+    return "\n\n".join(cleaned_lines)
 
 
 def extract_scanned_pdf_ocr(file_bytes: bytes) -> Optional[str]:
@@ -138,11 +174,31 @@ def extract_text_from_file(file_bytes: bytes, filename: str, mime_type: Optional
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file format '{ext}'. Supported formats: .pdf, .docx, .txt, .md",
+            detail=f"Unsupported file format '{ext}'. Supported formats: .pdf, .docx, .txt, .md, .vtt, .srt",
         )
 
     # 1. Plain Text and Markdown
-    if ext in {".txt", ".md", ".markdown"}:
+    # Transcripts (.vtt, .srt)
+    if ext in {".vtt", ".srt"}:
+        try:
+            raw_text = file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                raw_text = file_bytes.decode("latin-1")
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to decode transcript file. Ensure it is encoded in UTF-8 or standard ASCII.",
+                )
+        parsed = parse_transcript_cues(raw_text)
+        if not parsed.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Transcript file contains no extractable dialogue or cues.",
+            )
+        return parsed
+
+    elif ext in {".txt", ".md", ".markdown"}:
         try:
             text = file_bytes.decode("utf-8")
         except UnicodeDecodeError:

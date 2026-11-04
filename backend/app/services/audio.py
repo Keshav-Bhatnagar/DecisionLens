@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import urllib.request
 import uuid
+import base64
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -19,7 +20,6 @@ logger = logging.getLogger("decisionlens.audio")
 ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".webm", ".ogg"}
 SUPPORTED_LANGUAGES = {"en", "hi"}
 MAX_AUDIO_DURATION_SECONDS = 7200  # 2 hours limit
-
 
 
 def get_audio_extension(filename: str) -> str:
@@ -64,7 +64,6 @@ def validate_audio_file(
 
     # 4. Validate extension
     ext = get_audio_extension(filename)
-    # If filename doesn't have an extension (e.g. raw blob upload), infer from mime_type
     if not ext and mime_type:
         if "webm" in mime_type:
             ext = ".webm"
@@ -166,10 +165,8 @@ def enhance_audio_with_ffmpeg(
 
     audio_filters = []
     if enable_noise_reduction:
-        # High-pass filter at 200 Hz to remove low-frequency ambient rumble and mic handling hum
         audio_filters.append("highpass=f=200")
     if enable_normalization:
-        # EBU R128 integrated loudness normalization
         audio_filters.append("loudnorm")
 
     filter_str = ",".join(audio_filters) if audio_filters else "anull"
@@ -244,7 +241,6 @@ def transcribe_audio_google_free(audio_path: Path, language: str = "en") -> str:
         ssl_context = ssl.create_default_context()
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Segment into 15-second 16kHz mono FLAC chunks for optimal recognition accuracy
         out_pattern = Path(tmpdir) / "chunk_%03d.flac"
         cmd = [
             ffmpeg_bin, "-y", "-i", str(audio_path),
@@ -254,7 +250,6 @@ def transcribe_audio_google_free(audio_path: Path, language: str = "en") -> str:
         ]
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if res.returncode != 0:
-            logger.warning(f"FFmpeg segmentation failed ({res.stderr.decode('utf-8', errors='ignore')}), trying direct FLAC conversion")
             direct_flac = Path(tmpdir) / "direct.flac"
             cmd_direct = [
                 ffmpeg_bin, "-y", "-i", str(audio_path),
@@ -301,6 +296,94 @@ def transcribe_audio_google_free(audio_path: Path, language: str = "en") -> str:
                 logger.debug(f"Google speech chunk recognition error: {exc}")
 
         return " ".join(results).strip()
+
+
+def transcribe_audio_indic_asr(
+    audio_path: Path,
+    language: str = "en",
+    endpoint: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_name: Optional[str] = None,
+) -> str:
+    """
+    Transcribe audio using IIT Madras / AI4Bharat IndicASR (IndicWhisper / IndicWav2Vec).
+    Specifically tuned for Indian accents, Hinglish, Hindi, and regional enterprise dialogue.
+    Supports Bhashini / AI4Bharat ULCA inference endpoints or self-hosted Triton/vLLM endpoints.
+    """
+    active_endpoint = (endpoint or settings.indic_asr_endpoint).strip()
+    active_key = (api_key or settings.indic_asr_api_key).strip()
+    active_model = (model_name or settings.indic_asr_model).strip()
+
+    if not active_endpoint:
+        logger.info("No custom AI4Bharat / IndicASR endpoint configured. Proceeding to fallback tiers.")
+        return ""
+
+    try:
+        import httpx
+
+        logger.info(
+            "Calling IIT Madras / AI4Bharat IndicASR endpoint (%s) for language '%s' using model '%s'...",
+            active_endpoint,
+            language,
+            active_model,
+        )
+
+        audio_bytes = audio_path.read_bytes()
+        headers = {}
+        if active_key:
+            headers["Authorization"] = f"Bearer {active_key}"
+            headers["userID"] = "decisionlens-client"
+            headers["ulcaApiKey"] = active_key
+
+        lang_code = "hi" if language == "hi" else "en"
+
+        # 1. Try multipart upload
+        with httpx.Client(timeout=45.0) as client:
+            files = {"file": (audio_path.name, audio_bytes, "audio/wav")}
+            data = {"language": lang_code, "model": active_model}
+            resp = client.post(active_endpoint, headers=headers, data=data, files=files)
+            if resp.status_code == 200:
+                result = resp.json()
+                text = (
+                    result.get("transcript")
+                    or result.get("text")
+                    or result.get("data", {}).get("source", "")
+                    or ""
+                )
+                if text:
+                    logger.info("Successfully transcribed via AI4Bharat IndicASR (%d chars)", len(text))
+                    return clean_noise_tokens(text)
+
+            # 2. Try JSON base64 payload (Bhashini ASR standard format)
+            encoded_audio = base64.b64encode(audio_bytes).decode("utf-8")
+            bhashini_payload = {
+                "pipelineTasks": [
+                    {
+                        "taskType": "asr",
+                        "config": {
+                            "language": {"sourceLanguage": lang_code},
+                            "serviceId": active_model,
+                            "audioFormat": "wav",
+                            "samplingRate": 16000,
+                        },
+                    }
+                ],
+                "inputData": {"audio": [{"audioContent": encoded_audio}]},
+            }
+            resp2 = client.post(active_endpoint, headers=headers, json=bhashini_payload)
+            if resp2.status_code == 200:
+                result2 = resp2.json()
+                tasks = result2.get("pipelineResponse", [])
+                for t in tasks:
+                    if t.get("taskType") == "asr":
+                        out = t.get("output", [])
+                        if out and "source" in out[0]:
+                            transcribed = out[0]["source"]
+                            return clean_noise_tokens(transcribed)
+    except Exception as exc:
+        logger.warning("AI4Bharat IndicASR transcription request failed (%s). Cascading to fallbacks...", exc)
+
+    return ""
 
 
 def transcribe_audio_gemini(
@@ -354,13 +437,11 @@ def transcribe_audio_gemini(
         )
 
     try:
-        import base64
         import httpx
 
         audio_bytes = audio_path.read_bytes()
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
-        # Active Google multimodal models
         models_to_try = [
             "gemini-3.5-flash",
             "gemini-3.8-flash",
@@ -454,7 +535,6 @@ def transcribe_audio_azure_speech(
         temp_dir_path = Path(temp_dir)
         converted_wav = temp_dir_path / "audio_16k.wav"
 
-        # Transcode to 16kHz, 16-bit mono PCM WAV
         cmd = [
             ffmpeg_bin, "-y",
             "-i", str(audio_path),
@@ -469,7 +549,6 @@ def transcribe_audio_azure_speech(
             logger.warning("Failed to transcode audio for Azure Speech: %s", res.stderr)
             return ""
 
-        # Check duration
         duration = probe_audio_duration(converted_wav) or 0.0
 
         headers = {
@@ -478,7 +557,6 @@ def transcribe_audio_azure_speech(
             "Accept": "application/json",
         }
 
-        # If <= 55 seconds, send in a single call
         if duration <= 55.0:
             audio_data = converted_wav.read_bytes()
             try:
@@ -504,7 +582,6 @@ def transcribe_audio_azure_speech(
                 logger.warning("Azure Speech REST request error: %s", exc)
             return ""
 
-        # If > 55 seconds, segment into 45-second chunks
         segment_pattern = str(temp_dir_path / "chunk_%03d.wav")
         seg_cmd = [
             ffmpeg_bin, "-y",
@@ -552,13 +629,13 @@ def transcribe_audio_file(
     client_transcript: Optional[str] = None,
 ) -> str:
     """
-    Transcribe audio file with multi-tiered speech-to-text pipeline:
-    1. If force_mock=True (unit tests), returns unit test mock text.
-    2. Tier 0: Azure AI Speech Service (Primary if configured in Azure).
-    3. Tier 1: Google Gemini 3.5 Flash multimodal transcription (Option A Fallback).
-    4. Tier 2: OpenAI Whisper (whisper-1) if OpenAI API key is configured.
-    5. Tier 3: Browser live-captured Web Speech transcript if remote models are unavailable.
-    6. Tier 4: FFmpeg + Google Speech Recognition v2.
+    Lean, high-speed, cost-optimized 3-Tier Speech-to-Text Pipeline:
+    - Tier 1 (Primary): IIT Madras / AI4Bharat IndicASR (IndicWhisper for Indian accents & Hinglish).
+    - Tier 2 (Cloud Fallback with Subsidized/Free Credits):
+        - Tier 2A: Google Gemini 3.5 Flash (high-speed multimodal audio transcription).
+        - Tier 2B: Microsoft Azure AI Speech Service (Azure for Students credits).
+    - Tier 3 (Local / Zero-Cost Fallback): Browser Web Speech transcript captured client-side.
+    (Pruned redundant OpenAI Whisper paid tokens and legacy Google scraping).
     Strictly restricted to 'en' and 'hi'.
     """
     norm_lang = language.strip().lower()
@@ -573,12 +650,45 @@ def transcribe_audio_file(
         logger.info(f"Using mock transcription for testing (language={norm_lang}, force_mock=True)")
         return get_mock_transcript(norm_lang)
 
-    # 0. Tier 0: Azure AI Speech Service (Option B primary)
+    # Tier 1: IIT Madras / AI4Bharat IndicASR (IndicWhisper - Indian Accents & Hinglish)
+    if getattr(settings, "indic_asr_enabled", True) and getattr(settings, "indic_asr_endpoint", "").strip():
+        try:
+            indic_text = transcribe_audio_indic_asr(
+                audio_path,
+                language=norm_lang,
+                endpoint=settings.indic_asr_endpoint,
+                api_key=settings.indic_asr_api_key,
+                model_name=settings.indic_asr_model,
+            )
+            if indic_text and indic_text.strip():
+                logger.info("Successfully transcribed audio via IIT Madras AI4Bharat IndicASR (%d chars)", len(indic_text))
+                return indic_text.strip()
+            logger.info("AI4Bharat IndicASR returned empty. Cascading to Tier 2 (Gemini / Azure)...")
+        except Exception as exc:
+            logger.warning("AI4Bharat IndicASR tier failed (%s). Cascading to Tier 2...", exc)
+
+    # Tier 2A: Google Gemini 3.5 Flash Multimodal Audio (Fast 2-4s, low token cost)
+    gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
+    if gemini_key:
+        try:
+            logger.info("Attempting Tier 2A Gemini 3.5 Flash multimodal transcription (language=%s)...", norm_lang)
+            gemini_text = transcribe_audio_gemini(
+                audio_path,
+                language=norm_lang,
+                client_hint=client_transcript,
+            )
+            if gemini_text and gemini_text.strip():
+                logger.info("Successfully transcribed audio via Gemini 3.5 Flash (%d chars)", len(gemini_text))
+                return gemini_text.strip()
+        except Exception as exc:
+            logger.warning(f"Tier 2A Gemini transcription attempt failed: {exc}")
+
+    # Tier 2B: Microsoft Azure AI Speech Service (Azure for Students credits)
     azure_speech_key = settings.azure_speech_key.strip()
     azure_speech_region = settings.azure_speech_region.strip()
     if azure_speech_key and azure_speech_region:
         try:
-            logger.info("Attempting Tier 0 Azure AI Speech transcription (language=%s)...", norm_lang)
+            logger.info("Attempting Tier 2B Azure AI Speech (Student Pack credits, language=%s)...", norm_lang)
             azure_text = transcribe_audio_azure_speech(
                 audio_path,
                 language=norm_lang,
@@ -588,63 +698,16 @@ def transcribe_audio_file(
             if azure_text and azure_text.strip():
                 logger.info("Successfully transcribed audio via Azure AI Speech (%d chars)", len(azure_text))
                 return azure_text.strip()
-            logger.info("Azure AI Speech returned empty or silence. Checking fallback...")
+            logger.info("Azure AI Speech returned empty or silence. Checking Tier 3 fallback...")
         except Exception as exc:
-            logger.warning("Tier 0 Azure AI Speech transcription failed (%s). Falling back to Tier 1 Gemini.", exc)
+            logger.warning("Tier 2B Azure AI Speech failed (%s). Falling back to Tier 3.", exc)
 
-    # 1. Tier 1 (Fallback Option A): Google Gemini 3.5 Flash multimodal transcription (highest quality)
-    gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
-    if gemini_key:
-        try:
-            gemini_text = transcribe_audio_gemini(
-                audio_path,
-                language=norm_lang,
-                client_hint=client_transcript,
-            )
-            if gemini_text and gemini_text.strip():
-                return gemini_text.strip()
-        except Exception as exc:
-            logger.warning(f"Tier 1 Gemini transcription attempt failed: {exc}")
-
-    # 2. Tier 2: Hosted OpenAI Whisper if API key is provided
-    openai_key = settings.openai_api_key.strip()
-    if openai_key:
-        try:
-            from openai import OpenAI
-            client = OpenAI(api_key=openai_key)
-            whisper_prompt = (
-                "Transcript of a decision-making discussion or executive meeting with multiple speakers. "
-                "Speaker 1: ... Speaker 2: ... Clear dialogue turns, trade-offs, and decisions."
-            )
-            with open(audio_path, "rb") as f:
-                transcription = client.audio.transcriptions.create(
-                    model=settings.whisper_model,
-                    file=f,
-                    language=norm_lang,
-                    prompt=whisper_prompt,
-                )
-            text = clean_noise_tokens(transcription.text.strip())
-            if text:
-                return text
-        except Exception as exc:
-            logger.warning(f"OpenAI Whisper transcription failed ({exc}). Falling back to browser/Google Speech.")
-
-    # 3. Tier 3: Browser live-captured Web Speech transcript fallback if remote AI failed
+    # Tier 3: Browser live-captured Web Speech transcript (Zero Token / Local Fallback)
     if client_transcript and client_transcript.strip():
         cleaned_client = clean_noise_tokens(client_transcript)
         if cleaned_client:
-            logger.info(f"Using browser Web Speech transcript fallback ({len(cleaned_client)} chars)")
+            logger.info(f"Using Tier 3 Browser Web Speech transcript fallback ({len(cleaned_client)} chars)")
             return cleaned_client
-
-    # 4. Tier 4: Google Speech Recognition via FFmpeg
-    try:
-        recognized = transcribe_audio_google_free(audio_path, language=norm_lang)
-        cleaned_rec = clean_noise_tokens(recognized)
-        if cleaned_rec:
-            logger.info(f"Successfully transcribed audio via Google Speech API ({len(cleaned_rec)} chars)")
-            return cleaned_rec
-    except Exception as exc:
-        logger.warning(f"Google Speech Recognition execution error: {exc}")
 
     return ""
 
@@ -676,7 +739,6 @@ def process_and_store_audio(
     # 3. Probe duration
     duration = probe_audio_duration(original_path)
     if duration is not None and duration > MAX_AUDIO_DURATION_SECONDS:
-        # Clean up stored file and reject
         try:
             original_path.unlink()
         except Exception:

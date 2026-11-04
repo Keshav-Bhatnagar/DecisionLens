@@ -40,7 +40,10 @@ EXECUTIVE MANDATE & WRITING GUIDELINES:
    - State the core strategic verdict directly in the headline and recommendation narrative.
    - Frame the rationale around real operational advantages, risk posture, and alignment with the decision goals.
 
-2. DECISION POSTURE:
+2. DECISION POSTURE & AUTHORITY ENFORCEMENT:
+   - PARTICIPANT AUTHORITY & VETO RESPECT:
+     * If an alternative violates an explicit "[DEVOPS / SRE CONSTRAINT]" (e.g. exceeds infra capacity, violates uptime SLAs, lacks failover), it CANNOT be recommended unconditionally and MUST trigger a pre-mortem due-diligence spike.
+     * If an alternative breaches a "[SECURITY CONSTRAINT]" (e.g. non-compliant data residency under DPDP Act, unencrypted storage), it CANNOT be recommended as an unconditional winner.
    - If critical information gaps or blocking risks remain unresolved:
      Set "synthesis_type": "conditional_next_step", "status": "CONDITIONAL", and provide clear "conditional_triggers" detailing the specific due-diligence clearances required before irrevocable capital or organizational commitment.
    - If critical gaps are resolved and foundational facts are validated:
@@ -538,6 +541,52 @@ def generate_mock_synthesis(
         )
     )
 
+    # Gather RAG document excerpts
+    try:
+        from app.services.rag.document_rag import get_document_rag_service
+        doc_rag = get_document_rag_service()
+        if doc_rag.has_indexed_documents(decision.id):
+            query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
+            doc_excerpts = doc_rag.retrieve_relevant_excerpts(decision.id, query=query or "architecture requirements", top_k=3)
+            for exc in doc_excerpts:
+                doc_name = exc.get("metadata", {}).get("document_name", "Technical Specification")
+                content = exc.get("content", "").strip()
+                if content:
+                    supporting_evidence.append(
+                        SupportingEvidenceItem(
+                            claim=(content[:180] + "...") if len(content) > 180 else content,
+                            source_title=f"Internal Spec ({doc_name})",
+                            source_url=None,
+                            evidence_type="document_excerpt",
+                            reliability="high",
+                        )
+                    )
+    except Exception as exc:
+        logger.warning(f"Failed to gather RAG document evidence in mock synthesis: {exc}")
+
+    # Gather Domain RAG standards
+    try:
+        from app.services.rag.domain_rag import get_domain_rag_service
+        domain_rag = get_domain_rag_service()
+        domain_rag.initialize_knowledge_bases()
+        query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
+        guidelines = domain_rag.retrieve_guidelines(query=query or "system design standards", top_k=2)
+        for g in guidelines:
+            domain_name = g.get("metadata", {}).get("domain", "System Design")
+            content = g.get("content", "").strip()
+            if content:
+                supporting_evidence.append(
+                    SupportingEvidenceItem(
+                        claim=(content[:180] + "...") if len(content) > 180 else content,
+                        source_title=f"Architectural Standard ({domain_name.upper()})",
+                        source_url=None,
+                        evidence_type="domain_standard",
+                        reliability="high",
+                    )
+                )
+    except Exception as exc:
+        logger.warning(f"Failed to gather Domain RAG evidence in mock synthesis: {exc}")
+
     if folder_precedents:
         for p in folder_precedents[:2]:
             v_info = p.get("verdict_headline") or (f"Approved {p.get('verdict_winner')}" if p.get("verdict_winner") else None)
@@ -798,11 +847,34 @@ def execute_hosted_synthesis(
 
     domain = getattr(decision, "domain", None) or analysis.get("domain") or "BUSINESS"
 
+    # Gather RAG document excerpts and domain standards
+    doc_excerpts = []
+    try:
+        from app.services.rag.document_rag import get_document_rag_service
+        doc_rag = get_document_rag_service()
+        if doc_rag.has_indexed_documents(decision.id):
+            query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
+            doc_excerpts = doc_rag.retrieve_relevant_excerpts(decision.id, query=query or "architecture requirements", top_k=4)
+    except Exception as exc:
+        logger.warning(f"Failed to gather RAG document excerpts for hosted synthesis: {exc}")
+
+    domain_guidelines = []
+    try:
+        from app.services.rag.domain_rag import get_domain_rag_service
+        domain_rag = get_domain_rag_service()
+        domain_rag.initialize_knowledge_bases()
+        query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
+        domain_guidelines = domain_rag.retrieve_guidelines(query=query or "system design standards", top_k=2)
+    except Exception as exc:
+        logger.warning(f"Failed to gather domain guidelines for hosted synthesis: {exc}")
+
     payload_context = {
         "title": decision.title,
         "problem_statement": decision.problem_statement,
         "raw_input": decision.raw_input,
         "domain": domain,
+        "retrieved_document_excerpts": doc_excerpts,
+        "domain_architectural_guidelines": domain_guidelines,
         "facts": points.get("facts", []),
         "assumptions": points.get("assumptions", []),
         "pros": points.get("pros", []),

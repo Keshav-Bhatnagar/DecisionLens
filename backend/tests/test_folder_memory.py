@@ -221,3 +221,45 @@ def test_synthesis_incorporates_folder_continuity(db_session: Session, registere
     evidence_claims = [e.claim for e in synthesis.supporting_evidence]
     evidence_sources = [e.source_title for e in synthesis.supporting_evidence]
     assert any("Session Alpha" in s for s in evidence_sources)
+
+
+def test_semantic_precedent_ranking(db_session: Session, registered_user: dict):
+    user_id = registered_user["user"].id
+    folder = Folder(name="Semantic Memory Test", owner_id=user_id)
+    db_session.add(folder)
+    db_session.commit()
+    db_session.refresh(folder)
+
+    now = datetime.now(timezone.utc)
+
+    # 1. Past meeting about office catering (unrelated)
+    db_session.add(Decision(
+        owner_id=user_id,
+        folder_id=folder.id,
+        title="Office Catering & Snacks",
+        problem_statement="Choose tea and coffee vendor for cafeteria",
+        created_at=now - timedelta(days=5),
+    ))
+    # 2. Past meeting about database migration (highly relevant)
+    db_session.add(Decision(
+        owner_id=user_id,
+        folder_id=folder.id,
+        title="PostgreSQL 17 Sharding & Scaling",
+        problem_statement="Evaluate database connection pooling and sharding latency for high volume transactions",
+        created_at=now - timedelta(days=4),
+    ))
+    # 3. Current decision about database caching
+    current_decision = Decision(
+        owner_id=user_id,
+        folder_id=folder.id,
+        title="Redis Caching Layer for PostgreSQL",
+        problem_statement="Select Redis cluster configuration to reduce database query latency",
+        created_at=now,
+    )
+    db_session.add(current_decision)
+    db_session.commit()
+    db_session.refresh(current_decision)
+
+    precedents = get_folder_precedents(current_decision, db=db_session, limit=1)
+    assert len(precedents) == 1
+    assert "PostgreSQL" in precedents[0]["title"]

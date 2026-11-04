@@ -15,9 +15,13 @@ if (typeof nextEnv?.loadEnvConfig === "function") {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  turbopack: {
+    root: __dirname,
+  },
   httpAgentOptions: {
     keepAlive: true,
   },
+  devIndicators: false,
   experimental: {
     proxyTimeout: 120000,
   },
@@ -27,6 +31,10 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_API_URL ||
       "http://127.0.0.1:8000";
     return [
+      {
+        source: "/workspaces/:folderId",
+        destination: "/folders/:folderId",
+      },
       {
         source: "/api/:path*",
         destination: `${backendUrl}/api/:path*`,

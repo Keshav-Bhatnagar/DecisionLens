@@ -131,7 +131,7 @@ export default function OutcomeTrackingCard({
             setError(null);
             setIsModalOpen(true);
           }}
-          className="px-3.5 py-1.5 bg-[#2F5D8F] hover:bg-[#254b73] text-[#FCFBF8] text-xs font-medium rounded transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+          className="px-3.5 py-1.5 bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] text-xs font-bold uppercase tracking-wider rounded-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
         >
           <span>★</span>
           <span>{latest ? "Log Follow-Up Check-in" : "Log Decision Outcome"}</span>
@@ -145,12 +145,12 @@ export default function OutcomeTrackingCard({
       )}
 
       {loading ? (
-        <div className="p-6 bg-[#FCFBF8] border border-[#D9D2C3] rounded text-center text-xs text-[#5A6275]">
+        <div className="p-6 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-center text-xs text-[#4f4b40] dark:text-[#A89F91]">
           Loading recorded outcomes...
         </div>
       ) : latest ? (
         /* Display Latest Recorded Review */
-        <div className="bg-[#FCFBF8] border border-[#D9D2C3] rounded-lg p-5 shadow-sm">
+        <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-5 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#D9D2C3]">
             <div className="flex items-center gap-3">
               <div className="flex text-amber-500 text-sm">
@@ -241,7 +241,7 @@ export default function OutcomeTrackingCard({
         </div>
       ) : (
         /* Empty Prompt Banner */
-        <div className="bg-[#FCFBF8] border border-dashed border-[#D9D2C3] rounded-lg p-6 text-center">
+        <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-6 text-center">
           <div className="w-8 h-8 rounded-full bg-[#EFEADF] text-[#2F5D8F] flex items-center justify-center mx-auto mb-2 text-sm font-bold">
             ★
           </div>
@@ -253,7 +253,7 @@ export default function OutcomeTrackingCard({
           </p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-3 py-1.5 bg-[#161E33] hover:bg-[#1e293b] text-[#FCFBF8] text-xs font-medium rounded transition-colors"
+            className="px-4 py-2 bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold uppercase tracking-wider rounded-sm transition-colors shadow-xs"
           >
             Log 30-Day Decision Outcome
           </button>
@@ -263,7 +263,7 @@ export default function OutcomeTrackingCard({
       {/* Modal / Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="bg-[#FCFBF8] border border-[#D9D2C3] rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6">
+          <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-sm shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 text-[#1d1d1b] dark:text-[#F0EAE1]">
             <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
               <div>
                 <h3 className="text-base font-serif font-bold text-[#161E33]">

@@ -4,11 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Sidebar, { formatDisplayName } from "@/components/Sidebar";
+import WorkspaceMembersPill from "@/components/WorkspaceMembersPill";
+import ApertureToggle from "@/components/ApertureToggle";
+import { useTheme } from "@/context/ThemeContext";
+
 import {
   Menu,
   ChevronRight,
   LogIn,
-  LogOut,
 } from "lucide-react";
 import {
   getMe,
@@ -42,6 +45,7 @@ export default function AppShell({
   maxWidthClass = "max-w-[1100px]",
 }: AppShellProps) {
   const pathname = usePathname();
+  const { theme, toggleTheme } = useTheme();
 
   // Sidebar States
   const [collapsed, setCollapsed] = useState(false);
@@ -93,18 +97,19 @@ export default function AppShell({
     loadUser();
   }, [loadUser]);
 
-  const handleLogout = () => {
-    clearStoredToken();
-    setUser(null);
-    onRefresh?.();
-  };
-
   const handleCloseMobile = useCallback(() => {
     setMobileOpen(false);
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F1E8] text-[#161E33] flex flex-col antialiased font-ui">
+    <div
+      data-theme={theme}
+      className={`min-h-screen flex flex-col antialiased transition-colors duration-300 ${
+        theme === "dark"
+          ? "dark bg-[#181614] text-[#F0EAE1]"
+          : "bg-[#F4F0E6] text-[#1d1d1b]"
+      }`}
+    >
       {/* Sidebar Component */}
       <Sidebar
         activeFolderId={activeFolderId}
@@ -126,25 +131,25 @@ export default function AppShell({
           collapsed ? "lg:pl-16" : "lg:pl-[240px]"
         }`}
       >
-        {/* Calm Contextual Topbar: Breadcrumbs + User Info */}
-        <header className="sticky top-0 z-30 bg-[#F5F1E8]/95 backdrop-blur-xs border-b border-[#D9D2C3] px-4 sm:px-6 h-14 flex items-center justify-between">
+        {/* Calm Contextual Topbar: Breadcrumbs + User Info + Aperture Theme Shutter */}
+        <header className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-xs border-b border-[#cfc7b2] dark:border-[#38332C] px-4 sm:px-6 h-14 flex items-center justify-between transition-colors duration-200">
           {/* Left: Mobile Menu & Breadcrumbs */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             {/* Mobile Hamburger Button */}
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden w-8 h-8 flex items-center justify-center text-[#161E33] bg-[#FCFBF8] border border-[#D9D2C3] hover:bg-[#EFEADF] active:bg-[#D9D2C3]/60 rounded-[4px] transition-colors shrink-0 shadow-2xs"
+              className="lg:hidden w-8 h-8 flex items-center justify-center text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] active:bg-[#cfc7b2]/60 rounded-[4px] transition-colors shrink-0 shadow-2xs"
               aria-label="Open navigation sidebar"
             >
               <Menu className="w-4 h-4" />
             </button>
 
-            {/* Breadcrumb Path: Breadcrumb only (Workspaces / Overview) in the normal UI font */}
-            <nav className="flex items-center gap-1.5 text-[13px] text-[#5A6275] overflow-hidden truncate">
+            {/* Breadcrumb Path: Breadcrumb only (Workspaces / Overview) */}
+            <nav className="flex items-center gap-1.5 text-[13px] font-courier text-[#4f4b40] dark:text-[#A89F91] overflow-hidden truncate">
               <Link
                 href="/dashboard"
-                className="hover:text-[#161E33] transition-colors shrink-0"
+                className="hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors shrink-0"
               >
                 Workspaces
               </Link>
@@ -152,16 +157,16 @@ export default function AppShell({
               {breadcrumbs && breadcrumbs.length > 0 ? (
                 breadcrumbs.map((crumb, idx) => (
                   <div key={idx} className="flex items-center gap-1.5 shrink-0 max-w-[240px] truncate">
-                    <ChevronRight className="w-3.5 h-3.5 text-[#8B909C] shrink-0" />
+                    <ChevronRight className="w-3.5 h-3.5 text-[#7B8491] shrink-0" />
                     {crumb.href ? (
                       <Link
                         href={crumb.href}
-                        className="hover:text-[#161E33] truncate transition-colors"
+                        className="hover:text-[#2B4C8C] dark:hover:text-[#D4AA50] truncate transition-colors text-[#1d1d1b] dark:text-[#F0EAE1]"
                       >
                         {crumb.label}
                       </Link>
                     ) : (
-                      <span className="text-[#161E33] font-medium truncate">
+                      <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-bold truncate">
                         {crumb.label}
                       </span>
                     )}
@@ -169,28 +174,41 @@ export default function AppShell({
                 ))
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <ChevronRight className="w-3.5 h-3.5 text-[#8B909C] shrink-0" />
-                  <span className="text-[#161E33] font-medium">Overview</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-[#7B8491] shrink-0" />
+                  <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-bold">Overview</span>
                 </div>
               )}
             </nav>
           </div>
 
-          {/* Right: Custom Page Actions + User Avatar & Name */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Right: Custom Page Actions + Workspace Members + User Avatar & Name + Aperture Toggle */}
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             {actions}
 
-            {/* User Account */}
+            {(activeFolderId || activeDecisionId) && (
+              <WorkspaceMembersPill
+                folderId={activeFolderId}
+                decisionId={activeDecisionId}
+                currentUserEmail={user?.email}
+              />
+            )}
+
+            {/* Aperture Theme Shutter Dial (f/1.4 Lux <-> f/16 Nox) */}
+            <div className="pl-2.5 sm:pl-3 border-l border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center">
+              <ApertureToggle theme={theme} onToggle={toggleTheme} />
+            </div>
+
+            {/* Extreme Right: User Account Profile */}
             {loadingUser ? (
-              <div className="w-7 h-7 rounded-full bg-[#D9D2C3] animate-pulse" />
+              <div className="w-7 h-7 rounded-full bg-[#cfc7b2] dark:bg-[#38332C] animate-pulse" />
             ) : user ? (
-              <div className="flex items-center gap-2.5 pl-2">
+              <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-[#cfc7b2] dark:border-[#38332C]">
                 <Link
                   href="/profile"
                   className="flex items-center gap-2 hover:opacity-85 transition-opacity"
-                  title="Profile & settings"
+                  title={`Signed in as ${formatDisplayName(user.display_name, user.email)} (Profile & settings)`}
                 >
-                  <div className="w-7 h-7 rounded-full bg-[#FCFBF8] border border-[#D9D2C3] text-[#161E33] font-medium text-xs flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-courier font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
                     {user.avatar_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={user.avatar_url} alt="Avatar" className="w-full h-full rounded-full object-cover" />
@@ -198,7 +216,7 @@ export default function AppShell({
                       (user.display_name || user.email).charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className="hidden sm:inline text-[13px] font-medium text-[#161E33]">
+                  <span className="hidden sm:inline text-xs font-courier font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
                     {formatDisplayName(user.display_name, user.email)}
                   </span>
                 </Link>
@@ -206,7 +224,7 @@ export default function AppShell({
             ) : (
               <Link
                 href="/auth"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-white bg-[#161E33] hover:bg-[#232C47] rounded-[4px] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-white bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-[4px] transition-colors"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Sign in</span>
@@ -215,7 +233,7 @@ export default function AppShell({
           </div>
         </header>
 
-        {/* Page Content Body: Content max-width 1100px with 40px page padding */}
+        {/* Page Content Body */}
         <main className={`flex-1 w-full mx-auto px-6 sm:px-10 py-8 sm:py-10 ${maxWidthClass}`}>
           {children}
         </main>

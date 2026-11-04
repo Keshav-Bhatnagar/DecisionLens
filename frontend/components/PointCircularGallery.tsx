@@ -1,22 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Trash2,
-  Maximize2,
-  X,
-  BookOpen,
-  ZoomIn,
-  ZoomOut,
-  Sliders,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Trash2, Maximize2 } from "lucide-react";
 
 export interface CategoryTheme {
   border: string;
-  headerBg: string;
   badge: string;
   accent: string;
 }
@@ -27,7 +15,6 @@ export interface PointCircularGalleryProps {
   categoryKey: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
   colorClasses: CategoryTheme;
   items: string[];
   onUpdateItem: (index: number, newValue: string) => void;
@@ -35,13 +22,15 @@ export interface PointCircularGalleryProps {
   onAddItem: () => void;
   zoomLevel?: ZoomMode;
   onZoomChange?: (mode: ZoomMode) => void;
+  whyClassified?: string;
+  getItemWhyClassified?: (index: number, text: string) => string;
+  downstreamDestination?: string;
 }
 
 export default function PointCircularGallery({
   categoryKey,
   title,
   description,
-  icon,
   colorClasses,
   items,
   onUpdateItem,
@@ -49,13 +38,16 @@ export default function PointCircularGallery({
   onAddItem,
   zoomLevel: controlledZoom,
   onZoomChange,
+  whyClassified,
+  getItemWhyClassified,
+  downstreamDestination,
 }: PointCircularGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewMode, setViewMode] = useState<"circular" | "list">("circular");
   const [focusModalIndex, setFocusModalIndex] = useState<number | null>(null);
 
-  // Internal zoom state if uncontrolled (defaults to zoomOut with clear center and semi-blurred background)
-  const [internalZoom, setInternalZoom] = useState<ZoomMode>("zoomOut");
+  // Internal zoom state if uncontrolled (defaults to spacious for immediate clarity)
+  const [internalZoom, setInternalZoom] = useState<ZoomMode>("spacious");
   const zoomMode = controlledZoom !== undefined ? controlledZoom : internalZoom;
 
   const handleSetZoom = (mode: ZoomMode) => {
@@ -85,178 +77,206 @@ export default function PointCircularGallery({
     setActiveIndex((prev) => (prev + 1) % items.length);
   };
 
+  // Keyboard navigation inside the 3D circular carousel (ArrowLeft / ArrowRight)
+  useEffect(() => {
+    if (viewMode !== "circular") return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewMode, items.length]);
+
+  // Pointer drag gestures for tactile circular rotation
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === "TEXTAREA" || target.tagName === "BUTTON")) return;
+    setDragStartX(e.clientX);
+    setIsDragging(true);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging || dragStartX === null) return;
+    const diffX = e.clientX - dragStartX;
+    if (diffX > 40) {
+      handlePrev();
+    } else if (diffX < -40) {
+      handleNext();
+    }
+    setDragStartX(null);
+    setIsDragging(false);
+  };
+
   const handleAddAndFocus = () => {
     onAddItem();
     setActiveIndex(items.length);
   };
 
-  // Helper for word count and reading time
+  // Humanized reading stats
   const getReadingStats = (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return { words: 0, readTimeSec: 0, lengthCategory: "Empty" };
+    if (!trimmed) return { words: 0, readTimeText: "Empty" };
     const words = trimmed.split(/\s+/).length;
     const readTimeSec = Math.max(1, Math.round((words / 200) * 60));
-    let lengthCategory = "Brief";
-    if (words > 60) lengthCategory = "Comprehensive";
-    else if (words > 25) lengthCategory = "Detailed";
-    return { words, readTimeSec, lengthCategory };
+    return {
+      words,
+      readTimeText: `~${readTimeSec}s read`,
+    };
   };
 
   // Empty state when category has no points yet
   if (items.length === 0) {
     return (
-      <div className="py-14 px-6 text-center bg-white rounded-2xl border border-dashed border-slate-200 space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 mx-auto flex items-center justify-center text-3xl shadow-2xs">
-          {icon}
-        </div>
-        <div>
-          <h4 className="text-sm font-bold text-slate-800">
-            No {title.toLowerCase()} recorded yet
-          </h4>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 leading-relaxed">
-            Add the first point to start building your verified decision context.
-          </p>
-        </div>
+      <div className="py-12 px-6 text-center bg-[#FDFCF8] dark:bg-[#1A1815] rounded-xl border border-dashed border-[#D9D2C3] dark:border-[#38332C] space-y-3 font-sans">
+        <h4 className="text-sm font-bold text-[#161E33] dark:text-[#F0EAE1]">
+          No {title.toLowerCase()} recorded yet
+        </h4>
+        <p className="text-xs text-[#5A6275] dark:text-[#A89F91] max-w-sm mx-auto leading-relaxed">
+          Add an initial point to ground this section of your decision context.
+        </p>
         <button
           type="button"
           onClick={handleAddAndFocus}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-xl transition shadow-2xs"
+          className="inline-flex items-center px-4 py-2 text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
-          <span>Add First {title.slice(0, -1) || title}</span>
+          Add {title.slice(0, -1) || title}
         </button>
       </div>
     );
   }
 
-  // Calculate stage and card sizing based on zoomMode
+  // Stage and card sizing based on zoomMode
   const stageHeightClass =
     zoomMode === "zoomOut"
-      ? "h-[400px] sm:h-[435px]"
+      ? "h-[450px] sm:h-[480px]"
       : zoomMode === "focus"
-      ? "h-[470px] sm:h-[510px]"
-      : "h-[430px] sm:h-[460px]"; // spacious
+      ? "h-[510px] sm:h-[550px]"
+      : "h-[470px] sm:h-[500px]";
 
   const cardDimensions =
     zoomMode === "zoomOut"
       ? {
-          widthClass: "w-[92%] sm:w-[88%] max-w-[530px]",
-          heightClass: "h-[330px] sm:h-[355px]",
-          centerScale: 0.90,
-          neighborScale: 0.68,
-          translateX: "78%",
-          translateZ: "-160px",
+          widthClass: "w-[90%] sm:w-[84%] max-w-[500px]",
+          heightClass: "h-[360px] sm:h-[390px]",
+          neighborScale: 0.76,
+          translateX: "70%",
+          translateZ: "-130px",
           perspective: "1350px",
         }
       : zoomMode === "focus"
       ? {
           widthClass: "w-[96%] sm:w-[94%] max-w-[620px]",
-          heightClass: "h-[390px] sm:h-[420px]",
-          centerScale: 1.03,
+          heightClass: "h-[420px] sm:h-[450px]",
           neighborScale: 0.82,
           translateX: "66%",
           translateZ: "-100px",
           perspective: "1200px",
         }
       : {
-          // spacious (default - bigger, roomy boxes)
-          widthClass: "w-[94%] sm:w-[90%] max-w-[560px]",
-          heightClass: "h-[350px] sm:h-[380px]",
-          centerScale: 1.0,
-          neighborScale: 0.78,
-          translateX: "72%",
+          widthClass: "w-[94%] sm:w-[88%] max-w-[550px]",
+          heightClass: "h-[380px] sm:h-[410px]",
+          neighborScale: 0.8,
+          translateX: "70%",
           translateZ: "-120px",
           perspective: "1250px",
         };
 
   return (
-    <div className="space-y-3.5">
-      {/* Sub-header: Point counter, Zoom Out / Spacious / Focus controls, and View switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 px-1 text-xs">
+    <div className="space-y-3 font-sans">
+      {/* Sub-header: Point counter, zoom mode & view toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-[#5A6275] dark:text-[#A89F91]">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-            <span>Point {activeIndex + 1} of {items.length}</span>
+          <span className="font-bold text-[#161E33] dark:text-[#F0EAE1]">
+            Item {activeIndex + 1} of {items.length}
           </span>
           {viewMode === "circular" && items[activeIndex] && (
-            <span className="text-[10px] font-mono text-slate-400 border border-slate-200 px-2.5 py-0.5 rounded-full bg-white hidden sm:inline-block">
-              {getReadingStats(items[activeIndex]).words} words
+            <span className="text-[11px] font-mono text-[#5A6275] dark:text-[#A89F91] border border-[#D9D2C3] dark:border-[#38332C] px-2 py-0.5 rounded-md bg-[#FCFBF8] dark:bg-[#1E1B18] hidden sm:inline-block">
+              {getReadingStats(items[activeIndex]).readTimeText}
             </span>
           )}
         </div>
 
-        {/* View mode & Zoom Out / Zoom In Controls */}
+        {/* View mode & Zoom controls */}
         <div className="flex items-center gap-2">
-          {/* Zoom Controls */}
           {viewMode === "circular" && (
-            <div className="flex items-center gap-1 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/60">
+            <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-[11px]">
               <button
                 type="button"
                 onClick={() => handleSetZoom("zoomOut")}
-                className={`px-2 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 transition ${
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "zoomOut"
-                    ? "bg-white text-indigo-700 shadow-2xs font-semibold"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
+                    : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
                 }`}
-                title="Zoom Out: Wide angle camera perspective to view multiple cards comfortably"
+                title="Wide angle: see surrounding cards in the 3D arc"
               >
-                <ZoomOut className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Zoom Out</span>
+                Wide
               </button>
-
               <button
                 type="button"
                 onClick={() => handleSetZoom("spacious")}
-                className={`px-2 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 transition ${
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "spacious"
-                    ? "bg-white text-indigo-700 shadow-2xs font-semibold"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
+                    : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
                 }`}
-                title="Spacious Box (Default): Roomy, large box with full sentence visibility"
+                title="Spacious: balanced view for reading and in-place editing"
               >
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Spacious</span>
+                Spacious
               </button>
-
               <button
                 type="button"
                 onClick={() => handleSetZoom("focus")}
-                className={`px-2 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1 transition ${
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "focus"
-                    ? "bg-white text-indigo-700 shadow-2xs font-semibold"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
+                    : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
                 }`}
-                title="Focus Zoom: Large reading scale for comprehensive analysis"
+                title="Focus: maximum card scale"
               >
-                <ZoomIn className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Focus</span>
+                Focus
               </button>
             </div>
           )}
 
-          {/* 3D Gallery / List Switcher */}
-          <div className="flex items-center gap-1 bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/60">
+          <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-[11px]">
             <button
               type="button"
               onClick={() => setViewMode("circular")}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 viewMode === "circular"
-                  ? "bg-white text-indigo-700 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
+                  : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
               }`}
-              title="3D Circular Gallery View: Easy focus on one readable point at a time"
             >
-              3D Gallery
+              Orbit
             </button>
             <button
               type="button"
               onClick={() => setViewMode("list")}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 viewMode === "list"
-                  ? "bg-white text-indigo-700 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
+                  : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
               }`}
-              title="Stacked List View: View all points vertically"
             >
               List
             </button>
@@ -264,18 +284,20 @@ export default function PointCircularGallery({
         </div>
       </div>
 
-      {/* VIEW MODE 1: 3D Circular Point Gallery with Zoomed Out / Spacious Perspective */}
+      {/* VIEW 1: 3D Orbit Carousel */}
       {viewMode === "circular" ? (
         <div className="relative">
-          {/* 3D Stage Container */}
+          {/* Stage */}
           <div
-            className={`relative ${stageHeightClass} w-full flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-slate-50/80 via-slate-50/40 to-white border border-slate-200/90 p-4 select-none transition-all duration-300`}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            className={`relative ${stageHeightClass} w-full flex items-center justify-center overflow-hidden rounded-xl bg-[#F5F1E8] dark:bg-[#1C1A17] border border-[#D9D2C3] dark:border-[#38332C] p-4 select-none transition-all duration-300 cursor-grab active:cursor-grabbing`}
             style={{ perspective: cardDimensions.perspective }}
           >
-            {/* Background subtle radial ambient light */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-100/30 via-transparent to-transparent pointer-events-none" />
+            {/* Subtle warm ambient reflection */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#B4874B]/8 dark:from-[#D4AA50]/5 via-transparent to-transparent pointer-events-none" />
 
-            {/* Circular Gallery Items */}
+            {/* Orbit Cards */}
             {items.map((item, idx) => {
               const total = items.length;
               let diff = idx - activeIndex;
@@ -283,33 +305,49 @@ export default function PointCircularGallery({
               while (diff < -total / 2) diff += total;
 
               const isCenter = diff === 0;
-              const isNext = diff === 1;
-              const isPrev = diff === -1;
-              const isVisible = isCenter || isNext || isPrev || total === 2;
+              const isNext1 = diff === 1;
+              const isNext2 = diff === 2;
+              const isPrev1 = diff === -1;
+              const isPrev2 = diff === -2;
+              const isVisible =
+                isCenter || isNext1 || isNext2 || isPrev1 || isPrev2 || total <= 5;
 
-              if (!isVisible && Math.abs(diff) > 1) return null;
+              if (!isVisible && Math.abs(diff) > 2) return null;
 
-              // Compute 3D transformation values
               let translateX = "0%";
               let translateZ = "0px";
               let rotateY = "0deg";
-              let scale = cardDimensions.centerScale;
+              let scale = 1;
               let opacity = 1;
-              let zIndex = 30;
+              let zIndex = 40;
 
               if (diff === 1) {
                 translateX = cardDimensions.translateX;
                 translateZ = cardDimensions.translateZ;
-                rotateY = "-12deg";
+                rotateY = "-16deg";
                 scale = cardDimensions.neighborScale;
-                opacity = 0.9;
-                zIndex = 20;
+                opacity = 0.88;
+                zIndex = 30;
               } else if (diff === -1) {
                 translateX = `-${cardDimensions.translateX}`;
                 translateZ = cardDimensions.translateZ;
-                rotateY = "12deg";
+                rotateY = "16deg";
                 scale = cardDimensions.neighborScale;
-                opacity = 0.9;
+                opacity = 0.88;
+                zIndex = 30;
+              } else if (diff === 2) {
+                translateX = "112%";
+                translateZ = "-240px";
+                rotateY = "-28deg";
+                scale = 0.65;
+                opacity = 0.45;
+                zIndex = 20;
+              } else if (diff === -2) {
+                translateX = "-112%";
+                translateZ = "-240px";
+                rotateY = "28deg";
+                scale = 0.65;
+                opacity = 0.45;
                 zIndex = 20;
               }
 
@@ -321,57 +359,49 @@ export default function PointCircularGallery({
                   onClick={() => {
                     if (!isCenter) setActiveIndex(idx);
                   }}
-                  className={`absolute ${cardDimensions.widthClass} ${cardDimensions.heightClass} rounded-2xl transition-all duration-500 ease-[cubic-bezier(0.18,0.85,0.25,1)] ${
+                  className={`absolute ${cardDimensions.widthClass} ${cardDimensions.heightClass} rounded-xl transition-all duration-500 ease-[cubic-bezier(0.18,0.85,0.25,1)] ${
                     isCenter
                       ? "cursor-default"
                       : "cursor-pointer hover:opacity-100 hover:scale-[0.82]"
                   }`}
                   style={{
-                    transform: `translate3d(${translateX}, 0, ${translateZ}) scale(${scale}) rotateY(${rotateY})`,
+                    transform: isCenter
+                      ? "none"
+                      : `translate3d(${translateX}, 0, ${translateZ}) scale(${scale}) rotateY(${rotateY})`,
                     zIndex,
                     opacity,
-                    transformStyle: "preserve-3d",
+                    transformStyle: isCenter ? "flat" : "preserve-3d",
+                    backfaceVisibility: "hidden",
+                    WebkitFontSmoothing: "subpixel-antialiased",
                   }}
                 >
-                  {/* Point Card Frame with Crisp Depth */}
+                  {/* Card Frame */}
                   <div
-                    className={`w-full h-full rounded-2xl flex flex-col justify-between p-5 sm:p-6 transition-all duration-300 relative ${
+                    style={{ transform: "none", backfaceVisibility: "hidden" }}
+                    className={`w-full h-full rounded-xl flex flex-col justify-between p-5 sm:p-6 transition-all duration-300 relative ${
                       isCenter
-                        ? "bg-white border-2 border-indigo-200/90 shadow-2xl ring-1 ring-indigo-500/10 opacity-100"
-                        : "bg-white border border-slate-200 shadow-md opacity-90 hover:opacity-100"
+                        ? "bg-[#FCFBF8] dark:bg-[#221F1C] border-2 border-[#B4874B] dark:border-[#D4AA50] shadow-md opacity-100"
+                        : "bg-[#EDE7D6] dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] opacity-85 hover:opacity-100"
                     }`}
                   >
-
-                    {/* Top Specular Lighting Edge */}
-                    <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-white to-transparent pointer-events-none rounded-t-2xl" />
-
-                    {/* Card Header: Point Badge, Word count & Actions */}
-                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 shrink-0">
+                    {/* Header: Number, title & subtle actions */}
+                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#D9D2C3]/60 dark:border-[#38332C] shrink-0">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`w-6 h-6 rounded-lg text-xs font-mono font-bold flex items-center justify-center shrink-0 shadow-2xs ${
+                          className={`w-6 h-6 rounded-md text-xs font-mono font-bold flex items-center justify-center shrink-0 ${
                             isCenter
-                              ? "bg-indigo-600 text-white"
-                              : "bg-slate-200 text-slate-700 font-bold"
+                              ? "bg-[#161E33] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]"
+                              : "bg-[#D9D2C3] dark:bg-[#2E2924] text-[#161E33] dark:text-[#F0EAE1]"
                           }`}
                         >
                           {String(idx + 1).padStart(2, "0")}
                         </span>
-                        <span className="text-xs font-semibold text-slate-800 truncate max-w-[170px]">
+                        <span className="text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] truncate max-w-[200px]">
                           {title} #{idx + 1}
-                        </span>
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                            stats.words > 50
-                              ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                              : "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {stats.lengthCategory}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-3 text-xs">
                         {isCenter && (
                           <button
                             type="button"
@@ -379,10 +409,9 @@ export default function PointCircularGallery({
                               e.stopPropagation();
                               setFocusModalIndex(idx);
                             }}
-                            title="Open large reading focus mode"
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                            className="text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] hover:underline cursor-pointer"
                           >
-                            <Maximize2 className="w-4 h-4" />
+                            Expand
                           </button>
                         )}
                         <button
@@ -391,39 +420,51 @@ export default function PointCircularGallery({
                             e.stopPropagation();
                             onDeleteItem(idx);
                           }}
-                          title="Delete point"
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          className="text-[#5A6275] dark:text-[#A89F91] hover:text-red-700 dark:hover:text-red-400 hover:underline cursor-pointer"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          Delete
                         </button>
                       </div>
                     </div>
 
-                    {/* Point Body: High-Legibility Typography Area with Zero Scrollbar Clutter */}
+                    {/* Epistemic Rationale on Active Card */}
+                    {isCenter && (getItemWhyClassified ? getItemWhyClassified(idx, item) : whyClassified) && (
+                      <div className="mt-2.5 mb-1 px-3 py-2 bg-[#F5F1E8] dark:bg-[#1A1815] rounded-lg border border-[#D9D2C3]/70 dark:border-[#38332C] text-[11px] leading-relaxed text-[#5A6275] dark:text-[#A89F91] shrink-0 font-sans">
+                        <span className="font-bold font-mono text-[10px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                          Why {title}?
+                        </span>
+                        <span>{getItemWhyClassified ? getItemWhyClassified(idx, item) : whyClassified}</span>
+                      </div>
+                    )}
+
+                    {/* Text Body */}
                     <div className="flex-1 py-3 overflow-y-auto scrollbar-none">
                       {isCenter ? (
                         <textarea
                           value={item}
                           onChange={(e) => onUpdateItem(idx, e.target.value)}
                           placeholder={`Describe this ${title.toLowerCase().slice(0, -1)} in detail...`}
-                          className="w-full h-full text-[15px] sm:text-[15.5px] leading-[1.7] text-slate-900 placeholder:text-slate-400 bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-normal scrollbar-none"
+                          className="w-full h-full text-[15px] sm:text-[15.5px] leading-[1.7] text-[#161E33] dark:text-[#F0EAE1] placeholder-[#8B909C] bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-sans font-normal scrollbar-none subpixel-antialiased select-text"
                         />
                       ) : (
-                        <p className="text-sm text-slate-700 font-medium line-clamp-6 leading-relaxed select-none">
+                        <p className="text-sm text-[#5A6275] dark:text-[#A89F91] line-clamp-6 leading-relaxed select-none">
                           {item || `Empty ${title.toLowerCase()} point...`}
                         </p>
                       )}
                     </div>
 
-
-                    {/* Card Footer: Reading Metrics & Helpful Hint */}
-                    <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
+                    {/* Footer */}
+                    <div className="pt-2.5 border-t border-[#D9D2C3]/60 dark:border-[#38332C] flex items-center justify-between text-[11px] text-[#5A6275] dark:text-[#A89F91] shrink-0 font-mono">
                       <span>
-                        {stats.words} words • ~{stats.readTimeSec}s read
+                        {stats.words} words • {stats.readTimeText}
                       </span>
-                      {isCenter && (
-                        <span className="text-indigo-600 font-medium text-[11px]">
-                          Editable in-place
+                      {isCenter ? (
+                        <span className="text-[#7a4e10] dark:text-[#D4AA50] font-sans font-medium">
+                          Click to edit
+                        </span>
+                      ) : (
+                        <span className="text-[#8B909C] font-sans">
+                          Click to rotate
                         </span>
                       )}
                     </div>
@@ -432,22 +473,30 @@ export default function PointCircularGallery({
               );
             })}
 
-            {/* Left and Right Floating 3D Navigation Arrows */}
+            {/* Stepper Chevrons */}
             {items.length > 1 && (
               <>
                 <button
                   type="button"
-                  onClick={handlePrev}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 z-40 p-2.5 rounded-full bg-white/95 text-slate-700 hover:text-indigo-600 hover:bg-white shadow-md border border-slate-200/80 transition-all hover:scale-110 active:scale-95"
-                  title="Previous Point"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrev();
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-50 w-9 h-9 rounded-full bg-[#FCFBF8]/95 dark:bg-[#221F1C]/95 text-[#161E33] dark:text-[#F0EAE1] hover:text-[#7a4e10] dark:hover:text-[#D4AA50] shadow-sm border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  title="Previous item (or press ← Arrow)"
+                  aria-label="Previous item"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={handleNext}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 z-40 p-2.5 rounded-full bg-white/95 text-slate-700 hover:text-indigo-600 hover:bg-white shadow-md border border-slate-200/80 transition-all hover:scale-110 active:scale-95"
-                  title="Next Point"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNext();
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-50 w-9 h-9 rounded-full bg-[#FCFBF8]/95 dark:bg-[#221F1C]/95 text-[#161E33] dark:text-[#F0EAE1] hover:text-[#7a4e10] dark:hover:text-[#D4AA50] shadow-sm border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  title="Next item (or press → Arrow)"
+                  aria-label="Next item"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -455,63 +504,66 @@ export default function PointCircularGallery({
             )}
           </div>
 
-          {/* Bottom Dot Navigator & Add Button */}
+          {/* Bottom Dot Navigator & Add Action */}
           <div className="flex items-center justify-between gap-3 pt-2.5">
-            {/* Direct-Jump Dot Carousel */}
             <div className="flex items-center gap-1.5 overflow-x-auto py-1">
               {items.map((_, dotIdx) => (
                 <button
                   key={dotIdx}
                   type="button"
                   onClick={() => setActiveIndex(dotIdx)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
+                  className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
                     dotIdx === activeIndex
-                      ? "w-6 bg-indigo-600"
-                      : "w-2 bg-slate-300 hover:bg-slate-400"
+                      ? "w-6 bg-[#7a4e10] dark:bg-[#D4AA50]"
+                      : "w-2 bg-[#D9D2C3] dark:bg-[#38332C] hover:bg-[#B4874B]"
                   }`}
-                  title={`Go to point ${dotIdx + 1}`}
+                  title={`Go to item ${dotIdx + 1}`}
+                  aria-label={`Go to item ${dotIdx + 1}`}
                 />
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={handleAddAndFocus}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-xl transition border border-transparent hover:border-indigo-100"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Point</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-[#5A6275] dark:text-[#A89F91] hidden sm:inline">
+                Drag stage or press ← / →
+              </span>
+              <button
+                type="button"
+                onClick={handleAddAndFocus}
+                className="px-3 py-1.5 text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
+              >
+                + Add Point
+              </button>
+            </div>
           </div>
         </div>
       ) : (
-        /* VIEW MODE 2: Stacked List View */
+        /* VIEW 2: Clean List */
         <div className="space-y-3">
           {items.map((item, idx) => (
             <div
               key={idx}
-              className="p-4 bg-white border border-slate-200 rounded-2xl space-y-2.5 shadow-2xs hover:border-slate-300 transition"
+              className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-2.5 transition-colors"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">
+                <span className="text-xs font-bold text-[#161E33] dark:text-[#F0EAE1]">
                   #{idx + 1} {title.slice(0, -1) || title}
                 </span>
                 <button
                   type="button"
                   onClick={() => onDeleteItem(idx)}
-                  className="p-1 text-slate-400 hover:text-red-600 rounded transition"
-                  title="Delete point"
+                  className="text-xs text-[#5A6275] dark:text-[#A89F91] hover:text-red-700 dark:hover:text-red-400 hover:underline cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
                 </button>
               </div>
 
               <textarea
                 value={item}
-                rows={4}
+                rows={3}
                 onChange={(e) => onUpdateItem(idx, e.target.value)}
                 placeholder={`Describe this ${title.toLowerCase().slice(0, -1)}...`}
-                className="w-full text-sm leading-relaxed text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-y"
+                className="w-full text-sm leading-relaxed text-[#161E33] dark:text-[#F0EAE1] bg-[#F5F1E8] dark:bg-[#1A1815] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg p-3 focus:ring-1 focus:ring-[#7a4e10] dark:focus:ring-[#D4AA50] focus:outline-none resize-y font-sans font-normal"
               />
             </div>
           ))}
@@ -519,85 +571,70 @@ export default function PointCircularGallery({
           <button
             type="button"
             onClick={handleAddAndFocus}
-            className="w-full py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-dashed border-slate-300 rounded-xl transition flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Another Point</span>
+            + Add Another Point
           </button>
         </div>
       )}
 
-      {/* Large Reading Focus Modal for Extra-Lengthy Points */}
+      {/* Focus Modal */}
       {focusModalIndex !== null && items[focusModalIndex] !== undefined && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-              <div className="flex items-center gap-3">
-                <span className="p-2 bg-white rounded-xl border border-slate-200 flex items-center justify-center text-slate-700">
-                  {icon}
-                </span>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {title} — Point #{focusModalIndex + 1}
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Full Focus Reading &amp; Editing
+        <div className="fixed inset-0 z-50 bg-[#161E33]/60 dark:bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#FCFBF8] dark:bg-[#221F1C] rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#D9D2C3] dark:border-[#38332C] overflow-hidden font-sans">
+            <div className="px-6 py-4 border-b border-[#D9D2C3] dark:border-[#38332C] flex items-center justify-between bg-[#EDE7D6] dark:bg-[#1A1815]">
+              <div>
+                <h3 className="text-base font-bold text-[#161E33] dark:text-[#F0EAE1]">
+                  {title} — Point #{focusModalIndex + 1}
+                </h3>
+                <p className="text-xs text-[#5A6275] dark:text-[#A89F91]">
+                  Expanded reading &amp; editing
+                </p>
+                {(getItemWhyClassified ? getItemWhyClassified(focusModalIndex, items[focusModalIndex] || "") : whyClassified) && (
+                  <p className="text-xs text-[#7a4e10] dark:text-[#D4AA50] mt-1 font-mono">
+                    Why {title}: {getItemWhyClassified ? getItemWhyClassified(focusModalIndex, items[focusModalIndex] || "") : whyClassified}
                   </p>
-                </div>
+                )}
               </div>
 
               <button
                 type="button"
                 onClick={() => setFocusModalIndex(null)}
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition"
+                className="p-1.5 text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] rounded-lg transition cursor-pointer"
+                aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body: Generous Reading Font */}
             <div className="p-6 sm:p-8 flex-1 overflow-y-auto space-y-4">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs text-slate-600">
-                <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                  <BookOpen className="w-4 h-4 text-indigo-600" />
-                  Reading Stats
-                </span>
-                <span>
-                  {getReadingStats(items[focusModalIndex]).words} words • ~
-                  {getReadingStats(items[focusModalIndex]).readTimeSec} sec read
-                </span>
-              </div>
-
               <textarea
                 rows={10}
                 value={items[focusModalIndex]}
                 onChange={(e) => onUpdateItem(focusModalIndex, e.target.value)}
-                placeholder="Write the full comprehensive point detail here..."
-                className="w-full text-base leading-relaxed text-slate-900 bg-white border border-slate-200 rounded-2xl p-5 focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-y font-normal shadow-2xs"
+                placeholder="Write the full detail here..."
+                className="w-full text-base leading-relaxed text-[#161E33] dark:text-[#F0EAE1] bg-[#F5F1E8] dark:bg-[#1A1815] border border-[#D9D2C3] dark:border-[#38332C] rounded-xl p-4 focus:ring-1 focus:ring-[#7a4e10] dark:focus:ring-[#D4AA50] focus:outline-none resize-y font-sans font-normal"
               />
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <div className="px-6 py-4 bg-[#EDE7D6] dark:bg-[#1A1815] border-t border-[#D9D2C3] dark:border-[#38332C] flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => {
                   onDeleteItem(focusModalIndex);
                   setFocusModalIndex(null);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition"
+                className="text-xs font-bold text-red-700 dark:text-red-400 hover:underline cursor-pointer"
               >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete Point</span>
+                Delete Point
               </button>
 
               <button
                 type="button"
                 onClick={() => setFocusModalIndex(null)}
-                className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition"
+                className="px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
               >
-                Done Reading
+                Done
               </button>
             </div>
           </div>

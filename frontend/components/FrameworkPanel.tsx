@@ -6,6 +6,7 @@ import {
   Layers,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Brain,
   HelpCircle,
   GitBranch,
@@ -169,26 +170,17 @@ export default function FrameworkPanel({
     }
   };
 
-  const handleRatingChange = async (
-    optId: string,
-    critId: string,
-    newRating: number
+  const recalculateMatrix = async (
+    criteriaToUse: MatrixCriterion[],
+    ratingsToUse: MatrixScoreItem[]
   ) => {
-    const updated = matrixRatings.map((r) =>
-      r.option_id === optId && r.criterion_id === critId
-        ? { ...r, rating: newRating }
-        : r
-    );
-    setMatrixRatings(updated);
-
-    // Run deterministic calculation
     setEvaluatingMatrix(true);
     setMatrixError(null);
     try {
       const res = await evaluateMatrixScores(decisionId, {
-        criteria: matrixCriteria,
+        criteria: criteriaToUse,
         options: matrixOptions,
-        ratings: updated,
+        ratings: ratingsToUse,
         scale_min: 1.0,
         scale_max: 10.0,
       });
@@ -201,6 +193,69 @@ export default function FrameworkPanel({
     } finally {
       setEvaluatingMatrix(false);
     }
+  };
+
+  const handleRatingChange = async (
+    optId: string,
+    critId: string,
+    newRating: number
+  ) => {
+    const updated = matrixRatings.map((r) =>
+      r.option_id === optId && r.criterion_id === critId
+        ? { ...r, rating: newRating }
+        : r
+    );
+    setMatrixRatings(updated);
+
+    // Only recalculate if criteria weights sum to 100
+    const sum = matrixCriteria.reduce((acc, c) => acc + c.weight, 0);
+    if (Math.abs(sum - 100.0) < 0.15) {
+      await recalculateMatrix(matrixCriteria, updated);
+    }
+  };
+
+  const handleWeightChange = (critId: string, rawWeight: number) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(rawWeight * 10) / 10));
+    const updated = matrixCriteria.map((c) =>
+      c.id === critId ? { ...c, weight: clamped } : c
+    );
+    setMatrixCriteria(updated);
+
+    const sum = updated.reduce((acc, c) => acc + c.weight, 0);
+    if (Math.abs(sum - 100.0) < 0.1) {
+      recalculateMatrix(updated, matrixRatings);
+    }
+  };
+
+  const handleAutoBalanceWeights = () => {
+    if (matrixCriteria.length === 0) return;
+    const currentSum = matrixCriteria.reduce((acc, c) => acc + c.weight, 0);
+    let balanced: MatrixCriterion[];
+
+    if (currentSum === 0) {
+      const equalWeight = Math.round((100 / matrixCriteria.length) * 10) / 10;
+      balanced = matrixCriteria.map((c, i) => ({
+        ...c,
+        weight:
+          i === matrixCriteria.length - 1
+            ? Math.round((100 - equalWeight * (matrixCriteria.length - 1)) * 10) / 10
+            : equalWeight,
+      }));
+    } else {
+      let runningTotal = 0;
+      balanced = matrixCriteria.map((c, idx) => {
+        if (idx === matrixCriteria.length - 1) {
+          const finalW = Math.max(0, Math.round((100 - runningTotal) * 10) / 10);
+          return { ...c, weight: finalW };
+        }
+        const proportional = Math.round(((c.weight / currentSum) * 100) * 10) / 10;
+        runningTotal += proportional;
+        return { ...c, weight: proportional };
+      });
+    }
+
+    setMatrixCriteria(balanced);
+    recalculateMatrix(balanced, matrixRatings);
   };
 
   const toggleFrameworkSelection = (fw: string) => {
@@ -760,20 +815,60 @@ export default function FrameworkPanel({
                 </div>
               )}
 
-              {/* Weight Sum Invariant Notification */}
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                <span className="font-semibold text-slate-700">
-                  Weight Constraint (Strict Invariant):
-                </span>
-                <span
-                  className={`font-mono font-bold ${
-                    Math.abs(totalMatrixWeight - 100.0) < 0.1
-                      ? "text-emerald-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  Sum: {totalMatrixWeight.toFixed(1)}% / 100.0%
-                </span>
+              {/* Weight Sum Invariant & 100% Auto-Balancer Bar */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="font-semibold text-slate-700">
+                      Criteria Weights (Strict 100% Zero-Sum Budget):
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAutoBalanceWeights}
+                      className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] border border-indigo-200 transition inline-flex items-center gap-1 shadow-2xs cursor-pointer"
+                      title="Proportionally re-balance all criteria weights to sum to exactly 100.0%"
+                    >
+                      <Zap className="w-3 h-3 text-indigo-600" />
+                      <span>Auto-Balance 100%</span>
+                    </button>
+
+                    <span
+                      className={`font-mono font-bold px-2 py-0.5 rounded text-[11px] ${
+                        Math.abs(totalMatrixWeight - 100.0) < 0.1
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          : "bg-red-100 text-red-800 border border-red-300 animate-pulse"
+                      }`}
+                    >
+                      Sum: {totalMatrixWeight.toFixed(1)}% / 100.0%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Visual Weight Budget Bar */}
+                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden flex">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      Math.abs(totalMatrixWeight - 100.0) < 0.1
+                        ? "bg-emerald-500"
+                        : totalMatrixWeight > 100
+                        ? "bg-rose-500"
+                        : "bg-amber-500"
+                    }`}
+                    style={{ width: `${Math.min(100, (totalMatrixWeight / 100) * 100)}%` }}
+                  />
+                </div>
+
+                {Math.abs(totalMatrixWeight - 100.0) >= 0.1 && (
+                  <p className="text-[11px] text-amber-700 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                    <span>
+                      Criteria weights total <strong>{totalMatrixWeight.toFixed(1)}%</strong>. Real trade-offs require a fixed 100% budget. Click <strong>Auto-Balance 100%</strong> to lock the math.
+                    </span>
+                  </p>
+                )}
               </div>
 
               {matrixError && (
@@ -804,13 +899,38 @@ export default function FrameworkPanel({
                   <tbody className="divide-y divide-slate-100">
                     {matrixCriteria.map((crit) => (
                       <tr key={crit.id} className="hover:bg-slate-50/50">
-                        <td className="p-3">
-                          <span className="font-semibold text-slate-800 block">
+                        <td className="p-3 w-56">
+                          <span className="font-semibold text-slate-800 block text-xs">
                             {crit.name}
                           </span>
-                          <span className="text-[10px] text-indigo-600 font-mono">
-                            Weight: {crit.weight}%
-                          </span>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={crit.weight}
+                              onChange={(e) =>
+                                handleWeightChange(crit.id, parseFloat(e.target.value) || 0)
+                              }
+                              className="w-20 accent-indigo-600 cursor-pointer h-1.5"
+                              title={`Adjust weight for ${crit.name}`}
+                            />
+                            <div className="flex items-center gap-0.5">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={crit.weight}
+                                onChange={(e) =>
+                                  handleWeightChange(crit.id, parseFloat(e.target.value) || 0)
+                                }
+                                className="w-12 px-1.5 py-0.5 text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              />
+                              <span className="text-[10px] text-slate-500 font-mono">%</span>
+                            </div>
+                          </div>
                         </td>
                         {matrixOptions.map((opt) => {
                           const currentRating =
