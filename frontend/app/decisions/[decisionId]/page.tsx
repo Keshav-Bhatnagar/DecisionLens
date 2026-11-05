@@ -84,7 +84,7 @@ export default function DecisionDetailPage({
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAutoPilotModal, setShowAutoPilotModal] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const stepContentRef = useRef<HTMLDivElement>(null);
 
   const workflowStagesList: { id: WorkflowStage; label: string; number: string }[] = [
