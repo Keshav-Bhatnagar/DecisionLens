@@ -57,8 +57,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# ==========================================
-# Operating System & IDE
+# Scratch & Temporary Debugging
+scratch/
+
 # ==========================================
 .DS_Store
 .DS_Store?
