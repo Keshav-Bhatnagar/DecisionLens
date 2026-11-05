@@ -68,6 +68,7 @@ export default function SynthesisPanel({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [copiedADR, setCopiedADR] = useState(false);
+  const [activeTab, setActiveTab] = useState<"memo" | "roadmap" | "audit">("memo");
 
   // User priority tags input
   const [priorities, setPriorities] = useState<string[]>([]);
@@ -638,7 +639,74 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
           </div>
 
           {/* ========================================================================= */}
-          {/* 3. STAKEHOLDER CONSENSUS & CONCESSION LEDGER                               */}
+          {/* EXECUTIVE DOSSIER TABS (Eliminates Lengthy Scrolling & Cognitive Overload) */}
+          {/* ========================================================================= */}
+          <div className="sticky top-12 z-20 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md py-2 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-center justify-between gap-3 font-courier">
+            <div className="inline-flex items-center p-1 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("memo")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                  activeTab === "memo"
+                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>1. Boardroom Memo & Alignment</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("roadmap")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                  activeTab === "roadmap"
+                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>2. Execution Roadmap</span>
+                {displayRoadmap && (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-none font-courier ${
+                    activeTab === "roadmap" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
+                  }`}>
+                    {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)} tasks
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("audit")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                  activeTab === "audit"
+                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>3. Trade-Offs & Epistemic Audit</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-none font-courier ${
+                  activeTab === "audit" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
+                }`}>
+                  {displaySynthesis.alternatives_considered.length} alts
+                </span>
+              </button>
+            </div>
+
+            <span className="hidden lg:inline text-[11px] text-[#7B8491] dark:text-[#A89F91] italic font-newsreader">
+              {activeTab === "memo" && "Executive verdict, stakeholder alignment, and pre-commitment gates."}
+              {activeTab === "roadmap" && "30-60-90 day milestone delivery plan and operational ownership."}
+              {activeTab === "audit" && "Evidentiary claims, stress-tested assumptions, risks, and counterarguments."}
+            </span>
+          </div>
+
+          {/* TAB 1: BOARDROOM MEMO & ALIGNMENT */}
+          {activeTab === "memo" && (
+            <div className="space-y-6 animate-in fade-in duration-150">
+              {/* ========================================================================= */}
+              {/* 3. STAKEHOLDER CONSENSUS & CONCESSION LEDGER                               */}
           {/* ========================================================================= */}
           <div className="bg-paper-surface border border-border rounded-2xl p-6 space-y-4 shadow-2xs">
             <div>
@@ -710,8 +778,41 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 4. COMPARATIVE ALTERNATIVES & STRATEGIC TRADE-OFFS                         */}
+              {/* Quick Navigation Footer inside Tab 1 */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-paper-surface border border-border rounded-2xl">
+                <div>
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-ink block">
+                    Execution Next Steps
+                  </span>
+                  <span className="text-xs text-muted">
+                    Decision validated. Review the 30-60-90 day delivery roadmap or examine the full evidence audit.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("audit")}
+                    className="px-3.5 py-2 text-xs font-mono font-bold uppercase tracking-wider border border-border bg-paper-sidebar text-ink hover:border-accent transition cursor-pointer rounded-lg"
+                  >
+                    Examine Trade-Offs &rarr;
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("roadmap")}
+                    className="px-4 py-2 text-xs font-mono font-bold uppercase tracking-wider bg-ink text-paper-surface hover:opacity-90 transition cursor-pointer shadow-xs rounded-lg"
+                  >
+                    View Phased Roadmap &rarr;
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: COMPARATIVE ALTERNATIVES, EVIDENCE & EPISTEMIC AUDIT */}
+          {activeTab === "audit" && (
+            <div className="space-y-6 animate-in fade-in duration-150">
+              {/* ========================================================================= */}
+              {/* 4. COMPARATIVE ALTERNATIVES & STRATEGIC TRADE-OFFS                         */}
           {/* ========================================================================= */}
           <div className="bg-paper-surface border border-border rounded-2xl p-6 space-y-4 shadow-2xs">
             <div>
@@ -924,8 +1025,14 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 6. ACTIONABLE PHASED EXECUTION ROADMAP                                    */}
+            </div>
+          )}
+
+          {/* TAB 2: ACTIONABLE PHASED EXECUTION ROADMAP */}
+          {activeTab === "roadmap" && (
+            <div className="space-y-6 animate-in fade-in duration-150">
+              {/* ========================================================================= */}
+              {/* 6. ACTIONABLE PHASED EXECUTION ROADMAP                                    */}
           {/* ========================================================================= */}
           {displayRoadmap && (
             <div className="bg-paper-surface border border-border rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xs">
@@ -1109,11 +1216,33 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
             </div>
           )}
 
-          {/* Outcome Tracking Post-Decision Review */}
-          <OutcomeTrackingCard
-            decisionId={decisionId}
-            canonicalWinner={displaySynthesis.canonical_result?.winner_option_name}
-          />
+              {/* Quick Navigation Footer inside Tab 2 */}
+              <div className="flex items-center justify-between p-4 bg-paper-surface border border-border rounded-2xl font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("memo")}
+                  className="hover:underline text-muted hover:text-ink cursor-pointer font-bold"
+                >
+                  &larr; Back to Boardroom Memo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("audit")}
+                  className="hover:underline text-accent font-bold cursor-pointer"
+                >
+                  Examine Trade-Offs & Evidence &rarr;
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Outcome Tracking Post-Decision Review (Rendered inside Tab 3 Audit) */}
+          {activeTab === "audit" && (
+            <OutcomeTrackingCard
+              decisionId={decisionId}
+              canonicalWinner={displaySynthesis.canonical_result?.winner_option_name}
+            />
+          )}
         </div>
       ) : (
         /* Empty State */
