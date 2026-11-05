@@ -176,9 +176,10 @@ export default function StructuredFindingsEditor({
   const biasesCombined = [...contradictionsList, ...feelingsList];
 
   const consList = findings?.cons || [];
+  const mixedPointsList = findings?.mixed_points || [];
   const privateBiases = findings?.private_feedback?.potential_biases || [];
   const feedbackNotes = findings?.private_feedback?.feedback_notes ? [findings.private_feedback.feedback_notes] : [];
-  const caveatsCombined = [...consList, ...privateBiases, ...feedbackNotes];
+  const caveatsCombined = [...consList, ...mixedPointsList, ...privateBiases, ...feedbackNotes];
 
   // Handlers for Slide 0: The Ground Truth (Facts + Assets)
   const handleUpdateGroundTruth = (index: number, newValue: string) => {
@@ -277,15 +278,20 @@ export default function StructuredFindingsEditor({
     if (reviewed) setReviewed(false);
   };
 
-  // Handlers for Slide 3: Meeting Caveats & Friction
+  // Handlers for Slide 3: Meeting Caveats, Dual-Sided Trade-offs & Friction
   const handleUpdateCaveat = (index: number, newValue: string) => {
     if (!findings) return;
     if (index < consList.length) {
       const list = [...consList];
       list[index] = newValue;
       setFindings({ ...findings, cons: list });
-    } else if (index < consList.length + privateBiases.length) {
-      const bIdx = index - consList.length;
+    } else if (index < consList.length + mixedPointsList.length) {
+      const mIdx = index - consList.length;
+      const list = [...mixedPointsList];
+      list[mIdx] = newValue;
+      setFindings({ ...findings, mixed_points: list });
+    } else if (index < consList.length + mixedPointsList.length + privateBiases.length) {
+      const bIdx = index - consList.length - mixedPointsList.length;
       const list = [...privateBiases];
       list[bIdx] = newValue;
       const currentPrivate = findings.private_feedback || {
@@ -319,13 +325,18 @@ export default function StructuredFindingsEditor({
       const list = [...consList];
       list.splice(index, 1);
       setFindings({ ...findings, cons: list });
+    } else if (index < consList.length + mixedPointsList.length) {
+      const mIdx = index - consList.length;
+      const list = [...mixedPointsList];
+      list.splice(mIdx, 1);
+      setFindings({ ...findings, mixed_points: list });
     }
     if (reviewed) setReviewed(false);
   };
 
   const handleAddCaveat = () => {
     if (!findings) return;
-    setFindings({ ...findings, cons: [...consList, ""] });
+    setFindings({ ...findings, mixed_points: [...mixedPointsList, ""] });
     if (reviewed) setReviewed(false);
   };
 
@@ -379,6 +390,9 @@ export default function StructuredFindingsEditor({
     }
 
     if (category === "biases") {
+      if (index >= contradictionsList.length) {
+        return "Stakeholder Sentiment & Intuition: Emotional stake, unspoken developer hesitation, or leadership gut reaction (Edward de Bono's Red Hat). Must be acknowledged and de-risked.";
+      }
       if (t.includes("3 weeks") || t.includes("already spent") || t.includes("spent") || t.includes("prototyp") || t.includes("invested")) {
         return "Sunk Cost Fallacy: Past prototype time or sunk effort is cited to justify architecture adoption, despite severe operational mismatches.";
       }
@@ -392,6 +406,9 @@ export default function StructuredFindingsEditor({
     }
 
     if (category === "caveats") {
+      if (index >= consList.length && index < consList.length + mixedPointsList.length) {
+        return "Dual-Sided Trade-Off: Contains both a strategic benefit and an operational constraint. Must be balanced in Stage 4 Multi-Criteria Scoring.";
+      }
       if (t.includes("experience") || t.includes("zero") || t.includes("sre") || t.includes("toil") || t.includes("overhead")) {
         return "Execution & Toil Risk: Severe operational friction caused by team skill deficit and maintenance toil under tight timeline.";
       }
@@ -433,8 +450,8 @@ export default function StructuredFindingsEditor({
     {
       id: "biases",
       number: "03",
-      title: "Decision Traps & Blindspots",
-      subtitle: "Sunk costs, planning fallacies, and structural logic risks",
+      title: "Decision Traps & Stakeholder Sentiment",
+      subtitle: `Structural fallacies (${contradictionsList.length}) and intuitive team hesitation (${feelingsList.length})`,
       count: biasesCombined.length,
       colorTheme: {
         border: "border-[#cfc7b2] dark:border-[#38332C]",
@@ -445,8 +462,8 @@ export default function StructuredFindingsEditor({
     {
       id: "caveats",
       number: "04",
-      title: "Meeting Caveats & Friction",
-      subtitle: "Recorded dissent, operational constraints, and scribe notes",
+      title: "Meeting Caveats & Mixed Trade-Offs",
+      subtitle: `Recorded dissent (${consList.length}), dual-sided trade-offs (${mixedPointsList.length}), and scribe notes`,
       count: caveatsCombined.length,
       colorTheme: {
         border: "border-[#cfc7b2] dark:border-[#38332C]",
