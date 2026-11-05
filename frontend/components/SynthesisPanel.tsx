@@ -85,12 +85,21 @@ export default function SynthesisPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [decisionId]);
 
+  useEffect(() => {
+    if (initialSynthesis) {
+      setSynthesis(initialSynthesis);
+      if (initialSynthesis.roadmap) {
+        setActiveRoadmap(initialSynthesis.roadmap);
+      }
+    }
+  }, [initialSynthesis]);
+
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
       const [synthRes, snapListRes, roadmapRes] = await Promise.allSettled([
-        !synthesis ? getDecisionSynthesis(decisionId) : Promise.resolve(synthesis),
+        getDecisionSynthesis(decisionId),
         getAnalysisSnapshots(decisionId),
         getActiveRoadmap(decisionId),
       ]);

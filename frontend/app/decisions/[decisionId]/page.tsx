@@ -15,7 +15,6 @@ import WorkflowStepper, { WorkflowStage } from "@/components/WorkflowStepper";
 import ReportExportModal from "@/components/ReportExportModal";
 import SpeechDictationButton from "@/components/SpeechDictationButton";
 import LiveMeetingRoom from "@/components/LiveMeetingRoom";
-import ExpressADRCard from "@/components/ExpressADRCard";
 import AutoPilotModal from "@/components/AutoPilotModal";
 import DecisionInspector from "@/components/DecisionInspector";
 import {
@@ -116,6 +115,9 @@ export default function DecisionDetailPage({
       setIsHeaderCollapsed(true);
     }
     scrollToActiveStage(true);
+    if (stage === "synthesis" || stage === "frameworks") {
+      loadData(true);
+    }
   };
 
   // Keyboard shortcut 'I' to toggle inspector
@@ -365,21 +367,7 @@ export default function DecisionDetailPage({
               </div>
             </div>
 
-            {/* Express Boardroom ADR Card - Only rendered when on Stage 5 (Synthesis) or in 'View All' mode */}
-            {(workflowStage === "synthesis" || viewMode === "all") && Boolean(decision.recommendation && typeof decision.recommendation === "object" && "headline" in decision.recommendation) && (
-              <div className="mb-4">
-                <ExpressADRCard
-                  decision={decision}
-                  onOpenExportModal={() => setShowExportModal(true)}
-                  onSwitchToDeepAudit={() => {
-                    setViewTrack("deep");
-                    const elem = document.getElementById("deep-audit-section");
-                    if (elem) elem.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                  recordType={recordType}
-                />
-              </div>
-            )}
+
 
             {/* Phase 11: End-to-End Guided Workflow Stepper (Sticky on scroll) */}
             <div
