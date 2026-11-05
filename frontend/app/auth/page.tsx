@@ -69,16 +69,24 @@ export default function AuthPage() {
   useEffect(() => {
     async function initAuth() {
       try {
-        const [u, providers] = await Promise.all([
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3000));
+        const authPromise = Promise.all([
           getMe().catch(() => null),
           getOAuthProviders().catch(() => []),
         ]);
+        const res = (await Promise.race([
+          authPromise,
+          timeoutPromise.then(() => [null, []]),
+        ])) as [User | null, OAuthProviderInfo[]];
+        const [u, providers] = res || [null, []];
         if (u) {
           router.push(getDestinationUrl());
           return;
         }
         setCurrentUser(u);
-        setOauthProviders(providers);
+        if (providers && providers.length > 0) {
+          setOauthProviders(providers);
+        }
       } catch {
         setCurrentUser(null);
       } finally {

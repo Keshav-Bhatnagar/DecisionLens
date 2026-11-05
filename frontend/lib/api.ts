@@ -135,30 +135,46 @@ export async function fetchApi<T>(
     ...(options?.headers as Record<string, string>),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  // Add 15s timeout to prevent infinite UI freeze if backend is restarting
+  const controller = new AbortController();
+  const timeoutMs = options?.signal ? undefined : 15000;
+  const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
-  if (!response.ok) {
-    let errorDetail = `Request failed with status ${response.status}`;
-    try {
-      const errorJson = await response.json();
-      if (errorJson.detail) {
-        errorDetail = errorJson.detail;
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      signal: options?.signal || controller.signal,
+    });
+
+    if (!response.ok) {
+      let errorDetail = `Request failed with status ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.detail) {
+          errorDetail = errorJson.detail;
+        }
+      } catch {
+        // Non-JSON response
       }
-    } catch {
-      // Non-JSON response
+      throw new ApiError(response.status, errorDetail);
     }
-    throw new ApiError(response.status, errorDetail);
-  }
 
-  // Handle empty responses like 204 No Content
-  if (response.status === 204) {
-    return {} as T;
-  }
+    // Handle empty responses like 204 No Content
+    if (response.status === 204) {
+      return {} as T;
+    }
 
-  return response.json() as Promise<T>;
+    return response.json() as Promise<T>;
+  } catch (err: unknown) {
+    if (err instanceof ApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ApiError(504, "Backend request timed out. Please verify the backend server on port 8000 is active.");
+    }
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 // ==========================================

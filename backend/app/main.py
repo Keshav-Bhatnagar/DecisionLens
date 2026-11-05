@@ -31,6 +31,12 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.error(f"init_db failed during lifespan: {exc}")
     yield
+    # Cleanly dispose database engine on shutdown to prevent Uvicorn hanging on reload
+    try:
+        from app.database import engine
+        engine.dispose()
+    except Exception as exc:
+        logger.warning(f"Error disposing database engine: {exc}")
 
 
 app = FastAPI(
