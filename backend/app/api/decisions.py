@@ -55,6 +55,10 @@ def create_decision(
     if not clean_title:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title cannot be empty")
 
+    initial_domain = body.domain or "BUSINESS"
+    if folder.domain and folder.domain != "AUTO" and initial_domain in ("BUSINESS", "", None):
+        initial_domain = folder.domain
+
     decision = Decision(
         owner_id=current_user.id,
         folder_id=body.folder_id,
@@ -63,6 +67,7 @@ def create_decision(
         problem_statement=(body.problem_statement.strip() if (body.problem_statement and body.problem_statement.strip()) else clean_title),
         record_type=body.record_type or "decision",
         status=body.status or "draft",
+        domain=initial_domain,
         language=body.language or "en",
         raw_input="",
         transcript="",

@@ -48,6 +48,7 @@ class Folder(Base):
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     color: Mapped[str] = mapped_column(String(30), default="#4F46E5")
+    domain: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now
     )

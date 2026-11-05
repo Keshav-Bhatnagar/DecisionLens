@@ -121,6 +121,7 @@ class FolderBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=150)
     description: Optional[str] = ""
     color: Optional[str] = "#4F46E5"
+    domain: Optional[str] = Field("AUTO", description="Decision domain for this folder (e.g. SOFTWARE, REAL_ESTATE, BUSINESS)")
 
 
 class FolderCreate(FolderBase):
@@ -131,6 +132,7 @@ class FolderUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=150)
     description: Optional[str] = None
     color: Optional[str] = None
+    domain: Optional[str] = None
 
 
 class FolderResponse(FolderBase):

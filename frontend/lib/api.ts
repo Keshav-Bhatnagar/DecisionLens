@@ -57,6 +57,7 @@ export interface Folder {
   name: string;
   description: string;
   color: string;
+  domain?: string | null;
   created_at: string;
   updated_at: string;
   decision_count?: number;
@@ -238,6 +239,7 @@ export async function createFolder(data: {
   name: string;
   description?: string;
   color?: string;
+  domain?: string;
 }): Promise<Folder> {
   return fetchApi<Folder>("/api/folders", {
     method: "POST",
@@ -247,7 +249,7 @@ export async function createFolder(data: {
 
 export async function updateFolder(
   folderId: number,
-  data: { name?: string; description?: string; color?: string }
+  data: { name?: string; description?: string; color?: string; domain?: string }
 ): Promise<Folder> {
   return fetchApi<Folder>(`/api/folders/${folderId}`, {
     method: "PATCH",

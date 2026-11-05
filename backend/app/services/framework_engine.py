@@ -387,6 +387,12 @@ def detect_decision_domain(decision: Decision, context_text: str = "") -> str:
     Uses frequency-weighted semantic scoring giving highest priority to the decision's own
     transcript, problem statement, title, and raw input over background folder context.
     """
+    # 0. Check if folder has an explicit user-defined domain anchor
+    if hasattr(decision, "folder") and decision.folder and getattr(decision.folder, "domain", None):
+        f_dom = decision.folder.domain
+        if f_dom and f_dom not in ("AUTO", "BUSINESS", ""):
+            return f_dom
+
     title = (decision.title or "").lower()
     prob = (decision.problem_statement or "").lower()
     desc = (decision.description or "").lower()

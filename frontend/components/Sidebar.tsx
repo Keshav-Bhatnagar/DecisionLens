@@ -84,6 +84,7 @@ export default function Sidebar({
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderDesc, setNewFolderDesc] = useState("");
+  const [newFolderDomain, setNewFolderDomain] = useState("AUTO");
 
   // New decision/meeting modal state
   const [showNewDecisionModal, setShowNewDecisionModal] = useState(false);
@@ -170,10 +171,12 @@ export default function Sidebar({
       const created = await createFolder({
         name: newFolderName.trim(),
         description: newFolderDesc.trim(),
+        domain: newFolderDomain !== "AUTO" ? newFolderDomain : undefined,
       });
       setShowNewFolderModal(false);
       setNewFolderName("");
       setNewFolderDesc("");
+      setNewFolderDomain("AUTO");
       await loadSidebarData();
       onRefresh?.();
       router.push(`/folders/${created.id}`);
@@ -557,6 +560,31 @@ export default function Sidebar({
                     placeholder="e.g. Strategic Growth, Product Strategy"
                     className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                    Decision Domain / Focus
+                  </label>
+                  <select
+                    value={newFolderDomain}
+                    onChange={(e) => setNewFolderDomain(e.target.value)}
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors cursor-pointer"
+                  >
+                    <option value="AUTO">⚡ Auto-Detect from Content (Recommended)</option>
+                    <option value="SOFTWARE">💻 Software Engineering & Cloud Infrastructure</option>
+                    <option value="BUSINESS">🏢 Enterprise Strategy & Corporate Deliberation</option>
+                    <option value="PRODUCT">🚀 Product Strategy & Growth Experiments</option>
+                    <option value="FINANCE">📈 Finance, Capital Allocation & Treasury</option>
+                    <option value="REAL_ESTATE">🏛️ Real Estate, Land & Property Acquisition</option>
+                    <option value="CAREER">👔 Executive Career & Leadership Hiring</option>
+                    <option value="OPERATIONS">📦 Operations, Logistics & Supply Chain</option>
+                    <option value="EDUCATION">🎓 Education & Academic Research</option>
+                    <option value="PERSONAL">🌱 Personal Life & Habit Changes</option>
+                  </select>
+                  <p className="text-[11px] text-[#7B8491] dark:text-[#A89F91] mt-1 font-courier">
+                    Pre-calibrates evaluation criteria and prevents technical jargon ambiguity across deliberations.
+                  </p>
                 </div>
 
                 <div>

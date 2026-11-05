@@ -28,6 +28,7 @@ def create_folder(
         name=body.name.strip(),
         description=body.description.strip() if body.description else "",
         color=body.color or "#4F46E5",
+        domain=body.domain if body.domain and body.domain != "AUTO" else None,
     )
     db.add(folder)
     db.commit()
@@ -118,6 +119,8 @@ def update_folder(
         folder.description = body.description.strip()
     if body.color is not None:
         folder.color = body.color
+    if body.domain is not None:
+        folder.domain = body.domain if body.domain != "AUTO" else None
 
     db.commit()
     db.refresh(folder)
