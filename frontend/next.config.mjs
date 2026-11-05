@@ -25,6 +25,20 @@ const nextConfig = {
   experimental: {
     proxyTimeout: 120000,
   },
+  async redirects() {
+    return [
+      {
+        source: "/login",
+        destination: "/auth",
+        permanent: true,
+      },
+      {
+        source: "/signup",
+        destination: "/auth?mode=signup",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     const backendUrl =
       process.env.INTERNAL_API_URL ||

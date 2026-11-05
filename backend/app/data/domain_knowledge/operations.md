@@ -35,3 +35,4 @@ Reference Standards: APICS / ASCM Supply Chain Operations Reference (SCOR) Model
   - Parts Per Million (PPM) Defect Metric: `PPM = (Defective Units / Total Units Produced) * 1,000,000`.
   - Six Sigma Quality Target: 3.4 defects per million opportunities (DPMO).
   - First Pass Yield (FPY): Percentage of units manufactured correctly the first time without rework. Target: FPY >= 98.5%.
+

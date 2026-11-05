@@ -34,3 +34,4 @@ Reference Standards: Real Estate (Regulation and Development) Act 2016 (RERA), T
 - Stamp Duty & Circle Rate Discrepancy Risk:
   - Section 50C & 56(2)(x) of Income Tax Act: If land transaction value is lower than the government Circle Rate / Ready Reckoner value by > 10%, the delta is deemed taxable income for both buyer and seller.
   - Stamp duty typically ranges 5%–7% of registered transaction value plus 1% municipal registration surcharge.
+

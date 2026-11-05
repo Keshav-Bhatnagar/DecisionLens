@@ -40,3 +40,4 @@ Reference Standards: Lenny Rachitsky Product Benchmarks, Reforge Growth Framewor
 - Voluntary Churn (Value & Champion Departure):
   - Top root cause in B2B: The internal executive champion who purchased the software left the company, leaving no trained active users.
   - Executive Visibility Rule: Automated weekly or monthly executive ROI digests delivered directly to the budget-holder's inbox prevent contract cancellation at renewal.
+

@@ -43,3 +43,4 @@ Reference Standards: CFA Institute Corporate Finance Standards, Reserve Bank of 
   - Unlisted / Private secondary transactions command an illiquidity haircut of 20% to 35% relative to the last primary round valuation.
 - Quality of Earnings (QoE) Adjustments:
   - Standard EBITDA must be adjusted for non-recurring expenses, related-party transactions, capitalized R&D, and aggressive revenue recognition (ASC 606 / Ind AS 115).
+
