@@ -315,7 +315,7 @@ export default function Sidebar({
 
         {/* Navigation Sections */}
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
-          {/* Main Nav (All Decisions / Ledger) */}
+          {/* Main Nav (All Decisions / Ledger / Portfolio) */}
           <nav className="space-y-0.5">
             <Link
               href="/dashboard"
@@ -331,6 +331,22 @@ export default function Sidebar({
                 pathname === "/dashboard" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#4f4b40] dark:text-[#A89F91]"
               }`} />
               {isExpanded && <span>Workspaces</span>}
+            </Link>
+
+            <Link
+              href="/portfolio"
+              onClick={closeMobile}
+              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[13px] transition-colors ${
+                pathname === "/portfolio"
+                  ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                  : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
+              }`}
+              title="Decision Portfolio (3D Constellation)"
+            >
+              <Compass className={`w-4 h-4 shrink-0 ${
+                pathname === "/portfolio" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#4f4b40] dark:text-[#A89F91]"
+              }`} />
+              {isExpanded && <span>Decision Portfolio</span>}
             </Link>
           </nav>
 
