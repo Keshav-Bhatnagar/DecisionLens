@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -383,80 +384,80 @@ def detect_decision_domain(decision: Decision, context_text: str = "") -> str:
     """
     Intelligently classify the decision domain into one of the 9 canonical domains:
     REAL_ESTATE, FINANCE, CAREER, EDUCATION, BUSINESS, PRODUCT, SOFTWARE, OPERATIONS, PERSONAL.
+    Uses frequency-weighted semantic scoring giving highest priority to the decision's own
+    transcript, problem statement, title, and raw input over background folder context.
     """
+    title = (decision.title or "").lower()
+    prob = (decision.problem_statement or "").lower()
+    desc = (decision.description or "").lower()
+    raw = (decision.raw_input or "").lower()
+    transcript = (getattr(decision, "transcript", "") or "").lower()
+    ctx = (context_text or "").lower()
+
+    primary_text = f"{title} {prob} {transcript} {raw} {desc}"
+
+    domain_terms = {
+        DecisionDomain.SOFTWARE.value: [
+            "microservices", "monolith", "kubernetes", "cloud", "aws", "gcp", "azure",
+            "database", "postgres", "mongodb", "api", "devops", "ci/cd", "refactoring",
+            "codebase", "frontend", "backend", "docker", "latency", "tech stack", "software",
+            "kafka", "redis", "pgbouncer", "iops", "sre", "distributed tracing", "outage",
+            "p99", "cluster", "modular monolith", "architecture", "golang", "python",
+            "serverless", "node", "sql", "migration"
+        ],
+        DecisionDomain.REAL_ESTATE.value: [
+            "land", "property", "real estate", "acre", "acres", "plot", "sqft", "square feet",
+            "zoning", "fsi", "encumbrance", "buyout", "tenant", "lease", "landlord", "residential",
+            "commercial plot", "joint venture land bank", "outright purchase", "crore land",
+            "title deed", "feeder road", "land parcel", "construction", "real-estate", "rera"
+        ],
+        DecisionDomain.FINANCE.value: [
+            "portfolio", "equity", "venture capital", "debt", "bond", "dividend",
+            "hedge fund", "cap table", "valuation", "seed round", "series a", "series b",
+            "roi", "irr", "credit facility", "loan", "asset allocation", "liquidity event",
+            "treasury", "working capital"
+        ],
+        DecisionDomain.CAREER.value: [
+            "career", "job offer", "salary", "promotion", "resume", "resignation",
+            "notice period", "hiring", "compensation", "employer", "work-life balance",
+            "headcount", "role transition", "interview", "severance"
+        ],
+        DecisionDomain.EDUCATION.value: [
+            "university", "college", "degree", "tuition", "phd", "masters", "curriculum",
+            "school", "scholarship", "admissions", "campus", "academic", "coursework"
+        ],
+        DecisionDomain.PRODUCT.value: [
+            "product", "feature", "user retention", "onboarding", "churn", "ui/ux",
+            "user journey", "mvp", "persona", "activation rate", "freemium", "conversion rate"
+        ],
+        DecisionDomain.OPERATIONS.value: [
+            "supply chain", "warehouse", "logistics", "procurement", "inventory",
+            "supplier", "manufacturing", "fulfillment", "vendor negotiation", "sla", "freight"
+        ],
+        DecisionDomain.PERSONAL.value: [
+            "workout", "diet", "health", "fitness", "habit", "travel", "relocation",
+            "marriage", "lifestyle", "hobby"
+        ],
+    }
+
+    scores = {}
+    for dom, terms in domain_terms.items():
+        score = 0
+        for term in terms:
+            pattern = re.compile(r"\b" + re.escape(term) + r"\b", re.IGNORECASE)
+            score += len(pattern.findall(primary_text)) * 3
+            score += len(pattern.findall(ctx)) * 1
+        scores[dom] = score
+
+    best_domain = max(scores, key=scores.get)
+    if scores[best_domain] >= 2:
+        return best_domain
+
     if hasattr(decision, "domain") and decision.domain and decision.domain not in ("", "BUSINESS"):
         try:
             return DecisionDomain(decision.domain).value
         except ValueError:
             pass
-
-    title = (decision.title or "").lower()
-    prob = (decision.problem_statement or "").lower()
-    desc = (decision.description or "").lower()
-    raw = (decision.raw_input or "").lower()
-    ctx = (context_text or "").lower()
-    combined = f"{title} {prob} {desc} {raw} {ctx}"
-
-    real_estate_terms = [
-        "land", "property", "real estate", "acre", "acres", "plot", "sqft", "square feet",
-        "zoning", "fsi", "encumbrance", "buyout", "tenant", "lease", "landlord", "residential",
-        "commercial plot", "joint venture land bank", "outright purchase", "crore land",
-        "title deed", "feeder road", "land parcel", "construction", "real-estate"
-    ]
-    if any(term in combined for term in real_estate_terms):
-        return DecisionDomain.REAL_ESTATE.value
-
-    finance_terms = [
-        "portfolio", "equity", "venture capital", "debt", "bond", "dividend",
-        "hedge fund", "cap table", "valuation", "seed round", "series a", "series b",
-        "roi", "irr", "credit facility", "loan", "asset allocation", "liquidity event"
-    ]
-    if any(term in combined for term in finance_terms):
-        return DecisionDomain.FINANCE.value
-
-    career_terms = [
-        "career", "job offer", "salary", "promotion", "resume", "resignation",
-        "notice period", "hiring", "compensation", "employer", "work-life balance",
-        "headcount", "role transition"
-    ]
-    if any(term in combined for term in career_terms):
-        return DecisionDomain.CAREER.value
-
-    education_terms = [
-        "university", "college", "degree", "tuition", "phd", "masters", "curriculum",
-        "school", "scholarship", "admissions", "campus", "academic"
-    ]
-    if any(term in combined for term in education_terms):
-        return DecisionDomain.EDUCATION.value
-
-    software_terms = [
-        "microservices", "monolith", "kubernetes", "cloud", "aws", "gcp", "azure",
-        "database", "postgres", "mongodb", "api", "devops", "ci/cd", "refactoring",
-        "codebase", "frontend", "backend", "docker", "latency", "tech stack", "software"
-    ]
-    if any(term in combined for term in software_terms):
-        return DecisionDomain.SOFTWARE.value
-
-    product_terms = [
-        "product", "feature", "user retention", "onboarding", "churn", "ui/ux",
-        "user journey", "mvp", "persona", "activation rate", "freemium"
-    ]
-    if any(term in combined for term in product_terms):
-        return DecisionDomain.PRODUCT.value
-
-    ops_terms = [
-        "supply chain", "warehouse", "logistics", "procurement", "inventory",
-        "supplier", "manufacturing", "fulfillment", "vendor negotiation", "sla"
-    ]
-    if any(term in combined for term in ops_terms):
-        return DecisionDomain.OPERATIONS.value
-
-    personal_terms = [
-        "workout", "diet", "health", "fitness", "habit", "travel", "relocation",
-        "marriage", "lifestyle", "hobby"
-    ]
-    if any(term in combined for term in personal_terms):
-        return DecisionDomain.PERSONAL.value
 
     return DecisionDomain.BUSINESS.value
 

@@ -2,7 +2,7 @@
 DecisionLens RAG (Retrieval-Augmented Generation) Subsystem.
 Provides modular, two-tier vector retrieval:
 1. Document RAG: User private uploaded documents (BYOC).
-2. Domain RAG: Curated domain standards (Career, Legal, Software).
+2. Domain RAG: Curated domain standards (Business, Legal, Software).
 """
 
 from app.services.rag.chunking import TextChunker, TextChunk

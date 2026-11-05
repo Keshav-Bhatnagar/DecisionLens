@@ -11,7 +11,7 @@ logger = logging.getLogger("decisionlens.rag.domain")
 
 class DomainRAGService:
     """
-    Manages curated domain knowledge bases for Career, Legal, and Software standards.
+    Manages curated domain knowledge bases for Business, Legal, and Software standards.
     Automatically indexes domain guidelines into dedicated vector collections.
     """
 
@@ -27,7 +27,7 @@ class DomainRAGService:
 
         base_dir = Path(__file__).resolve().parent.parent.parent / "data" / "domain_knowledge"
         domain_files = {
-            DomainType.CAREER: base_dir / "career.md",
+            DomainType.BUSINESS: base_dir / "business.md",
             DomainType.LEGAL: base_dir / "legal.md",
             DomainType.SOFTWARE: base_dir / "software.md",
         }
@@ -76,10 +76,26 @@ class DomainRAGService:
         """Classify decision domain and retrieve matching domain blind-spot standards."""
         domain, conf = classify_decision_domain(decision_text)
         if domain == DomainType.GENERAL:
-            return domain, []
+            # Fall back to business domain if confidence is low, as DecisionLens primary focus is business/tech decisions
+            domain = DomainType.BUSINESS
 
         results = self.retrieve_domain_blind_spots(domain, decision_text, top_k=top_k)
         return domain, results
+
+    def retrieve_guidelines(
+        self,
+        query: str,
+        top_k: int = 2,
+        domain: Optional[DomainType] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Primary interface called by synthesis and recommendation engines.
+        Returns top_k guidelines from the relevant domain knowledge base.
+        """
+        if domain is not None and domain != DomainType.GENERAL:
+            return self.retrieve_domain_blind_spots(domain, query, top_k=top_k)
+        _, results = self.retrieve_blind_spots_for_decision(query, top_k=top_k)
+        return results
 
 
 _default_domain_rag_service: Optional[DomainRAGService] = None

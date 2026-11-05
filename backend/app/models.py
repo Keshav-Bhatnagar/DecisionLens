@@ -145,6 +145,9 @@ class Decision(Base):
     outcomes: Mapped[List["DecisionOutcome"]] = relationship(
         "DecisionOutcome", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
     )
+    document_chunks: Mapped[List["DecisionDocumentChunk"]] = relationship(
+        "DecisionDocumentChunk", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
+    )
 
     def __repr__(self) -> str:
         return f"<Decision id={self.id} title={self.title} folder_id={self.folder_id}>"
@@ -173,6 +176,30 @@ class Attachment(Base):
 
     def __repr__(self) -> str:
         return f"<Attachment id={self.id} original_name={self.original_name}>"
+
+
+class DecisionDocumentChunk(Base):
+    __tablename__ = "decision_document_chunks"
+
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    decision_id: Mapped[int] = mapped_column(
+        ForeignKey("decisions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    attachment_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("attachments.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    document_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    chunk_index: Mapped[int] = mapped_column(default=0, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    metadata_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
+
+    decision: Mapped["Decision"] = relationship("Decision", back_populates="document_chunks")
+
+    def __repr__(self) -> str:
+        return f"<DecisionDocumentChunk id={self.id} doc={self.document_name} idx={self.chunk_index}>"
 
 
 class AudioRecording(Base):

@@ -31,6 +31,8 @@ import {
   OAuthProviderInfo,
   User,
 } from "@/lib/api";
+import AmbientWaveCanvas from "@/components/AmbientWaveCanvas";
+import DecisionLensLogo, { DecisionLensIcon } from "@/components/DecisionLensLogo";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -220,90 +222,25 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-paper-page text-ink font-sans flex items-center justify-center p-4 sm:p-6 lg:p-10">
-      <div className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+    <div className="min-h-screen bg-paper-page text-ink font-sans flex items-center justify-center p-4 sm:p-6 lg:p-12 relative overflow-hidden">
+      <AmbientWaveCanvas />
+      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center relative z-10 py-6">
         {/* Left Column: Dossier Brand & Value Highlights */}
-        <div className="lg:col-span-6 space-y-6 lg:pr-4">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2.5 hover:opacity-90 transition group"
-          >
-            <div className="w-10 h-10 rounded-sm bg-ink text-paper-surface flex items-center justify-center font-serif text-lg font-bold border border-border">
-              <Compass className="w-5 h-5 text-paper-surface" />
-            </div>
-            <div>
-              <span className="text-xl font-serif font-bold tracking-tight text-ink block">
-                DecisionLens
-              </span>
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-accent block">
-                Executive Cognitive Intelligence
-              </span>
-            </div>
-          </Link>
+        <div className="lg:col-span-7 space-y-8 pr-0 lg:pr-6 flex flex-col justify-center">
+          <DecisionLensLogo href="/" size={44} />
 
           <div>
-            <h1 className="text-3xl sm:text-4xl font-serif font-bold text-ink tracking-tight leading-tight">
+            <h1 className="text-5xl sm:text-6xl font-serif font-medium text-ink tracking-tight leading-[1.08]">
               Structure Decisions. <br />
-              <span className="text-accent italic">
+              <span className="text-accent italic font-normal">
                 Decide with Grounded Conviction.
               </span>
             </h1>
-            <p className="text-xs sm:text-sm text-ink-secondary mt-3 leading-relaxed max-w-lg">
-              DecisionLens stress-tests strategic choices by structuring inputs into 8 cognitive categories, resolving factual gaps via empirical research, and executing multi-criteria frameworks.
-            </p>
-          </div>
-
-          {/* Dossier Feature Highlights */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <div className="bg-paper-surface rounded-md p-3.5 border border-border space-y-1">
-              <div className="flex items-center gap-2 text-ink">
-                <Brain className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-xs font-bold font-serif text-ink">Cognitive Structuring</span>
-              </div>
-              <p className="text-[11px] text-ink-secondary leading-snug">
-                Separates objective facts from unverified assumptions and bias.
-              </p>
-            </div>
-
-            <div className="bg-paper-surface rounded-md p-3.5 border border-border space-y-1">
-              <div className="flex items-center gap-2 text-ink">
-                <Search className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-xs font-bold font-serif text-ink">Empirical Due Diligence</span>
-              </div>
-              <p className="text-[11px] text-ink-secondary leading-snug">
-                Detects critical unknowns and pulls corroborated public evidence.
-              </p>
-            </div>
-
-            <div className="bg-paper-surface rounded-md p-3.5 border border-border space-y-1">
-              <div className="flex items-center gap-2 text-ink">
-                <Compass className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-xs font-bold font-serif text-ink">Multi-Model Frameworks</span>
-              </div>
-              <p className="text-[11px] text-ink-secondary leading-snug">
-                Weighted Matrix, SWOT, Five Whys, and Decision Tree analysis.
-              </p>
-            </div>
-
-            <div className="bg-paper-surface rounded-md p-3.5 border border-border space-y-1">
-              <div className="flex items-center gap-2 text-ink">
-                <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
-                <span className="text-xs font-bold font-serif text-ink">Cross-Meeting Memory</span>
-              </div>
-              <p className="text-[11px] text-ink-secondary leading-snug">
-                Folder continuity automatically inherits baseline facts and milestones.
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-2 flex items-center gap-2 text-[11px] text-ink-tertiary font-mono">
-            <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
-            <span>Google Workspace Single Sign-On &middot; Multi-Tenant Privacy</span>
           </div>
         </div>
 
-        {/* Right Column: Authentication Card */}
-        <div className="lg:col-span-6">
+        {/* Right Column: Authentication Card (100% Preserved) */}
+        <div className="lg:col-span-5">
           <div className="bg-paper-surface rounded-md p-6 sm:p-8 border border-border relative">
             {/* If user is already authenticated */}
             {!checkingAuth && currentUser && (
@@ -549,10 +486,8 @@ export default function AuthPage() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-[#FCFBF8] rounded-md border border-[#D9D2C3] p-6 max-w-md w-full shadow-2xl space-y-4 relative z-50">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-sm bg-paper-sidebar border border-border flex items-center justify-center text-accent">
-                  <Compass className="w-4 h-4" />
-                </div>
+              <div className="flex items-center gap-2.5">
+                <DecisionLensIcon size={30} />
                 <div>
                   <h3 className="text-sm font-serif font-bold text-ink">
                     Sandbox: {activeOAuthProvider.toUpperCase()} Sign-In

@@ -26,6 +26,12 @@ TestingSessionLocal = sessionmaker(
     expire_on_commit=False,
 )
 
+# Bind the test database engine directly so lifespan init_db() doesn't connect to remote DB
+import app.database as app_db
+app_db.engine = test_engine
+app_db.SessionLocal = TestingSessionLocal
+app_db.is_sqlite = True
+
 
 @pytest.fixture(autouse=True)
 def setup_test_db():

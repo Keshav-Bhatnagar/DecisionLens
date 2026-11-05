@@ -643,6 +643,12 @@ export interface GapItem {
   answer?: string | null;
   research_query?: string | null;
   source_origin?: string | null;
+  title?: string | null;
+  gap_type?: string | null;
+  affected_dimensions?: string[];
+  source_spans?: string[];
+  derived_from?: string[];
+  discovery_reason?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -1469,3 +1475,45 @@ export async function getMeetingTakeaways(
     body: JSON.stringify(payload || {}),
   });
 }
+
+export interface RagSearchResultItem {
+  id: string;
+  content: string;
+  score: number;
+  document_name?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface RagQueryResponse {
+  decision_id: number;
+  query: string;
+  count: number;
+  results: RagSearchResultItem[];
+}
+
+export interface RagStatusResponse {
+  decision_id: number;
+  has_indexed_documents: boolean;
+  chunk_count: number;
+  storage_engine: string;
+}
+
+export async function queryDecisionRag(
+  decisionId: number,
+  query: string,
+  topK: number = 3
+): Promise<RagQueryResponse> {
+  return fetchApi<RagQueryResponse>(`/api/decisions/${decisionId}/rag/query`, {
+    method: "POST",
+    body: JSON.stringify({ query, top_k: topK }),
+  });
+}
+
+export async function getDecisionRagStatus(
+  decisionId: number
+): Promise<RagStatusResponse> {
+  return fetchApi<RagStatusResponse>(`/api/decisions/${decisionId}/rag/status`, {
+    method: "GET",
+  });
+}
+

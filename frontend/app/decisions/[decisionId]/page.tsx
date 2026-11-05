@@ -361,8 +361,8 @@ export default function DecisionDetailPage({
               </div>
             </div>
 
-            {/* Express Boardroom ADR Card */}
-            {Boolean(decision.recommendation && typeof decision.recommendation === "object" && "headline" in decision.recommendation) && (
+            {/* Express Boardroom ADR Card - Only rendered when on Stage 5 (Synthesis) or in 'View All' mode */}
+            {(workflowStage === "synthesis" || viewMode === "all") && Boolean(decision.recommendation && typeof decision.recommendation === "object" && "headline" in decision.recommendation) && (
               <div className="mb-4">
                 <ExpressADRCard
                   decision={decision}
@@ -799,6 +799,7 @@ export default function DecisionDetailPage({
                     decisionId={decisionId}
                     initialAnalysis={decision.analysis}
                     onAnalysisUpdated={() => loadData()}
+                    onAdvanceToNextStage={() => handleSelectStage("synthesis")}
                   />
                 </div>
               )}

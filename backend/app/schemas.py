@@ -1172,3 +1172,31 @@ class MeetingTakeawaysResponse(BaseModel):
     unresolved_questions: List[str]
     slack_markdown: str
     email_body: str
+
+
+class RagQueryRequest(BaseModel):
+    query: str
+    top_k: int = 3
+
+
+class RagSearchResultItem(BaseModel):
+    id: str
+    content: str
+    score: float
+    document_name: Optional[str] = "Document"
+    metadata: Optional[dict] = None
+
+
+class RagQueryResponse(BaseModel):
+    decision_id: int
+    query: str
+    count: int
+    results: List[RagSearchResultItem]
+
+
+class RagStatusResponse(BaseModel):
+    decision_id: int
+    has_indexed_documents: bool
+    chunk_count: int
+    storage_engine: str = "supabase_pgvector"
+

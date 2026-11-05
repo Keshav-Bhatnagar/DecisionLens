@@ -3,81 +3,92 @@ from app.services.rag.chunking import TextChunker
 from app.services.rag.embeddings import EmbeddingEngine
 from app.services.rag.vector_store import InMemoryVectorStore
 from app.services.rag.router import DomainRouter, DomainType, classify_decision_domain
-from app.services.rag.domain_rag import DomainRAGService, get_domain_rag_service
+from app.services.rag.domain_rag import DomainRAGService
 from app.services.rag.document_rag import DocumentRAGService
 
 
 def test_text_chunker():
-    chunker = TextChunker(chunk_size=150, chunk_overlap=30, min_chunk_size=40)
-    sample_text = (
-        "Paragraph one discusses database architecture and distributed systems reliability. "
-        "It provides high throughput and low latency.\n\n"
-        "Paragraph two discusses relational ACID compliance versus NoSQL eventual consistency. "
-        "Choosing between PostgreSQL and DynamoDB requires careful evaluation."
+    chunker = TextChunker(chunk_size=100, chunk_overlap=20, min_chunk_size=30)
+    text = (
+        "This is paragraph one with enough characters to be meaningful.\n\n"
+        "This is paragraph two. It contains detailed sentences that should be preserved properly. "
+        "Here is another sentence in paragraph two to increase the overall character count.\n\n"
+        "This is paragraph three describing technical considerations."
     )
-    chunks = chunker.split_text(sample_text, document_id="test_doc")
+    chunks = chunker.split_text(text, document_id="doc_1")
     assert len(chunks) >= 2
-    assert chunks[0].id.startswith("test_doc_chunk_")
-    assert "database" in chunks[0].content or "Paragraph" in chunks[0].content
+    for c in chunks:
+        assert len(c.content) >= 30
+        assert c.id.startswith("doc_1_chunk_")
+        assert "document_id" in c.metadata or c.metadata is not None
 
 
 def test_embedding_engine_cosine_similarity():
-    engine = EmbeddingEngine(dimension=128)
-    v1 = engine.encode("PostgreSQL relational database ACID transactions")
-    v2 = engine.encode("Relational database with ACID consistency and SQL queries")
-    v3 = engine.encode("Employment contract non-compete clause and salary equity")
+    engine = EmbeddingEngine(dimension=384)
+    v1 = engine.encode("PostgreSQL relational database consistency")
+    v2 = engine.encode("Relational PostgreSQL database with ACID transactions")
+    v3 = engine.encode("Career promotion salary negotiation and resume advice")
 
     # Cosine similarity is dot product of normalized vectors
-    dot_related = sum(a * b for a, b in zip(v1, v2))
-    dot_unrelated = sum(a * b for a, b in zip(v1, v3))
+    dot_similar = sum(a * b for a, b in zip(v1, v2))
+    dot_dissimilar = sum(a * b for a, b in zip(v1, v3))
 
-    assert dot_related > dot_unrelated
-    assert dot_related > 0.3
+    assert dot_similar > dot_dissimilar
+    assert dot_similar > 0.40  # Meaningful lexical & phrase overlap
 
 
 def test_in_memory_vector_store():
     store = InMemoryVectorStore()
-    docs = [
-        "AWS Lambda serverless compute cold-start latency is a critical factor.",
-        "PostgreSQL database primary-replica replication and connection pooling.",
-        "Commercial contract non-compete clauses are void under California law.",
-    ]
-    store.add_texts("tech_collection", docs)
-    assert store.collection_size("tech_collection") == 3
+    collection = "test_collection"
 
-    results = store.similarity_search("tech_collection", "serverless lambda cold start", top_k=1)
-    assert len(results) == 1
-    assert "Lambda" in results[0]["content"]
-    assert results[0]["score"] > 0.0
+    texts = [
+        "AWS Lambda serverless architecture with API Gateway",
+        "Kubernetes container orchestration with Helm charts",
+        "Salary compensation and equity vesting cliff schedule",
+    ]
+    metadatas = [
+        {"topic": "serverless"},
+        {"topic": "k8s"},
+        {"topic": "career"},
+    ]
+    store.add_texts(collection, texts=texts, metadatas=metadatas)
+
+    results = store.similarity_search(collection, "serverless lambda functions", top_k=2)
+    assert len(results) == 2
+    assert results[0]["metadata"]["topic"] == "serverless"
+
+    # Test collection management
+    assert store.collection_size(collection) == 3
+    store.delete_collection(collection)
+    assert store.collection_size(collection) == 0
 
 
 def test_domain_router():
     router = DomainRouter()
-    
-    domain, conf = router.classify("Should I accept the new job offer with $160k salary and equity vesting?")
-    assert domain == DomainType.CAREER
-    assert conf > 0.0
 
-    domain, conf = router.classify("Reviewing B2B SaaS contract liability caps and non-compete terms")
-    assert domain == DomainType.LEGAL
-
-    domain, conf = router.classify("Evaluating PostgreSQL vs DynamoDB for high-throughput microservices architecture")
+    domain, conf = router.classify("We need to decide whether to migrate our monolith to microservices on Kubernetes.")
     assert domain == DomainType.SOFTWARE
+    assert conf > 0.5
 
-    domain, conf = router.classify("Planning what groceries to buy for dinner tonight")
-    assert domain == DomainType.GENERAL
+    domain, conf = router.classify("Reviewing our SaaS ARR growth, customer acquisition cost payback, and runway.")
+    assert domain == DomainType.BUSINESS
+    assert conf > 0.5
+
+    domain, conf = router.classify("Reviewing indemnity clauses, non-compete agreements, and intellectual property terms.")
+    assert domain == DomainType.LEGAL
+    assert conf > 0.5
 
 
 def test_domain_rag_service():
-    service = get_domain_rag_service()
+    service = DomainRAGService()
     service.initialize_knowledge_bases()
 
-    # Query career domain
+    # Query business domain
     results = service.retrieve_domain_blind_spots(
-        DomainType.CAREER, "Evaluating safe runway and equity vesting options", top_k=2
+        DomainType.BUSINESS, "CAC payback period and LTV to CAC ratio benchmarks", top_k=2
     )
     assert len(results) > 0
-    assert any("Runway" in r["content"] or "Equity" in r["content"] or "Compensation" in r["content"] for r in results)
+    assert any("CAC" in r["content"] or "LTV" in r["content"] or "Gross Margin" in r["content"] for r in results)
 
     # Query legal domain
     results = service.retrieve_domain_blind_spots(
@@ -92,6 +103,25 @@ def test_domain_rag_service():
     )
     assert len(results) > 0
     assert any("Serverless" in r["content"] or "Latency" in r["content"] or "Relational" in r["content"] for r in results)
+
+
+def test_business_domain_rag_and_retrieve_guidelines():
+    service = DomainRAGService()
+    service.initialize_knowledge_bases()
+
+    # Query business domain directly
+    results = service.retrieve_domain_blind_spots(
+        DomainType.BUSINESS, "Customer acquisition cost CAC payback and LTV ratio", top_k=2
+    )
+    assert len(results) > 0
+    assert any("CAC" in r["content"] or "Unit Economics" in r["content"] or "LTV" in r["content"] for r in results)
+
+    # Test the primary synthesis interface retrieve_guidelines
+    guidelines = service.retrieve_guidelines(
+        "B2B SaaS pricing models and burn multiple metrics", top_k=2
+    )
+    assert len(guidelines) > 0
+    assert any("Pricing" in g["content"] or "Burn Multiple" in g["content"] or "SaaS" in g["content"] for g in guidelines)
 
 
 def test_document_rag_service():
@@ -117,6 +147,7 @@ def test_document_rag_service():
     indexed_count = doc_rag.index_attachments(decision_id=999, attachments=[att1, att2])
     assert indexed_count >= 2
     assert doc_rag.has_indexed_documents(decision_id=999)
+    assert doc_rag.get_chunk_count(decision_id=999) >= 2
 
     excerpts = doc_rag.retrieve_relevant_excerpts(
         decision_id=999, query="non-compete clause duration", top_k=1

@@ -4,18 +4,18 @@ from typing import List, Optional, Tuple
 
 
 class DomainType(str, Enum):
-    CAREER = "career"
+    BUSINESS = "business"
     LEGAL = "legal"
     SOFTWARE = "software"
     GENERAL = "general"
 
 
 DOMAIN_KEYWORDS = {
-    DomainType.CAREER: [
-        "career", "job", "offer", "salary", "compensation", "promotion", "raise",
-        "resume", "hiring", "manager", "pivot", "quit", "resign", "role", "interview",
-        "equity", "vesting", "bonus", "work-life", "burnout", "employer", "employee",
-        "colleague", "workplace", "internship", "fellowship"
+    DomainType.BUSINESS: [
+        "business", "revenue", "pricing", "margin", "cac", "ltv", "arr", "mrr",
+        "runway", "burn multiple", "churn", "unit economics", "saas", "procurement",
+        "b2b", "sales cycle", "enterprise", "vendor", "contract value", "acv",
+        "growth", "monetization", "gross margin", "ebitda", "fundraising", "pitch"
     ],
     DomainType.LEGAL: [
         "contract", "liability", "clause", "non-compete", "agreement", "nda",
