@@ -7,6 +7,11 @@ class DomainType(str, Enum):
     BUSINESS = "business"
     LEGAL = "legal"
     SOFTWARE = "software"
+    REAL_ESTATE = "real_estate"
+    FINANCE = "finance"
+    PRODUCT = "product"
+    OPERATIONS = "operations"
+    CAREER = "career"
     GENERAL = "general"
 
 
@@ -30,6 +35,34 @@ DOMAIN_KEYWORDS = {
         "nosql", "sql", "postgres", "mongodb", "dynamodb", "redis", "kafka",
         "api", "backend", "frontend", "serverless", "lambda", "framework",
         "refactor", "tech stack", "uptime", "sla", "devops", "ci/cd"
+    ],
+    DomainType.REAL_ESTATE: [
+        "land", "property", "real estate", "acre", "acres", "plot", "sqft", "square feet",
+        "zoning", "fsi", "far", "encumbrance", "buyout", "tenant", "lease", "landlord", "residential",
+        "commercial plot", "joint venture", "jda", "outright purchase", "title deed", "patta",
+        "land parcel", "construction", "real-estate", "rera", "circle rate", "setback", "tdr"
+    ],
+    DomainType.FINANCE: [
+        "portfolio", "equity", "venture capital", "debt", "bond", "dividend",
+        "hedge fund", "cap table", "valuation", "seed round", "series a", "series b",
+        "roi", "irr", "wacc", "dscr", "icr", "credit facility", "loan", "asset allocation",
+        "liquidity", "haircut", "treasury", "working capital", "cash conversion cycle"
+    ],
+    DomainType.PRODUCT: [
+        "product", "feature", "user retention", "onboarding", "churn", "ui/ux",
+        "user journey", "mvp", "persona", "activation rate", "freemium", "conversion rate",
+        "rice score", "aha moment", "time-to-value", "ttv", "experimentation", "a/b test",
+        "cannibalization", "cohort", "dunning"
+    ],
+    DomainType.OPERATIONS: [
+        "supply chain", "warehouse", "logistics", "procurement", "inventory",
+        "supplier", "manufacturing", "fulfillment", "vendor negotiation", "sla", "freight",
+        "eoq", "safety stock", "otif", "bullwhip", "reorder point", "tco", "six sigma", "incoterms"
+    ],
+    DomainType.CAREER: [
+        "career", "job offer", "salary", "promotion", "resume", "resignation",
+        "notice period", "hiring", "compensation", "employer", "work-life balance",
+        "headcount", "role transition", "interview", "severance", "rsu", "options", "burnout"
     ],
 }
 

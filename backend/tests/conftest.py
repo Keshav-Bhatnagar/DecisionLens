@@ -35,10 +35,16 @@ app_db.is_sqlite = True
 
 @pytest.fixture(autouse=True)
 def setup_test_db():
-    """Create fresh database tables before each test and drop them after."""
+    """Create fresh database tables before each test and truncate them after."""
     Base.metadata.create_all(bind=test_engine)
     yield
-    Base.metadata.drop_all(bind=test_engine)
+    try:
+        with test_engine.connect() as conn:
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(table.delete())
+            conn.commit()
+    except Exception:
+        pass
 
 
 @pytest.fixture
@@ -48,7 +54,14 @@ def db_session() -> Generator[Session, None, None]:
     try:
         yield session
     finally:
-        session.close()
+        try:
+            session.rollback()
+        except Exception:
+            pass
+        try:
+            session.close()
+        except Exception:
+            pass
 
 
 @pytest.fixture

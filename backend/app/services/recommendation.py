@@ -229,6 +229,18 @@ def generate_domain_grounded_roadmap(
             "Operations & Delivery Lead",
             "Executive Steering Committee",
         ),
+        "PRODUCT": (
+            "Principal Product Manager",
+            "Growth & Analytics Lead",
+            "Design & Engineering Lead",
+            "Chief Product Officer",
+        ),
+        "OPERATIONS": (
+            "Head of Procurement & Supply",
+            "Quality Assurance Lead",
+            "Logistics Operations Director",
+            "Chief Operating Officer",
+        ),
     }
     roles = role_map.get(domain_upper, role_map["BUSINESS"])
     legal_role, risk_role, ops_role, exec_role = roles
@@ -289,6 +301,36 @@ def generate_domain_grounded_roadmap(
                     is_completed=False,
                     source_type="decision_requirement",
                     reason="Validates non-functional performance requirements before full-scale engineering commitment.",
+                )
+            )
+        elif domain_upper == "PRODUCT":
+            phase1_tasks.append(
+                RoadmapTask(
+                    task_id="task-p1-prod",
+                    title=f"Activation Milestone & Cohort Prototype Validation{title_context}",
+                    description=f"Run qualitative user interviews and low-fidelity prototype walkthrough to test Time-to-Value for {top_option_name}.",
+                    owner_role=legal_role,
+                    timeline="Weeks 1-2",
+                    dependencies=[],
+                    success_criteria="Validated activation funnel with >= 80% user prototype task completion rate.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Empirically verifies core value hypothesis before allocating engineering sprints.",
+                )
+            )
+        elif domain_upper == "OPERATIONS":
+            phase1_tasks.append(
+                RoadmapTask(
+                    task_id="task-p1-ops",
+                    title=f"Supplier SLA & Dual-Sourcing Feasibility Audit{title_context}",
+                    description=f"Audit vendor OTIF history, lead time variance, and secondary backup capacity for {top_option_name}.",
+                    owner_role=legal_role,
+                    timeline="Weeks 1-2",
+                    dependencies=[],
+                    success_criteria="Verified vendor capability assessment with >= 95% target OTIF SLA agreement.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Insulates supply chain against single-source disruption and inventory stockouts.",
                 )
             )
         else:

@@ -78,10 +78,30 @@ def test_domain_router():
     assert domain == DomainType.LEGAL
     assert conf > 0.5
 
+    domain, conf = router.classify("Evaluating 15 acres commercial land parcel buyout, RERA compliance, FSI, and title deed encumbrance.")
+    assert domain == DomainType.REAL_ESTATE
+    assert conf > 0.5
+
+    domain, conf = router.classify("Assessing IRR hurdle rate, DSCR debt covenants, working capital cash conversion cycle, and valuation.")
+    assert domain == DomainType.FINANCE
+    assert conf > 0.5
+
+    domain, conf = router.classify("A/B test experimentation for user retention cohort curves, time-to-value activation, and onboarding churn.")
+    assert domain == DomainType.PRODUCT
+    assert conf > 0.5
+
+    domain, conf = router.classify("Evaluating warehouse supply chain logistics, EOQ safety stock calculation, and vendor OTIF delivery SLAs.")
+    assert domain == DomainType.OPERATIONS
+    assert conf > 0.5
+
+    domain, conf = router.classify("Senior executive job offer compensation, severance package, RSU equity vesting, and career transition.")
+    assert domain == DomainType.CAREER
+    assert conf > 0.5
+
 
 def test_domain_rag_service():
     service = DomainRAGService()
-    service.initialize_knowledge_bases()
+    service.initialize_knowledge_bases(force=True)
 
     # Query business domain
     results = service.retrieve_domain_blind_spots(
@@ -103,6 +123,62 @@ def test_domain_rag_service():
     )
     assert len(results) > 0
     assert any("Serverless" in r["content"] or "Latency" in r["content"] or "Relational" in r["content"] for r in results)
+
+    # Query real estate domain
+    results = service.retrieve_domain_blind_spots(
+        DomainType.REAL_ESTATE, "FSI Floor Space Index, RERA escrow, and 30-year title deed", top_k=2
+    )
+    assert len(results) > 0
+    assert any("FSI" in r["content"] or "RERA" in r["content"] or "Title" in r["content"] for r in results)
+
+    # Query finance domain
+    results = service.retrieve_domain_blind_spots(
+        DomainType.FINANCE, "IRR hurdle rate, WACC, and DSCR debt service coverage", top_k=2
+    )
+    assert len(results) > 0
+    assert any("IRR" in r["content"] or "DSCR" in r["content"] or "WACC" in r["content"] for r in results)
+
+    # Query product domain
+    results = service.retrieve_domain_blind_spots(
+        DomainType.PRODUCT, "Cohort retention curve flattening, RICE score, and activation time-to-value", top_k=2
+    )
+    assert len(results) > 0
+    assert any("Retention" in r["content"] or "RICE" in r["content"] or "Activation" in r["content"] for r in results)
+
+    # Query operations domain
+    results = service.retrieve_domain_blind_spots(
+        DomainType.OPERATIONS, "EOQ Economic Order Quantity, safety stock, and OTIF fulfillment", top_k=2
+    )
+    assert len(results) > 0
+    assert any("EOQ" in r["content"] or "Safety Stock" in r["content"] or "OTIF" in r["content"] for r in results)
+
+    # Query career domain
+    results = service.retrieve_domain_blind_spots(
+        DomainType.CAREER, "Safe financial runway formula, RSU equity options, and burnout", top_k=2
+    )
+    assert len(results) > 0
+    assert any("Runway" in r["content"] or "Compensation" in r["content"] or "Burnout" in r["content"] for r in results)
+
+
+def test_multi_domain_criteria_grounding():
+    from app.services.framework_engine import build_domain_grounded_criteria, DecisionDomain
+
+    for domain in [
+        DecisionDomain.SOFTWARE.value,
+        DecisionDomain.BUSINESS.value,
+        DecisionDomain.REAL_ESTATE.value,
+        DecisionDomain.FINANCE.value,
+        DecisionDomain.CAREER.value,
+        DecisionDomain.PRODUCT.value,
+        DecisionDomain.OPERATIONS.value,
+    ]:
+        criteria = build_domain_grounded_criteria(domain)
+        assert len(criteria) == 4, f"Domain {domain} must have exactly 4 criteria"
+        total_weight = sum(c.weight for c in criteria)
+        assert abs(total_weight - 100.0) < 0.001, f"Domain {domain} criteria weights must sum to 100.0 (got {total_weight})"
+        for c in criteria:
+            assert len(c.name) > 3, f"Criterion name too short: {c.name}"
+            assert len(c.description) > 10, f"Criterion description too short: {c.description}"
 
 
 def test_business_domain_rag_and_retrieve_guidelines():

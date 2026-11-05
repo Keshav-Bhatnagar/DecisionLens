@@ -578,7 +578,61 @@ def build_domain_grounded_criteria(domain: str) -> List[MatrixCriterion]:
                 description="Compute, storage, and networking operational costs over a multi-year horizon.",
             ),
         ]
-    else:  # BUSINESS / PRODUCT / OPERATIONS / PERSONAL default
+    elif domain == DecisionDomain.PRODUCT.value:
+        return [
+            MatrixCriterion(
+                id="crit_prod_retention",
+                name="User Retention & Activation Velocity",
+                weight=30.0,
+                description="Time-to-value (TTV), cohort retention curve flattening, and activation milestone completion.",
+            ),
+            MatrixCriterion(
+                id="crit_prod_ltv",
+                name="Customer LTV & Monetization Expansion",
+                weight=25.0,
+                description="ARPU uplift, willingness-to-pay, expansion revenue trajectory, and referral loops.",
+            ),
+            MatrixCriterion(
+                id="crit_prod_feasibility",
+                name="Shipping Velocity & Technical Feasibility",
+                weight=25.0,
+                description="Engineering implementation complexity, design friction, dependencies, and RICE effort.",
+            ),
+            MatrixCriterion(
+                id="crit_prod_churn",
+                name="Churn Mitigation & Defensibility",
+                weight=20.0,
+                description="Workflow stickiness, switching cost creation, and defensibility against competitor copycats.",
+            ),
+        ]
+    elif domain == DecisionDomain.OPERATIONS.value:
+        return [
+            MatrixCriterion(
+                id="crit_ops_fulfillment",
+                name="SLA Reliability & Fulfillment Velocity",
+                weight=30.0,
+                description="On-Time In-Full (OTIF) rate, lead time compression, and process throughput capacity.",
+            ),
+            MatrixCriterion(
+                id="crit_ops_working_capital",
+                name="Working Capital & Inventory Carrying Cost",
+                weight=25.0,
+                description="EOQ optimization, safety stock buffer, cash conversion cycle, and holding cost minimization.",
+            ),
+            MatrixCriterion(
+                id="crit_ops_resilience",
+                name="Supply Chain Resilience & SPOF Mitigation",
+                weight=25.0,
+                description="Dual-sourcing capability, buffer capacity, vendor financial stability, and disruption insulation.",
+            ),
+            MatrixCriterion(
+                id="crit_ops_compliance",
+                name="Quality Yield & Regulatory Governance",
+                weight=20.0,
+                description="Six Sigma defect rate (PPM), ESG/statutory compliance, and contract penalty protection.",
+            ),
+        ]
+    else:  # BUSINESS / EDUCATION / PERSONAL default
         return [
             MatrixCriterion(
                 id="crit_biz_alignment",

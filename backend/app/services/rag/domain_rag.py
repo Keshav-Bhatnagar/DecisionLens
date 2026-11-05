@@ -30,6 +30,11 @@ class DomainRAGService:
             DomainType.BUSINESS: base_dir / "business.md",
             DomainType.LEGAL: base_dir / "legal.md",
             DomainType.SOFTWARE: base_dir / "software.md",
+            DomainType.REAL_ESTATE: base_dir / "real_estate.md",
+            DomainType.FINANCE: base_dir / "finance.md",
+            DomainType.PRODUCT: base_dir / "product.md",
+            DomainType.OPERATIONS: base_dir / "operations.md",
+            DomainType.CAREER: base_dir / "career.md",
         }
 
         for domain, file_path in domain_files.items():
@@ -54,7 +59,7 @@ class DomainRAGService:
 
     def retrieve_domain_blind_spots(
         self,
-        domain: DomainType,
+        domain: Any,
         query: str,
         top_k: int = 2,
     ) -> List[Dict[str, Any]]:
@@ -62,10 +67,21 @@ class DomainRAGService:
         if not self._initialized:
             self.initialize_knowledge_bases()
 
-        if domain == DomainType.GENERAL:
+        if isinstance(domain, str):
+            clean_dom = domain.lower()
+            try:
+                dom_enum = DomainType(clean_dom)
+            except ValueError:
+                dom_enum = DomainType.GENERAL
+        elif isinstance(domain, DomainType):
+            dom_enum = domain
+        else:
+            dom_enum = DomainType.GENERAL
+
+        if dom_enum == DomainType.GENERAL:
             return []
 
-        collection_name = f"domain_{domain.value}"
+        collection_name = f"domain_{dom_enum.value}"
         return self.vector_store.similarity_search(collection_name, query, top_k=top_k)
 
     def retrieve_blind_spots_for_decision(
