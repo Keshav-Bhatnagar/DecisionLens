@@ -1025,6 +1025,13 @@ class DecisionSynthesis(BaseModel):
     is_stale: bool = Field(False, description="True if upstream data was modified after this synthesis")
     created_at: str
     version: int = 1
+    override: Optional[Dict[str, Any]] = Field(None, description="Leadership sovereign override metadata")
+
+
+class OverrideRequest(BaseModel):
+    overridden_winner: Optional[str] = None
+    reason: Optional[str] = None
+    revert_to_ai: bool = False
 
 
 class SynthesisRequest(BaseModel):

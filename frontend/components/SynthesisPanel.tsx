@@ -14,6 +14,7 @@ import {
   getAnalysisSnapshotDetail,
   getActiveRoadmap,
   updateActiveRoadmap,
+  recordDecisionOverride,
 } from "@/lib/api";
 import {
   AlertTriangle,
@@ -39,6 +40,12 @@ import {
   Trash2,
   RotateCcw,
   Zap,
+  CalendarDays,
+  Filter,
+  UserCheck,
+  AlertOctagon,
+  Edit3,
+  X,
 } from "lucide-react";
 import OutcomeTrackingCard from "@/components/OutcomeTrackingCard";
 
@@ -69,6 +76,84 @@ export default function SynthesisPanel({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [copiedADR, setCopiedADR] = useState(false);
   const [activeTab, setActiveTab] = useState<"memo" | "roadmap" | "audit">("memo");
+
+  // Dynamic Sprint Calendar & Runway State
+  const [projectStartDate, setProjectStartDate] = useState<string>(() => {
+    return new Date().toISOString().split("T")[0];
+  });
+  const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string>("ALL");
+
+  // Executive Sovereign Override State
+  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+  const [selectedOverrideOption, setSelectedOverrideOption] = useState<string>("");
+  const [overrideReason, setOverrideReason] = useState<string>("");
+  const [savingOverride, setSavingOverride] = useState(false);
+
+  // Dynamic date calculation based on leadership's start date
+  function getPhaseDates(phaseIdx: number) {
+    try {
+      const base = new Date(projectStartDate);
+      if (isNaN(base.getTime())) return null;
+      let startOffset = 0;
+      let duration = 14;
+      if (phaseIdx === 0) {
+        startOffset = 0;
+        duration = 14;
+      } else if (phaseIdx === 1) {
+        startOffset = 14;
+        duration = 21;
+      } else {
+        startOffset = 35;
+        duration = 21;
+      }
+      const s = new Date(base);
+      s.setDate(s.getDate() + startOffset);
+      const e = new Date(s);
+      e.setDate(e.getDate() + duration);
+      const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      return { startStr: fmt(s), endStr: fmt(e), range: `${fmt(s)} – ${fmt(e)}` };
+    } catch {
+      return null;
+    }
+  }
+
+  async function handleConfirmOverride() {
+    if (!selectedOverrideOption || !displaySynthesis) return;
+    setSavingOverride(true);
+    setError(null);
+    try {
+      const res = await recordDecisionOverride(decisionId, {
+        overridden_winner: selectedOverrideOption,
+        reason: overrideReason.trim() || "Mandated sovereignly by engineering leadership.",
+        revert_to_ai: false,
+      });
+      setSynthesis(res);
+      setIsOverrideModalOpen(false);
+      setSuccessMsg(`Executive Override confirmed: Proceeding with '${selectedOverrideOption}'.`);
+      if (onSynthesisUpdated) onSynthesisUpdated(res);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to record executive override");
+    } finally {
+      setSavingOverride(false);
+    }
+  }
+
+  async function handleRevertOverride() {
+    setSavingOverride(true);
+    setError(null);
+    try {
+      const res = await recordDecisionOverride(decisionId, {
+        revert_to_ai: true,
+      });
+      setSynthesis(res);
+      setSuccessMsg("Reverted to AI recommendation.");
+      if (onSynthesisUpdated) onSynthesisUpdated(res);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to revert override");
+    } finally {
+      setSavingOverride(false);
+    }
+  }
 
   // User priority tags input
   const [priorities, setPriorities] = useState<string[]>([]);
@@ -636,6 +721,49 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                 </div>
               </div>
             )}
+
+            {/* Sovereign Executive Override Banner */}
+            {displaySynthesis.override ? (
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-xl space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertOctagon className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
+                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                      Leadership Sovereign Override Active: {displaySynthesis.override.overridden_winner}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRevertOverride}
+                    disabled={savingOverride}
+                    className="text-xs font-mono font-bold text-amber-800 dark:text-amber-300 underline hover:no-underline cursor-pointer"
+                  >
+                    Revert to AI Verdict ({displaySynthesis.override.previous_winner || "Option C"})
+                  </button>
+                </div>
+                <p className="text-xs text-amber-900/90 dark:text-amber-200/90 font-sans leading-relaxed">
+                  <strong>Leadership Mandate:</strong> "{displaySynthesis.override.reason}" • <span className="opacity-75">{new Date(displaySynthesis.override.timestamp).toLocaleDateString()} by {displaySynthesis.override.overridden_by || "Executive Lead"}</span>
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border text-xs font-mono">
+                <div className="flex items-center gap-2 text-muted">
+                  <UserCheck className="w-3.5 h-3.5 text-accent" />
+                  <span>Human Sovereignty: AI advises, leadership decides. You hold final fiduciary authority.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const defaultOther = displaySynthesis.alternatives_considered.find((a: any) => !a.is_recommended)?.name || "Microservices (Kafka/Go)";
+                    setSelectedOverrideOption(defaultOther);
+                    setIsOverrideModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg border border-border bg-paper-sidebar hover:border-accent text-ink font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                >
+                  <span>⚡ Override Winner / Choose Alternative</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ========================================================================= */}
@@ -1045,7 +1173,7 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                     {displayRoadmap.title}
                   </h3>
                   <p className="text-xs text-muted font-sans mt-0.5">
-                    Phase-gated operational milestones, owner roles, and success criteria. Check off tasks to maintain live audit progress.
+                    Phase-gated operational milestones, owner roles, and success criteria. Set your kickoff date and track real delivery dates.
                   </p>
                 </div>
 
@@ -1060,9 +1188,105 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                 )}
               </div>
 
+              {/* 1. LEAD-DRIVEN PROJECT KICKOFF CALENDAR BAR */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-paper-sidebar border border-border rounded-xl font-courier">
+                <div className="flex items-center gap-2.5">
+                  <CalendarDays className="w-4 h-4 text-accent shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-ink block">
+                      Project Kickoff Anchor Date
+                    </span>
+                    <span className="text-[11px] text-muted">
+                      Leadership dictates the start date. All phased delivery windows calculate dynamically.
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-mono text-muted uppercase font-bold shrink-0">Kickoff:</label>
+                  <input
+                    type="date"
+                    value={projectStartDate}
+                    onChange={(e) => setProjectStartDate(e.target.value)}
+                    className="px-2.5 py-1 text-xs font-mono bg-paper-surface border border-border text-ink rounded focus:outline-none focus:border-accent cursor-pointer shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              {/* 2. VISUAL PHASED RUNWAY (GANTT-LITE HORIZONTAL TIMELINE BAR) */}
+              <div className="space-y-2 font-courier">
+                <div className="flex items-center justify-between text-[11px] text-muted uppercase font-bold px-1">
+                  <span>Phased Timeline Runway (Weeks 1 to 8)</span>
+                  <span>Total Tasks: {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)}</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  {displayRoadmap.phases.map((phase, pIdx) => {
+                    const phaseDates = getPhaseDates(pIdx);
+                    const completedCount = phase.tasks.filter((t) => t.is_completed).length;
+                    const totalCount = phase.tasks.length;
+                    const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+                    return (
+                      <div
+                        key={phase.phase_id}
+                        className="p-3 bg-paper-sidebar border border-border rounded-xl space-y-1.5 transition-all hover:border-accent"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-ink truncate">
+                            Phase {pIdx + 1}: {phase.timeline}
+                          </span>
+                          <span className="text-[10px] font-mono text-accent font-bold">
+                            {pct}% Done
+                          </span>
+                        </div>
+
+                        {/* Dynamically Projected Calendar Range */}
+                        <span className="text-[10px] font-mono text-muted block">
+                          📅 {phaseDates?.range || phase.timeline}
+                        </span>
+
+                        {/* Progress Bar */}
+                        <div className="w-full h-1.5 bg-paper-surface border border-border/60 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-accent transition-all duration-300"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+
+                        <span className="text-[10px] text-muted block text-right font-mono">
+                          {completedCount}/{totalCount} tasks cleared
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. OWNER ROLE FILTER CHIPS */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-border font-courier text-xs">
+                <span className="text-muted text-[11px] uppercase font-bold mr-1 flex items-center gap-1">
+                  <Filter className="w-3 h-3" /> Stakeholder Filter:
+                </span>
+                {["ALL", "Architecture", "SRE", "DevOps", "Product", "Executive"].map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setSelectedOwnerFilter(role)}
+                    className={`px-2.5 py-1 text-[11px] uppercase font-bold rounded-lg border transition cursor-pointer ${
+                      selectedOwnerFilter === role
+                        ? "bg-ink text-paper-surface border-ink shadow-2xs"
+                        : "bg-paper-surface text-muted border-border hover:text-ink"
+                    }`}
+                  >
+                    {role === "ALL" ? "All Tasks" : role}
+                  </button>
+                ))}
+              </div>
+
               {/* Phases */}
               <div className="space-y-5">
-                {displayRoadmap.phases.map((phase) => (
+                {displayRoadmap.phases.map((phase, pIdx) => {
+                  const phaseDates = getPhaseDates(pIdx);
+                  return (
                   <div
                     key={phase.phase_id}
                     className="rounded-xl border border-border bg-paper-sidebar p-4 sm:p-5 space-y-3"
@@ -1076,14 +1300,28 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                           {phase.description}
                         </p>
                       </div>
-                      <span className="text-[11px] font-mono px-2.5 py-0.5 rounded bg-paper-surface border border-border text-accent font-bold shrink-0 self-start sm:self-auto">
-                        {phase.timeline}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                        {phaseDates && (
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-paper-surface border border-border text-ink font-bold">
+                            📅 {phaseDates.range}
+                          </span>
+                        )}
+                        <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-paper-surface border border-border text-accent font-bold">
+                          {phase.timeline}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Tasks List */}
                     <div className="space-y-2">
-                      {phase.tasks.map((task) => (
+                      {phase.tasks
+                        .filter((task) => {
+                          if (selectedOwnerFilter === "ALL") return true;
+                          const o = (task.owner_role || "").toLowerCase();
+                          const f = selectedOwnerFilter.toLowerCase();
+                          return o.includes(f);
+                        })
+                        .map((task) => (
                         <div
                           key={task.task_id}
                           className={`p-3 rounded-lg border transition-colors flex items-start justify-between gap-3 ${
@@ -1211,7 +1449,8 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

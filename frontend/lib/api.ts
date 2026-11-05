@@ -922,6 +922,13 @@ export interface DecisionMatrixAnalysis {
   canonical_result?: CanonicalDecisionResult | null;
   domain?: string;
   is_stale?: boolean;
+  override?: {
+    overridden_winner: string;
+    reason: string;
+    timestamp: string;
+    previous_winner?: string;
+    overridden_by?: string;
+  } | null;
 }
 
 export interface MatrixEvaluationRequest {
@@ -1167,6 +1174,13 @@ export interface DecisionSynthesis {
   canonical_result?: CanonicalDecisionResult | null;
   domain?: string;
   is_stale?: boolean;
+  override?: {
+    overridden_winner: string;
+    reason: string;
+    timestamp: string;
+    previous_winner?: string;
+    overridden_by?: string;
+  } | null;
 }
 
 export interface SynthesisRequest {
@@ -1223,6 +1237,23 @@ export async function getDecisionSynthesis(
 ): Promise<DecisionSynthesis> {
   return fetchApi<DecisionSynthesis>(
     `/api/decisions/${decisionId}/synthesis`
+  );
+}
+
+export async function recordDecisionOverride(
+  decisionId: number,
+  payload: {
+    overridden_winner?: string;
+    reason?: string;
+    revert_to_ai?: boolean;
+  }
+): Promise<DecisionSynthesis> {
+  return fetchApi<DecisionSynthesis>(
+    `/api/decisions/${decisionId}/synthesis/override`,
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }
   );
 }
 

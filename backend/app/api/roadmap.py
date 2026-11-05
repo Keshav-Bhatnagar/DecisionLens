@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.database import get_db
 import re
@@ -16,6 +17,7 @@ from app.schemas import (
     SnapshotDetail,
     SnapshotSummary,
     SynthesisRequest,
+    OverrideRequest,
 )
 from app.services.recommendation import run_decision_synthesis
 from app.services.report_generator import (
@@ -98,6 +100,74 @@ def get_decision_synthesis(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No recommendation synthesis has been generated for this decision yet.",
         )
+
+    return DecisionSynthesis.model_validate(decision.recommendation)
+
+
+@router.put(
+    "/{decision_id}/synthesis/override",
+    response_model=DecisionSynthesis,
+    status_code=status.HTTP_200_OK,
+    summary="Record or Revert Leadership Sovereign Override",
+)
+def record_decision_override(
+    decision_id: int,
+    payload: OverrideRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Allow executive leadership to sovereignly adopt, override, or revert the winner.
+    Respects human-in-the-loop governance by persisting leadership rationale.
+    """
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+    if not decision:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Decision with ID {decision_id} not found",
+        )
+    verify_ownership(decision.owner_id, current_user.id, "decision")
+
+    if not decision.recommendation or not isinstance(decision.recommendation, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot override: Decision has not been synthesized yet.",
+        )
+
+    rec = dict(decision.recommendation)
+    canonical = dict(rec.get("canonical_result") or {})
+    prev_winner = canonical.get("winner_option_name") or rec.get("headline", "Option C")
+
+    if payload.revert_to_ai:
+        rec.pop("override", None)
+        if canonical:
+            canonical.pop("override", None)
+            rec["canonical_result"] = canonical
+        orig_winner = canonical.get("winner_option_name") or "Primary Recommendation"
+        rec["headline"] = f"Executive Mandate: Proceed with '{orig_winner}'"
+    else:
+        if not payload.overridden_winner:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="overridden_winner must be specified when recording an override.",
+            )
+        override_data = {
+            "overridden_winner": payload.overridden_winner,
+            "reason": payload.reason or "Strategic mandate set by leadership.",
+            "overridden_by": getattr(current_user, "email", "Executive Lead"),
+            "previous_winner": prev_winner,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        rec["override"] = override_data
+        if canonical:
+            canonical["override"] = override_data
+            rec["canonical_result"] = canonical
+        rec["headline"] = f"Executive Override: Proceed with '{payload.overridden_winner}'"
+
+    decision.recommendation = rec
+    flag_modified(decision, "recommendation")
+    db.commit()
+    db.refresh(decision)
 
     return DecisionSynthesis.model_validate(decision.recommendation)
 

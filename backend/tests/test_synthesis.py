@@ -485,3 +485,80 @@ def test_synthesis_cross_user_isolation(
         headers=other_auth_headers,
     )
     assert res_b_edit.status_code == 404
+
+
+def test_executive_sovereign_override_and_revert(
+    client: TestClient,
+    auth_headers: dict,
+    test_user: User,
+    test_folder: Folder,
+    db_session: Session,
+):
+    """
+    Verify leadership can execute a sovereign override on the AI synthesis winner,
+    and subsequently revert back to the AI recommendation.
+    """
+    decision = Decision(
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+        title="Streaming vs Batch Pipeline",
+        problem_statement="Choose Kafka vs Batch Processing for financial events.",
+        points={"facts": ["Transactions arrive at 5k/sec."]},
+        gaps={"gaps": []},
+        analysis={},
+    )
+    db_session.add(decision)
+    db_session.commit()
+    db_session.refresh(decision)
+
+    # 1. Generate synthesis
+    resp = client.post(
+        f"/api/decisions/{decision.id}/synthesis",
+        json={"force_mock": True},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    original_headline = resp.json()["headline"]
+
+    # 2. Executive overrides with a strategic choice
+    override_payload = {
+        "overridden_winner": "Option B: Managed Kafka Cluster",
+        "reason": "Executive board mandate for sub-second audit log replication.",
+        "revert_to_ai": False,
+    }
+    override_resp = client.put(
+        f"/api/decisions/{decision.id}/synthesis/override",
+        json=override_payload,
+        headers=auth_headers,
+    )
+    assert override_resp.status_code == 200
+    synth_data = override_resp.json()
+    assert "Option B: Managed Kafka Cluster" in synth_data["headline"]
+    assert synth_data["override"] is not None
+    assert synth_data["override"]["overridden_winner"] == "Option B: Managed Kafka Cluster"
+    assert "Executive board mandate" in synth_data["override"]["reason"]
+
+    # 3. Verify persistence on GET
+    get_resp = client.get(
+        f"/api/decisions/{decision.id}/synthesis",
+        headers=auth_headers,
+    )
+    assert get_resp.status_code == 200
+    persisted = get_resp.json()
+    assert "Option B: Managed Kafka Cluster" in persisted["headline"]
+    assert persisted["override"] is not None
+
+    # 4. Revert override back to AI recommendation
+    revert_payload = {
+        "revert_to_ai": True,
+    }
+    revert_resp = client.put(
+        f"/api/decisions/{decision.id}/synthesis/override",
+        json=revert_payload,
+        headers=auth_headers,
+    )
+    assert revert_resp.status_code == 200
+    reverted = revert_resp.json()
+    assert reverted["override"] is None
+    assert "Executive Mandate: Proceed with" in reverted["headline"]
+
