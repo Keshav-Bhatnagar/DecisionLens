@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { useTheme } from "@/context/ThemeContext";
+import DecisionPrismCanvas from "@/components/DecisionPrismCanvas";
 import {
   getMe,
   getFolders,
@@ -95,8 +96,9 @@ export default function ProfilePage() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Creative Decision Signature (Persisted to localStorage)
+  // Creative Decision Signature & 3D Artifact State
   const [signature, setSignature] = useState<DecisionSignature>("first_principles");
+  const [showArtifact3D, setShowArtifact3D] = useState(true);
 
   // Voice & Ingestion Settings (Persisted to localStorage)
   const [defaultLanguage, setDefaultLanguage] = useState<string>("en");
@@ -437,64 +439,91 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* 3. Creative Decision Posture / Strategic Persona */}
-          <div className="bg-[var(--bg-surface)] rounded-3xl p-6 sm:p-7 border border-[var(--border)] shadow-xs space-y-4 transition-colors duration-200">
-            <div className="flex items-center justify-between">
+          {/* 3. Executive Decision Artifact & 3D Cognitive Sculpture */}
+          <div className="bg-[var(--bg-surface)] rounded-3xl p-6 sm:p-7 border border-[var(--border)] shadow-xs space-y-5 transition-colors duration-200">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h3 className="text-base font-serif font-bold text-[var(--ink)] flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-[var(--accent)]" />
-                  <span>Your Decision-Making Philosophy</span>
+                  <Sparkles className="w-4 h-4 text-[var(--accent)]" />
+                  <span>Executive Decision Artifact</span>
                 </h3>
                 <p className="text-xs text-[var(--ink-secondary)] mt-0.5">
-                  Choose how DecisionLens tunes your cognitive frameworks and trade-off scrutiny.
+                  A generative 3D sculpture calibrated to your strategic decision posture.
                 </p>
               </div>
-              {prefSavedMsg && (
-                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 animate-fadeIn">
-                  Saved
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {prefSavedMsg && (
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 animate-fadeIn">
+                    Artifact Synced
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowArtifact3D(!showArtifact3D)}
+                  className="text-xs text-[var(--ink-secondary)] hover:text-[var(--ink)] flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--bg-page)]/60 transition"
+                  title="Toggle 3D Sculpture View"
+                >
+                  <span>{showArtifact3D ? "Minimize 3D" : "Expand 3D"}</span>
+                  {showArtifact3D ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              {SIGNATURES.map((sig) => {
-                const isSelected = signature === sig.id;
-                const IconComponent = sig.icon;
-                return (
-                  <button
-                    key={sig.id}
-                    type="button"
-                    onClick={() => handleSelectSignature(sig.id)}
-                    className={`text-left p-4 rounded-2xl border transition-all duration-150 flex items-start gap-3.5 relative ${
-                      isSelected
-                        ? "border-[var(--accent)] bg-[var(--bg-page)]/80 shadow-xs ring-1 ring-[var(--accent)]/30"
-                        : "border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-page)]/40 hover:border-[var(--accent)]/40"
-                    }`}
-                  >
-                    <div className={`p-2.5 rounded-xl border shrink-0 bg-gradient-to-br ${sig.color}`}>
-                      <IconComponent className="w-4 h-4" />
-                    </div>
+            {showArtifact3D && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center pt-1">
+                {/* 3D Interactive Canvas Hero (5 Cols) */}
+                <div className="md:col-span-5 flex flex-col items-center">
+                  <DecisionPrismCanvas
+                    signature={signature}
+                    onSelectSignature={handleSelectSignature}
+                    className="w-full h-64 sm:h-72 bg-gradient-to-b from-[var(--bg-page)]/70 to-[var(--bg-surface)] border border-[var(--border)] rounded-2xl shadow-inner"
+                  />
+                  <span className="text-[10px] text-[var(--ink-secondary)] mt-2 font-mono">
+                    Drag to inspect &bull; Mouse &amp; touch responsive
+                  </span>
+                </div>
 
-                    <div className="min-w-0 pr-6">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[var(--ink)] block">
-                          {sig.title}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[var(--ink-secondary)] mt-0.5 leading-relaxed">
-                        {sig.tagline}
-                      </p>
-                    </div>
+                {/* Tactical Philosophy Selector (7 Cols) */}
+                <div className="md:col-span-7 grid grid-cols-1 gap-2.5">
+                  {SIGNATURES.map((sig) => {
+                    const isSelected = signature === sig.id;
+                    const IconComponent = sig.icon;
+                    return (
+                      <button
+                        key={sig.id}
+                        type="button"
+                        onClick={() => handleSelectSignature(sig.id)}
+                        className={`text-left p-3.5 rounded-2xl border transition-all duration-150 flex items-center justify-between gap-3 ${
+                          isSelected
+                            ? "border-[var(--accent)] bg-[var(--bg-page)] shadow-xs ring-1 ring-[var(--accent)]/30"
+                            : "border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-page)]/40 hover:border-[var(--accent)]/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`p-2 rounded-xl border shrink-0 bg-gradient-to-br ${sig.color}`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-[var(--ink)] block truncate">
+                              {sig.title}
+                            </span>
+                            <p className="text-[11px] text-[var(--ink-secondary)] truncate">
+                              {sig.tagline}
+                            </p>
+                          </div>
+                        </div>
 
-                    {isSelected && (
-                      <span className="absolute right-3.5 top-3.5 w-5 h-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center shadow-xs">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                        {isSelected && (
+                          <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center shrink-0 shadow-xs">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 4. Simple Preferences & Account Essentials (Two Balanced Columns) */}
