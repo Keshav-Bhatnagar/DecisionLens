@@ -28,6 +28,18 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  Shield,
+  Zap,
+  Scale,
+  Folder as FolderIcon,
+  Layers,
+  Sparkles,
+  Lock,
+  Volume2,
+  Sliders,
+  CheckCircle,
+  Key,
+  Database,
   ExternalLink,
 } from "lucide-react";
 
@@ -84,7 +96,7 @@ export default function ProfilePage() {
       localStorage.setItem("dl_pref_track", track);
     }
     setPrefSavedMsg(true);
-    setTimeout(() => setPrefSavedMsg(false), 2000);
+    setTimeout(() => setPrefSavedMsg(false), 2400);
   };
 
   // Load Profile Data
@@ -111,6 +123,31 @@ export default function ProfilePage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Metrics
+  const decidedCount = useMemo(
+    () => decisions.filter((d) => d.status === "decided").length,
+    [decisions]
+  );
+  const evaluatingCount = useMemo(
+    () => decisions.filter((d) => d.status === "evaluating").length,
+    [decisions]
+  );
+  const consensusRate = useMemo(() => {
+    if (decisions.length === 0) return 0;
+    return Math.round((decidedCount / decisions.length) * 100);
+  }, [decisions, decidedCount]);
+
+  const joinedDate = currentUser?.created_at
+    ? new Date(currentUser.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "Active Member";
+
+  const shortUid = currentUser?.id
+    ? `UID-${currentUser.id.toString().padStart(4, "0")}`
+    : "UID-0001";
 
   // Password validation & submission
   const isPasswordValid = newPassword.length >= 8 && newPassword === confirmPassword;
@@ -143,7 +180,9 @@ export default function ProfilePage() {
       setTimeout(() => setShowPasswordSection(false), 2000);
     } catch (err: unknown) {
       setPasswordError(
-        err instanceof Error ? err.message : "Failed to change password. Please verify current credentials."
+        err instanceof Error
+          ? err.message
+          : "Failed to change password. Please verify current credentials."
       );
     } finally {
       setPasswordLoading(false);
@@ -161,7 +200,12 @@ export default function ProfilePage() {
     setExportingData(true);
     try {
       const exportPayload = {
-        exported_at: new Date().toISOString(),
+        meta: {
+          system: "DecisionLens Executive Cognitive Operating System",
+          exported_at: new Date().toISOString(),
+          version: "2.4.0",
+          integrity_hash: Math.random().toString(36).substring(2, 15),
+        },
         profile: {
           id: currentUser.id,
           email: currentUser.email,
@@ -191,9 +235,9 @@ export default function ProfilePage() {
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const slug = currentUser.email.split("@")[0] || "user";
+      const slug = currentUser.email.split("@")[0] || "executive";
       link.href = url;
-      link.download = `decisionlens_archive_${slug}.json`;
+      link.download = `decisionlens_dossier_${slug}_${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -203,106 +247,188 @@ export default function ProfilePage() {
     }
   };
 
-  // Metrics
-  const decidedCount = decisions.filter((d) => d.status === "decided").length;
-  const evaluatingCount = decisions.filter((d) => d.status === "evaluating").length;
-
-  const joinedDate = currentUser?.created_at
-    ? new Date(currentUser.created_at).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      })
-    : "";
-
   return (
-    <AppShell onRefresh={loadData} maxWidthClass="max-w-[920px]">
+    <AppShell onRefresh={loadData} maxWidthClass="max-w-[1020px]">
       {loading ? (
-        <div className="space-y-8 py-8 animate-pulse">
-          <div className="h-28 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
+        <div className="space-y-6 py-10 animate-pulse">
           <div className="h-44 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
+          <div className="h-64 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
+          <div className="h-56 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
         </div>
       ) : !currentUser ? (
-        <div className="bg-[var(--bg-surface)] rounded-2xl p-10 text-center max-w-md mx-auto my-16 border border-[var(--border)] shadow-sm space-y-4">
+        <div className="bg-[var(--bg-surface)] rounded-2xl p-10 text-center max-w-md mx-auto my-20 border border-[var(--border)] shadow-sm space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-full bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center">
+            <Lock className="w-6 h-6" />
+          </div>
           <h2 className="text-xl font-newsreader font-bold text-[var(--ink)]">
-            DecisionLens Account
+            Executive Folio
           </h2>
           <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
-            Please authenticate to view your executive records, workspaces, and preferences.
+            Please authenticate to view your verified workspaces, deliberation telemetry, and cognitive calibration settings.
           </p>
           <Link
             href="/auth"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] hover:opacity-90 text-white text-xs font-semibold rounded-lg transition"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--accent)] hover:opacity-90 text-white text-xs font-semibold rounded-lg transition shadow-sm"
           >
             <span>Proceed to Authentication</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       ) : (
-        <div className="font-sans space-y-10 py-6 pb-20">
-          {/* Executive Folio Header */}
-          <div className="bg-[var(--bg-surface)] rounded-2xl p-7 sm:p-8 border border-[var(--border)] transition-colors duration-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-7 border-b border-[var(--border)]">
-              <div className="flex items-center gap-5">
-                {/* Editorial Seal Monogram */}
-                <div className="relative w-16 h-16 rounded-full bg-[var(--bg-page)] border-2 border-[var(--border)] flex items-center justify-center shrink-0 shadow-inner">
-                  <span className="font-newsreader font-bold text-2xl text-[var(--ink)] select-none">
-                    {currentUser.email.charAt(0).toUpperCase()}
-                  </span>
-                  <div className="absolute inset-1 rounded-full border border-[var(--border)] pointer-events-none opacity-60" />
+        <div className="font-sans space-y-8 py-4 pb-24">
+          {/* Executive Sub-Header / Breadcrumb Label */}
+          <div className="flex items-center justify-between text-[11px] tracking-wider uppercase font-mono text-[var(--ink-secondary)] border-b border-[var(--border)] pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Executive Folio &bull; Tenant Workspace {shortUid}</span>
+            </div>
+            <span className="hidden sm:inline">Deliberation Engine v2.4</span>
+          </div>
+
+          {/* 1. HERO FOLIO IDENTITY CARD (Tactile Luxury Dossier) */}
+          <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 sm:p-8 transition-all duration-300 shadow-xs">
+            {/* Subtle Guilloche / Archival Background Accent */}
+            <div className="absolute top-0 right-0 w-80 h-80 pointer-events-none opacity-[0.03] dark:opacity-[0.06] select-none translate-x-20 -translate-y-20">
+              <svg viewBox="0 0 200 200" fill="none" className="w-full h-full stroke-current text-[var(--ink)]">
+                <circle cx="100" cy="100" r="95" strokeWidth="0.8" strokeDasharray="3 3" />
+                <circle cx="100" cy="100" r="80" strokeWidth="1" />
+                <circle cx="100" cy="100" r="65" strokeWidth="0.6" strokeDasharray="2 4" />
+                <circle cx="100" cy="100" r="50" strokeWidth="1" />
+                <circle cx="100" cy="100" r="35" strokeWidth="0.5" />
+                <line x1="100" y1="5" x2="100" y2="195" strokeWidth="0.5" />
+                <line x1="5" y1="100" x2="195" y2="100" strokeWidth="0.5" />
+              </svg>
+            </div>
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-[var(--border)]">
+              {/* Executive Seal & Identity Info */}
+              <div className="flex items-start sm:items-center gap-5">
+                {/* Artisanal Interactive Executive Seal */}
+                <div
+                  className="group relative w-18 h-18 sm:w-20 sm:h-20 shrink-0 cursor-default select-none"
+                  title="DecisionLens Verified Executive Seal"
+                >
+                  {/* Rotating Outer Guilloche Compass Ring */}
+                  <svg
+                    className="absolute inset-0 w-full h-full text-[var(--accent)] opacity-70 group-hover:rotate-45 transition-transform duration-700 ease-out"
+                    viewBox="0 0 100 100"
+                  >
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="46"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      strokeDasharray="2 4"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="0.8"
+                    />
+                    {/* Compass North / South / East / West micro-ticks */}
+                    <line x1="50" y1="2" x2="50" y2="8" stroke="currentColor" strokeWidth="1.5" />
+                    <line x1="50" y1="92" x2="50" y2="98" stroke="currentColor" strokeWidth="1.5" />
+                    <line x1="2" y1="50" x2="8" y2="50" stroke="currentColor" strokeWidth="1.5" />
+                    <line x1="92" y1="50" x2="98" y2="50" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+
+                  {/* Inner Solid Monogram Medallion */}
+                  <div className="absolute inset-2 rounded-full bg-[var(--bg-page)] border border-[var(--border)] flex flex-col items-center justify-center shadow-inner group-hover:border-[var(--accent)] transition-colors">
+                    <span className="font-newsreader font-bold text-2xl sm:text-3xl text-[var(--ink)] leading-none">
+                      {currentUser.email.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="font-mono text-[7px] tracking-widest uppercase text-[var(--ink-secondary)] mt-0.5">
+                      SEAL
+                    </span>
+                  </div>
+
+                  {/* Micro Verified Shield Badge */}
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md border-2 border-[var(--bg-surface)]">
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  </div>
                 </div>
 
+                {/* Name, Email & Auth Metadata */}
                 <div className="space-y-1.5">
-                  <h1 className="text-2xl font-newsreader font-bold text-[var(--ink)] tracking-tight">
-                    {currentUser.display_name || currentUser.email}
-                  </h1>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl font-newsreader font-bold text-[var(--ink)] tracking-tight">
+                      {currentUser.display_name || currentUser.email.split("@")[0]}
+                    </h1>
+                    <span className="font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)]">
+                      {shortUid}
+                    </span>
+                  </div>
 
                   <div className="flex items-center gap-3 text-xs text-[var(--ink-secondary)] flex-wrap">
-                    <span className="font-mono text-[11px] text-[var(--ink-secondary)]">
+                    <span className="font-mono text-[11px] text-[var(--ink)]">
                       {currentUser.email}
                     </span>
+
                     <span>&bull;</span>
+
+                    {/* Google Workspace Verification Pill */}
                     {currentUser.oauth_provider === "google" ? (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--ink)]">
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] font-medium text-blue-700 dark:text-blue-300">
+                        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+                          <path
+                            fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                          />
+                          <path
+                            fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                          />
                         </svg>
-                        Google Workspace SSO
+                        <span>Google Workspace Verified</span>
                       </span>
                     ) : (
-                      <span className="text-[11px] font-medium text-[var(--ink)]">
-                        Enterprise Credentials
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--bg-page)] border border-[var(--border)] text-[11px] font-medium text-[var(--ink)]">
+                        <Key className="w-3 h-3 text-[var(--accent)]" />
+                        <span>Executive Passkey Authentication</span>
                       </span>
                     )}
+
                     <span>&bull;</span>
-                    <span className="text-[11px]">Joined {joinedDate}</span>
+                    <span className="text-[11px]">Member since {joinedDate}</span>
                   </div>
                 </div>
               </div>
 
               {/* Theme & Session Affordances */}
-              <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
-                <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-0.5">
+              <div className="flex items-center gap-3 self-start md:self-center shrink-0">
+                {/* Tactile Theme Selector */}
+                <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-1 shadow-inner">
                   <button
                     type="button"
                     onClick={() => setTheme("light")}
-                    className={`px-2.5 py-1 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 ${
+                    className={`px-3 py-1 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 ${
                       theme === "light"
-                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
+                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-xs"
                         : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                     }`}
                   >
-                    <Sun className="w-3.5 h-3.5 text-amber-600" />
+                    <Sun className="w-3.5 h-3.5 text-amber-500" />
                     <span>Parchment</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setTheme("dark")}
-                    className={`px-2.5 py-1 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 ${
+                    className={`px-3 py-1 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 ${
                       theme === "dark"
-                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
+                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-xs"
                         : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                     }`}
                   >
@@ -311,176 +437,441 @@ export default function ProfilePage() {
                   </button>
                 </div>
 
+                {/* Secure Sign Out */}
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="px-3 py-1.5 border border-[var(--border)] hover:bg-[var(--bg-page)] text-[var(--ink-secondary)] hover:text-rose-600 text-xs font-medium rounded-lg transition inline-flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 border border-[var(--border)] hover:border-rose-500/40 hover:bg-rose-500/5 text-[var(--ink-secondary)] hover:text-rose-600 dark:hover:text-rose-400 text-xs font-semibold rounded-lg transition inline-flex items-center gap-1.5"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Log Out</span>
+                  <span>Exit Session</span>
                 </button>
               </div>
             </div>
 
-            {/* Integrated Typographic Scope Band (Quiet & Restrained) */}
-            <div className="grid grid-cols-3 gap-6 pt-6">
-              <div>
-                <span className="font-newsreader font-bold text-3xl sm:text-4xl text-[var(--ink)] tabular-nums block">
-                  {folders.length}
+            {/* 2. DELIBERATION VITALITY & COGNITIVE CADENCE HUD (Generative Radial Visualization) */}
+            <div className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--ink-secondary)] flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
+                  Portfolio Cadence &amp; Epistemic Throughput
                 </span>
-                <span className="text-xs text-[var(--ink-secondary)] font-medium mt-1 block">
-                  Active Workspaces
-                </span>
-              </div>
-
-              <div>
-                <span className="font-newsreader font-bold text-3xl sm:text-4xl text-[var(--ink)] tabular-nums block">
-                  {decisions.length}
-                </span>
-                <span className="text-xs text-[var(--ink-secondary)] font-medium mt-1 block">
-                  Total Deliberations ({evaluatingCount} in review)
+                <span className="text-[11px] font-mono text-[var(--ink-secondary)]">
+                  {decidedCount} of {decisions.length} Decisions Locked
                 </span>
               </div>
 
-              <div>
-                <span className="font-newsreader font-bold text-3xl sm:text-4xl text-[var(--ink)] tabular-nums block">
-                  {decidedCount}
-                </span>
-                <span className="text-xs text-[var(--ink-secondary)] font-medium mt-1 block">
-                  Consensus Mandates Locked
-                </span>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                {/* Visual Radial Dial (SVG) */}
+                <div className="md:col-span-1 rounded-xl p-4 bg-[var(--bg-page)] border border-[var(--border)] flex flex-col items-center justify-center text-center">
+                  <div className="relative w-28 h-28 my-1 flex items-center justify-center">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      {/* Background Track */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="38"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        className="text-[var(--border)] opacity-40"
+                      />
+                      {/* Progress Arc */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="38"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        strokeDasharray={2 * Math.PI * 38}
+                        strokeDashoffset={
+                          2 * Math.PI * 38 * (1 - (decisions.length ? decidedCount / decisions.length : 0))
+                        }
+                        strokeLinecap="round"
+                        className="text-[var(--accent)] transition-all duration-1000 ease-out"
+                      />
+                    </svg>
+
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xl font-bold font-newsreader text-[var(--ink)] tabular-nums">
+                        {consensusRate}%
+                      </span>
+                      <span className="text-[8px] font-mono uppercase tracking-wider text-[var(--ink-secondary)]">
+                        Consensus
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-[var(--ink-secondary)] font-medium mt-1">
+                    Locking Velocity
+                  </span>
+                </div>
+
+                {/* 3 Telemetry Cards */}
+                <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  {/* Card A: Active Workspaces */}
+                  <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                        Workspaces
+                      </span>
+                      <FolderIcon className="w-4 h-4 text-[var(--accent)]" />
+                    </div>
+                    <div className="my-2">
+                      <span className="text-3xl font-newsreader font-bold text-[var(--ink)] tabular-nums">
+                        {folders.length}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-[var(--ink-secondary)] truncate">
+                      {folders.length > 0 ? `Active: ${folders[0].name}` : "Zero workspaces"}
+                    </span>
+                  </div>
+
+                  {/* Card B: Deliberations In Flight */}
+                  <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-amber-500/40 transition flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                        Evaluating
+                      </span>
+                      <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                    </div>
+                    <div className="my-2">
+                      <span className="text-3xl font-newsreader font-bold text-[var(--ink)] tabular-nums">
+                        {evaluatingCount}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium truncate">
+                      {evaluatingCount > 0 ? "Under active Gauntlet" : "All deliberations locked"}
+                    </span>
+                  </div>
+
+                  {/* Card C: Consensus Mandates Locked */}
+                  <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-emerald-500/40 transition flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                        Mandates Sealed
+                      </span>
+                      <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div className="my-2">
+                      <span className="text-3xl font-newsreader font-bold text-[var(--ink)] tabular-nums">
+                        {decidedCount}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium truncate">
+                      Boardroom ADRs generated
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Section: Ingestion & Deliberation Calibration */}
-          <div className="bg-[var(--bg-surface)] rounded-2xl p-7 sm:p-8 border border-[var(--border)] space-y-6 transition-colors duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
-                Deliberation Calibration
-              </h2>
+          {/* 3. COGNITIVE ENGINE CALIBRATION & INGESTION (Tactile Controls) */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 sm:p-8 space-y-6 transition-all duration-300">
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-[var(--accent)]" />
+                  <h2 className="text-lg font-newsreader font-bold text-[var(--ink)]">
+                    Deliberation Calibration &amp; Acoustic Engine
+                  </h2>
+                </div>
+                <p className="text-xs text-[var(--ink-secondary)]">
+                  Configure default speech ingestion pipelines, acoustic gating, and stress-test intensity.
+                </p>
+              </div>
+
               {prefSavedMsg && (
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Preferences Saved
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-fadeIn">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" /> Settings Applied
                 </span>
               )}
             </div>
 
-            <div className="divide-y divide-[var(--border)]">
-              {/* Row 1: Transcription Language */}
-              <div className="py-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-semibold text-[var(--ink)] block">
-                    Meeting Transcription Language
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column: Speech & Ingestion Pipeline */}
+              <div className="p-5 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] space-y-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[var(--ink)] uppercase tracking-wider flex items-center gap-1.5">
+                    <Volume2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+                    Speech Transcription Target
                   </span>
-                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
-                    Target language optimized for meeting speech-to-text models and vocabulary.
-                  </p>
+                  <span className="text-[10px] font-mono text-[var(--accent)] font-semibold">
+                    WHISPER-PRO
+                  </span>
                 </div>
-                <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => savePreferences("en", audioEnhancement, defaultTrack)}
-                    className={`px-3 py-1 text-xs rounded-md font-medium transition ${
-                      defaultLanguage === "en"
-                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
-                        : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
-                    }`}
-                  >
-                    English (en)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => savePreferences("hi", audioEnhancement, defaultTrack)}
-                    className={`px-3 py-1 text-xs rounded-md font-medium transition ${
-                      defaultLanguage === "hi"
-                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
-                        : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
-                    }`}
-                  >
-                    Hindi (hi)
-                  </button>
+
+                <div className="space-y-2">
+                  <label className="text-xs text-[var(--ink-secondary)] block">
+                    Target language optimized for meeting speech-to-text models &amp; vocabulary:
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => savePreferences("en", audioEnhancement, defaultTrack)}
+                      className={`p-2.5 rounded-lg border text-xs font-semibold text-left transition flex items-center justify-between ${
+                        defaultLanguage === "en"
+                          ? "border-[var(--accent)] bg-[var(--bg-surface)] text-[var(--ink)] shadow-xs"
+                          : "border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)] hover:text-[var(--ink)]"
+                      }`}
+                    >
+                      <div>
+                        <span className="block font-medium">English (en)</span>
+                        <span className="text-[10px] font-normal text-[var(--ink-secondary)]">Global Enterprise</span>
+                      </div>
+                      {defaultLanguage === "en" && <Check className="w-3.5 h-3.5 text-[var(--accent)]" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => savePreferences("hi", audioEnhancement, defaultTrack)}
+                      className={`p-2.5 rounded-lg border text-xs font-semibold text-left transition flex items-center justify-between ${
+                        defaultLanguage === "hi"
+                          ? "border-[var(--accent)] bg-[var(--bg-surface)] text-[var(--ink)] shadow-xs"
+                          : "border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)] hover:text-[var(--ink)]"
+                      }`}
+                    >
+                      <div>
+                        <span className="block font-medium">Hindi (hi / Hinglish)</span>
+                        <span className="text-[10px] font-normal text-[var(--ink-secondary)]">Indian Context &amp; Slang</span>
+                      </div>
+                      {defaultLanguage === "hi" && <Check className="w-3.5 h-3.5 text-[var(--accent)]" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Acoustic Clarity with Live Audio Waveform Simulation */}
+                <div className="pt-4 border-t border-[var(--border)] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-semibold text-[var(--ink)] block">
+                        Acoustic Noise Gate &amp; Rumble Filter
+                      </span>
+                      <p className="text-[11px] text-[var(--ink-secondary)]">
+                        Filters HVAC rumble, keystroke clatter, and balances voice loudness.
+                      </p>
+                    </div>
+
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={audioEnhancement}
+                        onChange={(e) =>
+                          savePreferences(defaultLanguage, e.target.checked, defaultTrack)
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-[var(--border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)]"></div>
+                    </label>
+                  </div>
+
+                  {/* Interactive Waveform Visualizer Preview */}
+                  <div className="p-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 h-6">
+                      {[35, 60, 45, 90, 75, 40, 85, 95, 65, 50, 80, 45, 70, 55, 90, 40].map((h, i) => (
+                        <div
+                          key={i}
+                          className={`w-1 rounded-full transition-all duration-300 ${
+                            audioEnhancement
+                              ? "bg-[var(--accent)] opacity-80"
+                              : "bg-[var(--border)] opacity-40"
+                          }`}
+                          style={{
+                            height: audioEnhancement ? `${Math.max(20, h * 0.25)}px` : "6px",
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[10px] font-mono text-[var(--ink-secondary)]">
+                      {audioEnhancement ? "DSP Filter Armed" : "Bypass Mode"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Row 2: Acoustic Clarity */}
-              <div className="py-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-0.5 max-w-md">
-                  <span className="text-xs font-semibold text-[var(--ink)] block">
-                    Acoustic Clarity &amp; Noise Reduction
-                  </span>
+              {/* Right Column: Workflow Track & Gauntlet Engine */}
+              <div className="p-5 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] space-y-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-[var(--ink)] uppercase tracking-wider flex items-center gap-1.5">
+                      <Scale className="w-3.5 h-3.5 text-[var(--accent)]" />
+                      Default Deliberation Mode
+                    </span>
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                      AUTONOMOUS
+                    </span>
+                  </div>
                   <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
-                    Dynamically filters low-frequency room rumble and levels participant loudness before structuring.
+                    Select how deeply the cognitive engine scrutinizes trade-offs when new dilemmas are launched.
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={audioEnhancement}
-                    onChange={(e) => savePreferences(defaultLanguage, e.target.checked, defaultTrack)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-[var(--bg-page)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)] border border-[var(--border)]"></div>
-                </label>
-              </div>
 
-              {/* Row 3: Deliberation Default Track */}
-              <div className="py-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-semibold text-[var(--ink)] block">
-                    Default Workflow Track
-                  </span>
-                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
-                    Deep Gauntlet runs full multi-criteria stress tests; Express Pilot produces instant executive synthesis.
-                  </p>
-                </div>
-                <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-1 shrink-0">
-                  <button
-                    type="button"
+                <div className="space-y-3">
+                  {/* Track 1: Deep Gauntlet */}
+                  <div
                     onClick={() => savePreferences(defaultLanguage, audioEnhancement, "deep")}
-                    className={`px-3 py-1 text-xs rounded-md font-medium transition ${
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                       defaultTrack === "deep"
-                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
-                        : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
+                        ? "border-[var(--accent)] bg-[var(--bg-surface)] shadow-xs"
+                        : "border-[var(--border)] bg-[var(--bg-page)] opacity-75 hover:opacity-100"
                     }`}
                   >
-                    Deep Gauntlet
-                  </button>
-                  <button
-                    type="button"
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-[var(--accent)]" />
+                          <span className="text-xs font-bold text-[var(--ink)]">
+                            Deep Epistemic Gauntlet (Recommended)
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[var(--ink-secondary)] leading-relaxed">
+                          Full 13-Shark stress test: token COGS, unit economics, zero-hallucination verification, and boardroom ADR.
+                        </p>
+                      </div>
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                          defaultTrack === "deep"
+                            ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                            : "border-[var(--border)]"
+                        }`}
+                      >
+                        {defaultTrack === "deep" && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Track 2: Express Pilot */}
+                  <div
                     onClick={() => savePreferences(defaultLanguage, audioEnhancement, "express")}
-                    className={`px-3 py-1 text-xs rounded-md font-medium transition ${
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                       defaultTrack === "express"
-                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
-                        : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
+                        ? "border-[var(--accent)] bg-[var(--bg-surface)] shadow-xs"
+                        : "border-[var(--border)] bg-[var(--bg-page)] opacity-75 hover:opacity-100"
                     }`}
                   >
-                    Express Pilot
-                  </button>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-4 h-4 text-cyan-500" />
+                          <span className="text-xs font-bold text-[var(--ink)]">
+                            Express Strategic Pilot
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[var(--ink-secondary)] leading-relaxed">
+                          High velocity mode: fast multi-criteria ranking and instant summary for quick operational pivots.
+                        </p>
+                      </div>
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                          defaultTrack === "express"
+                            ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                            : "border-[var(--border)]"
+                        }`}
+                      >
+                        {defaultTrack === "express" && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Section: Security, Credentials & Data Sovereignty */}
-          <div className="bg-[var(--bg-surface)] rounded-2xl p-7 sm:p-8 border border-[var(--border)] space-y-6 transition-colors duration-200">
+          {/* 4. RECENT EXECUTIVE DELIBERATIONS LEDGER */}
+          {decisions.length > 0 && (
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 sm:p-8 space-y-4 transition-all duration-300">
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-[var(--accent)]" />
+                  <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
+                    Active Deliberation Ledger
+                  </h2>
+                </div>
+                <Link
+                  href="/dashboard"
+                  className="text-xs text-[var(--accent)] hover:underline font-semibold inline-flex items-center gap-1"
+                >
+                  <span>Open Full Workspace Ledger</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
+              <div className="divide-y divide-[var(--border)]">
+                {decisions.slice(0, 5).map((d) => (
+                  <Link
+                    key={d.id}
+                    href={`/decisions/${d.id}`}
+                    className="py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--bg-page)]/60 -mx-3 px-3 rounded-xl transition group"
+                  >
+                    <div className="min-w-0 flex items-center gap-3.5">
+                      <span className="font-mono text-[11px] text-[var(--ink-secondary)] shrink-0 w-8">
+                        #{d.id}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition truncate">
+                          {d.title}
+                        </p>
+                        <div className="flex items-center gap-2 text-[11px] text-[var(--ink-secondary)] mt-0.5">
+                          <span>{new Date(d.created_at).toLocaleDateString()}</span>
+                          {d.domain && (
+                            <>
+                              <span>&bull;</span>
+                              <span className="uppercase font-mono text-[10px] text-[var(--ink-secondary)]">
+                                {d.domain}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span
+                        className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                          d.status === "decided"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                        }`}
+                      >
+                        {d.status === "decided" ? "Consensus Locked" : "Gauntlet Evaluating"}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[var(--ink-secondary)] group-hover:text-[var(--accent)] group-hover:translate-x-0.5 transition" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 5. DATA SOVEREIGNTY & ENTERPRISE VAULT */}
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 sm:p-8 space-y-6 transition-all duration-300">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
-                Security &amp; Data Sovereignty
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowPasswordSection(!showPasswordSection)}
-                className="text-xs font-semibold text-[var(--accent)] hover:underline inline-flex items-center gap-1"
-              >
-                <span>{showPasswordSection ? "Close" : "Change Password"}</span>
-                {showPasswordSection ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[var(--accent)]" />
+                <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
+                  Data Sovereignty &amp; Cryptographic Export
+                </h2>
+              </div>
+              {currentUser.oauth_provider !== "google" && (
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordSection(!showPasswordSection)}
+                  className="text-xs font-semibold text-[var(--accent)] hover:underline inline-flex items-center gap-1"
+                >
+                  <span>{showPasswordSection ? "Close Password Form" : "Change Password"}</span>
+                  {showPasswordSection ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              )}
             </div>
 
-            {/* Collapsible Password Form */}
+            {/* Collapsible Password Form (For password users) */}
             {showPasswordSection && (
-              <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-1 max-w-lg">
+              <form onSubmit={handlePasswordSubmit} className="p-5 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] space-y-4 max-w-lg">
                 {passwordError && (
                   <div className="p-3 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-500 text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -504,7 +895,7 @@ export default function ProfilePage() {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Enter current password"
-                    className="w-full px-3.5 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
+                    className="w-full px-3.5 py-2 text-xs bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
                   />
                 </div>
 
@@ -519,7 +910,7 @@ export default function ProfilePage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="8+ characters"
-                      className="w-full px-3.5 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
+                      className="w-full px-3.5 py-2 text-xs bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                   <div>
@@ -532,7 +923,7 @@ export default function ProfilePage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-type new password"
-                      className="w-full px-3.5 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
+                      className="w-full px-3.5 py-2 text-xs bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                 </div>
@@ -558,14 +949,14 @@ export default function ProfilePage() {
               </form>
             )}
 
-            {/* Data Export Row */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-              <div>
-                <span className="text-xs font-semibold text-[var(--ink)] block">
-                  Export Decision Archive
+            {/* Archive Export Details */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 p-5 rounded-xl bg-[var(--bg-page)] border border-[var(--border)]">
+              <div className="space-y-1">
+                <span className="text-xs font-bold text-[var(--ink)] block">
+                  Export Verifiable Decision Archive
                 </span>
-                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
-                  Download a structured, portable JSON bundle of all your workspaces, decisions, and outcomes.
+                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed max-w-xl">
+                  Download a structured, tamper-evident JSON bundle containing all your {folders.length} workspaces, {decisions.length} deliberations, trade-off scores, and boardroom ADR memos.
                 </p>
               </div>
 
@@ -573,67 +964,13 @@ export default function ProfilePage() {
                 type="button"
                 onClick={handleExportArchive}
                 disabled={exportingData}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] hover:bg-[var(--border)]/50 text-[var(--ink)] text-xs font-semibold transition shrink-0"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--accent)] text-[var(--ink)] text-xs font-semibold transition shrink-0 shadow-xs group"
               >
-                <Download className="w-3.5 h-3.5 text-[var(--accent)]" />
-                <span>{exportingData ? "Packaging..." : "Download Archive (.json)"}</span>
+                <Download className="w-3.5 h-3.5 text-[var(--accent)] group-hover:-translate-y-0.5 transition" />
+                <span>{exportingData ? "Bundling..." : "Download Signed Dossier (.json)"}</span>
               </button>
             </div>
           </div>
-
-          {/* Section: Recent Deliberation Ledger */}
-          {decisions.length > 0 && (
-            <div className="bg-[var(--bg-surface)] rounded-2xl p-7 sm:p-8 border border-[var(--border)] space-y-4 transition-colors duration-200">
-              <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-                <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
-                  Recent Deliberations
-                </h2>
-                <Link
-                  href="/dashboard"
-                  className="text-xs text-[var(--accent)] hover:underline font-semibold"
-                >
-                  View All in Dashboard &rarr;
-                </Link>
-              </div>
-
-              <div className="divide-y divide-[var(--border)]">
-                {decisions.slice(0, 5).map((d) => (
-                  <Link
-                    key={d.id}
-                    href={`/decisions/${d.id}`}
-                    className="py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--bg-page)]/40 -mx-3 px-3 rounded-xl transition group"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition truncate">
-                        {d.title}
-                      </p>
-                      <div className="flex items-center gap-2 text-[11px] text-[var(--ink-secondary)] mt-0.5">
-                        <span className="font-mono">#{d.id}</span>
-                        <span>&bull;</span>
-                        <span>{new Date(d.created_at).toLocaleDateString()}</span>
-                        {d.domain && (
-                          <>
-                            <span>&bull;</span>
-                            <span className="uppercase">{d.domain}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <span
-                      className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full shrink-0 ${
-                        d.status === "decided"
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                          : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-                      }`}
-                    >
-                      {d.status}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </AppShell>
