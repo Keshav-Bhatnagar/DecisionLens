@@ -575,25 +575,25 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
 
       {/* Alert Notices */}
       {error && (
-        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-center justify-between">
           <span>{error}</span>
           <button
             onClick={() => setError(null)}
-            className="text-rose-800 hover:opacity-80 font-bold ml-2 cursor-pointer"
+            className="text-rose-800 dark:text-rose-300 hover:opacity-80 font-bold ml-2 cursor-pointer"
           >
             ×
           </button>
         </div>
       )}
       {successMsg && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span>{successMsg}</span>
           </div>
           <button
             onClick={() => setSuccessMsg(null)}
-            className="text-emerald-800 hover:opacity-80 font-bold ml-2 cursor-pointer"
+            className="text-emerald-800 dark:text-emerald-300 hover:opacity-80 font-bold ml-2 cursor-pointer"
           >
             ×
           </button>
@@ -602,9 +602,9 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
 
       {/* Historical Snapshot Notice */}
       {viewingSnapshot && (
-        <div className="p-4 rounded-xl bg-amber-50/90 border border-amber-300 flex items-center justify-between text-xs text-amber-950">
+        <div className="p-4 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 flex items-center justify-between text-xs text-amber-950 dark:text-amber-200">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs font-bold uppercase bg-amber-200/80 px-2 py-0.5 rounded">
+            <span className="font-mono text-xs font-bold uppercase bg-amber-200/80 dark:bg-amber-900/60 px-2 py-0.5 rounded">
               HISTORICAL SNAPSHOT
             </span>
             <div>
@@ -618,7 +618,7 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
           </div>
           <button
             onClick={() => setViewingSnapshot(null)}
-            className="px-3 py-1.5 bg-white text-amber-900 font-semibold text-xs rounded-lg border border-amber-300 hover:bg-amber-100 transition-colors shrink-0 cursor-pointer"
+            className="px-3 py-1.5 bg-paper-surface text-amber-900 dark:text-amber-200 font-semibold text-xs rounded-lg border border-amber-300 dark:border-amber-700 hover:bg-paper-sidebar transition-colors shrink-0 cursor-pointer"
           >
             Return to Active Version
           </button>
@@ -630,9 +630,9 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
         <div className="space-y-6">
           {/* Stale Synthesis Warning */}
           {displaySynthesis.is_stale && (
-            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between text-amber-900 text-xs">
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-between text-amber-900 dark:text-amber-200 text-xs">
               <div className="flex items-center gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
                 <div>
                   <strong className="block font-bold">Upstream Analysis Updated</strong>
                   <span>Problem framing, evidence findings, or matrix weights have changed since this synthesis was produced.</span>
@@ -661,8 +661,8 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                 <span
                   className={`px-2.5 py-0.5 rounded-md text-[11px] font-mono uppercase font-bold border ${
                     isConditional
-                      ? "bg-amber-50 text-amber-900 border-amber-300"
-                      : "bg-emerald-50 text-emerald-800 border-emerald-300"
+                      ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                      : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
                   }`}
                 >
                   {isConditional ? "Conditional Pre-Commitment" : "Conclusive Recommendation"}
@@ -698,11 +698,12 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
             {/* ========================================================================= */}
             {/* 2. MANDATORY DUE DILIGENCE CLEARANCE SPIKES (The Kisan Gate)              */}
             {/* ========================================================================= */}
+            {/* Mandatory Pre-Commitment Gated Spikes */}
             {displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
-              <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 border border-amber-200/90 space-y-3">
+              <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/60 space-y-3">
                 <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-800 shrink-0" />
-                  <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-950">
+                  <ShieldAlert className="w-4 h-4 text-amber-800 dark:text-amber-400 shrink-0" />
+                  <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-950 dark:text-amber-200">
                     Mandatory Pre-Commitment Due Diligence Spikes (Clear Before Merging)
                   </h4>
                 </div>
@@ -710,9 +711,9 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                   {displaySynthesis.conditional_triggers.map((trigger, idx) => (
                     <div
                       key={idx}
-                      className="p-3 bg-white/80 border border-amber-200 rounded-lg text-xs text-amber-950 flex items-start gap-2.5"
+                      className="p-3 bg-paper-surface border border-amber-200 dark:border-amber-800/80 rounded-lg text-xs text-amber-950 dark:text-amber-200 flex items-start gap-2.5"
                     >
-                      <span className="font-mono text-amber-800 font-bold shrink-0 mt-0.5">
+                      <span className="font-mono text-amber-800 dark:text-amber-400 font-bold shrink-0 mt-0.5">
                         SPIKE 0{idx + 1}
                       </span>
                       <span className="leading-snug">{trigger}</span>
@@ -856,7 +857,7 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                   <span className="font-mono text-[11px] font-bold text-ink uppercase">
                     Architecture & Tech
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
                     Resolved
                   </span>
                 </div>
@@ -874,7 +875,7 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                   <span className="font-mono text-[11px] font-bold text-ink uppercase">
                     DevOps & SRE
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
                     Protected
                   </span>
                 </div>
@@ -892,7 +893,7 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                   <span className="font-mono text-[11px] font-bold text-ink uppercase">
                     Product & Velocity
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
                     Accommodated
                   </span>
                 </div>
@@ -1078,8 +1079,8 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                       <span
                         className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
                           item.is_verified
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                            : "bg-amber-50 text-amber-800 border-amber-300"
+                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                            : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
                         }`}
                       >
                         {item.is_verified ? "Verified" : "Unverified"}
@@ -1109,8 +1110,8 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
                       <span
                         className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
                           r.severity === "high" || r.severity === "critical"
-                            ? "bg-rose-50 text-rose-800 border-rose-300 font-bold"
-                            : "bg-amber-50 text-amber-800 border-amber-300"
+                            ? "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold"
+                            : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
                         }`}
                       >
                         {r.severity}
@@ -1514,6 +1515,100 @@ ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: $
               </>
             )}
           </button>
+        </div>
+      )}
+
+      {/* Sovereign Executive Override Modal */}
+      {isOverrideModalOpen && displaySynthesis && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-paper-surface border-2 border-border rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 text-ink animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <AlertOctagon className="w-5 h-5 text-accent" />
+                <h3 className="text-base font-newsreader font-bold text-ink">
+                  Sovereign Executive Override
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsOverrideModalOpen(false)}
+                className="text-muted hover:text-ink text-lg font-bold cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-xs text-muted font-sans leading-relaxed">
+              Exercise human leadership sovereignty. The AI evaluation recommends{" "}
+              <strong className="text-ink font-semibold">
+                {displaySynthesis.canonical_result?.winner_option_name || "Option C"}
+              </strong>
+              , but executive leadership holds full fiduciary authority to adopt an alternate path.
+            </p>
+
+            <div className="space-y-3 font-sans text-xs">
+              <div>
+                <label className="block font-semibold text-ink mb-1.5 font-mono uppercase text-[11px]">
+                  Select Mandated Architecture / Strategy
+                </label>
+                <div className="space-y-2">
+                  {displaySynthesis.alternatives_considered.map((alt: any) => (
+                    <label
+                      key={alt.name}
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
+                        selectedOverrideOption === alt.name
+                          ? "bg-accent/10 border-accent text-ink font-semibold ring-1 ring-accent"
+                          : "bg-paper-sidebar border-border text-muted hover:text-ink"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="override_option"
+                        value={alt.name}
+                        checked={selectedOverrideOption === alt.name}
+                        onChange={(e) => setSelectedOverrideOption(e.target.value)}
+                        className="mt-0.5"
+                      />
+                      <div className="min-w-0">
+                        <span className="block text-ink font-bold text-xs">{alt.name}</span>
+                        <span className="text-[11px] text-muted block leading-snug">{alt.description}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-ink mb-1.5 font-mono uppercase text-[11px]">
+                  Executive Rationale / Board Justification
+                </label>
+                <textarea
+                  rows={3}
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="e.g., Mandatory board directive for sub-second audit log replication; team prioritizing team velocity over multi-cloud complexity..."
+                  className="w-full px-3 py-2 bg-paper-sidebar border border-border rounded-xl text-ink text-xs focus:ring-1 focus:ring-accent focus:outline-hidden leading-relaxed"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+              <button
+                type="button"
+                onClick={() => setIsOverrideModalOpen(false)}
+                className="px-3.5 py-1.5 text-xs text-muted hover:text-ink font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingOverride || !selectedOverrideOption}
+                onClick={handleConfirmOverride}
+                className="px-4 py-1.5 bg-ink text-paper-surface font-semibold text-xs rounded-xl hover:bg-ink-light transition disabled:opacity-50 cursor-pointer shadow-xs"
+              >
+                {savingOverride ? "Saving Override..." : "Confirm Executive Override"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
