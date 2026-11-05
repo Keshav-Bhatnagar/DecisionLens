@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
@@ -16,12 +16,9 @@ import {
   Decision,
 } from "@/lib/api";
 import {
-  Calendar,
-  KeyRound,
   LogOut,
   Sun,
   Moon,
-  Mic,
   Download,
   Check,
   ChevronDown,
@@ -30,8 +27,8 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  FileText,
   ArrowRight,
+  ExternalLink,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -44,12 +41,13 @@ export default function ProfilePage() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Audio Ingestion Settings (Persisted to localStorage)
+  // Calibration Settings (Persisted to localStorage)
   const [defaultLanguage, setDefaultLanguage] = useState<string>("en");
   const [audioEnhancement, setAudioEnhancement] = useState<boolean>(true);
+  const [defaultTrack, setDefaultTrack] = useState<"deep" | "express">("deep");
   const [prefSavedMsg, setPrefSavedMsg] = useState(false);
 
-  // Password Accordion & Form State
+  // Password Accordion State
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -70,15 +68,20 @@ export default function ProfilePage() {
 
       const savedAudio = localStorage.getItem("dl_pref_audio");
       if (savedAudio !== null) setAudioEnhancement(savedAudio === "true");
+
+      const savedTrack = localStorage.getItem("dl_pref_track");
+      if (savedTrack === "deep" || savedTrack === "express") setDefaultTrack(savedTrack);
     }
   }, []);
 
-  const handleSaveAudioPrefs = (lang: string, audio: boolean) => {
+  const savePreferences = (lang: string, audio: boolean, track: "deep" | "express") => {
     setDefaultLanguage(lang);
     setAudioEnhancement(audio);
+    setDefaultTrack(track);
     if (typeof window !== "undefined") {
       localStorage.setItem("dl_pref_lang", lang);
       localStorage.setItem("dl_pref_audio", String(audio));
+      localStorage.setItem("dl_pref_track", track);
     }
     setPrefSavedMsg(true);
     setTimeout(() => setPrefSavedMsg(false), 2000);
@@ -133,14 +136,14 @@ export default function ProfilePage() {
     setPasswordLoading(true);
     try {
       const res = await changePassword(currentPassword, newPassword);
-      setPasswordSuccess(res.message || "Password updated successfully!");
+      setPasswordSuccess(res.message || "Password updated successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setTimeout(() => setShowPasswordSection(false), 2000);
     } catch (err: unknown) {
       setPasswordError(
-        err instanceof Error ? err.message : "Failed to change password. Please verify your current password."
+        err instanceof Error ? err.message : "Failed to change password. Please verify current credentials."
       );
     } finally {
       setPasswordLoading(false);
@@ -190,7 +193,7 @@ export default function ProfilePage() {
       const link = document.createElement("a");
       const slug = currentUser.email.split("@")[0] || "user";
       link.href = url;
-      link.download = `decisionlens_data_${slug}.json`;
+      link.download = `decisionlens_archive_${slug}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -202,6 +205,7 @@ export default function ProfilePage() {
 
   // Metrics
   const decidedCount = decisions.filter((d) => d.status === "decided").length;
+  const evaluatingCount = decisions.filter((d) => d.status === "evaluating").length;
 
   const joinedDate = currentUser?.created_at
     ? new Date(currentUser.created_at).toLocaleDateString("en-US", {
@@ -211,261 +215,263 @@ export default function ProfilePage() {
     : "";
 
   return (
-    <AppShell onRefresh={loadData}>
+    <AppShell onRefresh={loadData} maxWidthClass="max-w-[920px]">
       {loading ? (
-        <div className="space-y-6 max-w-3xl mx-auto animate-pulse py-4">
-          <div className="h-36 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
-          <div className="h-24 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
-          <div className="h-48 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
+        <div className="space-y-8 py-8 animate-pulse">
+          <div className="h-28 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
+          <div className="h-44 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)]" />
         </div>
       ) : !currentUser ? (
-        <div className="bg-[var(--bg-surface)] rounded-2xl p-8 sm:p-10 text-center max-w-md mx-auto my-12 border border-[var(--border)] shadow-xs space-y-4">
-          <h2 className="text-xl font-serif font-bold text-[var(--ink)]">
+        <div className="bg-[var(--bg-surface)] rounded-2xl p-10 text-center max-w-md mx-auto my-16 border border-[var(--border)] shadow-sm space-y-4">
+          <h2 className="text-xl font-newsreader font-bold text-[var(--ink)]">
             DecisionLens Account
           </h2>
           <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
-            Please sign in to view your account details, workspace records, and preferences.
+            Please authenticate to view your executive records, workspaces, and preferences.
           </p>
           <Link
             href="/auth"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] hover:opacity-90 text-white text-xs font-bold rounded-xl transition shadow-xs"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] hover:opacity-90 text-white text-xs font-semibold rounded-lg transition"
           >
-            <span>Sign In</span>
+            <span>Proceed to Authentication</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       ) : (
-        <div className="space-y-6 max-w-3xl mx-auto font-sans pb-16 pt-2">
-          {/* 1. Profile Header Card */}
-          <div className="bg-[var(--bg-surface)] rounded-2xl p-6 sm:p-7 border border-[var(--border)] shadow-2xs transition-colors duration-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-              <div className="flex items-center gap-4">
-                {/* Clean Editorial Monogram */}
-                <div className="w-14 h-14 rounded-2xl bg-[var(--bg-page)] border border-[var(--border)] text-[var(--ink)] font-serif font-bold text-2xl flex items-center justify-center shadow-2xs shrink-0">
-                  {currentUser.email.charAt(0).toUpperCase()}
+        <div className="font-sans space-y-10 py-6 pb-20">
+          {/* Executive Folio Header */}
+          <div className="bg-[var(--bg-surface)] rounded-2xl p-7 sm:p-8 border border-[var(--border)] transition-colors duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-7 border-b border-[var(--border)]">
+              <div className="flex items-center gap-5">
+                {/* Editorial Seal Monogram */}
+                <div className="relative w-16 h-16 rounded-full bg-[var(--bg-page)] border-2 border-[var(--border)] flex items-center justify-center shrink-0 shadow-inner">
+                  <span className="font-newsreader font-bold text-2xl text-[var(--ink)] select-none">
+                    {currentUser.email.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="absolute inset-1 rounded-full border border-[var(--border)] pointer-events-none opacity-60" />
                 </div>
 
-                <div className="space-y-1">
-                  <h1 className="text-lg sm:text-xl font-serif font-bold text-[var(--ink)] tracking-tight">
+                <div className="space-y-1.5">
+                  <h1 className="text-2xl font-newsreader font-bold text-[var(--ink)] tracking-tight">
                     {currentUser.display_name || currentUser.email}
                   </h1>
-                  <p className="text-xs text-[var(--ink-secondary)] font-mono">
-                    {currentUser.email}
-                  </p>
 
-                  <div className="flex items-center gap-2 pt-0.5 text-xs text-[var(--ink-secondary)] flex-wrap">
+                  <div className="flex items-center gap-3 text-xs text-[var(--ink-secondary)] flex-wrap">
+                    <span className="font-mono text-[11px] text-[var(--ink-secondary)]">
+                      {currentUser.email}
+                    </span>
+                    <span>&bull;</span>
                     {currentUser.oauth_provider === "google" ? (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-page)] text-[var(--ink)] text-[11px] font-medium border border-[var(--border)]">
-                        <svg className="w-3 h-3" viewBox="0 0 24 24">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--ink)]">
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
                           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                         </svg>
-                        Google Account
+                        Google Workspace SSO
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--bg-page)] text-[var(--ink-secondary)] text-[11px] font-medium border border-[var(--border)]">
-                        Password Sign-in
+                      <span className="text-[11px] font-medium text-[var(--ink)]">
+                        Enterprise Credentials
                       </span>
                     )}
-
                     <span>&bull;</span>
-                    <span className="flex items-center gap-1 text-[11px]">
-                      <Calendar className="w-3 h-3 text-[var(--ink-secondary)]" />
-                      Joined {joinedDate}
-                    </span>
+                    <span className="text-[11px]">Joined {joinedDate}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Theme toggle & Sign out */}
-              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                <div className="inline-flex rounded-xl border border-[var(--border)] bg-[var(--bg-page)] p-1">
+              {/* Theme & Session Affordances */}
+              <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
+                <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-0.5">
                   <button
                     type="button"
                     onClick={() => setTheme("light")}
-                    className={`p-1.5 rounded-lg transition ${
+                    className={`px-2.5 py-1 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 ${
                       theme === "light"
-                        ? "bg-[var(--bg-surface)] text-[var(--accent)] shadow-2xs font-bold"
+                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
                         : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                     }`}
-                    title="Light Parchment Theme"
                   >
-                    <Sun className="w-4 h-4" />
+                    <Sun className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Parchment</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setTheme("dark")}
-                    className={`p-1.5 rounded-lg transition ${
+                    className={`px-2.5 py-1 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 ${
                       theme === "dark"
-                        ? "bg-[var(--bg-surface)] text-[var(--accent)] shadow-2xs font-bold"
+                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
                         : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                     }`}
-                    title="Dark Charcoal Theme"
                   >
-                    <Moon className="w-4 h-4" />
+                    <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Obsidian</span>
                   </button>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="px-3.5 py-1.5 border border-[var(--border)] hover:bg-[var(--bg-page)] text-[var(--ink-secondary)] hover:text-rose-500 text-xs font-medium rounded-xl transition flex items-center gap-1.5"
-                  title="Sign out of DecisionLens"
+                  className="px-3 py-1.5 border border-[var(--border)] hover:bg-[var(--bg-page)] text-[var(--ink-secondary)] hover:text-rose-600 text-xs font-medium rounded-lg transition inline-flex items-center gap-1.5"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Log Out</span>
                 </button>
               </div>
             </div>
+
+            {/* Integrated Typographic Scope Band (Quiet & Restrained) */}
+            <div className="grid grid-cols-3 gap-6 pt-6">
+              <div>
+                <span className="font-newsreader font-bold text-3xl sm:text-4xl text-[var(--ink)] tabular-nums block">
+                  {folders.length}
+                </span>
+                <span className="text-xs text-[var(--ink-secondary)] font-medium mt-1 block">
+                  Active Workspaces
+                </span>
+              </div>
+
+              <div>
+                <span className="font-newsreader font-bold text-3xl sm:text-4xl text-[var(--ink)] tabular-nums block">
+                  {decisions.length}
+                </span>
+                <span className="text-xs text-[var(--ink-secondary)] font-medium mt-1 block">
+                  Total Deliberations ({evaluatingCount} in review)
+                </span>
+              </div>
+
+              <div>
+                <span className="font-newsreader font-bold text-3xl sm:text-4xl text-[var(--ink)] tabular-nums block">
+                  {decidedCount}
+                </span>
+                <span className="text-xs text-[var(--ink-secondary)] font-medium mt-1 block">
+                  Consensus Mandates Locked
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* 2. Workspace Overview (3 Quiet Numbers) */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            <div className="bg-[var(--bg-surface)] rounded-2xl p-4 sm:p-5 border border-[var(--border)] shadow-2xs">
-              <span className="text-[11px] text-[var(--ink-secondary)] uppercase tracking-wider block mb-1">
-                Workspaces
-              </span>
-              <span className="text-2xl sm:text-3xl font-serif font-bold text-[var(--ink)] tabular-nums">
-                {folders.length}
-              </span>
-            </div>
-
-            <div className="bg-[var(--bg-surface)] rounded-2xl p-4 sm:p-5 border border-[var(--border)] shadow-2xs">
-              <span className="text-[11px] text-[var(--ink-secondary)] uppercase tracking-wider block mb-1">
-                Decisions
-              </span>
-              <span className="text-2xl sm:text-3xl font-serif font-bold text-[var(--ink)] tabular-nums">
-                {decisions.length}
-              </span>
-            </div>
-
-            <div className="bg-[var(--bg-surface)] rounded-2xl p-4 sm:p-5 border border-[var(--border)] shadow-2xs">
-              <span className="text-[11px] text-[var(--ink-secondary)] uppercase tracking-wider block mb-1">
-                Resolved
-              </span>
-              <span className="text-2xl sm:text-3xl font-serif font-bold text-[var(--ink)] tabular-nums">
-                {decidedCount}
-              </span>
-            </div>
-          </div>
-
-          {/* 3. Account & Preferences */}
-          <div className="bg-[var(--bg-surface)] rounded-2xl p-6 border border-[var(--border)] shadow-2xs space-y-5 transition-colors duration-200">
+          {/* Section: Ingestion & Deliberation Calibration */}
+          <div className="bg-[var(--bg-surface)] rounded-2xl p-7 sm:p-8 border border-[var(--border)] space-y-6 transition-colors duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <h2 className="text-sm font-serif font-bold text-[var(--ink)]">
-                Preferences &amp; Ingestion
+              <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
+                Deliberation Calibration
               </h2>
               {prefSavedMsg && (
-                <span className="text-[11px] font-medium text-[var(--accent)] animate-fadeIn">
-                  Saved
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> Preferences Saved
                 </span>
               )}
             </div>
 
-            <div className="space-y-4 text-xs">
-              {/* Connected Account */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 bg-[var(--bg-page)]/50 rounded-xl border border-[var(--border)]">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] flex items-center justify-center shrink-0">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-[var(--ink)] block">
-                      Google Account
-                    </span>
-                    <span className="text-[11px] text-[var(--ink-secondary)]">
-                      {currentUser.oauth_provider === "google"
-                        ? `Connected as ${currentUser.email}`
-                        : "Sign in with Google available"}
-                    </span>
-                  </div>
-                </div>
-
-                {currentUser.oauth_provider === "google" ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-[var(--accent)] font-medium">
-                    <Check className="w-3.5 h-3.5" /> Connected
+            <div className="divide-y divide-[var(--border)]">
+              {/* Row 1: Transcription Language */}
+              <div className="py-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-semibold text-[var(--ink)] block">
+                    Meeting Transcription Language
                   </span>
-                ) : (
-                  <Link
-                    href="/auth"
-                    className="text-[11px] font-medium text-[var(--accent)] hover:underline"
-                  >
-                    Switch account &rarr;
-                  </Link>
-                )}
-              </div>
-
-              {/* Spoken Language */}
-              <div>
-                <label className="block text-[11px] font-medium text-[var(--ink-secondary)] mb-1.5 flex items-center gap-1.5">
-                  <Mic className="w-3.5 h-3.5 text-[var(--accent)]" />
-                  <span>Transcription Language</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2">
+                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                    Target language optimized for meeting speech-to-text models and vocabulary.
+                  </p>
+                </div>
+                <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-1 shrink-0">
                   <button
                     type="button"
-                    onClick={() => handleSaveAudioPrefs("en", audioEnhancement)}
-                    className={`p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition ${
+                    onClick={() => savePreferences("en", audioEnhancement, defaultTrack)}
+                    className={`px-3 py-1 text-xs rounded-md font-medium transition ${
                       defaultLanguage === "en"
-                        ? "border-[var(--accent)] bg-[var(--bg-page)] text-[var(--ink)] font-bold shadow-2xs"
-                        : "border-[var(--border)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)]"
+                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
+                        : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                     }`}
                   >
-                    <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[var(--bg-page)] border border-[var(--border)]">EN</span>
-                    <span>English</span>
+                    English (en)
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleSaveAudioPrefs("hi", audioEnhancement)}
-                    className={`p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition ${
+                    onClick={() => savePreferences("hi", audioEnhancement, defaultTrack)}
+                    className={`px-3 py-1 text-xs rounded-md font-medium transition ${
                       defaultLanguage === "hi"
-                        ? "border-[var(--accent)] bg-[var(--bg-page)] text-[var(--ink)] font-bold shadow-2xs"
-                        : "border-[var(--border)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)]"
+                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
+                        : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                     }`}
                   >
-                    <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[var(--bg-page)] border border-[var(--border)]">HI</span>
-                    <span>Hindi (हिंदी)</span>
+                    Hindi (hi)
                   </button>
                 </div>
               </div>
 
-              {/* Audio Clarity */}
-              <label className="flex items-start gap-3 p-3 bg-[var(--bg-page)]/40 border border-[var(--border)] rounded-xl cursor-pointer hover:border-[var(--accent)]/40 transition">
-                <input
-                  type="checkbox"
-                  checked={audioEnhancement}
-                  onChange={(e) => handleSaveAudioPrefs(defaultLanguage, e.target.checked)}
-                  className="mt-0.5 rounded text-[var(--accent)] focus:ring-[var(--accent)] w-4 h-4"
-                />
-                <div>
-                  <span className="font-semibold text-[var(--ink)] block">
-                    Audio Clarity &amp; Noise Reduction
+              {/* Row 2: Acoustic Clarity */}
+              <div className="py-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-0.5 max-w-md">
+                  <span className="text-xs font-semibold text-[var(--ink)] block">
+                    Acoustic Clarity &amp; Noise Reduction
                   </span>
-                  <span className="text-[11px] text-[var(--ink-secondary)]">
-                    Normalizes microphone volume and cleans room echo during voice meetings.
-                  </span>
+                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                    Dynamically filters low-frequency room rumble and levels participant loudness before structuring.
+                  </p>
                 </div>
-              </label>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={audioEnhancement}
+                    onChange={(e) => savePreferences(defaultLanguage, e.target.checked, defaultTrack)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-[var(--bg-page)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)] border border-[var(--border)]"></div>
+                </label>
+              </div>
+
+              {/* Row 3: Deliberation Default Track */}
+              <div className="py-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-semibold text-[var(--ink)] block">
+                    Default Workflow Track
+                  </span>
+                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                    Deep Gauntlet runs full multi-criteria stress tests; Express Pilot produces instant executive synthesis.
+                  </p>
+                </div>
+                <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--bg-page)] p-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => savePreferences(defaultLanguage, audioEnhancement, "deep")}
+                    className={`px-3 py-1 text-xs rounded-md font-medium transition ${
+                      defaultTrack === "deep"
+                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
+                        : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
+                    }`}
+                  >
+                    Deep Gauntlet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => savePreferences(defaultLanguage, audioEnhancement, "express")}
+                    className={`px-3 py-1 text-xs rounded-md font-medium transition ${
+                      defaultTrack === "express"
+                        ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-2xs"
+                        : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
+                    }`}
+                  >
+                    Express Pilot
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* 4. Security & Data Management */}
-          <div className="bg-[var(--bg-surface)] rounded-2xl p-6 border border-[var(--border)] shadow-2xs space-y-4 transition-colors duration-200">
+          {/* Section: Security, Credentials & Data Sovereignty */}
+          <div className="bg-[var(--bg-surface)] rounded-2xl p-7 sm:p-8 border border-[var(--border)] space-y-6 transition-colors duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <h2 className="text-sm font-serif font-bold text-[var(--ink)]">
-                Security &amp; Data
+              <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
+                Security &amp; Data Sovereignty
               </h2>
               <button
                 type="button"
                 onClick={() => setShowPasswordSection(!showPasswordSection)}
-                className="text-xs font-medium text-[var(--accent)] hover:underline flex items-center gap-1"
+                className="text-xs font-semibold text-[var(--accent)] hover:underline inline-flex items-center gap-1"
               >
                 <span>{showPasswordSection ? "Close" : "Change Password"}</span>
                 {showPasswordSection ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -474,22 +480,22 @@ export default function ProfilePage() {
 
             {/* Collapsible Password Form */}
             {showPasswordSection && (
-              <form onSubmit={handlePasswordSubmit} className="space-y-3 pt-1">
+              <form onSubmit={handlePasswordSubmit} className="space-y-4 pt-1 max-w-lg">
                 {passwordError && (
-                  <div className="p-2.5 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-500 text-xs flex items-center gap-2">
+                  <div className="p-3 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-500 text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{passwordError}</span>
                   </div>
                 )}
                 {passwordSuccess && (
-                  <div className="p-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 text-xs flex items-center gap-2">
+                  <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 text-xs flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>{passwordSuccess}</span>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-[11px] font-medium text-[var(--ink-secondary)] mb-1">
+                  <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                     Current Password
                   </label>
                   <input
@@ -498,13 +504,13 @@ export default function ProfilePage() {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Enter current password"
-                    className="w-full px-3 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-xl text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
+                    className="w-full px-3.5 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-[var(--ink-secondary)] mb-1">
+                    <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                       New Password
                     </label>
                     <input
@@ -513,11 +519,11 @@ export default function ProfilePage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="8+ characters"
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-xl text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
+                      className="w-full px-3.5 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-[var(--ink-secondary)] mb-1">
+                    <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                       Confirm New Password
                     </label>
                     <input
@@ -526,7 +532,7 @@ export default function ProfilePage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-type new password"
-                      className="w-full px-3 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-xl text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
+                      className="w-full px-3.5 py-2 text-xs bg-[var(--bg-page)] border border-[var(--border)] rounded-lg text-[var(--ink)] focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                 </div>
@@ -535,81 +541,90 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => setShowPasswordText(!showPasswordText)}
-                    className="text-[11px] text-[var(--ink-secondary)] hover:text-[var(--ink)] flex items-center gap-1"
+                    className="text-xs text-[var(--ink-secondary)] hover:text-[var(--ink)] inline-flex items-center gap-1"
                   >
                     {showPasswordText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    <span>{showPasswordText ? "Hide" : "Show"}</span>
+                    <span>{showPasswordText ? "Hide characters" : "Show characters"}</span>
                   </button>
 
                   <button
                     type="submit"
                     disabled={passwordLoading || !isPasswordValid}
-                    className="px-4 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white font-medium text-xs rounded-xl transition disabled:opacity-50"
+                    className="px-4 py-2 bg-[var(--accent)] hover:opacity-90 text-white font-semibold text-xs rounded-lg transition disabled:opacity-50"
                   >
-                    {passwordLoading ? "Updating..." : "Update Password"}
+                    {passwordLoading ? "Updating..." : "Save New Password"}
                   </button>
                 </div>
               </form>
             )}
 
-            {/* Export Account Data */}
-            <div className="flex items-center justify-between gap-4 pt-1">
+            {/* Data Export Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
               <div>
                 <span className="text-xs font-semibold text-[var(--ink)] block">
-                  Export Workspaces &amp; Decisions
+                  Export Decision Archive
                 </span>
-                <span className="text-[11px] text-[var(--ink-secondary)]">
-                  Download a JSON copy of all your decision records.
-                </span>
+                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  Download a structured, portable JSON bundle of all your workspaces, decisions, and outcomes.
+                </p>
               </div>
+
               <button
                 type="button"
                 onClick={handleExportArchive}
                 disabled={exportingData}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--bg-page)] hover:bg-[var(--border)]/60 text-[var(--ink)] text-xs font-medium transition"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-page)] hover:bg-[var(--border)]/50 text-[var(--ink)] text-xs font-semibold transition shrink-0"
               >
                 <Download className="w-3.5 h-3.5 text-[var(--accent)]" />
-                <span>{exportingData ? "Exporting..." : "Export Data"}</span>
+                <span>{exportingData ? "Packaging..." : "Download Archive (.json)"}</span>
               </button>
             </div>
           </div>
 
-          {/* 5. Recent Decisions */}
+          {/* Section: Recent Deliberation Ledger */}
           {decisions.length > 0 && (
-            <div className="bg-[var(--bg-surface)] rounded-2xl p-6 border border-[var(--border)] shadow-2xs space-y-3 transition-colors duration-200">
-              <div className="flex items-center justify-between pb-2 border-b border-[var(--border)]">
-                <h2 className="text-sm font-serif font-bold text-[var(--ink)] flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[var(--accent)]" />
-                  <span>Recent Decisions</span>
+            <div className="bg-[var(--bg-surface)] rounded-2xl p-7 sm:p-8 border border-[var(--border)] space-y-4 transition-colors duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+                <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
+                  Recent Deliberations
                 </h2>
                 <Link
                   href="/dashboard"
-                  className="text-xs text-[var(--accent)] hover:underline font-medium"
+                  className="text-xs text-[var(--accent)] hover:underline font-semibold"
                 >
-                  View All &rarr;
+                  View All in Dashboard &rarr;
                 </Link>
               </div>
 
               <div className="divide-y divide-[var(--border)]">
-                {decisions.slice(0, 4).map((d) => (
+                {decisions.slice(0, 5).map((d) => (
                   <Link
                     key={d.id}
                     href={`/decisions/${d.id}`}
-                    className="py-3 flex items-center justify-between gap-3 hover:bg-[var(--bg-page)]/40 -mx-2 px-2 rounded-lg transition group"
+                    className="py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--bg-page)]/40 -mx-3 px-3 rounded-xl transition group"
                   >
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-[var(--ink)] group-hover:text-[var(--accent)] truncate">
+                      <p className="text-xs font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition truncate">
                         {d.title}
                       </p>
-                      <p className="text-[10px] text-[var(--ink-secondary)]">
-                        {new Date(d.created_at).toLocaleDateString()}
-                      </p>
+                      <div className="flex items-center gap-2 text-[11px] text-[var(--ink-secondary)] mt-0.5">
+                        <span className="font-mono">#{d.id}</span>
+                        <span>&bull;</span>
+                        <span>{new Date(d.created_at).toLocaleDateString()}</span>
+                        {d.domain && (
+                          <>
+                            <span>&bull;</span>
+                            <span className="uppercase">{d.domain}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
+
                     <span
-                      className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full shrink-0 ${
                         d.status === "decided"
                           ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                          : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
                       }`}
                     >
                       {d.status}

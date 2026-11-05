@@ -527,3 +527,4 @@ export default function Portfolio3DCanvas({
     </div>
   );
 }
+
