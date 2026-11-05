@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models import User, Folder, Decision
@@ -16,6 +16,20 @@ from app.schemas import (
 from app.auth import get_current_user, verify_ownership
 
 router = APIRouter(prefix="/decisions", tags=["Decisions"])
+
+
+def attach_folder_seq(decision: Decision, db: Session) -> DecisionResponse:
+    """Attach 1-based chronological sequence index within the decision's folder."""
+    resp = DecisionResponse.model_validate(decision)
+    if decision.folder_id:
+        seq = db.scalar(
+            select(func.count(Decision.id)).where(
+                Decision.folder_id == decision.folder_id,
+                Decision.created_at <= decision.created_at,
+            )
+        ) or 1
+        resp.folder_seq = seq
+    return resp
 
 
 @router.post(
@@ -64,7 +78,7 @@ def create_decision(
     db.commit()
     db.refresh(decision)
 
-    return DecisionResponse.model_validate(decision)
+    return attach_folder_seq(decision, db)
 
 
 @router.get(
@@ -90,7 +104,16 @@ def list_decisions(
 
     stmt = stmt.order_by(Decision.created_at.desc())
     decisions = db.scalars(stmt).all()
-    return [DecisionResponse.model_validate(d) for d in decisions]
+    if folder_id is not None:
+        chronological_ids = [d.id for d in sorted(decisions, key=lambda x: x.created_at)]
+        id_to_seq = {did: idx + 1 for idx, did in enumerate(chronological_ids)}
+        results = []
+        for d in decisions:
+            r = DecisionResponse.model_validate(d)
+            r.folder_seq = id_to_seq.get(d.id, 1)
+            results.append(r)
+        return results
+    return [attach_folder_seq(d, db) for d in decisions]
 
 
 @router.get(
@@ -110,7 +133,7 @@ def get_decision(
 
     verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
 
-    return DecisionResponse.model_validate(decision)
+    return attach_folder_seq(decision, db)
 
 
 @router.patch(
@@ -158,7 +181,7 @@ def update_decision(
     db.commit()
     db.refresh(decision)
 
-    return DecisionResponse.model_validate(decision)
+    return attach_folder_seq(decision, db)
 
 
 @router.delete(

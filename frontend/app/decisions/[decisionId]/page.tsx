@@ -256,13 +256,17 @@ export default function DecisionDetailPage({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const sequenceDisplay = decision?.folder_seq
+    ? String(decision.folder_seq).padStart(2, "0")
+    : "01";
+
   return (
     <AppShell
       activeDecisionId={decisionId}
       activeFolderId={folder?.id}
       breadcrumbs={[
         ...(folder ? [{ label: folder.name, href: `/folders/${folder.id}` }] : []),
-        { label: decision?.title || "Decision Analysis", href: `/decisions/${decisionId}` },
+        { label: decision?.title ? `#${sequenceDisplay}: ${decision.title}` : "Decision Analysis", href: `/decisions/${decisionId}` },
         { label: `Step ${currentStageIdx + 1}: ${workflowStagesList[currentStageIdx]?.label}` },
       ]}
       actions={
@@ -320,7 +324,7 @@ export default function DecisionDetailPage({
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-[2px] bg-[#7a4e10] dark:bg-[#D4AA50]" />
                   <span className="font-courier text-xs font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#D4AA50]">
-                    {folder?.name ? `${folder.name} / ` : ""}#{decisionId} • {recordType === "meeting" ? "MEETING DELIBERATION" : "DECISION DELIBERATION"}
+                    {folder?.name ? `${folder.name} / ` : ""}#{sequenceDisplay} • {recordType === "meeting" ? "MEETING DELIBERATION" : "DECISION DELIBERATION"}
                   </span>
                 </div>
 

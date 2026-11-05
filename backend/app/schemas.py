@@ -178,6 +178,7 @@ class DecisionResponse(DecisionBase):
     id: int
     owner_id: int
     folder_id: int
+    folder_seq: Optional[int] = Field(default=None, description="Chronological sequence number within parent folder (1-based)")
     raw_input: str
     transcript: str
     transcript_reviewed: bool

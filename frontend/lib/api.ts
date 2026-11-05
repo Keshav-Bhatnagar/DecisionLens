@@ -2,9 +2,12 @@
  * DecisionLens Typed API Client
  */
 
-export const API_BASE_URL =
-  typeof window !== "undefined"
-    ? ""
+export const API_BASE_URL =
+
+  typeof window !== "undefined"
+
+    ? ""
+
     : process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export interface HealthStatus {
@@ -63,6 +66,7 @@ export interface Decision {
   id: number;
   owner_id: number;
   folder_id: number;
+  folder_seq?: number | null;
   title: string;
   description: string;
   problem_statement: string;
