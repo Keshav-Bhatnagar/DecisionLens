@@ -34,6 +34,11 @@ export default function OutcomeTrackingCard({
   const [lessonsLearned, setLessonsLearned] = useState<string>("");
   const [challenges, setChallenges] = useState<string[]>([]);
   const [newChallenge, setNewChallenge] = useState<string>("");
+  const [targetMetrics, setTargetMetrics] = useState({
+    slaMet: true,
+    budgetHeld: true,
+    sreLoadManageable: true,
+  });
 
   useEffect(() => {
     loadOutcomes();
@@ -75,15 +80,34 @@ export default function OutcomeTrackingCard({
       setSubmitting(true);
       setError(null);
 
+      const finalChosen =
+        status === "implemented_as_recommended"
+          ? canonicalWinner || "Recommended Path"
+          : chosenOption.trim() || "Alternative Path";
+
+      const metricsSummary = [
+        targetMetrics.slaMet ? "✓ Performance SLA Met" : "⚠ Performance SLA Missed",
+        targetMetrics.budgetHeld ? "✓ Budget & Cost Target Maintained" : "⚠ Cloud Budget Overrun",
+        targetMetrics.sreLoadManageable ? "✓ SRE/Team Load Manageable" : "⚠ Elevated Operational Drag",
+      ].join(" • ");
+
+      const retroText = lessonsLearned.trim() || whatWorked.trim();
+      const combinedWhatWorked = `${metricsSummary}${retroText ? `\n\n${retroText}` : ""}`;
+
       const payload: DecisionOutcomeCreate = {
         implementation_status: status,
-        chosen_option: chosenOption.trim() || canonicalWinner || "Recommended Path",
+        chosen_option: finalChosen,
         utility_rating: utilityRating,
         days_since_decision: daysElapsed,
-        what_worked_well: whatWorked.trim(),
-        lessons_learned: lessonsLearned.trim(),
+        what_worked_well: combinedWhatWorked,
+        lessons_learned: retroText || metricsSummary,
         unexpected_challenges: challenges,
         would_recommend_tool: utilityRating >= 3,
+        predicted_vs_actual: {
+          sla_met: targetMetrics.slaMet,
+          budget_held: targetMetrics.budgetHeld,
+          sre_load_manageable: targetMetrics.sreLoadManageable,
+        },
       };
 
       const res = await createDecisionOutcome(decisionId, payload);
@@ -287,130 +311,208 @@ export default function OutcomeTrackingCard({
               </div>
             )}
 
-            <form onSubmit={handleSubmitOutcome} className="space-y-4 text-xs">
-              {/* Implementation Status */}
+            <form onSubmit={handleSubmitOutcome} className="space-y-4 text-xs font-sans">
+              {/* 1. Implementation Status */}
               <div>
-                <label className="block font-semibold text-[#161E33] mb-1">
-                  Implementation Status
+                <label className="block font-semibold text-[#161E33] mb-1 font-mono uppercase text-[11px]">
+                  1. Implementation Status
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: "implemented_as_recommended", label: "Implemented as Recommended" },
-                    { id: "pivoted_to_alternative", label: "Pivoted to Alternative" },
-                    { id: "delayed", label: "In Progress / Delayed" },
-                    { id: "abandoned", label: "Cancelled / Abandoned" },
+                    { id: "implemented_as_recommended", label: "✓ Implemented as Recommended" },
+                    { id: "pivoted_to_alternative", label: "⇄ Pivoted to Alternative" },
+                    { id: "delayed", label: "⏳ In Progress / Delayed" },
+                    { id: "abandoned", label: "✕ Cancelled / Abandoned" },
                   ].map((s) => (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => setStatus(s.id)}
-                      className={`p-2 rounded text-left border transition-all ${
+                      className={`p-2.5 rounded text-left border transition-all cursor-pointer ${
                         status === s.id
-                          ? "bg-[#2F5D8F] text-[#FCFBF8] border-[#2F5D8F] font-medium"
+                          ? "bg-[#2F5D8F] text-[#FCFBF8] border-[#2F5D8F] font-bold shadow-xs"
                           : "bg-[#EFEADF] text-[#161E33] border-[#D9D2C3] hover:border-[#2F5D8F]"
                       }`}
                     >
-                      {s.label}
+                      <span className="block text-xs">{s.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Utility Rating */}
-              <div>
-                <label className="block font-semibold text-[#161E33] mb-1">
-                  Decision Utility Rating: {utilityRating} / 5 Stars
-                </label>
-                <div className="flex items-center gap-1.5 text-2xl cursor-pointer">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setUtilityRating(star)}
-                      className={`transition-transform hover:scale-110 ${
-                        star <= utilityRating ? "text-amber-500" : "text-[#D9D2C3]"
-                      }`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                  <span className="text-xs text-[#5A6275] ml-2">
-                    {utilityRating === 5
-                      ? "High impact / Mission critical"
-                      : utilityRating >= 4
-                      ? "Very useful & clarifying"
-                      : utilityRating >= 3
-                      ? "Moderately helpful"
-                      : "Did not meet expectations"}
+              {/* 2. Dynamic Adopted Path (No redundant input if recommended) */}
+              {status === "implemented_as_recommended" ? (
+                <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+                  <div>
+                    <span className="font-mono text-[10px] uppercase font-bold text-emerald-700 block">
+                      Confirmed Production Path
+                    </span>
+                    <span className="font-semibold">{canonicalWinner || "Recommended Architecture"}</span>
+                  </div>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
+                    Standard Mandate
                   </span>
                 </div>
-              </div>
-
-              {/* Chosen Option & Days Elapsed */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-[#161E33] mb-1">
-                    Option Actually Implemented
+              ) : status === "pivoted_to_alternative" ? (
+                <div className="p-3 bg-amber-50/80 border border-amber-300 rounded space-y-1.5">
+                  <label className="block font-semibold text-amber-900 font-mono text-[10px] uppercase">
+                    Pivoted Alternative Deployed
                   </label>
                   <input
                     type="text"
                     value={chosenOption}
                     onChange={(e) => setChosenOption(e.target.value)}
-                    placeholder="e.g. Supabase + PgBouncer"
-                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded text-[#161E33]"
+                    placeholder="e.g., Microservices (Kafka/Go) or Managed In-Memory Redis"
+                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] border border-amber-300 rounded text-[#161E33] focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                    required
+                  />
+                  <p className="text-[10px] text-amber-700 font-mono">
+                    Specify the alternate architecture or vendor adopted by leadership.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 bg-stone-100 border border-stone-300 rounded space-y-1.5">
+                  <label className="block font-semibold text-stone-800 font-mono text-[10px] uppercase">
+                    Delay or Cancellation Rationale
+                  </label>
+                  <input
+                    type="text"
+                    value={chosenOption}
+                    onChange={(e) => setChosenOption(e.target.value)}
+                    placeholder="e.g., Priority shifted to compliance audit; cloud budget frozen"
+                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] border border-stone-300 rounded text-[#161E33]"
                   />
                 </div>
+              )}
 
-                <div>
-                  <label className="block font-semibold text-[#161E33] mb-1">
-                    Days Post-Decision
-                  </label>
-                  <select
-                    value={daysElapsed}
-                    onChange={(e) => setDaysElapsed(Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded text-[#161E33]"
-                  >
-                    <option value={14}>14 Days (Early Rollout)</option>
-                    <option value={30}>30 Days (Pilot Check)</option>
-                    <option value={60}>60 Days (Mid-Term)</option>
-                    <option value={90}>90 Days (Quarterly Review)</option>
-                    <option value={180}>180 Days (Long-Term Outcome)</option>
-                  </select>
+              {/* 3. Audit Horizon Chips (Replaces clunky dropdown) */}
+              <div>
+                <label className="block font-semibold text-[#161E33] mb-1 font-mono uppercase text-[11px]">
+                  2. Review Horizon Milestone
+                </label>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { days: 14, label: "⚡ 14d Spike Check" },
+                    { days: 30, label: "📅 30d Pilot Check" },
+                    { days: 60, label: "📊 60d Mid-Term" },
+                    { days: 90, label: "🏛️ 90d Quarterly Audit" },
+                    { days: 180, label: "🗓️ 180d Long-Term" },
+                  ].map((h) => (
+                    <button
+                      key={h.days}
+                      type="button"
+                      onClick={() => setDaysElapsed(h.days)}
+                      className={`px-2.5 py-1 text-xs rounded border transition cursor-pointer font-mono font-medium ${
+                        daysElapsed === h.days
+                          ? "bg-[#161E33] text-paper-surface border-[#161E33] shadow-xs"
+                          : "bg-[#EFEADF] text-[#161E33] border-[#D9D2C3] hover:border-[#161E33]"
+                      }`}
+                    >
+                      {h.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* What Worked Well */}
+              {/* 4. Executive Outcome Health & Verdict (Replaces consumer stars) */}
               <div>
-                <label className="block font-semibold text-[#161E33] mb-1">
-                  What Succeeded in Real-World Rollout?
+                <label className="block font-semibold text-[#161E33] mb-1 font-mono uppercase text-[11px]">
+                  3. Executive Decision Health Verdict
                 </label>
-                <textarea
-                  rows={2}
-                  value={whatWorked}
-                  onChange={(e) => setWhatWorked(e.target.value)}
-                  placeholder="e.g., Latency stayed under 80ms, budget targets were met without surprise invoices..."
-                  className="w-full px-2.5 py-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded text-[#161E33]"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { rating: 5, label: "🎯 Exceeded Targets", desc: "Outperformed SLAs & cost goals" },
+                    { rating: 4, label: "✅ Met Expectations", desc: "Core planned objectives achieved" },
+                    { rating: 3, label: "⚠️ Mixed / Partial", desc: "Worked, but created technical drag" },
+                    { rating: 2, label: "❌ Underperformed", desc: "Missed targets or caused outages" },
+                  ].map((v) => (
+                    <button
+                      key={v.rating}
+                      type="button"
+                      onClick={() => setUtilityRating(v.rating)}
+                      className={`p-2 rounded text-left border transition cursor-pointer ${
+                        utilityRating === v.rating
+                          ? "bg-amber-50 border-amber-600 ring-1 ring-amber-600 text-amber-950 font-bold"
+                          : "bg-[#EFEADF] text-[#161E33] border-[#D9D2C3] hover:border-amber-400"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs">{v.label}</span>
+                        <span className="text-[10px] font-mono text-[#5A6275]">{v.rating}/5</span>
+                      </div>
+                      <span className="text-[10px] text-[#5A6275] block font-normal mt-0.5 leading-tight">
+                        {v.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Lessons Learned */}
+              {/* 5. Target Variance Verification (1-Click Toggles) */}
               <div>
-                <label className="block font-semibold text-[#161E33] mb-1">
-                  Key Lessons Learned (Stored in Folder Memory)
+                <label className="block font-semibold text-[#161E33] mb-1 font-mono uppercase text-[11px]">
+                  4. Production Target Verification
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTargetMetrics({ ...targetMetrics, slaMet: !targetMetrics.slaMet })}
+                    className={`p-2 rounded border text-left cursor-pointer transition ${
+                      targetMetrics.slaMet
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-bold"
+                        : "bg-rose-50 border-rose-200 text-rose-700"
+                    }`}
+                  >
+                    <span className="text-xs block">{targetMetrics.slaMet ? "✓ Latency SLA Met" : "✕ Latency SLA Missed"}</span>
+                    <span className="text-[9px] font-mono opacity-80">sub-50ms p99 Target</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTargetMetrics({ ...targetMetrics, budgetHeld: !targetMetrics.budgetHeld })}
+                    className={`p-2 rounded border text-left cursor-pointer transition ${
+                      targetMetrics.budgetHeld
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-bold"
+                        : "bg-rose-50 border-rose-200 text-rose-700"
+                    }`}
+                  >
+                    <span className="text-xs block">{targetMetrics.budgetHeld ? "✓ Cloud Budget Held" : "✕ Budget Overrun"}</span>
+                    <span className="text-[9px] font-mono opacity-80">Zero Infra Surprise</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTargetMetrics({ ...targetMetrics, sreLoadManageable: !targetMetrics.sreLoadManageable })}
+                    className={`p-2 rounded border text-left cursor-pointer transition ${
+                      targetMetrics.sreLoadManageable
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-bold"
+                        : "bg-rose-50 border-rose-200 text-rose-700"
+                    }`}
+                  >
+                    <span className="text-xs block">{targetMetrics.sreLoadManageable ? "✓ SRE Load Safe" : "✕ High SRE Fatigue"}</span>
+                    <span className="text-[9px] font-mono opacity-80">3-Person SRE Team</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 6. Consolidated Retrospective Field (Replaces 2 repetitive essays) */}
+              <div>
+                <label className="block font-semibold text-[#161E33] mb-1 font-mono uppercase text-[11px]">
+                  5. Retrospective Learnings (Stored in Folder Memory)
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={lessonsLearned}
                   onChange={(e) => setLessonsLearned(e.target.value)}
-                  placeholder="e.g., Enable connection pooling before running load tests; set up automated alerts for burst queries..."
-                  className="w-full px-2.5 py-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded text-[#161E33]"
+                  placeholder="Summarize production results: What succeeded? Did PgBouncer hold connection load? Any runbook surprises or tuning tips that subsequent decisions in this workspace must remember?"
+                  className="w-full px-2.5 py-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded text-[#161E33] leading-relaxed text-xs focus:ring-1 focus:ring-[#2F5D8F] focus:outline-hidden"
                 />
               </div>
 
-              {/* Unexpected Challenges */}
+              {/* 7. Unforeseen Challenges (Optional Tags) */}
               <div>
-                <label className="block font-semibold text-[#161E33] mb-1">
-                  Unforeseen Pitfalls or Obstacles
+                <label className="block font-semibold text-[#161E33] mb-1 font-mono uppercase text-[11px]">
+                  6. Production Obstacles & Outages (Optional Tags)
                 </label>
                 <div className="flex gap-2 mb-2">
                   <input
@@ -423,13 +525,13 @@ export default function OutcomeTrackingCard({
                         handleAddChallenge();
                       }
                     }}
-                    placeholder="Add an unexpected challenge and press Enter..."
+                    placeholder="Add an unexpected incident/pitfall and press Enter..."
                     className="flex-1 px-2.5 py-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded text-[#161E33]"
                   />
                   <button
                     type="button"
                     onClick={handleAddChallenge}
-                    className="px-3 py-1 bg-[#EFEADF] border border-[#D9D2C3] rounded hover:bg-[#D9D2C3] text-[#161E33]"
+                    className="px-3 py-1 bg-[#EFEADF] border border-[#D9D2C3] rounded hover:bg-[#D9D2C3] text-[#161E33] font-bold cursor-pointer"
                   >
                     Add
                   </button>
@@ -446,7 +548,7 @@ export default function OutcomeTrackingCard({
                         <button
                           type="button"
                           onClick={() => handleRemoveChallenge(c)}
-                          className="hover:text-rose-900 font-bold"
+                          className="hover:text-rose-900 font-bold cursor-pointer"
                         >
                           ×
                         </button>
@@ -461,14 +563,14 @@ export default function OutcomeTrackingCard({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-1.5 text-[#5A6275] hover:text-[#161E33]"
+                  className="px-3 py-1.5 text-[#5A6275] hover:text-[#161E33] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-1.5 bg-[#2F5D8F] hover:bg-[#254b73] text-[#FCFBF8] font-medium rounded transition-colors disabled:opacity-50"
+                  className="px-4 py-1.5 bg-[#2F5D8F] hover:bg-[#254b73] text-[#FCFBF8] font-bold rounded transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   {submitting ? "Saving Outcome..." : "Save Outcome Review"}
                 </button>

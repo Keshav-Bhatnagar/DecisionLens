@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, status
@@ -423,6 +424,163 @@ def generate_domain_grounded_roadmap(
     )
 
 
+def _extract_option_keywords(name: str) -> set:
+    tokens = set(re.findall(r'[a-zA-Z]{3,}', name.lower()))
+    stopwords = {"option", "architecture", "approach", "standard", "alternative", "system", "path", "based"}
+    return tokens - stopwords
+
+
+def _score_text_relevance(text: str, keywords: set) -> int:
+    t_lower = text.lower()
+    return sum(1 for kw in keywords if kw in t_lower)
+
+
+def build_grounded_alternatives(
+    matrix_results: List[Dict[str, Any]],
+    criteria_dict: Dict[str, str],
+    points: Dict[str, Any],
+    top_option_id: str,
+    top_option_name: str,
+    canonical_winner_score: float,
+) -> List[AlternativeOption]:
+    """
+    Epistemically constructs domain-grounded upsides (pros) and downsides (cons)
+    for each alternative, strictly deduplicating semantically redundant options
+    and ensuring downsides of one option are NEVER erroneously assigned to another.
+    """
+    facts = points.get("facts", [])
+    all_pros = points.get("pros", [])
+    all_cons = points.get("cons", [])
+    all_mixed = points.get("mixed_points", [])
+
+    # Step 1: Deduplicate redundant options (e.g. "Microservices (Kafka/Go)" and "Microservices Architecture")
+    seen_keys: List[set] = []
+    filtered_results: List[Dict[str, Any]] = []
+    for r in matrix_results:
+        opt_name = r.get("option_name") or ""
+        kws = _extract_option_keywords(opt_name)
+        is_dup = False
+        for sk in seen_keys:
+            if kws and sk and (kws.issubset(sk) or sk.issubset(kws) or (len(kws & sk) / max(len(kws), len(sk)) >= 0.6)):
+                is_dup = True
+                break
+        if not is_dup:
+            seen_keys.append(kws)
+            filtered_results.append(r)
+
+    alternatives: List[AlternativeOption] = []
+    for r in filtered_results[:4]:
+        opt_name = r.get("option_name", "Alternative")
+        opt_rank = r.get("rank", 1)
+        opt_score = r.get("weighted_score", 0.0)
+        is_winner = (r.get("option_id") == top_option_id or opt_name == top_option_name or opt_rank == 1)
+        kws = _extract_option_keywords(opt_name)
+        scores = r.get("criteria_scores", {})
+
+        # Dynamic pros from criteria
+        top_criteria_pros: List[str] = []
+        low_criteria_cons: List[str] = []
+        for cid, cscore in sorted(scores.items(), key=lambda x: x[1], reverse=True):
+            cname = criteria_dict.get(cid, cid)
+            if cscore >= 7.5:
+                top_criteria_pros.append(f"Strong performance in {cname} ({cscore:.1f}/10)")
+            elif cscore <= 5.5:
+                low_criteria_cons.append(f"Operational friction in {cname} ({cscore:.1f}/10)")
+
+        # Dynamic pros from points matching keywords
+        matched_pros: List[str] = []
+        for p in all_pros + all_mixed:
+            if _score_text_relevance(p, kws) > 0:
+                matched_pros.append(p)
+
+        # Dynamic cons from points matching keywords
+        matched_cons: List[str] = []
+        negative_indicators = [
+            "limit", "starvation", "outage", "complexity", "overhead",
+            "constraint", "bill", "cost", "zero production experience",
+            "burn out", "delay", "risk", "friction"
+        ]
+        for c in all_cons + facts:
+            if any(neg in c.lower() for neg in negative_indicators):
+                if _score_text_relevance(c, kws) > 0:
+                    matched_cons.append(c)
+
+        if is_winner:
+            pros = [
+                f"Highest weighted framework score ({opt_score:.2f}/10)",
+                "Superior alignment with critical operational criteria",
+            ]
+            if top_criteria_pros:
+                pros.extend(top_criteria_pros[:2])
+            if matched_pros:
+                pros.extend(matched_pros[:1])
+
+            # Ensure winner cons ONLY match winner's domain; never slap other options' cons onto winner
+            winner_cons = (
+                matched_cons[:2]
+                if matched_cons
+                else (
+                    low_criteria_cons[:2]
+                    if low_criteria_cons
+                    else ["Requires rigorous architectural boundary governance to avoid cross-module coupling."]
+                )
+            )
+
+            alternatives.append(
+                AlternativeOption(
+                    name=opt_name,
+                    description=f"Primary recommended path achieving Rank #{opt_rank} in Weighted Decision Matrix ({opt_score:.2f}/10).",
+                    pros=pros[:3],
+                    cons=winner_cons[:2],
+                    tradeoffs="Delivers optimal delivery speed and low operational risk while accepting monolithic database query constraints.",
+                    is_recommended=True,
+                    why_not_recommended=None,
+                )
+            )
+        else:
+            # Runner-up alternative
+            alt_pros = (
+                matched_pros[:2]
+                if matched_pros
+                else (
+                    top_criteria_pros[:2]
+                    if top_criteria_pros
+                    else [f"Viable approach with positive attributes in {opt_name}."]
+                )
+            )
+            if top_criteria_pros and not any(p in alt_pros for p in top_criteria_pros):
+                alt_pros.insert(0, top_criteria_pros[0])
+
+            alt_cons: List[str] = []
+            if low_criteria_cons:
+                alt_cons.extend(low_criteria_cons[:2])
+            if matched_cons:
+                alt_cons.extend(matched_cons[:2])
+            if not alt_cons:
+                alt_cons = [f"Lower overall criteria alignment ({opt_score:.2f}/10 vs {canonical_winner_score:.2f}/10)."]
+
+            why_deprioritized = (
+                f"Ranked #{opt_rank} with lower deterministic score ({opt_score:.2f}/10) "
+                f"compared to {top_option_name} ({canonical_winner_score:.2f}/10)."
+            )
+            if low_criteria_cons:
+                why_deprioritized += f" Deprioritized primarily due to {low_criteria_cons[0].lower()}."
+
+            alternatives.append(
+                AlternativeOption(
+                    name=opt_name,
+                    description=f"Alternative evaluated in Decision Matrix (Rank #{opt_rank}, Score: {opt_score:.2f}/10).",
+                    pros=alt_pros[:3],
+                    cons=alt_cons[:3],
+                    tradeoffs=f"Trades away criteria performance and operational simplicity compared to {top_option_name}.",
+                    is_recommended=False,
+                    why_not_recommended=why_deprioritized,
+                )
+            )
+
+    return alternatives
+
+
 def generate_mock_synthesis(
     decision: Decision,
     user_priorities: Optional[List[str]] = None,
@@ -649,52 +807,33 @@ def generate_mock_synthesis(
         )
 
     # Formulate alternatives considered with strict adherence to matrix scores and ranks
-    alternatives: List[AlternativeOption] = []
+    matrix_data = analysis.get("decision_matrix", {}) if isinstance(analysis, dict) else {}
+    criteria_dict = {c["id"]: c.get("name", c["id"]) for c in matrix_data.get("criteria", []) if isinstance(c, dict)}
     if matrix_results and len(matrix_results) >= 2:
-        for r in matrix_results[:4]:
-            opt_name = r.get("option_name")
-            opt_rank = r.get("rank", 1)
-            opt_score = r.get("weighted_score", 0.0)
-            if r.get("option_id") == top_option_id or opt_name == top_option_name:
-                alternatives.append(
-                    AlternativeOption(
-                        name=opt_name,
-                        description=f"Primary recommended path achieving Rank #{opt_rank} in Weighted Decision Matrix.",
-                        pros=[f"Highest weighted framework score ({opt_score:.2f}/10)", "Superior alignment with critical criteria"],
-                        cons=cons[:1] if cons else ["Requires rigorous pre-execution due diligence"],
-                        tradeoffs="Demands thorough validation to unlock superior long-term upside.",
-                        is_recommended=True,
-                        why_not_recommended=None,
-                    )
-                )
-            else:
-                alternatives.append(
-                    AlternativeOption(
-                        name=opt_name,
-                        description=f"Alternative evaluated in Decision Matrix (Rank #{opt_rank}, Score: {opt_score:.2f}/10).",
-                        pros=["Viable alternative option"],
-                        cons=[f"Lower overall criteria alignment ({opt_score:.2f}/10 vs {canonical_winner_score:.2f}/10)"],
-                        tradeoffs=f"Trades away criteria performance compared to {top_option_name}.",
-                        is_recommended=False,
-                        why_not_recommended=f"Ranked #{opt_rank} with lower deterministic score ({opt_score:.2f}/10) compared to {top_option_name} ({canonical_winner_score:.2f}/10).",
-                    )
-                )
+        alternatives = build_grounded_alternatives(
+            matrix_results=matrix_results,
+            criteria_dict=criteria_dict,
+            points=points,
+            top_option_id=top_option_id,
+            top_option_name=top_option_name,
+            canonical_winner_score=canonical_winner_score,
+        )
     else:
         alternatives = [
             AlternativeOption(
                 name=top_option_name,
                 description="Primary recommended path.",
-                pros=["Optimal strategic alignment"],
-                cons=["Implementation dedication required"],
-                tradeoffs="Demands thorough validation.",
+                pros=["Optimal strategic alignment", "Verified compliance with foundational constraints"],
+                cons=["Demands disciplined implementation tracking to meet delivery deadlines"],
+                tradeoffs="Demands thorough validation to unlock superior long-term upside.",
                 is_recommended=True,
                 why_not_recommended=None,
             ),
             AlternativeOption(
                 name=second_option_name,
                 description="Secondary fallback option.",
-                pros=["Alternative approach"],
-                cons=["Suboptimal criteria alignment"],
+                pros=["Alternative approach offering localized flexibility"],
+                cons=["Lower criteria alignment and higher operational friction compared to primary path"],
                 tradeoffs="Trades performance for fallback utility.",
                 is_recommended=False,
                 why_not_recommended=f"Lower overall alignment compared to {top_option_name}.",
@@ -1007,6 +1146,21 @@ def execute_hosted_synthesis(
                     "why_not_recommended": None,
                 },
             )
+
+        # Defensive enrichment: If alternatives lack distinct pros/cons or have generic placeholders, enrich with domain-grounded alternatives
+        if any(not alt.get("cons") or "Viable alternative option" in alt.get("pros", []) for alt in parsed["alternatives_considered"] if isinstance(alt, dict)):
+            matrix_data = analysis.get("decision_matrix", {}) if isinstance(analysis, dict) else {}
+            criteria_dict = {c["id"]: c.get("name", c["id"]) for c in matrix_data.get("criteria", []) if isinstance(c, dict)}
+            enriched_alts = build_grounded_alternatives(
+                matrix_results=canonical_dict.get("results") or matrix_data.get("results", []),
+                criteria_dict=criteria_dict,
+                points=points,
+                top_option_id=canonical_winner_id or "",
+                top_option_name=canonical_winner_name,
+                canonical_winner_score=canonical_winner_score,
+            )
+            if enriched_alts:
+                parsed["alternatives_considered"] = [a.model_dump() for a in enriched_alts]
 
     # Defensive validation: Ensure headline and recommendation recommend canonical winner
     if canonical_winner_name not in parsed.get("headline", ""):
