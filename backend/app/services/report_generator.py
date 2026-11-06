@@ -183,14 +183,15 @@ def generate_decision_markdown_report(decision: Decision) -> str:
     lines.append("")
 
     if feedback and isinstance(feedback, dict):
-        lines.extend([
-            "#### Anti-Bias Advisory (Private Reflective Feedback)",
-            f"- **Tone Observations:** {feedback.get('tone_observations', 'Objective and measured.')}",
-            f"- **Clarity Rating:** {feedback.get('clarity_rating', 'Medium')}",
-            f"- **Cognitive Biases Detected:** {', '.join(feedback.get('potential_biases', ['None detected']))}",
-            f"- **Strategic Feedback Notes:** {feedback.get('feedback_notes', 'N/A')}",
-            "",
-        ])
+        biases = feedback.get("potential_biases", [])
+        notes = feedback.get("feedback_notes")
+        if biases or notes:
+            lines.append("#### Methodological Guardrails & Identified Decision Traps")
+            if biases:
+                lines.append(f"- **Identified Decision Traps:** {', '.join(biases)}")
+            if notes:
+                lines.append(f"- **Execution Guardrails:** {notes}")
+            lines.append("")
 
     lines.extend([
         "---",
@@ -764,15 +765,18 @@ def generate_decision_latex_report(decision: Decision) -> str:
         lines.append(r"\textit{None noted.}")
 
     if feedback and isinstance(feedback, dict):
-        lines.extend([
-            r"\subsubsection{Anti-Bias Advisory (Private Reflective Feedback)}",
-            r"\begin{tcolorbox}[colback=WarmPaper, colframe=BorderGray, arc=1mm, boxrule=0.6pt]",
-            f"\\textbf{{Tone Observations:}} {escape_latex(feedback.get('tone_observations', 'Objective and measured.'))} \\\\[3pt]",
-            f"\\textbf{{Clarity Rating:}} {escape_latex(feedback.get('clarity_rating', 'Medium'))} \\\\[3pt]",
-            f"\\textbf{{Cognitive Biases Detected:}} {escape_latex(', '.join(feedback.get('potential_biases', ['None detected'])))} \\\\[3pt]",
-            f"\\textbf{{Strategic Feedback Notes:}} {escape_latex(feedback.get('feedback_notes', 'N/A'))}",
-            r"\end{tcolorbox}",
-        ])
+        biases = feedback.get("potential_biases", [])
+        notes = feedback.get("feedback_notes")
+        if biases or notes:
+            lines.extend([
+                r"\subsubsection{Methodological Guardrails \& Identified Decision Traps}",
+                r"\begin{tcolorbox}[colback=WarmPaper, colframe=BorderGray, arc=1mm, boxrule=0.6pt]",
+            ])
+            if biases:
+                lines.append(f"\\textbf{{Identified Decision Traps:}} {escape_latex(', '.join(biases))} \\\\[3pt]")
+            if notes:
+                lines.append(f"\\textbf{{Execution Guardrails:}} {escape_latex(notes)}")
+            lines.append(r"\end{tcolorbox}")
 
     lines.extend([
         "",
@@ -1520,23 +1524,25 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     feedback = points.get("private_feedback")
     fb_text = ""
     if feedback and isinstance(feedback, dict):
-        fb_text = (
-            f"<b>Tone Observations:</b> {escape_xml(feedback.get('tone_observations', 'Objective.'))}<br/>"
-            f"<b>Clarity Rating:</b> {escape_xml(feedback.get('clarity_rating', 'Medium'))} &bull; "
-            f"<b>Cognitive Biases Detected:</b> {escape_xml(', '.join(feedback.get('potential_biases', ['None detected'])))}<br/>"
-            f"<b>Strategic Feedback Notes:</b> {escape_xml(feedback.get('feedback_notes', 'N/A'))}"
-        )
+        biases = feedback.get("potential_biases", [])
+        notes = feedback.get("feedback_notes")
+        parts = []
+        if biases:
+            parts.append(f"<b>Identified Logic & Planning Traps:</b> {escape_xml(', '.join(biases))}")
+        if notes:
+            parts.append(f"<b>Methodological Guardrails:</b> {escape_xml(notes)}")
+        fb_text = "<br/>".join(parts) if parts else "<i>No methodological guardrails recorded.</i>"
     else:
-        fb_text = "<i>No private feedback recorded.</i>"
+        fb_text = "<i>No methodological guardrails recorded.</i>"
 
     story.append(_render_orbit_card(
         "Orbit 04",
         "Meeting Caveats & Mixed Trade-Offs",
-        f"Recorded Dissent ({len(cons_list)}), Nuanced Trade-Offs ({len(mixed_list)}) & Anti-Bias Advisory",
+        f"Recorded Dissent ({len(cons_list)}), Nuanced Trade-Offs ({len(mixed_list)}) & Methodological Guardrails",
         [
             ("Cons (Operational Friction & Vulnerabilities)", cons_list, False),
             ("Mixed Points (Dual-Sided Nuanced Trade-Offs)", mixed_list, False),
-            ("Anti-Bias Advisory (Private Reflective Feedback)", fb_text, True),
+            ("Methodological Guardrails (Identified Traps & Notes)", fb_text, True),
         ]
     ))
     story.append(Spacer(1, 6))

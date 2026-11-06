@@ -317,18 +317,14 @@ class GroundedCognitiveItem(BaseModel):
 
 
 class PrivateTranscriptFeedback(BaseModel):
-    tone_observations: str = Field(
-        "", description="Assessment of discussion tone, emotional intensity, or conversational dynamics"
-    )
     potential_biases: List[str] = Field(
-        default_factory=list, description="Detected cognitive biases with brief contextual notes"
-    )
-    clarity_rating: str = Field(
-        "Medium", description="Estimated clarity of problem formulation: High, Medium, or Low"
+        default_factory=list, description="Detected logic and planning fallacies with contextual notes"
     )
     feedback_notes: str = Field(
-        "", description="Private coaching notes and recommendations to refine the decision basis"
+        "", description="Methodological guardrails and recommendations to refine the decision basis"
     )
+    tone_observations: Optional[str] = Field("", description="Deprecated")
+    clarity_rating: Optional[str] = Field("", description="Deprecated")
 
 
 class StructuredFindings(BaseModel):

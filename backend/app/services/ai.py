@@ -151,9 +151,7 @@ Return valid JSON adhering strictly to this schema:
   ],
   "summary": "Objective synthesis defining the decision tension, options evaluated, and current evidence state.",
   "private_feedback": {
-    "tone_observations": "Objective review of stakeholder alignment, dissent, and technical boundary clarity.",
-    "potential_biases": ["Sunk Cost Fallacy: Team justification based on 3 weeks spent prototyping in Go rather than production workload fit."],
-    "clarity_rating": "High",
+    "potential_biases": ["Sunk Cost Fallacy: Justification based on 3 weeks spent prototyping in Go rather than production workload fit."],
     "feedback_notes": "Validate database connection pool limits and SRE operational readiness before selecting event broker."
   }
 }
@@ -616,7 +614,6 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
         ]
 
         summary = f"Structuring of core operational decision regarding: {first_span}."
-        tone = "Analytical, pragmatic, and deliberative"
         biases = [
             "Confirmation Bias: Risk of seeking evidence that reinforces initial baseline preferences."
         ]
@@ -624,7 +621,6 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
     if is_hindi:
         summary = "प्रदान किए गए इनपुट के आधार पर वास्तुशिल्प और संगठनात्मक प्राथमिकताओं का निष्पक्ष विश्लेषण किया गया है।"
-        tone = "सहयोगात्मक और विश्लेषणात्मक (Objective and analytical)"
         feedback_notes = "निर्णय लेने से पहले मुख्य अनसुलझे प्रश्नों पर स्पष्टता प्राप्त करने की सिफारिश की जाती है।"
 
     # Build grounded items dictionary and string lists
@@ -657,9 +653,9 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
     }
 
     feedback = PrivateTranscriptFeedback(
-        tone_observations=tone,
+        tone_observations="",
         potential_biases=biases,
-        clarity_rating="High" if is_database_decision else "Medium",
+        clarity_rating="",
         feedback_notes=feedback_notes,
     )
 
