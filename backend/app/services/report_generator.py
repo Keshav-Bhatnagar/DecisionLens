@@ -446,6 +446,8 @@ def escape_latex(text: Any) -> str:
     if text is None:
         return ""
     s = str(text)
+    s = s.replace("₹", "Rs. ")
+    s = s.replace("🛡️", "").replace("🛡", "").replace("🧾", "").replace("📜", "").replace("★", "*")
     replacements = [
         ('\\', r'\textbackslash{}'),
         ('&', r'\&'),
@@ -466,10 +468,23 @@ def escape_latex(text: Any) -> str:
 
 
 def escape_xml(s: Any) -> str:
-    """Escape text safely for ReportLab Platypus XML markup."""
+    """
+    Escape text safely for ReportLab Platypus XML markup and sanitize non-Latin1 glyphs.
+    Standard PDF Type 1 fonts (Times-Roman, Helvetica) only support Latin-1 / WinAnsi.
+    Replaces ₹ with Rs. and strips unrenderable emojis to prevent black square (■) glyphs.
+    """
     if s is None:
         return ""
-    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    val = str(s)
+    # Replace Rupee symbol with clean publication-standard Rs.
+    val = val.replace("₹", "Rs. ")
+    # Replace common emojis with clean academic text or strip them
+    val = val.replace("🛡️", "").replace("🛡", "").replace("🧾", "").replace("📜", "").replace("★", "*")
+    val = val.replace("✓", "[PASS]").replace("⚠", "[!]").replace("⚡", "*")
+    # Clean up double spaces from emoji removal
+    val = re.sub(r" {2,}", " ", val)
+    # XML entities
+    return val.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def generate_decision_latex_report(decision: Decision) -> str:
@@ -1377,48 +1392,62 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     story.append(Paragraph('<a name="sec_frameworks"/><b>4. Multi-Lens Analytical Framework Results</b>', h1_style))
     story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
     matrix = analysis.get("decision_matrix", {}) if isinstance(analysis, dict) else {}
-    if matrix and matrix.get("applicable"):
+    canonical = rec.get("canonical_result") or {}
+    criteria = matrix.get("criteria", []) if matrix else []
+    ranked_opts = matrix.get("ranked_options", []) if matrix else []
+
+    if not criteria and canonical.get("criteria"):
+        criteria = canonical.get("criteria", [])
+    if not ranked_opts and canonical.get("results"):
+        ranked_opts = []
+        for r in canonical.get("results", []):
+            ranked_opts.append({
+                "name": r.get("option_name"),
+                "score": r.get("weighted_score", 0.0),
+                "weighted_score": r.get("weighted_score", 0.0),
+                "rank": r.get("rank", 1),
+                "scores": r.get("criteria_scores", {}),
+            })
+
+    if criteria and ranked_opts:
         story.append(Paragraph("<b>Weighted Decision Matrix (Normalized to 100% Weight):</b>", h2_style))
-        criteria = matrix.get("criteria", [])
-        ranked_opts = matrix.get("ranked_options", [])
-        if criteria and ranked_opts:
-            m_header = [Paragraph("<b>Rank</b>", table_header), Paragraph("<b>Option Candidate</b>", table_header), Paragraph("<b>Weighted Score</b>", table_header)]
+        m_header = [Paragraph("<b>Rank</b>", table_header), Paragraph("<b>Option Candidate</b>", table_header), Paragraph("<b>Weighted Score</b>", table_header)]
+        for c in criteria:
+            m_header.append(Paragraph(f"<b>{escape_xml(c.get('name', 'C'))}</b><br/>({c.get('weight', 0):.0f}%)", table_header))
+
+        m_rows = [m_header]
+        for opt in ranked_opts:
+            opt_name = escape_xml(opt.get("name", "Option"))
+            w_score = opt.get("score", opt.get("weighted_score", 0.0))
+            rank = opt.get("rank", 1)
+            opt_ratings = opt.get("scores", {})
+            is_winner = rank == 1
+            name_cell = f"<font color=\"#166534\"><b>* {opt_name}</b></font>" if is_winner else f"<b>{opt_name}</b>"
+            row = [Paragraph(f"Rank {rank}", table_cell), Paragraph(name_cell, table_cell), Paragraph(f"<b>{w_score:.2f}</b>", table_cell)]
             for c in criteria:
-                m_header.append(Paragraph(f"<b>{escape_xml(c.get('name', 'C'))}</b><br/>({c.get('weight', 0):.0f}%)", table_header))
+                cid = c.get("id")
+                val = opt_ratings.get(cid, "-")
+                row.append(Paragraph(f"{val:.1f}" if isinstance(val, (int, float)) else str(val), table_cell))
+            m_rows.append(row)
 
-            m_rows = [m_header]
-            for opt in ranked_opts:
-                opt_name = escape_xml(opt.get("name", "Option"))
-                w_score = opt.get("score", opt.get("weighted_score", 0.0))
-                rank = opt.get("rank", 1)
-                opt_ratings = opt.get("scores", {})
-                is_winner = rank == 1
-                name_cell = f"<font color=\"#166534\"><b>★ {opt_name}</b></font>" if is_winner else f"<b>{opt_name}</b>"
-                row = [Paragraph(f"Rank {rank}", table_cell), Paragraph(name_cell, table_cell), Paragraph(f"<b>{w_score:.2f}</b>", table_cell)]
-                for c in criteria:
-                    cid = c.get("id")
-                    val = opt_ratings.get(cid, "-")
-                    row.append(Paragraph(f"{val:.1f}" if isinstance(val, (int, float)) else str(val), table_cell))
-                m_rows.append(row)
-
-            # Booktabs Matrix Layout
-            num_cols = len(m_header)
-            col_w = 499 / num_cols
-            m_table = Table(m_rows, colWidths=[col_w] * num_cols)
-            m_table.setStyle(TableStyle([
-                ('LINEABOVE', (0, 0), (-1, 0), 1.2, COLOR_NAVY),     # \toprule
-                ('LINEBELOW', (0, 0), (-1, 0), 0.6, COLOR_NAVY),     # \midrule
-                ('LINEBELOW', (0, -1), (-1, -1), 1.2, COLOR_NAVY),   # \bottomrule
-                ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_SURFACE, colors.white]),
-                ('TOPPADDING', (0, 0), (-1, -1), 3),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-                ('LEFTPADDING', (0, 0), (-1, -1), 4),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ]))
-            story.append(m_table)
-            story.append(Spacer(1, 4))
+        # Booktabs Matrix Layout
+        num_cols = len(m_header)
+        col_w = 499 / num_cols
+        m_table = Table(m_rows, colWidths=[col_w] * num_cols)
+        m_table.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 1.2, COLOR_NAVY),     # \toprule
+            ('LINEBELOW', (0, 0), (-1, 0), 0.6, COLOR_NAVY),     # \midrule
+            ('LINEBELOW', (0, -1), (-1, -1), 1.2, COLOR_NAVY),   # \bottomrule
+            ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_SURFACE, colors.white]),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ]))
+        story.append(m_table)
+        story.append(Spacer(1, 4))
 
     # Section 5: Synthesis & Recommendation (tcolorbox Callout Replica)
     story.append(BookmarkFlowable("sec_synthesis", "5. Strategic Recommendation", 0))
@@ -1453,24 +1482,34 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
         try:
             from app.services.recommendation import compute_blunder_shield
             domain = getattr(decision, "domain", None) or analysis.get("domain") or "BUSINESS"
-            winner_name = rec.get("headline", "Primary Strategy")
-            shield_obj = compute_blunder_shield(domain=domain, top_option_name=winner_name)
+            canonical = rec.get("canonical_result") or {}
+            winner_name = canonical.get("winner_option_name") or rec.get("headline", "Primary Strategy")
+            alts = rec.get("alternatives_considered", [])
+            risks = [r.get("risk") if isinstance(r, dict) else str(r) for r in rec.get("risks_and_mitigations", [])]
+            shield_obj = compute_blunder_shield(
+                domain=domain,
+                top_option_name=winner_name,
+                alternatives=alts,
+                risks=risks,
+                decision_id=decision.id,
+                problem_statement=decision.problem_statement or decision.title,
+            )
             pdf_shield = shield_obj.model_dump()
         except Exception:
             pdf_shield = {
-                "capital_at_risk_saved": "₹45 Lakh – ₹65 Lakh",
+                "capital_at_risk_saved": "Rs. 45 Lakh – Rs. 65 Lakh",
                 "developer_sprints_saved": "6 Sprints (12 Wks)",
                 "prevented_fatal_trap": "Premature architecture sprawl and unvetted dependencies",
                 "risk_reduction_rationale": "Avoided unbudgeted rewrite toil, licensing traps, and operational drag.",
             }
 
-    p_cap = escape_xml(str(pdf_shield.get("capital_at_risk_saved", "₹45L+")))
+    p_cap = escape_xml(str(pdf_shield.get("capital_at_risk_saved", "Rs. 45L+")))
     p_sprints = escape_xml(str(pdf_shield.get("developer_sprints_saved", "6 Sprints")))
     p_trap = escape_xml(str(pdf_shield.get("prevented_fatal_trap", "Premature Complexity")))
     p_rationale = escape_xml(str(pdf_shield.get("risk_reduction_rationale", "Avoided toil & risk.")))
     adr_status_pdf = "ACCEPTED (Active CI Guardrail)" if decision.status == "decided" else "PROPOSED (Pending Clearance)"
 
-    story.append(Paragraph("<b>🛡️ Capital at Risk &amp; Blunder Shield (Executive ROI Assurance):</b>", h2_style))
+    story.append(Paragraph("<b>Capital at Risk &amp; Blunder Shield (Executive ROI Assurance):</b>", h2_style))
     shield_rows = [
         [
             Paragraph("<b>Protection Vector</b>", table_header),
@@ -1511,7 +1550,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     # 5.2 Itemized FinOps Sunk-Cost Receipt (Munshi Table)
     pdf_receipt = pdf_shield.get("receipt")
     if pdf_receipt and isinstance(pdf_receipt, dict) and pdf_receipt.get("line_items"):
-        story.append(Paragraph(f"<b>🧾 Itemized FinOps Sunk-Cost Receipt ({escape_xml(pdf_receipt.get('receipt_id', 'RCP'))}):</b>", h2_style))
+        story.append(Paragraph(f"<b>Itemized FinOps Sunk-Cost Receipt ({escape_xml(pdf_receipt.get('receipt_id', 'RCP'))}):</b>", h2_style))
         rcpt_rows = [[
             Paragraph("<b>Cost Vector</b>", table_header),
             Paragraph("<b>Category</b>", table_header),
@@ -1570,7 +1609,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
 
     # MADR Callout Card
     adr_card = Table(
-        [[Paragraph(f"<b>📜 Architectural Decision Record (Git-Native MADR 3.0.0):</b> <font color='#2F5D8F'>ADR-{decision.id:04d}</font> &bull; Status: <b>{adr_status_pdf}</b> &bull; Drift-Guarded in CI", meta_val)]],
+        [[Paragraph(f"<b>Architectural Decision Record (Git-Native MADR 3.0.0):</b> <font color='#2F5D8F'>ADR-{decision.id:04d}</font> &bull; Status: <b>{adr_status_pdf}</b> &bull; Drift-Guarded in CI", meta_val)]],
         colWidths=[499]
     )
     adr_card.setStyle(TableStyle([
