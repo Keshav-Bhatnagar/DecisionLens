@@ -423,8 +423,17 @@ export default function SynthesisPanel({
   }
 
   const calibratedBlunderShield = useMemo(() => {
-    if (!displaySynthesis?.blunder_shield) return null;
-    const bs = displaySynthesis.blunder_shield;
+    const domain = (displaySynthesis?.domain || "SOFTWARE").toUpperCase();
+    const baseLow = domain === "REAL_ESTATE" ? 15000000 : domain === "FINANCE" ? 8500000 : 4500000;
+    const baseHigh = domain === "REAL_ESTATE" ? 28000000 : domain === "FINANCE" ? 14000000 : 6500000;
+
+    const bs = displaySynthesis?.blunder_shield || {
+      capital_at_risk_saved: `${formatAmountInr(baseLow)} – ${formatAmountInr(baseHigh)}`,
+      developer_sprints_saved: "6 Sprints (12 Wks)",
+      prevented_fatal_trap: "Premature Complexity & Architecture Sprawl",
+      risk_reduction_rationale: "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments.",
+    };
+
     if (!isCalibrated) return bs;
 
     const geoMult = GEO_RATES[selectedGeoRate].multiplier;
@@ -433,6 +442,7 @@ export default function SynthesisPanel({
 
     let calibratedReceipt = null;
     let totalCalibrated = 0;
+    let calibratedCapitalRange = bs.capital_at_risk_saved;
 
     if (bs.receipt?.line_items && bs.receipt.line_items.length > 0) {
       const calibratedItems = bs.receipt.line_items.map((item) => {
@@ -472,7 +482,7 @@ export default function SynthesisPanel({
           mult = teamMult * geoMult * 0.5 + scaleMult * 0.5;
         }
 
-        const calAmt = rawAmt * mult;
+        const calAmt = Math.round(rawAmt * mult);
         totalCalibrated += calAmt;
 
         return {
@@ -481,30 +491,34 @@ export default function SynthesisPanel({
         };
       });
 
+      const lowRange = Math.round(totalCalibrated * 0.85);
+      const highRange = Math.round(totalCalibrated * 1.15);
+      calibratedCapitalRange = `${formatAmountInr(lowRange)} – ${formatAmountInr(highRange)}`;
+
       calibratedReceipt = {
         ...bs.receipt,
         total_capital_at_risk: formatAmountInr(totalCalibrated),
         line_items: calibratedItems,
       };
     } else {
-      const parts = bs.capital_at_risk_saved.split("–").map((p) => p.trim());
-      if (parts.length === 2) {
-        const factor = (teamMult * geoMult + scaleMult) / 2;
-        const low = parseAmountInr(parts[0]) * factor;
-        const high = parseAmountInr(parts[1]) * factor;
-        return {
-          ...bs,
-          capital_at_risk_saved: `${formatAmountInr(low)} – ${formatAmountInr(high)}`,
-        };
-      }
+      const parts = bs.capital_at_risk_saved.split(/[–—\-]|to/i).map((p) => p.trim()).filter(Boolean);
+      const rawLow = parts.length >= 2 ? (parseAmountInr(parts[0]) || baseLow) : baseLow;
+      const rawHigh = parts.length >= 2 ? (parseAmountInr(parts[1]) || baseHigh) : baseHigh;
+
+      const combinedFactor = (teamMult * geoMult * 0.70) + (scaleMult * 0.30);
+      const calLow = Math.round(rawLow * combinedFactor);
+      const calHigh = Math.round(rawHigh * combinedFactor);
+      calibratedCapitalRange = `${formatAmountInr(calLow)} – ${formatAmountInr(calHigh)}`;
     }
 
-    const lowRange = Math.round(totalCalibrated * 0.85);
-    const highRange = Math.round(totalCalibrated * 1.15);
+    const devWeeksSaved = Math.round(12 * (customTeamSize / 5));
+    const dynamicRationale = `Calibrated for ${customTeamSize} engineers (${GEO_RATES[selectedGeoRate].label} @ ${GEO_RATES[selectedGeoRate].rateStr}) under ${SCALE_TIERS[selectedScaleTier].label}. Protects against unbudgeted rewrite toil, licensing traps, and infrastructure sprawl.`;
 
     return {
       ...bs,
-      capital_at_risk_saved: `${formatAmountInr(lowRange)} – ${formatAmountInr(highRange)}`,
+      capital_at_risk_saved: calibratedCapitalRange,
+      developer_sprints_saved: `6 Sprints (${devWeeksSaved} Dev-Wks)`,
+      risk_reduction_rationale: dynamicRationale,
       receipt: calibratedReceipt || bs.receipt,
     };
   }, [displaySynthesis, isCalibrated, customTeamSize, selectedGeoRate, selectedScaleTier]);
@@ -1193,27 +1207,45 @@ jobs:
 
                 {/* Metric 2: Sprint Velocity Saved */}
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-muted font-bold block">
-                    Engineering Velocity Saved
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
+                      Engineering Velocity Saved
+                    </span>
+                    {isCalibrated && (
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                        Calibrated
+                      </span>
+                    )}
+                  </div>
                   <div className="font-newsreader text-2xl font-bold text-ink">
-                    {displaySynthesis.blunder_shield?.developer_sprints_saved || "6 Sprints (12 Wks)"}
+                    {calibratedBlunderShield?.developer_sprints_saved || displaySynthesis.blunder_shield?.developer_sprints_saved || "6 Sprints (12 Wks)"}
                   </div>
                   <p className="text-[11px] text-muted leading-tight">
-                    Prevented dead-end prototype iterations and on-call operational drag before validation.
+                    {isCalibrated
+                      ? `Calibrated for ${customTeamSize} engineers. Prevents dead-end prototyping sprints and on-call operational drag.`
+                      : "Prevented dead-end prototype iterations and on-call operational drag before validation."}
                   </p>
                 </div>
 
                 {/* Metric 3: Fatal Sunk-Cost Trap Neutralized */}
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-muted font-bold block">
-                    Fatal Sunk-Cost Trap Blocked
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
+                      Fatal Sunk-Cost Trap Blocked
+                    </span>
+                    {isCalibrated && (
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                        Mitigated
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs font-bold text-ink truncate">
-                    {displaySynthesis.blunder_shield?.prevented_fatal_trap || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity"}
+                    {calibratedBlunderShield?.prevented_fatal_trap || displaySynthesis.blunder_shield?.prevented_fatal_trap || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity"}
                   </div>
                   <p className="text-[11px] text-muted line-clamp-2 leading-tight">
-                    {displaySynthesis.blunder_shield?.risk_reduction_rationale || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.why_not_recommended || "Deprioritized due to operational friction, high maintenance drag, and criteria misalignment."}
+                    {isCalibrated
+                      ? `Deprioritized to eliminate ${SCALE_TIERS[selectedScaleTier].label} infrastructure tax and ${GEO_RATES[selectedGeoRate].label} hiring overhead.`
+                      : (displaySynthesis.blunder_shield?.risk_reduction_rationale || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.why_not_recommended || "Deprioritized due to operational friction, high maintenance drag, and criteria misalignment.")}
                   </p>
                 </div>
               </div>

@@ -101,6 +101,26 @@ def get_decision_synthesis(
             detail="No recommendation synthesis has been generated for this decision yet.",
         )
 
+    rec_dict = dict(decision.recommendation)
+    if not rec_dict.get("blunder_shield"):
+        from app.services.recommendation import compute_blunder_shield
+        analysis_data = decision.analysis or {}
+        domain = getattr(decision, "domain", None) or analysis_data.get("domain") or "BUSINESS"
+        winner_name = rec_dict.get("canonical_result", {}).get("winner_option_name") or rec_dict.get("headline") or "Primary Strategy"
+        alts = rec_dict.get("alternatives_considered", [])
+        risks = [r.get("risk") if isinstance(r, dict) else str(r) for r in rec_dict.get("risks_and_mitigations", [])]
+        shield_obj = compute_blunder_shield(
+            domain=domain,
+            top_option_name=winner_name,
+            alternatives=alts,
+            risks=risks,
+            decision_id=decision.id,
+            problem_statement=decision.problem_statement or decision.title,
+        )
+        rec_dict["blunder_shield"] = shield_obj.model_dump()
+        decision.recommendation = rec_dict
+        db.commit()
+
     return DecisionSynthesis.model_validate(decision.recommendation)
 
 
