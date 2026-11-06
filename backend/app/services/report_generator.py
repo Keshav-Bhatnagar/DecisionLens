@@ -81,38 +81,111 @@ def generate_decision_markdown_report(decision: Decision) -> str:
         "",
         "---",
         "",
-        "## 2. Cognitive Structuring (8 Distinct Cognitive Categories)",
+        "## 2. Cognitive Structuring (The 4 Evidence Orbits)",
         "",
     ])
 
-    # 8 categories
-    cat_keys = [
-        ("Facts (Concrete, Verified)", "facts"),
-        ("Assumptions (Unverified Hypotheses)", "assumptions"),
-        ("Pros (Strategic Upsides)", "pros"),
-        ("Cons (Vulnerabilities & Friction)", "cons"),
-        ("Mixed Points (Nuanced Trade-offs)", "mixed_points"),
-        ("Feelings (Stakeholder Morale & Anxiety)", "feelings"),
-        ("Contradictions (Direct Inconsistencies)", "contradictions"),
-        ("Unknowns (Information Blindspots)", "unknowns"),
-    ]
+    # Orbit 01: The Ground Truth
+    facts = points.get("facts", [])
+    pros = points.get("pros", [])
+    lines.extend([
+        "### Orbit 01 • The Ground Truth",
+        f"*Direct facts ({len(facts)}) and validated strategic realities ({len(pros)})*",
+        "",
+        "#### Facts (Concrete, Verified Grounding)",
+    ])
+    if facts:
+        for item in facts:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- *None noted.*")
+    lines.append("")
 
-    for cat_title, cat_key in cat_keys:
-        items = points.get(cat_key, [])
-        lines.append(f"### {cat_title}")
-        if items and isinstance(items, list):
-            for item in items:
-                lines.append(f"- {item}")
-        else:
-            lines.append("- *None noted.*")
-        lines.append("")
+    lines.append("#### Pros (Validated Strategic Upsides)")
+    if pros:
+        for item in pros:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- *None noted.*")
+    lines.append("")
 
-    # Private feedback
+    # Orbit 02: Working Assumptions & Information Gaps
+    assumptions = points.get("assumptions", [])
+    unknowns = points.get("unknowns", [])
+    lines.extend([
+        "### Orbit 02 • Working Assumptions & Information Gaps",
+        f"*Hypotheses requiring validation ({len(assumptions)}) and information blindspots ({len(unknowns)})*",
+        "",
+        "#### Assumptions (Unverified Hypotheses Requiring Validation)",
+    ])
+    if assumptions:
+        for item in assumptions:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- *None noted.*")
+    lines.append("")
+
+    lines.append("#### Unknowns (Information Blindspots & Open Questions)")
+    if unknowns:
+        for item in unknowns:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- *None noted.*")
+    lines.append("")
+
+    # Orbit 03: Decision Traps & Stakeholder Sentiment
+    feelings = points.get("feelings", [])
+    contradictions = points.get("contradictions", [])
+    lines.extend([
+        "### Orbit 03 • Decision Traps & Stakeholder Sentiment",
+        f"*Structural fallacies ({len(contradictions)}) and intuitive team hesitation ({len(feelings)})*",
+        "",
+        "#### Stakeholder Morale & Intuitive Hesitation (Feelings)",
+    ])
+    if feelings:
+        for item in feelings:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- *None noted.*")
+    lines.append("")
+
+    lines.append("#### Contradictions (Direct Structural Inconsistencies)")
+    if contradictions:
+        for item in contradictions:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- *None noted.*")
+    lines.append("")
+
+    # Orbit 04: Meeting Caveats & Mixed Trade-Offs
+    cons = points.get("cons", [])
+    mixed = points.get("mixed_points", [])
     feedback = points.get("private_feedback")
+    lines.extend([
+        "### Orbit 04 • Meeting Caveats & Mixed Trade-Offs",
+        f"*Recorded dissent ({len(cons)}), dual-sided trade-offs ({len(mixed)}), and anti-bias advisory*",
+        "",
+        "#### Cons (Operational Friction & Vulnerabilities)",
+    ])
+    if cons:
+        for item in cons:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- *None noted.*")
+    lines.append("")
+
+    lines.append("#### Mixed Points (Dual-Sided Nuanced Trade-Offs)")
+    if mixed:
+        for item in mixed:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- *None noted.*")
+    lines.append("")
+
     if feedback and isinstance(feedback, dict):
         lines.extend([
-            "### Private Reflective Feedback",
-            f"- **Discussion Dynamics & Alignment:** {feedback.get('tone_observations', 'Objective and measured.')}",
+            "#### Anti-Bias Advisory (Private Reflective Feedback)",
+            f"- **Tone Observations:** {feedback.get('tone_observations', 'Objective and measured.')}",
             f"- **Clarity Rating:** {feedback.get('clarity_rating', 'Medium')}",
             f"- **Cognitive Biases Detected:** {', '.join(feedback.get('potential_biases', ['None detected']))}",
             f"- **Strategic Feedback Notes:** {feedback.get('feedback_notes', 'N/A')}",
@@ -586,36 +659,113 @@ def generate_decision_latex_report(decision: Decision) -> str:
         f"\\item \\textbf{{Transcript Status:}} {'Reviewed by user' if decision.transcript_reviewed else ('Present (Unreviewed)' if decision.transcript else 'None')}",
         r"\end{itemize}",
         "",
-        r"\section{Cognitive Structuring (8 Distinct Cognitive Categories)}",
+        r"\section{Cognitive Structuring (The 4 Evidence Orbits)}",
     ]
 
-    cat_keys = [
-        ("Facts (Concrete, Verified)", "facts"),
-        ("Assumptions (Unverified Hypotheses)", "assumptions"),
-        ("Pros (Strategic Upsides)", "pros"),
-        ("Cons (Vulnerabilities & Friction)", "cons"),
-        ("Mixed Points (Nuanced Trade-offs)", "mixed_points"),
-        ("Feelings (Stakeholder Morale & Anxiety)", "feelings"),
-        ("Contradictions (Direct Inconsistencies)", "contradictions"),
-        ("Unknowns (Information Blindspots)", "unknowns"),
-    ]
+    # Orbit 01: The Ground Truth
+    facts = points.get("facts", [])
+    pros = points.get("pros", [])
+    lines.extend([
+        r"\subsection{Orbit 01 $\cdot$ The Ground Truth}",
+        r"\textit{Direct facts and validated strategic upsides.}",
+        r"\subsubsection{Facts (Concrete, Verified Grounding)}",
+    ])
+    if facts:
+        lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
+        for item in facts:
+            lines.append(f"\\item {escape_latex(item)}")
+        lines.append(r"\end{itemize}")
+    else:
+        lines.append(r"\textit{None noted.}")
 
-    for cat_title, cat_key in cat_keys:
-        items = points.get(cat_key, [])
-        lines.append(f"\\subsection{{{cat_title}}}")
-        if items and isinstance(items, list):
-            lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
-            for item in items:
-                lines.append(f"\\item {escape_latex(item)}")
-            lines.append(r"\end{itemize}")
-        else:
-            lines.append(r"\textit{None noted.}")
+    lines.append(r"\subsubsection{Pros (Validated Strategic Upsides)}")
+    if pros:
+        lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
+        for item in pros:
+            lines.append(f"\\item {escape_latex(item)}")
+        lines.append(r"\end{itemize}")
+    else:
+        lines.append(r"\textit{None noted.}")
 
-    # Private feedback
+    # Orbit 02: Working Assumptions & Information Gaps
+    assumptions = points.get("assumptions", [])
+    unknowns = points.get("unknowns", [])
+    lines.extend([
+        r"\subsection{Orbit 02 $\cdot$ Working Assumptions \& Information Gaps}",
+        r"\textit{Hypotheses requiring validation and information blindspots.}",
+        r"\subsubsection{Assumptions (Unverified Hypotheses Requiring Validation)}",
+    ])
+    if assumptions:
+        lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
+        for item in assumptions:
+            lines.append(f"\\item {escape_latex(item)}")
+        lines.append(r"\end{itemize}")
+    else:
+        lines.append(r"\textit{None noted.}")
+
+    lines.append(r"\subsubsection{Unknowns (Information Blindspots \& Open Questions)}")
+    if unknowns:
+        lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
+        for item in unknowns:
+            lines.append(f"\\item {escape_latex(item)}")
+        lines.append(r"\end{itemize}")
+    else:
+        lines.append(r"\textit{None noted.}")
+
+    # Orbit 03: Decision Traps & Stakeholder Sentiment
+    feelings = points.get("feelings", [])
+    contradictions = points.get("contradictions", [])
+    lines.extend([
+        r"\subsection{Orbit 03 $\cdot$ Decision Traps \& Stakeholder Sentiment}",
+        r"\textit{Structural fallacies and intuitive team hesitation.}",
+        r"\subsubsection{Stakeholder Morale \& Intuitive Hesitation (Feelings)}",
+    ])
+    if feelings:
+        lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
+        for item in feelings:
+            lines.append(f"\\item {escape_latex(item)}")
+        lines.append(r"\end{itemize}")
+    else:
+        lines.append(r"\textit{None noted.}")
+
+    lines.append(r"\subsubsection{Contradictions (Direct Structural Inconsistencies)}")
+    if contradictions:
+        lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
+        for item in contradictions:
+            lines.append(f"\\item {escape_latex(item)}")
+        lines.append(r"\end{itemize}")
+    else:
+        lines.append(r"\textit{None noted.}")
+
+    # Orbit 04: Meeting Caveats & Mixed Trade-Offs
+    cons = points.get("cons", [])
+    mixed = points.get("mixed_points", [])
     feedback = points.get("private_feedback")
+    lines.extend([
+        r"\subsection{Orbit 04 $\cdot$ Meeting Caveats \& Mixed Trade-Offs}",
+        r"\textit{Recorded dissent, dual-sided trade-offs, and anti-bias advisory.}",
+        r"\subsubsection{Cons (Operational Friction \& Vulnerabilities)}",
+    ])
+    if cons:
+        lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
+        for item in cons:
+            lines.append(f"\\item {escape_latex(item)}")
+        lines.append(r"\end{itemize}")
+    else:
+        lines.append(r"\textit{None noted.}")
+
+    lines.append(r"\subsubsection{Mixed Points (Dual-Sided Nuanced Trade-Offs)}")
+    if mixed:
+        lines.append(r"\begin{itemize}[noitemsep,topsep=2pt]")
+        for item in mixed:
+            lines.append(f"\\item {escape_latex(item)}")
+        lines.append(r"\end{itemize}")
+    else:
+        lines.append(r"\textit{None noted.}")
+
     if feedback and isinstance(feedback, dict):
         lines.extend([
-            r"\subsection{Private Reflective Feedback}",
+            r"\subsubsection{Anti-Bias Advisory (Private Reflective Feedback)}",
             r"\begin{tcolorbox}[colback=WarmPaper, colframe=BorderGray, arc=1mm, boxrule=0.6pt]",
             f"\\textbf{{Tone Observations:}} {escape_latex(feedback.get('tone_observations', 'Objective and measured.'))} \\\\[3pt]",
             f"\\textbf{{Clarity Rating:}} {escape_latex(feedback.get('clarity_rating', 'Medium'))} \\\\[3pt]",
@@ -1216,7 +1366,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
         ],
         [
             Paragraph("<b>2.</b>", table_header),
-            Paragraph('<a href="#sec_cognitive" color="#161E33">Cognitive Structuring (8 Distinct Categories)</a> <font color="#C4BCAD">. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .</font>', table_cell),
+            Paragraph('<a href="#sec_cognitive" color="#161E33">Cognitive Structuring (The 4 Evidence Orbits)</a> <font color="#C4BCAD">. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .</font>', table_cell),
             Paragraph('<a href="#sec_cognitive" color="#2F5D8F"><b>§ 2</b></a>', ParagraphStyle("TR", parent=table_cell, alignment=2)),
         ],
         [
@@ -1280,16 +1430,35 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     story.append(Paragraph(ingest_txt, body_muted))
     story.append(Spacer(1, 6))
 
-    # Section 2: Cognitive Structuring
+    # Section 2: Cognitive Structuring (The 4 Evidence Orbits)
     story.append(BookmarkFlowable("sec_cognitive", "2. Cognitive Structuring", 0))
-    story.append(Paragraph('<a name="sec_cognitive"/><b>2. Cognitive Structuring (8 Distinct Cognitive Categories)</b>', h1_style))
+    story.append(Paragraph('<a name="sec_cognitive"/><b>2. Cognitive Structuring (Stage 02 Evidence Orbit — 4 Core Dimensions)</b>', h1_style))
     story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
 
-    def _render_cat_card(title: str, items: list, width: float = 499):
-        items_txt = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items]) if items else "<i>None noted during deliberation.</i>"
+    def _render_orbit_card(number: str, title: str, subtitle: str, sections: list, width: float = 499):
+        """
+        Renders an atomic Evidence Orbit card matching Stage 02 UI.
+        sections is a list of tuples: (sublabel_title, items_list, is_formatted_text)
+        """
+        content_parts = []
+        for sec_idx, (label, items, is_text) in enumerate(sections):
+            if sec_idx > 0:
+                content_parts.append("<br/>")
+            content_parts.append(f"<b><font color='#7a4e10'>{label}:</font></b><br/>")
+            if is_text:
+                content_parts.append(items)
+            elif items and isinstance(items, list):
+                bullets = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items])
+                content_parts.append(bullets)
+            else:
+                content_parts.append("<i>None noted during deliberation.</i>")
+
+        cell_html = "".join(content_parts)
+        header_html = f"<b>{number} &bull; {title}</b> <font color='#5A6275'>— {subtitle}</font>"
+
         card = Table([
-            [Paragraph(f"<b>{title}</b>", h2_style)],
-            [Paragraph(items_txt, table_cell)],
+            [Paragraph(header_html, h2_style)],
+            [Paragraph(cell_html, table_cell)],
         ], colWidths=[width])
         card.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
@@ -1297,83 +1466,79 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
             ('LINEBELOW', (0, 0), (-1, 0), 0.4, COLOR_BORDER),
             ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ('LEFTPADDING', (0, 0), (-1, -1), 6),
             ('RIGHTPADDING', (0, 0), (-1, -1), 6),
         ]))
         return KeepTogether(card)
 
-    def _render_pair_card(title_a: str, items_a: list, title_b: str, items_b: list):
-        txt_a = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items_a]) if items_a else "<i>None noted.</i>"
-        txt_b = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items_b]) if items_b else "<i>None noted.</i>"
-        pair = Table([
-            [Paragraph(f"<b>{title_a}</b>", h2_style), Paragraph(f"<b>{title_b}</b>", h2_style)],
-            [Paragraph(txt_a, table_cell), Paragraph(txt_b, table_cell)],
-        ], colWidths=[246, 246])
-        pair.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, 0), COLOR_PAGE),
-            ('BACKGROUND', (1, 0), (1, 0), COLOR_PAGE),
-            ('BACKGROUND', (0, 1), (-1, -1), COLOR_SURFACE),
-            ('BOX', (0, 0), (0, -1), 0.5, COLOR_BORDER),
-            ('BOX', (1, 0), (1, -1), 0.5, COLOR_BORDER),
-            ('LINEBELOW', (0, 0), (0, 0), 0.4, COLOR_BORDER),
-            ('LINEBELOW', (1, 0), (1, 0), 0.4, COLOR_BORDER),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-        ]))
-        return KeepTogether(pair)
-
-    # 1. Facts - Full-width featured grounding card
-    story.append(_render_cat_card("Facts (Concrete, Verified Grounding)", points.get("facts", [])))
-    story.append(Spacer(1, 3))
-
-    # 2. Assumptions & Unknowns - Epistemic uncertainty pair
-    story.append(_render_pair_card(
-        "Assumptions (Unverified Hypotheses)", points.get("assumptions", []),
-        "Unknowns (Information Blindspots)", points.get("unknowns", [])
+    # Orbit 01: The Ground Truth
+    facts_list = points.get("facts", [])
+    pros_list = points.get("pros", [])
+    story.append(_render_orbit_card(
+        "Orbit 01",
+        "The Ground Truth",
+        f"Direct Facts ({len(facts_list)}) & Validated Realities ({len(pros_list)})",
+        [
+            ("Facts (Concrete, Verified Grounding)", facts_list, False),
+            ("Pros (Validated Strategic Upsides)", pros_list, False),
+        ]
     ))
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 4))
 
-    # 3. Pros & Cons - Core trade-off pair
-    story.append(_render_pair_card(
-        "Pros (Strategic Upsides)", points.get("pros", []),
-        "Cons (Vulnerabilities & Friction)", points.get("cons", [])
+    # Orbit 02: Working Assumptions & Information Gaps
+    assumptions_list = points.get("assumptions", [])
+    unknowns_list = points.get("unknowns", [])
+    story.append(_render_orbit_card(
+        "Orbit 02",
+        "Working Assumptions & Information Gaps",
+        f"Hypotheses ({len(assumptions_list)}) & Blindspots ({len(unknowns_list)})",
+        [
+            ("Assumptions (Unverified Hypotheses Requiring Validation)", assumptions_list, False),
+            ("Unknowns (Information Blindspots & Open Questions)", unknowns_list, False),
+        ]
     ))
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 4))
 
-    # 4. Mixed Points & Feelings - Nuances & Stakeholder morale pair
-    story.append(_render_pair_card(
-        "Mixed Points (Nuanced Trade-offs)", points.get("mixed_points", []),
-        "Feelings (Stakeholder Morale)", points.get("feelings", [])
+    # Orbit 03: Decision Traps & Stakeholder Sentiment
+    feelings_list = points.get("feelings", [])
+    contradictions_list = points.get("contradictions", [])
+    story.append(_render_orbit_card(
+        "Orbit 03",
+        "Decision Traps & Stakeholder Sentiment",
+        f"Structural Fallacies ({len(contradictions_list)}) & Morale ({len(feelings_list)})",
+        [
+            ("Stakeholder Morale & Intuitive Hesitation (Feelings)", feelings_list, False),
+            ("Contradictions (Direct Structural Inconsistencies)", contradictions_list, False),
+        ]
     ))
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 4))
 
-    # 5. Contradictions - Direct Inconsistencies card
-    story.append(_render_cat_card("Contradictions (Direct Inconsistencies)", points.get("contradictions", [])))
-    story.append(Spacer(1, 3))
-
-    # Private feedback card
+    # Orbit 04: Meeting Caveats & Mixed Trade-Offs
+    cons_list = points.get("cons", [])
+    mixed_list = points.get("mixed_points", [])
     feedback = points.get("private_feedback")
+    fb_text = ""
     if feedback and isinstance(feedback, dict):
-        fb_txt = (
+        fb_text = (
             f"<b>Tone Observations:</b> {escape_xml(feedback.get('tone_observations', 'Objective.'))}<br/>"
             f"<b>Clarity Rating:</b> {escape_xml(feedback.get('clarity_rating', 'Medium'))} &bull; "
             f"<b>Cognitive Biases Detected:</b> {escape_xml(', '.join(feedback.get('potential_biases', ['None detected'])))}<br/>"
-            f"<b>Strategic Feedback:</b> {escape_xml(feedback.get('feedback_notes', 'N/A'))}"
+            f"<b>Strategic Feedback Notes:</b> {escape_xml(feedback.get('feedback_notes', 'N/A'))}"
         )
-        fb_table = Table([[Paragraph("<b>Private Reflective Feedback (Anti-Bias Analysis)</b>", h2_style)], [Paragraph(fb_txt, table_cell)]], colWidths=[499])
-        fb_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), COLOR_PAGE),
-            ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        story.append(Spacer(1, 2))
-        story.append(KeepTogether(fb_table))
+    else:
+        fb_text = "<i>No private feedback recorded.</i>"
 
+    story.append(_render_orbit_card(
+        "Orbit 04",
+        "Meeting Caveats & Mixed Trade-Offs",
+        f"Recorded Dissent ({len(cons_list)}), Nuanced Trade-Offs ({len(mixed_list)}) & Anti-Bias Advisory",
+        [
+            ("Cons (Operational Friction & Vulnerabilities)", cons_list, False),
+            ("Mixed Points (Dual-Sided Nuanced Trade-Offs)", mixed_list, False),
+            ("Anti-Bias Advisory (Private Reflective Feedback)", fb_text, True),
+        ]
+    ))
     story.append(Spacer(1, 6))
 
     # Section 3: Gaps & Web Research
