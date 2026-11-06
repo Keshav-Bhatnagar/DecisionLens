@@ -1000,6 +1000,13 @@ class RoadmapData(BaseModel):
     phases: List[RoadmapPhase] = Field(default_factory=list)
 
 
+class BlunderShield(BaseModel):
+    capital_at_risk_saved: str = Field(..., description="Estimated direct capital at risk prevented (e.g. ₹45L – ₹65L)")
+    developer_sprints_saved: str = Field(..., description="Estimated engineering velocity saved (e.g. 4 – 6 Sprints)")
+    prevented_fatal_trap: str = Field(..., description="The primary structural decision trap neutralized")
+    risk_reduction_rationale: str = Field(..., description="Operational rationale explaining risk reduction")
+
+
 class DecisionSynthesis(BaseModel):
     decision_id: int
     synthesis_type: str = Field(
@@ -1026,6 +1033,7 @@ class DecisionSynthesis(BaseModel):
     created_at: str
     version: int = 1
     override: Optional[Dict[str, Any]] = Field(None, description="Leadership sovereign override metadata")
+    blunder_shield: Optional[BlunderShield] = Field(None, description="Quantified capital-at-risk and velocity insurance metrics")
 
 
 class OverrideRequest(BaseModel):

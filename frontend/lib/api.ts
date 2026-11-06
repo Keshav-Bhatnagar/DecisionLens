@@ -1172,6 +1172,13 @@ export interface RoadmapData {
   phases: RoadmapPhase[];
 }
 
+export interface BlunderShield {
+  capital_at_risk_saved: string;
+  developer_sprints_saved: string;
+  prevented_fatal_trap: string;
+  risk_reduction_rationale: string;
+}
+
 export interface DecisionSynthesis {
   decision_id: number;
   synthesis_type: "recommendation" | "conditional_next_step" | string;
@@ -1190,6 +1197,7 @@ export interface DecisionSynthesis {
   canonical_result?: CanonicalDecisionResult | null;
   domain?: string;
   is_stale?: boolean;
+  blunder_shield?: BlunderShield | null;
   override?: {
     overridden_winner: string;
     reason: string;

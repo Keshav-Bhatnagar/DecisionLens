@@ -864,14 +864,16 @@ jobs:
                     Capital at Risk Prevented
                   </span>
                   <div className="font-newsreader text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                    {displaySynthesis.domain === "REAL_ESTATE"
-                      ? "₹1.50 Cr – ₹2.80 Cr"
-                      : displaySynthesis.domain === "FINANCE"
-                      ? "₹85 Lakh – ₹1.40 Cr"
-                      : "₹45 Lakh – ₹65 Lakh"}
+                    {displaySynthesis.blunder_shield?.capital_at_risk_saved || (
+                      displaySynthesis.domain === "REAL_ESTATE"
+                        ? "₹1.50 Cr – ₹2.80 Cr"
+                        : displaySynthesis.domain === "FINANCE"
+                        ? "₹85 Lakh – ₹1.40 Cr"
+                        : "₹45 Lakh – ₹65 Lakh"
+                    )}
                   </div>
                   <p className="text-[11px] text-muted leading-tight">
-                    Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments.
+                    {displaySynthesis.blunder_shield?.risk_reduction_rationale || "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments."}
                   </p>
                 </div>
 
@@ -881,7 +883,7 @@ jobs:
                     Engineering Velocity Saved
                   </span>
                   <div className="font-newsreader text-2xl font-bold text-ink">
-                    6 Sprints (12 Wks)
+                    {displaySynthesis.blunder_shield?.developer_sprints_saved || "6 Sprints (12 Wks)"}
                   </div>
                   <p className="text-[11px] text-muted leading-tight">
                     Prevented dead-end prototype iterations and on-call operational drag before validation.
@@ -894,10 +896,10 @@ jobs:
                     Fatal Sunk-Cost Trap Blocked
                   </span>
                   <div className="text-xs font-bold text-ink truncate">
-                    {displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity"}
+                    {displaySynthesis.blunder_shield?.prevented_fatal_trap || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity"}
                   </div>
                   <p className="text-[11px] text-muted line-clamp-2 leading-tight">
-                    {displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.why_not_recommended || "Deprioritized due to operational friction, high maintenance drag, and criteria misalignment."}
+                    {displaySynthesis.blunder_shield?.risk_reduction_rationale || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.why_not_recommended || "Deprioritized due to operational friction, high maintenance drag, and criteria misalignment."}
                   </p>
                 </div>
               </div>

@@ -562,3 +562,84 @@ def test_executive_sovereign_override_and_revert(
     assert reverted["override"] is None
     assert "Executive Mandate: Proceed with" in reverted["headline"]
 
+
+def test_synthesis_blunder_shield_and_report_alignment(
+    client: TestClient, auth_headers: dict, test_user: User, test_folder: Folder, db_session: Session
+):
+    """
+    Verify prompt, synthesis response, and final report generators (Markdown, PDF, LaTeX)
+    are 100% aligned with Blunder Shield metrics and MADR architectural governance.
+    """
+    from app.services.report_generator import (
+        generate_decision_markdown_report,
+        generate_decision_interactive_pdf,
+        generate_decision_latex_report,
+    )
+
+    decision = Decision(
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+        title="Production Microservices Migration",
+        problem_statement="Evaluate migration from modular monolith to microservices under high load.",
+        domain="SOFTWARE",
+        points={
+            "facts": ["Modular monolith currently processes 12,000 requests/sec."],
+            "assumptions": ["Traffic may double in 12 months."],
+            "pros": ["Modular monolith is maintainable with low team overhead."],
+            "cons": ["Potential shared database bottleneck at 3x scale."],
+            "unknowns": [],
+        },
+        points_reviewed=True,
+        gaps={"gaps": []},
+        analysis={
+            "decision_matrix": {
+                "results": [
+                    {"option_name": "Optimized Modular Monolith", "option_id": "OPT_001", "weighted_score": 8.7, "rank": 1},
+                    {"option_name": "Full Microservices Rewrite", "option_id": "OPT_002", "weighted_score": 6.2, "rank": 2},
+                ]
+            }
+        },
+    )
+    db_session.add(decision)
+    db_session.commit()
+    db_session.refresh(decision)
+
+    # 1. Generate synthesis via API
+    resp = client.post(
+        f"/api/decisions/{decision.id}/synthesis",
+        json={"force_mock": True},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    synth_data = resp.json()
+
+    # Verify BlunderShield is present and epistemically computed
+    shield = synth_data.get("blunder_shield")
+    assert shield is not None, "blunder_shield must be populated in DecisionSynthesis"
+    assert "₹" in shield["capital_at_risk_saved"], "Capital at risk must have currency metric"
+    assert "Sprints" in shield["developer_sprints_saved"], "Velocity must specify sprints saved"
+    assert "Full Microservices Rewrite" in shield["prevented_fatal_trap"] or "Premature" in shield["prevented_fatal_trap"]
+    assert len(shield["risk_reduction_rationale"]) > 10
+
+    # Refresh decision from DB
+    db_session.refresh(decision)
+
+    # 2. Markdown Report verification
+    md_report = generate_decision_markdown_report(decision)
+    assert "### 🛡️ Capital at Risk & Blunder Shield" in md_report
+    assert "Capital at Risk Prevented" in md_report
+    assert shield["capital_at_risk_saved"] in md_report
+    assert "### 📜 Architectural Decision Record (Git-Native MADR Standard)" in md_report
+    assert f"ADR-{decision.id:04d}" in md_report
+
+    # 3. Interactive PDF verification
+    pdf_bytes = generate_decision_interactive_pdf(decision)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 2000
+    assert pdf_bytes.startswith(b"%PDF")
+
+    # 4. LaTeX Report verification
+    latex_report = generate_decision_latex_report(decision)
+    assert "Capital at Risk \\& Blunder Shield Protection" in latex_report
+    assert f"ADR-{decision.id:04d}" in latex_report
+
