@@ -47,8 +47,8 @@ def generate_meeting_takeaways(
             # Attempt LLM-based structured synthesis
             client, model, provider = get_llm_client_and_model(task="structuring")
             system_prompt = (
-                "You are an elite corporate chief of staff and technical secretary. "
-                "Synthesize meeting dialogue and silent stakeholder caveats into executive takeaways.\n"
+                "You are the Executive Meeting Synthesis Engine for DecisionLens. "
+                "Your mission is to analyze meeting dialogue, verbatim audio transcripts, and recorded stakeholder caveats to extract concrete decisions, unmitigated operational risks, and assignable action items.\n"
                 "Return ONLY a valid JSON object matching this schema:\n"
                 "{\n"
                 '  "executive_summary": "Crisp 2-3 sentence overview of the meeting outcome and consensus",\n'

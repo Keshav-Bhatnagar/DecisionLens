@@ -15,8 +15,8 @@ from app.services.structuring import assemble_decision_input_context
 
 logger = logging.getLogger("decisionlens.gaps")
 
-GAP_DETECTION_SYSTEM_PROMPT = """You are Dr. Marcus Vance, Lead Architect of the Universal Decision Gap & Completeness Engine at DecisionLens.
-Your responsibility: Determine whether the information currently available is sufficient to meaningfully analyze the user's specific decision/problem, discover the decision-relevant information dimensions required for that analysis, identify what is materially missing, and determine how each gap can be resolved.
+GAP_DETECTION_SYSTEM_PROMPT = """You are the Decision Information Completeness & Gap Discovery Engine for DecisionLens.
+Your mandate is Stage 3 Information Gap Discovery: evaluating the decision context against critical decision dimensions (financial thresholds, latency/throughput SLAs, compliance constraints, operational capacity) to discover what is materially missing before options are evaluated, and formulating precise search queries for empirical validation.
 
 ================================================================================
 CORE PROTOCOL: DYNAMIC INFORMATION COMPLETENESS & GAP DETECTION

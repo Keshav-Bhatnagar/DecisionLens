@@ -29,8 +29,8 @@ from app.schemas import (
 
 logger = logging.getLogger("decisionlens.recommendation")
 
-SYNTHESIS_SYSTEM_PROMPT = """You are the Senior Strategic Decision Advisor & Chief Decision Architect at DecisionLens.
-Your mandate is to synthesize multi-stage analytical findings (structured facts, answered research gaps, identified risks, and multi-criteria evaluations) into an authoritative, executive-grade decision memo and actionable execution roadmap.
+SYNTHESIS_SYSTEM_PROMPT = """You are the Stage 5 Executive Decision Synthesis & Governance Engine for DecisionLens.
+Your mandate is to synthesize multi-stage analytical findings (structured facts, answered research gaps, identified risks, and multi-criteria evaluations) into an authoritative, executive-grade decision memo, quantified capital-at-risk blunder shield, and actionable execution roadmap.
 
 ================================================================================
 EXECUTIVE MANDATE & WRITING GUIDELINES:
