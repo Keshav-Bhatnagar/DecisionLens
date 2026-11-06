@@ -1285,35 +1285,32 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     story.append(Paragraph('<a name="sec_cognitive"/><b>2. Cognitive Structuring (8 Distinct Cognitive Categories)</b>', h1_style))
     story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
 
-    cat_keys = [
-        ("Facts (Concrete, Verified)", "facts"),
-        ("Assumptions (Unverified Hypotheses)", "assumptions"),
-        ("Pros (Strategic Upsides)", "pros"),
-        ("Cons (Vulnerabilities & Friction)", "cons"),
-        ("Mixed Points (Nuanced Trade-offs)", "mixed_points"),
-        ("Feelings (Stakeholder Morale)", "feelings"),
-        ("Contradictions (Direct Inconsistencies)", "contradictions"),
-        ("Unknowns (Information Blindspots)", "unknowns"),
-    ]
+    def _render_cat_card(title: str, items: list, width: float = 499):
+        items_txt = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items]) if items else "<i>None noted during deliberation.</i>"
+        card = Table([
+            [Paragraph(f"<b>{title}</b>", h2_style)],
+            [Paragraph(items_txt, table_cell)],
+        ], colWidths=[width])
+        card.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
+            ('BACKGROUND', (0, 1), (-1, -1), COLOR_SURFACE),
+            ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.4, COLOR_BORDER),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        return KeepTogether(card)
 
-    for i in range(0, len(cat_keys), 2):
-        title_a, key_a = cat_keys[i]
-        items_a = points.get(key_a, [])
-        items_a_txt = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items_a]) if items_a else "<i>None noted.</i>"
-
-        if i + 1 < len(cat_keys):
-            title_b, key_b = cat_keys[i + 1]
-            items_b = points.get(key_b, [])
-            items_b_txt = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items_b]) if items_b else "<i>None noted.</i>"
-        else:
-            title_b, items_b_txt = "", ""
-
-        pair_data = [
+    def _render_pair_card(title_a: str, items_a: list, title_b: str, items_b: list):
+        txt_a = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items_a]) if items_a else "<i>None noted.</i>"
+        txt_b = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items_b]) if items_b else "<i>None noted.</i>"
+        pair = Table([
             [Paragraph(f"<b>{title_a}</b>", h2_style), Paragraph(f"<b>{title_b}</b>", h2_style)],
-            [Paragraph(items_a_txt, table_cell), Paragraph(items_b_txt, table_cell)],
-        ]
-        t = Table(pair_data, colWidths=[246, 246])
-        t.setStyle(TableStyle([
+            [Paragraph(txt_a, table_cell), Paragraph(txt_b, table_cell)],
+        ], colWidths=[246, 246])
+        pair.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (0, 0), COLOR_PAGE),
             ('BACKGROUND', (1, 0), (1, 0), COLOR_PAGE),
             ('BACKGROUND', (0, 1), (-1, -1), COLOR_SURFACE),
@@ -1326,8 +1323,36 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
         ]))
-        story.append(t)
-        story.append(Spacer(1, 3))
+        return KeepTogether(pair)
+
+    # 1. Facts - Full-width featured grounding card
+    story.append(_render_cat_card("Facts (Concrete, Verified Grounding)", points.get("facts", [])))
+    story.append(Spacer(1, 3))
+
+    # 2. Assumptions & Unknowns - Epistemic uncertainty pair
+    story.append(_render_pair_card(
+        "Assumptions (Unverified Hypotheses)", points.get("assumptions", []),
+        "Unknowns (Information Blindspots)", points.get("unknowns", [])
+    ))
+    story.append(Spacer(1, 3))
+
+    # 3. Pros & Cons - Core trade-off pair
+    story.append(_render_pair_card(
+        "Pros (Strategic Upsides)", points.get("pros", []),
+        "Cons (Vulnerabilities & Friction)", points.get("cons", [])
+    ))
+    story.append(Spacer(1, 3))
+
+    # 4. Mixed Points & Feelings - Nuances & Stakeholder morale pair
+    story.append(_render_pair_card(
+        "Mixed Points (Nuanced Trade-offs)", points.get("mixed_points", []),
+        "Feelings (Stakeholder Morale)", points.get("feelings", [])
+    ))
+    story.append(Spacer(1, 3))
+
+    # 5. Contradictions - Direct Inconsistencies card
+    story.append(_render_cat_card("Contradictions (Direct Inconsistencies)", points.get("contradictions", [])))
+    story.append(Spacer(1, 3))
 
     # Private feedback card
     feedback = points.get("private_feedback")
@@ -1347,7 +1372,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(Spacer(1, 2))
-        story.append(fb_table)
+        story.append(KeepTogether(fb_table))
 
     story.append(Spacer(1, 6))
 
