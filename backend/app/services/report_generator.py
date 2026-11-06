@@ -1,7 +1,12 @@
 import io
 import json
+import logging
 import re
+import shutil
+import subprocess
+import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
@@ -879,6 +884,51 @@ def generate_decision_latex_report(decision: Decision) -> str:
     ])
 
     return "\n".join(lines)
+
+
+def compile_latex_to_pdf_locally(tex_code: str) -> Optional[bytes]:
+    """
+    Safely compile LaTeX source code directly to PDF using a local compiler
+    (tectonic, pdflatex, or xelatex) if available in the host PATH.
+    Returns compiled PDF bytes or None if no compiler is available or compilation fails.
+    """
+    compiler = shutil.which("tectonic") or shutil.which("pdflatex") or shutil.which("xelatex")
+    if not compiler:
+        return None
+
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            tex_file = tmp_path / "document.tex"
+            tex_file.write_text(tex_code, encoding="utf-8")
+
+            if "tectonic" in compiler.lower():
+                cmd = [compiler, str(tex_file), "--outdir", str(tmp_path)]
+            else:
+                cmd = [
+                    compiler,
+                    "-interaction=nonstopmode",
+                    "-halt-on-error",
+                    "-output-directory",
+                    str(tmp_path),
+                    str(tex_file),
+                ]
+
+            proc = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
+                cwd=str(tmp_path),
+            )
+            pdf_file = tmp_path / "document.pdf"
+            if pdf_file.exists():
+                return pdf_file.read_bytes()
+    except Exception as exc:
+        logging.getLogger("decisionlens.report_generator").warning(
+            "Local LaTeX compilation failed (%s), falling back to native ReportLab.", exc
+        )
+    return None
 
 
 # ReportLab Color Palette

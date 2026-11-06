@@ -176,6 +176,22 @@ export default function ReportExportModal({
     }
   }
 
+  function handleOpenOverleaf() {
+    if (!latexContent) return;
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "https://www.overleaf.com/docs";
+    form.target = "_blank";
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "snip";
+    input.value = latexContent;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  }
+
   function handleDownloadMarkdown() {
     if (!report?.content) return;
     const blob = new Blob([report.content], { type: "text/markdown;charset=utf-8" });
@@ -474,16 +490,25 @@ export default function ReportExportModal({
                 </div>
               ) : latexContent ? (
                 <div className="space-y-3">
-                  <div className="p-3 bg-[var(--bg-surface)] rounded-lg border border-[var(--border)] flex items-center justify-between text-xs text-[var(--ink-secondary)]">
+                  <div className="p-3 bg-[var(--bg-surface)] rounded-lg border border-[var(--border)] flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--ink-secondary)]">
                     <span className="font-mono text-[11px]">
                       Standard Article &bull; Geometry (1.8cm) &bull; Hyperref Bookmarks &bull; Tcolorbox &bull; Booktabs
                     </span>
-                    <button
-                      onClick={handleDownloadLatex}
-                      className="text-[var(--accent)] font-bold hover:underline flex items-center gap-1"
-                    >
-                      <Download className="w-3 h-3" /> Download .tex
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleOpenOverleaf}
+                        className="px-2.5 py-1 rounded bg-emerald-600/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold hover:bg-emerald-600/25 transition inline-flex items-center gap-1.5"
+                        title="Open and compile directly in Overleaf (Cloud LaTeX)"
+                      >
+                        <ExternalLink className="w-3 h-3" /> Compile in Overleaf
+                      </button>
+                      <button
+                        onClick={handleDownloadLatex}
+                        className="text-[var(--accent)] font-bold hover:underline flex items-center gap-1"
+                      >
+                        <Download className="w-3 h-3" /> Download .tex
+                      </button>
+                    </div>
                   </div>
                   <pre className="font-mono text-xs bg-[#11100F] text-[#EDE8DE] p-5 sm:p-6 rounded-lg overflow-x-auto whitespace-pre leading-relaxed shadow-inner border border-[var(--border)]">
                     {latexContent}

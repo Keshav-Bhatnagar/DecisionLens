@@ -383,7 +383,10 @@ def export_decision_report(
 
     # 1. Interactive PDF format
     if fmt == "pdf":
-        pdf_bytes = generate_decision_interactive_pdf(decision)
+        from app.services.report_generator import compile_latex_to_pdf_locally
+        tex_source = generate_decision_latex_report(decision)
+        compiled_latex_pdf = compile_latex_to_pdf_locally(tex_source)
+        pdf_bytes = compiled_latex_pdf if compiled_latex_pdf else generate_decision_interactive_pdf(decision)
         disposition = "attachment" if download else "inline"
         return Response(
             content=pdf_bytes,
