@@ -50,6 +50,8 @@ import {
   Receipt,
   ChevronDown,
   ChevronUp,
+  Globe,
+  Server,
 } from "lucide-react";
 import OutcomeTrackingCard from "@/components/OutcomeTrackingCard";
 
@@ -93,6 +95,12 @@ export default function SynthesisPanel({
   const [overrideReason, setOverrideReason] = useState<string>("");
   const [savingOverride, setSavingOverride] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+
+  // Interactive FinOps Calibrator State
+  const [isCalibratorOpen, setIsCalibratorOpen] = useState(false);
+  const [customTeamSize, setCustomTeamSize] = useState<number>(5);
+  const [selectedGeoRate, setSelectedGeoRate] = useState<"INDIA" | "US" | "EUROPE" | "SEA">("INDIA");
+  const [selectedScaleTier, setSelectedScaleTier] = useState<"STARTUP" | "GROWTH" | "ENTERPRISE">("GROWTH");
 
   // Dynamic date calculation based on leadership's start date
   function getPhaseDates(phaseIdx: number) {
@@ -370,6 +378,136 @@ export default function SynthesisPanel({
     displaySynthesis?.synthesis_type === "conditional_next_step" ||
     (displaySynthesis?.canonical_result?.decision_status &&
       displaySynthesis.canonical_result.decision_status !== "READY");
+
+  // FinOps Calibrator Multipliers & Logic
+  type GeoKey = "INDIA" | "US" | "EUROPE" | "SEA";
+  type ScaleKey = "STARTUP" | "GROWTH" | "ENTERPRISE";
+
+  const GEO_RATES: Record<GeoKey, { label: string; rateStr: string; multiplier: number }> = {
+    INDIA: { label: "India Tech Hub", rateStr: "₹2.1L/mo (₹25L CTC)", multiplier: 1.0 },
+    US: { label: "US / North America", rateStr: "$13k/mo (≈₹11L/mo)", multiplier: 5.2 },
+    EUROPE: { label: "Western Europe", rateStr: "€7.2k/mo (≈₹6.8L/mo)", multiplier: 3.2 },
+    SEA: { label: "Southeast Asia", rateStr: "$3.8k/mo (≈₹3.2L/mo)", multiplier: 1.5 },
+  };
+
+  const SCALE_TIERS: Record<ScaleKey, { label: string; desc: string; multiplier: number }> = {
+    STARTUP: { label: "Early Stage / Seed", desc: "< 1M req/mo", multiplier: 0.65 },
+    GROWTH: { label: "Series A–B Growth", desc: "10M–100M req/mo (Baseline)", multiplier: 1.0 },
+    ENTERPRISE: { label: "Enterprise High-QPS", desc: "1B+ req/mo, Multi-AZ", multiplier: 1.85 },
+  };
+
+  const isCalibrated = customTeamSize !== 5 || selectedGeoRate !== "INDIA" || selectedScaleTier !== "GROWTH";
+
+  const handleResetCalibrator = () => {
+    setCustomTeamSize(5);
+    setSelectedGeoRate("INDIA");
+    setSelectedScaleTier("GROWTH");
+  };
+
+  function parseAmountInr(str: string): number {
+    if (!str) return 0;
+    const clean = str.replace(/[₹,\s]/g, "").toLowerCase();
+    const crMatch = clean.match(/([\d.]+)\s*cr/);
+    if (crMatch) return parseFloat(crMatch[1]) * 10000000;
+    const lakhMatch = clean.match(/([\d.]+)\s*lakh/);
+    if (lakhMatch) return parseFloat(lakhMatch[1]) * 100000;
+    const numMatch = clean.match(/([\d.]+)/);
+    if (numMatch) return parseFloat(numMatch[1]);
+    return 0;
+  }
+
+  function formatAmountInr(val: number): string {
+    if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+    if (val >= 100000) return `₹${(val / 100000).toFixed(2)} Lakh`;
+    return `₹${Math.round(val).toLocaleString("en-IN")}`;
+  }
+
+  const calibratedBlunderShield = useMemo(() => {
+    if (!displaySynthesis?.blunder_shield) return null;
+    const bs = displaySynthesis.blunder_shield;
+    if (!isCalibrated) return bs;
+
+    const geoMult = GEO_RATES[selectedGeoRate].multiplier;
+    const teamMult = customTeamSize / 5;
+    const scaleMult = SCALE_TIERS[selectedScaleTier].multiplier;
+
+    let calibratedReceipt = null;
+    let totalCalibrated = 0;
+
+    if (bs.receipt?.line_items && bs.receipt.line_items.length > 0) {
+      const calibratedItems = bs.receipt.line_items.map((item) => {
+        const rawAmt = parseAmountInr(item.amount_inr);
+        const cat = (item.category || "").toLowerCase();
+        const isPayroll =
+          cat.includes("payroll") ||
+          cat.includes("engineering") ||
+          cat.includes("developer") ||
+          cat.includes("devops") ||
+          cat.includes("advisory") ||
+          cat.includes("legal") ||
+          cat.includes("human") ||
+          cat.includes("team") ||
+          cat.includes("sre") ||
+          cat.includes("architect");
+
+        const isInfra =
+          cat.includes("cloud") ||
+          cat.includes("cluster") ||
+          cat.includes("compute") ||
+          cat.includes("infra") ||
+          cat.includes("traffic") ||
+          cat.includes("ingress") ||
+          cat.includes("telemetry") ||
+          cat.includes("storage") ||
+          cat.includes("egress") ||
+          cat.includes("serverless") ||
+          cat.includes("streaming");
+
+        let mult = 1.0;
+        if (isPayroll) {
+          mult = teamMult * geoMult;
+        } else if (isInfra) {
+          mult = scaleMult;
+        } else {
+          mult = teamMult * geoMult * 0.5 + scaleMult * 0.5;
+        }
+
+        const calAmt = rawAmt * mult;
+        totalCalibrated += calAmt;
+
+        return {
+          ...item,
+          amount_inr: formatAmountInr(calAmt),
+        };
+      });
+
+      calibratedReceipt = {
+        ...bs.receipt,
+        total_capital_at_risk: formatAmountInr(totalCalibrated),
+        line_items: calibratedItems,
+      };
+    } else {
+      const parts = bs.capital_at_risk_saved.split("–").map((p) => p.trim());
+      if (parts.length === 2) {
+        const factor = (teamMult * geoMult + scaleMult) / 2;
+        const low = parseAmountInr(parts[0]) * factor;
+        const high = parseAmountInr(parts[1]) * factor;
+        return {
+          ...bs,
+          capital_at_risk_saved: `${formatAmountInr(low)} – ${formatAmountInr(high)}`,
+        };
+      }
+    }
+
+    const lowRange = Math.round(totalCalibrated * 0.85);
+    const highRange = Math.round(totalCalibrated * 1.15);
+
+    return {
+      ...bs,
+      capital_at_risk_saved: `${formatAmountInr(lowRange)} – ${formatAmountInr(highRange)}`,
+      receipt: calibratedReceipt || bs.receipt,
+    };
+  }, [displaySynthesis, isCalibrated, customTeamSize, selectedGeoRate, selectedScaleTier]);
 
   // Copy Markdown ADR to clipboard
   const handleCopyBoardroomADR = () => {
@@ -855,20 +993,192 @@ jobs:
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                     Executive ROI &amp; Sunk-Cost Shield
                   </span>
+                  {isCalibrated && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40 font-bold animate-pulse">
+                      Live Calibrated
+                    </span>
+                  )}
                 </div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 self-start sm:self-auto">
-                  Procurement ROI: Verified 10x+
-                </span>
+                <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
+                      isCalibratorOpen || isCalibrated
+                        ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
+                        : "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200"
+                    }`}
+                    title="Calibrate headcount, geography rate card, and cloud scale tier"
+                  >
+                    <Sliders className="w-3 h-3" />
+                    <span>{isCalibratorOpen ? "Hide Calibrator" : "Calibrate FinOps Assumptions"}</span>
+                  </button>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    Procurement ROI: Verified 10x+
+                  </span>
+                </div>
               </div>
+
+              {/* Collapsible FinOps Assumptions Calibrator Drawer */}
+              {isCalibratorOpen && (
+                <div className="p-4 rounded-xl bg-paper-surface border border-emerald-500/30 space-y-4 animate-in fade-in duration-150">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Sliders className="w-3.5 h-3.5 text-accent" />
+                        <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-ink">
+                          FinOps Baseline Calibrator
+                        </h4>
+                      </div>
+                      <p className="text-[11px] text-muted font-sans mt-0.5">
+                        Fine-tune capital risk assumptions according to your actual squad size, market salary rates, and cloud scale.
+                      </p>
+                    </div>
+                    {isCalibrated && (
+                      <button
+                        type="button"
+                        onClick={handleResetCalibrator}
+                        className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-muted hover:text-ink px-2 py-1 rounded border border-border hover:bg-paper-sidebar transition-colors cursor-pointer self-start sm:self-auto"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Reset to AI Baseline</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {/* Control 1: Team Headcount Slider */}
+                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="font-bold text-ink flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-accent" />
+                          <span>Squad Headcount</span>
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-paper-surface border border-border font-bold text-accent text-xs">
+                          {customTeamSize} Engineers
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={2}
+                        max={25}
+                        step={1}
+                        value={customTeamSize}
+                        onChange={(e) => setCustomTeamSize(parseInt(e.target.value, 10))}
+                        className="w-full h-1.5 bg-border rounded-lg appearance-none cursor-pointer accent-accent"
+                      />
+                      <div className="flex justify-between text-[10px] font-mono text-muted">
+                        <span>2 (Lean Pod)</span>
+                        <span className={customTeamSize === 5 ? "font-bold text-accent" : ""}>5 (AI Base)</span>
+                        <span>12 (Squad)</span>
+                        <span>25 (Org)</span>
+                      </div>
+                      <p className="text-[10px] text-muted">
+                        Scales developer payroll, platform SRE toil, and transition burn.
+                      </p>
+                    </div>
+
+                    {/* Control 2: Geography Rate Card */}
+                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="font-bold text-ink flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-accent" />
+                          <span>Market Rate Card</span>
+                        </span>
+                        <span className="text-[10px] text-muted font-bold">
+                          {GEO_RATES[selectedGeoRate].multiplier}x
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {(Object.keys(GEO_RATES) as GeoKey[]).map((geoKey) => (
+                          <button
+                            key={geoKey}
+                            type="button"
+                            onClick={() => setSelectedGeoRate(geoKey)}
+                            className={`p-1.5 rounded text-left border transition-all cursor-pointer ${
+                              selectedGeoRate === geoKey
+                                ? "bg-accent/15 border-accent text-accent font-bold"
+                                : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
+                            }`}
+                          >
+                            <div className="text-[11px] leading-tight truncate">{GEO_RATES[geoKey].label}</div>
+                            <div className="text-[9px] font-mono opacity-80 truncate">{GEO_RATES[geoKey].rateStr}</div>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted">
+                        Adjusts compensation rates across international engineering hubs.
+                      </p>
+                    </div>
+
+                    {/* Control 3: Cloud Scale Tier */}
+                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="font-bold text-ink flex items-center gap-1.5">
+                          <Server className="w-3.5 h-3.5 text-accent" />
+                          <span>Cloud Scale Tier</span>
+                        </span>
+                        <span className="text-[10px] text-muted font-bold">
+                          {SCALE_TIERS[selectedScaleTier].multiplier}x
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {(Object.keys(SCALE_TIERS) as ScaleKey[]).map((tierKey) => (
+                          <button
+                            key={tierKey}
+                            type="button"
+                            onClick={() => setSelectedScaleTier(tierKey)}
+                            className={`w-full p-1.5 rounded flex items-center justify-between text-left border transition-all cursor-pointer ${
+                              selectedScaleTier === tierKey
+                                ? "bg-accent/15 border-accent text-accent font-bold"
+                                : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
+                            }`}
+                          >
+                            <span className="text-[11px]">{SCALE_TIERS[tierKey].label}</span>
+                            <span className="text-[9px] font-mono opacity-80">{SCALE_TIERS[tierKey].desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted">
+                        Scales multi-AZ node commitments, ingress egress, and managed broker floors.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Summary Footer */}
+                  <div className="pt-2 border-t border-border/60 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-muted">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-ink">Active Multipliers:</span>
+                      <span>Headcount: {(customTeamSize / 5).toFixed(2)}x</span>
+                      <span>•</span>
+                      <span>Rate Card: {GEO_RATES[selectedGeoRate].multiplier}x</span>
+                      <span>•</span>
+                      <span>Infrastructure: {SCALE_TIERS[selectedScaleTier].multiplier}x</span>
+                    </div>
+                    {isCalibrated && (
+                      <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                        ✓ Calibrated values applied across headline and itemized voucher
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                 {/* Metric 1: Capital at Risk Prevented */}
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-muted font-bold block">
-                    Capital at Risk Prevented
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
+                      Capital at Risk Prevented
+                    </span>
+                    {isCalibrated && (
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                        Calibrated
+                      </span>
+                    )}
+                  </div>
                   <div className="font-newsreader text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                    {displaySynthesis.blunder_shield?.capital_at_risk_saved || (
+                    {calibratedBlunderShield?.capital_at_risk_saved || displaySynthesis.blunder_shield?.capital_at_risk_saved || (
                       displaySynthesis.domain === "REAL_ESTATE"
                         ? "₹1.50 Cr – ₹2.80 Cr"
                         : displaySynthesis.domain === "FINANCE"
@@ -877,7 +1187,7 @@ jobs:
                     )}
                   </div>
                   <p className="text-[11px] text-muted leading-tight">
-                    {displaySynthesis.blunder_shield?.risk_reduction_rationale || "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments."}
+                    {calibratedBlunderShield?.risk_reduction_rationale || displaySynthesis.blunder_shield?.risk_reduction_rationale || "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments."}
                   </p>
                 </div>
 
@@ -909,12 +1219,12 @@ jobs:
               </div>
 
               {/* Receipt Toggle & Expanded Voucher */}
-              {displaySynthesis.blunder_shield?.receipt && (
+              {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt) && (
                 <div className="pt-2 border-t border-emerald-500/20">
                   <button
                     type="button"
                     onClick={() => setShowReceipt(!showReceipt)}
-                    className="flex items-center justify-between w-full text-left text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 transition-colors py-1"
+                    className="flex items-center justify-between w-full text-left text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 transition-colors py-1 cursor-pointer"
                   >
                     <span className="flex items-center gap-1.5">
                       <Receipt className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -922,8 +1232,13 @@ jobs:
                         {showReceipt ? "Hide Itemized FinOps Receipt" : "Inspect Itemized Sunk-Cost Receipt (Munshi Audit Ledger)"}
                       </span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                        {displaySynthesis.blunder_shield.receipt.receipt_id}
+                        {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.receipt_id}
                       </span>
+                      {isCalibrated && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">
+                          Custom Calibrated
+                        </span>
+                      )}
                     </span>
                     {showReceipt ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -931,14 +1246,21 @@ jobs:
                   {showReceipt && (
                     <div className="mt-3 p-4 rounded-lg bg-paper-surface border border-emerald-500/30 font-mono text-xs space-y-3 shadow-inner">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border/60 pb-2 text-[11px] text-muted">
-                        <div>
-                          <span className="font-bold text-ink">ARCHETYPE:</span>{" "}
-                          <span className="px-1.5 py-0.5 rounded bg-muted/10 text-ink font-semibold">
-                            {displaySynthesis.blunder_shield.receipt.decision_type}
-                          </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div>
+                            <span className="font-bold text-ink">ARCHETYPE:</span>{" "}
+                            <span className="px-1.5 py-0.5 rounded bg-muted/10 text-ink font-semibold">
+                              {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.decision_type}
+                            </span>
+                          </div>
+                          {isCalibrated && (
+                            <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">
+                              [{customTeamSize} Devs • {GEO_RATES[selectedGeoRate].label} • {SCALE_TIERS[selectedScaleTier].label}]
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10px]">
-                          STANDARD: {displaySynthesis.blunder_shield.receipt.audit_standard || "Munshi FinOps Matrix v2.1"}
+                          STANDARD: {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.audit_standard || "Munshi FinOps Matrix v2.1"}
                         </div>
                       </div>
 
@@ -952,8 +1274,8 @@ jobs:
                               <th className="py-1.5 pl-2 text-right">Protected (INR)</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-border/40">
-                            {displaySynthesis.blunder_shield.receipt.line_items.map((item, idx) => (
+                          <tbody className="divide-y border-border/40">
+                            {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.line_items.map((item, idx) => (
                               <tr key={idx} className="hover:bg-emerald-500/5 transition-colors">
                                 <td className="py-2 pr-2">
                                   <div className="font-bold text-ink">{item.item_name}</div>
@@ -974,10 +1296,10 @@ jobs:
                           <tfoot>
                             <tr className="border-t-2 border-emerald-500/40 font-bold">
                               <td colSpan={3} className="py-2 text-ink uppercase text-[10px]">
-                                Total Capital at Risk Neutralized:
+                                Total Capital at Risk Neutralized {isCalibrated ? "(Calibrated)" : ""}:
                               </td>
                               <td className="py-2 text-right font-bold text-sm text-emerald-700 dark:text-emerald-400">
-                                {displaySynthesis.blunder_shield.receipt.total_capital_at_risk}
+                                {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.total_capital_at_risk}
                               </td>
                             </tr>
                           </tfoot>
