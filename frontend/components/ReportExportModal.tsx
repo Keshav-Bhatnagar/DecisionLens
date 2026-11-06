@@ -36,7 +36,7 @@ interface ReportExportModalProps {
   onReportSaved?: () => void;
 }
 
-type ExportFormat = "pdf" | "latex" | "markdown" | "json";
+type ExportFormat = "pdf" | "markdown" | "json";
 type MarkdownMode = "reading" | "source";
 
 interface FormatMeta {
@@ -52,15 +52,8 @@ const FORMATS: FormatMeta[] = [
     id: "pdf",
     title: "Executive PDF dossier",
     extension: ".pdf",
-    badge: "A4 typeset",
-    description: "Publication-grade dossier with table of contents, blunder shield, and verification footnotes.",
-  },
-  {
-    id: "latex",
-    title: "LaTeX source document",
-    extension: ".tex",
-    badge: "PyLaTeX / Overleaf",
-    description: "Compilable LaTeX source code with modular macros. Compatible with 1-click Overleaf import.",
+    badge: "Typeset dossier",
+    description: "Publication-grade dossier with table of contents, blunder shield, and verified footnotes.",
   },
   {
     id: "markdown",
@@ -187,8 +180,6 @@ export default function ReportExportModal({
     setError(null);
     if (fmt === "pdf" && !pdfBlobUrl) {
       loadCompiledPdf();
-    } else if (fmt === "latex" && !latexContent) {
-      loadLatexContent();
     } else if (fmt === "markdown" && !report) {
       loadMarkdown();
     } else if (fmt === "json" && !jsonContent) {
@@ -198,8 +189,7 @@ export default function ReportExportModal({
 
   function handleCopyCurrentContent() {
     let text = "";
-    if (selectedFormat === "latex") text = latexContent || "";
-    else if (selectedFormat === "markdown") text = report?.content || "";
+    if (selectedFormat === "markdown") text = report?.content || "";
     else if (selectedFormat === "json") text = jsonContent || "";
 
     if (!text) return;
@@ -223,9 +213,6 @@ export default function ReportExportModal({
       if (fmt === "pdf") {
         blob = await downloadDecisionExportBlob(decisionId, "pdf");
         filename = getSafeFilename(".pdf");
-      } else if (fmt === "latex") {
-        blob = await downloadDecisionExportBlob(decisionId, "latex");
-        filename = getSafeFilename(".tex");
       } else if (fmt === "markdown") {
         if (report?.content) {
           blob = new Blob([report.content], { type: "text/markdown;charset=utf-8" });
@@ -433,28 +420,32 @@ export default function ReportExportModal({
 
                 <div className="flex items-center gap-2">
                   {/* Contextual actions based on active format */}
-                  {selectedFormat === "pdf" && pdfBlobUrl && (
-                    <a
-                      href={pdfBlobUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-page)] text-[var(--ink)] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] cursor-pointer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Open fullscreen</span>
-                    </a>
-                  )}
-
-                  {selectedFormat === "latex" && latexContent && (
-                    <button
-                      type="button"
-                      onClick={handleOpenOverleaf}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold hover:bg-emerald-500/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer"
-                      title="Open and compile directly in Overleaf (Cloud LaTeX)"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Compile in Overleaf</span>
-                    </button>
+                  {selectedFormat === "pdf" && (
+                    <>
+                      {pdfBlobUrl && (
+                        <a
+                          href={pdfBlobUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-page)] text-[var(--ink)] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] cursor-pointer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Open fullscreen</span>
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!latexContent) await loadLatexContent();
+                          handleOpenOverleaf();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold hover:bg-emerald-500/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer"
+                        title="Open document directly in Overleaf (Cloud LaTeX)"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open in Overleaf</span>
+                      </button>
+                    </>
                   )}
 
                   {selectedFormat === "markdown" && (
@@ -550,23 +541,6 @@ export default function ReportExportModal({
                       >
                         Download PDF directly
                       </button>
-                    </div>
-                  )
-                ) : selectedFormat === "latex" ? (
-                  loadingLatex ? (
-                    <div className="py-28 text-center space-y-3">
-                      <div className="animate-spin w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full mx-auto" />
-                      <p className="text-xs text-[var(--ink-secondary)] font-medium">
-                        Generating PyLaTeX source code...
-                      </p>
-                    </div>
-                  ) : latexContent ? (
-                    <pre className="font-mono text-xs bg-[#11100F] text-[#EDE8DE] p-5 sm:p-6 rounded-xl overflow-x-auto whitespace-pre leading-relaxed shadow-inner border border-[var(--border)] max-h-[620px]">
-                      {latexContent}
-                    </pre>
-                  ) : (
-                    <div className="py-24 text-center text-xs text-[var(--ink-secondary)]">
-                      Failed to load LaTeX content.
                     </div>
                   )
                 ) : selectedFormat === "markdown" ? (
