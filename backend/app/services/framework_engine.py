@@ -638,7 +638,7 @@ def build_domain_grounded_criteria(domain: str) -> List[MatrixCriterion]:
                 id="crit_biz_alignment",
                 name="Strategic Alignment & ROI",
                 weight=30.0,
-                description="Direct synergy with organizational priorities, long-term impact, and expected returns.",
+                description="Direct alignment with organizational priorities, long-term impact, and expected returns.",
             ),
             MatrixCriterion(
                 id="crit_biz_speed",

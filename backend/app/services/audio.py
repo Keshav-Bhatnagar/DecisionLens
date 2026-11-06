@@ -88,7 +88,7 @@ def validate_audio_file(
 def get_ffmpeg_binary() -> Optional[str]:
     """
     Find FFmpeg binary from system PATH, or fallback to bundled imageio-ffmpeg.
-    Ensures seamless audio transcoding and normalization on systems without global FFmpeg.
+    Ensures resilient audio transcoding and normalization on systems without global FFmpeg.
     """
     bin_path = shutil.which("ffmpeg")
     if bin_path:

@@ -617,7 +617,7 @@ export default function TornDecisionCanvas({
         const v = (y + SHEET_H * 0.5) / SHEET_H;
         uvAttr.setXY(i, u, v);
 
-        // Tactile Archival Paper Curl: seamless global sheet curl (zero seam gaps between shards)
+        // Tactile Archival Paper Curl: continuous global sheet curl (zero seam gaps between shards)
         const curl =
           Math.sin(u * Math.PI) * Math.sin(v * Math.PI) * -0.015 +
           (u - 0.5) * (v - 0.5) * 0.025;

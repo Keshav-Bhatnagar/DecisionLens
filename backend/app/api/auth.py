@@ -181,7 +181,7 @@ def get_oauth_providers(request: Request):
 )
 def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
     """Authenticate or register user via Google, GitHub, Microsoft, or Supabase OAuth.
-    Supports real token verification or seamless dev sandbox simulation.
+    Supports real token verification or automated dev sandbox simulation.
     """
     valid_providers = {"google", "github", "microsoft", "supabase", "azure"}
     normalized_provider = body.provider.lower().strip()

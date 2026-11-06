@@ -59,17 +59,33 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Enforce Cloudflare and enterprise perimeter HTTP security headers."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
+
+
 import logging
+import re
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 
 logger = logging.getLogger("decisionlens.main")
 
+CORS_ORIGIN_REGEX = re.compile(r"^https?://(localhost|127\.0\.0\.1|.*\.trycloudflare\.com)(:\d+)?$")
+
 
 def _cors_headers_for(request: Request, extra_headers=None):
+    """Safely inject CORS headers only for explicitly permitted origins."""
     headers = dict(extra_headers) if extra_headers else {}
     origin = request.headers.get("origin")
-    if origin:
+    if origin and (origin in settings.cors_origins or CORS_ORIGIN_REGEX.match(origin)):
         headers["Access-Control-Allow-Origin"] = origin
         headers["Access-Control-Allow-Credentials"] = "true"
         headers["Access-Control-Allow-Methods"] = "*"
