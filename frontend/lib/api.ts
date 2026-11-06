@@ -1172,11 +1172,29 @@ export interface RoadmapData {
   phases: RoadmapPhase[];
 }
 
+export interface ReceiptLineItem {
+  item_name: string;
+  category: string;
+  unit_basis: string;
+  amount_inr: string;
+  rationale: string;
+}
+
+export interface BlunderReceipt {
+  receipt_id: string;
+  decision_type: string;
+  total_capital_at_risk: string;
+  line_items: ReceiptLineItem[];
+  currency?: string;
+  audit_standard?: string;
+}
+
 export interface BlunderShield {
   capital_at_risk_saved: string;
   developer_sprints_saved: string;
   prevented_fatal_trap: string;
   risk_reduction_rationale: string;
+  receipt?: BlunderReceipt | null;
 }
 
 export interface DecisionSynthesis {

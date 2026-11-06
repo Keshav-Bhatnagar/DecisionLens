@@ -643,3 +643,97 @@ def test_synthesis_blunder_shield_and_report_alignment(
     assert "Capital at Risk \\& Blunder Shield Protection" in latex_report
     assert f"ADR-{decision.id:04d}" in latex_report
 
+
+def test_cloud_migration_receipt_vs_services_archetype(
+    client: TestClient, auth_headers: dict, test_user: User, test_folder: Folder, db_session: Session
+):
+    """
+    Verify that an Azure vs AWS decision generates a CLOUD_MIGRATION receipt
+    with cloud-specific line items (cutover run-rate, egress, RI shortfall, IAM retraining)
+    instead of generic developer pod rewrite toil.
+    """
+    from app.services.recommendation import compute_blunder_shield
+    from app.services.report_generator import generate_decision_markdown_report, generate_decision_interactive_pdf
+
+    # 1. Test Cloud Migration Archetype (Azure vs AWS)
+    cloud_shield = compute_blunder_shield(
+        domain="SOFTWARE",
+        top_option_name="AWS Cloud Native Architecture",
+        runner_up_name="Azure Cloud Migration",
+        decision_title="Cloud Platform Selection: AWS vs Azure",
+        problem_statement="Choose between AWS and Microsoft Azure for high-throughput enterprise workloads with 50TB storage.",
+        facts=["Current infrastructure runs on AWS with existing savings plans.", "Workload transfers 50TB across services."],
+        decision_id=404,
+    )
+    assert cloud_shield.receipt is not None
+    assert cloud_shield.receipt.decision_type == "CLOUD_MIGRATION"
+    item_names = [item.item_name for item in cloud_shield.receipt.line_items]
+    assert any("Dual-Cloud Cutover" in name for name in item_names)
+    assert any("Egress" in name for name in item_names)
+    assert any("Committed Use / RI" in name for name in item_names)
+    assert any("Cloud IAM" in name for name in item_names)
+    assert not any("Pod Payroll" in name for name in item_names), "Cloud migration must not report pod rewrite payroll"
+
+    # 2. Test Build vs Buy Archetype (Auth0 vs Custom)
+    bvb_shield = compute_blunder_shield(
+        domain="PRODUCT",
+        top_option_name="Managed Identity via Auth0",
+        runner_up_name="Custom In-House Authentication",
+        decision_title="Identity System: Build vs Buy (Auth0 vs In-House)",
+        problem_statement="Decide whether to buy Auth0 enterprise plan or build custom in-house auth server.",
+        facts=["Team has zero cryptography or OAuth2 compliance experts."],
+        decision_id=505,
+    )
+    assert bvb_shield.receipt is not None
+    assert bvb_shield.receipt.decision_type == "BUILD_VS_BUY"
+    bvb_items = [item.item_name for item in bvb_shield.receipt.line_items]
+    assert any("Enterprise Platform Tier" in name for name in bvb_items)
+    assert any("Custom Maintenance Sprints" in name for name in bvb_items)
+
+    # 3. Create full Decision record with Azure vs AWS and verify Markdown & PDF report receipts
+    decision = Decision(
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+        title="AWS vs Azure Enterprise Cloud Migration",
+        problem_statement="Select between AWS and Azure for core analytics and database hosting.",
+        domain="SOFTWARE",
+        points={
+            "facts": ["Existing AWS savings plans expire in 9 months.", "Data egress tariffs must be controlled."],
+            "unknowns": [],
+        },
+        points_reviewed=True,
+        gaps={"gaps": []},
+        analysis={
+            "decision_matrix": {
+                "results": [
+                    {"option_name": "AWS Architecture", "option_id": "OPT_001", "weighted_score": 8.9, "rank": 1},
+                    {"option_name": "Azure Migration", "option_id": "OPT_002", "weighted_score": 7.1, "rank": 2},
+                ]
+            }
+        },
+    )
+    db_session.add(decision)
+    db_session.commit()
+    db_session.refresh(decision)
+
+    resp = client.post(
+        f"/api/decisions/{decision.id}/synthesis",
+        json={"force_mock": True},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    synth_json = resp.json()
+    receipt = synth_json["blunder_shield"]["receipt"]
+    assert receipt is not None
+    assert receipt["decision_type"] == "CLOUD_MIGRATION"
+
+    db_session.refresh(decision)
+    md_report = generate_decision_markdown_report(decision)
+    assert "Itemized FinOps Sunk-Cost Receipt" in md_report
+    assert "Dual-Cloud Cutover Run-Rate Overlap" in md_report
+    assert "Cross-Cloud Data Egress & Transfer Tariffs" in md_report
+
+    pdf_bytes = generate_decision_interactive_pdf(decision)
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 2000
+

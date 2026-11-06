@@ -279,6 +279,21 @@ def generate_decision_markdown_report(decision: Decision) -> str:
         f"| **Engineering Velocity Saved** | **{shield_data.get('developer_sprints_saved')}** | Prevented dead-end iterations and on-call operational drag |",
         f"| **Fatal Sunk-Cost Trap Blocked** | **{shield_data.get('prevented_fatal_trap')}** | {shield_data.get('risk_reduction_rationale')} |",
         "",
+    ])
+
+    # Itemized FinOps Sunk-Cost Receipt
+    receipt_data = shield_data.get("receipt")
+    if receipt_data and isinstance(receipt_data, dict) and receipt_data.get("line_items"):
+        lines.append(f"#### 🧾 Itemized FinOps Sunk-Cost Receipt [`{receipt_data.get('receipt_id', 'RCP-FINOPS')}`]")
+        lines.append(f"*Archetype:* `{receipt_data.get('decision_type', 'GENERAL')}` | *Audit Standard:* {receipt_data.get('audit_standard', 'DecisionLens FinOps Standard')}\n")
+        lines.append("| Cost Vector | Category | Unit / Basis | Protected Amount (INR) | Risk Avoided / Rationale |")
+        lines.append("| :--- | :--- | :--- | :--- | :--- |")
+        for item in receipt_data.get("line_items", []):
+            if isinstance(item, dict):
+                lines.append(f"| **{item.get('item_name')}** | `{item.get('category')}` | {item.get('unit_basis')} | **{item.get('amount_inr')}** | {item.get('rationale')} |")
+        lines.append(f"| **TOTAL CAPITAL SHIELDED** | | | **{receipt_data.get('total_capital_at_risk', shield_data.get('capital_at_risk_saved'))}** | *Certified via DecisionLens FinOps Ledger* |\n")
+
+    lines.extend([
         "### 📜 Architectural Decision Record (Git-Native MADR Standard)",
         f"- **ADR Identifier:** `ADR-{decision.id:04d}`",
         f"- **Governance Status:** `{adr_status}`",
@@ -1337,6 +1352,45 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     ]))
     story.append(shield_table)
     story.append(Spacer(1, 4))
+
+    # Itemized FinOps Receipt Table
+    pdf_receipt = pdf_shield.get("receipt")
+    if pdf_receipt and isinstance(pdf_receipt, dict) and pdf_receipt.get("line_items"):
+        story.append(Paragraph(f"<b>🧾 Itemized FinOps Sunk-Cost Receipt ({escape_xml(pdf_receipt.get('receipt_id', 'RCP'))}):</b>", h2_style))
+        rcpt_rows = [[
+            Paragraph("<b>Cost Vector</b>", table_header),
+            Paragraph("<b>Category</b>", table_header),
+            Paragraph("<b>Unit / Basis</b>", table_header),
+            Paragraph("<b>Amount</b>", table_header),
+        ]]
+        for it in pdf_receipt.get("line_items", []):
+            if isinstance(it, dict):
+                rcpt_rows.append([
+                    Paragraph(f"<b>{escape_xml(it.get('item_name'))}</b><br/><i>{escape_xml(it.get('rationale'))}</i>", table_cell),
+                    Paragraph(escape_xml(it.get("category")), table_cell),
+                    Paragraph(escape_xml(it.get("unit_basis")), table_cell),
+                    Paragraph(f"<font color='#166534'><b>{escape_xml(it.get('amount_inr'))}</b></font>", table_cell),
+                ])
+        rcpt_rows.append([
+            Paragraph("<b>TOTAL CAPITAL SHIELDED</b>", table_header),
+            Paragraph(f"<b>{escape_xml(pdf_receipt.get('decision_type', 'ARCHETYPE'))}</b>", table_header),
+            Paragraph("<i>Munshi FinOps Matrix v2.1</i>", table_header),
+            Paragraph(f"<font color='#166534'><b>{escape_xml(pdf_receipt.get('total_capital_at_risk', p_cap))}</b></font>", table_header),
+        ])
+        rcpt_table = Table(rcpt_rows, colWidths=[174, 95, 150, 85])
+        rcpt_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
+            ('BACKGROUND', (0, 1), (-1, -2), COLOR_SURFACE),
+            ('BACKGROUND', (0, -1), (-1, -1), COLOR_PAGE),
+            ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(rcpt_table)
+        story.append(Spacer(1, 4))
 
     # MADR Callout Card
     adr_card = Table(

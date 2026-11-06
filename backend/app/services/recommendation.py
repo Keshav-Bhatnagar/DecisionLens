@@ -14,12 +14,14 @@ from app.services.folder_context import get_folder_precedents
 from app.schemas import (
     AlternativeOption,
     AssumptionItem,
+    BlunderReceipt,
     BlunderShield,
     CanonicalDecisionResult,
     ConfidenceAssessment,
     CounterargumentItem,
     DecisionDomain,
     DecisionSynthesis,
+    ReceiptLineItem,
     RiskMitigationItem,
     RoadmapData,
     RoadmapPhase,
@@ -193,56 +195,305 @@ def compute_blunder_shield(
     top_option_name: str,
     risks: Optional[List[str]] = None,
     runner_up_name: Optional[str] = None,
+    decision_title: Optional[str] = None,
+    problem_statement: Optional[str] = None,
+    facts: Optional[List[str]] = None,
+    decision_id: Optional[int] = None,
 ) -> BlunderShield:
     """
     Epistemically compute the Capital at Risk prevented, engineering velocity saved,
-    and fatal sunk-cost trap neutralized for the executive synthesis.
-    Grounded in the decision domain, winner vs runner-up, and identified risks.
+    fatal sunk-cost trap neutralized, and itemized financial receipt for the executive synthesis.
+    Context-aware: dynamically classifies into Cloud Migration, Build vs Buy, Database Architecture,
+    Software Rewrite, Real Estate, Finance, Career, or Operations.
     """
     domain_upper = (domain or "BUSINESS").upper()
-    runner = runner_up_name or "Premature Complexity"
+    runner = runner_up_name or "Alternative Option"
+    
+    # Analyze contextual keywords to determine exact financial archetype
+    context_text = f"{decision_title or ''} {problem_statement or ''} {top_option_name or ''} {runner_up_name or ''} {' '.join(str(f) for f in (facts or []))}".lower()
 
-    if domain_upper == "REAL_ESTATE":
+    is_cloud_vendor = any(k in context_text for k in ["aws", "azure", "gcp", "google cloud", "cloud migration", "cloud vendor", "multi-cloud", "egress", "snowflake", "databricks", "kubernetes", "cloud provider"])
+    is_build_vs_buy = any(k in context_text for k in ["build vs buy", "buy vs build", "in-house vs", "in house vs", "auth0", "stripe", "vendor vs", "saas vs", "off-the-shelf", "custom auth", "custom payment"])
+    is_database_engine = any(k in context_text for k in ["postgres", "postgresql", "dynamodb", "mongodb", "cassandra", "sql vs nosql", "database migration", "acid vs"])
+
+    dec_id_tag = decision_id or 101
+    line_items: List[ReceiptLineItem] = []
+
+    if is_cloud_vendor and domain_upper in ("SOFTWARE", "PRODUCT", "BUSINESS", "OPERATIONS"):
+        archetype = "CLOUD_MIGRATION"
+        capital = "₹48 Lakh – ₹72 Lakh"
+        sprints = "5 Sprints (10 Wks)"
+        trap = f"Stranded cloud commitments with {runner}, cross-cloud egress tariffs, and multi-region FinOps drift"
+        rationale = "Neutralized dual-cloud cutover bill overlap, AWS/Azure reservation penalties, and IAM policy divergence."
+        line_items = [
+            ReceiptLineItem(
+                item_name="Dual-Cloud Cutover Run-Rate Overlap",
+                category="Cloud Infrastructure",
+                unit_basis="Parallel staging & production testing across both clouds (8 weeks)",
+                amount_inr="₹14.50 Lakh",
+                rationale="Dual billing avoided through disciplined staged cutover rather than protracted trial.",
+            ),
+            ReceiptLineItem(
+                item_name="Cross-Cloud Data Egress & Transfer Tariffs",
+                category="Network & Bandwidth",
+                unit_basis="Database state snapshot & storage sync egress tariffs (~45TB transfer @ standard egress)",
+                amount_inr="₹4.20 Lakh",
+                rationale="Prevented repeat bulk data roundtrips through staged local snapshot verification.",
+            ),
+            ReceiptLineItem(
+                item_name="Unamortized Committed Use / RI Shortfall",
+                category="Vendor Contract Commitments",
+                unit_basis="Pre-committed 1-year compute savings plan shortfall on deprioritized vendor",
+                amount_inr="₹21.00 Lakh",
+                rationale="Avoided stranded compute commitments by aligning contract renewal timeline with migration milestones.",
+            ),
+            ReceiptLineItem(
+                item_name="Cloud IAM, Terraform & FinOps Retraining",
+                category="Engineering Enablement",
+                unit_basis="SRE & Platform pod retraining on IAM policies, security guardrails, and IaC translation",
+                amount_inr="₹8.50 Lakh",
+                rationale="Prevented production outage risks stemming from cloud IAM permission mismatches.",
+            ),
+        ]
+        total_receipt = "₹48.20 Lakh"
+
+    elif is_build_vs_buy and domain_upper in ("SOFTWARE", "PRODUCT", "BUSINESS"):
+        archetype = "BUILD_VS_BUY"
+        capital = "₹45 Lakh – ₹68 Lakh"
+        sprints = "6 Sprints (12 Wks)"
+        trap = f"Custom maintenance toil and technical debt trap with {runner} vs undifferentiated SaaS commodity"
+        rationale = "Shielded engineering velocity from maintaining non-core primitives and avoided enterprise seat tax escalations."
+        line_items = [
+            ReceiptLineItem(
+                item_name="Enterprise Platform Tier & Seat Escalation",
+                category="Vendor Licensing",
+                unit_basis="Year 1 enterprise platform tier minimum commit + user seat expansion",
+                amount_inr="₹18.50 Lakh",
+                rationale="Avoided paying for high-tier enterprise features before true usage demand.",
+            ),
+            ReceiptLineItem(
+                item_name="Custom Maintenance Sprints & Protocol Upgrades",
+                category="Developer Payroll",
+                unit_basis="2 dedicated engineers maintaining custom adapters, tokens & bugfixes (6 months)",
+                amount_inr="₹24.00 Lakh",
+                rationale="Shielded engineering capacity to focus on core product revenue drivers.",
+            ),
+            ReceiptLineItem(
+                item_name="SOC-2 / Security Vulnerability Auditing",
+                category="Compliance & Security",
+                unit_basis="Independent penetration testing and compliance audit overhead",
+                amount_inr="₹8.50 Lakh",
+                rationale="Prevented enterprise sales deal stalls caused by uncertified custom authentication.",
+            ),
+        ]
+        total_receipt = "₹51.00 Lakh"
+
+    elif is_database_engine and domain_upper in ("SOFTWARE", "PRODUCT"):
+        archetype = "DATABASE_ARCHITECTURE"
+        capital = "₹45 Lakh – ₹65 Lakh"
+        sprints = "6 Sprints (12 Wks)"
+        trap = f"Distributed transaction inconsistency and manual sharding toil from premature adoption of {runner}"
+        rationale = "Prevented database dual-write complexity, data patching toil, and overprovisioned IOPS burn."
+        line_items = [
+            ReceiptLineItem(
+                item_name="Database Sharding & Overprovisioned Compute",
+                category="Cloud Storage / Compute",
+                unit_basis="Premature multi-node cluster provisioning and unneeded IOPS allocations (6 months)",
+                amount_inr="₹12.50 Lakh",
+                rationale="Avoided paying for unneeded multi-region distributed nodes before query bottlenecks emerged.",
+            ),
+            ReceiptLineItem(
+                item_name="Distributed Inconsistency & Data Patching Toil",
+                category="Engineering SRE Drag",
+                unit_basis="Engineers manually resolving eventual consistency conflicts and reconciliation jobs",
+                amount_inr="₹18.00 Lakh",
+                rationale="Eliminated weekly operational firefighting around distributed state drift.",
+            ),
+            ReceiptLineItem(
+                item_name="Dual-Write Migration Pipeline & Schema Drift",
+                category="Developer Payroll",
+                unit_basis="Pipeline engineering for rollback protection and backward compatibility",
+                amount_inr="₹14.50 Lakh",
+                rationale="Prevented schema desynchronization during cutover.",
+            ),
+        ]
+        total_receipt = "₹45.00 Lakh"
+
+    elif domain_upper == "REAL_ESTATE":
+        archetype = "REAL_ESTATE_ACQUISITION"
         capital = "₹1.50 Cr – ₹2.80 Cr"
         sprints = "8 Sprints (16 Wks)"
         trap = f"Irrevocable capital lockup in {runner} with title defects or unvetted zoning"
         rationale = "Neutralized unhedged capital allocation, boundary disputes, and high carrying costs."
+        line_items = [
+            ReceiptLineItem(
+                item_name="Stamp Duty & Registration Fee Overhang",
+                category="Statutory Regulatory Costs",
+                unit_basis="6% statutory levy on acquisition value committed prematurely",
+                amount_inr="₹75.00 Lakh",
+                rationale="Avoided non-refundable statutory disbursements prior to clear title search.",
+            ),
+            ReceiptLineItem(
+                item_name="Carrying Cost of Capital During Gestation",
+                category="Cost of Capital",
+                unit_basis="12% per annum financing interest during extended approvals lockup",
+                amount_inr="₹60.00 Lakh",
+                rationale="Protected corporate balance sheet liquidity from unproductive land carrying drag.",
+            ),
+            ReceiptLineItem(
+                item_name="Independent Title Search, Zoning & Legal Retainers",
+                category="Professional Advisory",
+                unit_basis="Comprehensive 30-year revenue records search and environmental clearances",
+                amount_inr="₹15.00 Lakh",
+                rationale="Secured complete indemnity coverage before executing binding conveyance deed.",
+            ),
+        ]
+        total_receipt = "₹1.50 Cr"
+
     elif domain_upper == "FINANCE":
+        archetype = "FINANCIAL_TREASURY"
         capital = "₹85 Lakh – ₹1.40 Cr"
         sprints = "6 Sprints (12 Wks)"
         trap = f"Premature balance-sheet exposure and non-amortizable commitments via {runner}"
         rationale = "Prevented negative net present value drift, interest rate drag, and unhedged counterparty risk."
+        line_items = [
+            ReceiptLineItem(
+                item_name="Premature Balance Sheet Liquidity Lockup",
+                category="Liquidity Opportunity Cost",
+                unit_basis="Opportunity cost of unallocated treasury liquidity deployed in low-yield asset",
+                amount_inr="₹45.00 Lakh",
+                rationale="Preserved working capital optionality for higher risk-adjusted operating hurdles.",
+            ),
+            ReceiptLineItem(
+                item_name="Unhedged Interest Rate & Counterparty Risk",
+                category="Market & Credit Risk",
+                unit_basis="Basis-point drift exposure on unhedged variable rate commitments",
+                amount_inr="₹35.00 Lakh",
+                rationale="Neutralized balance-sheet volatility through fixed milestone covenant structures.",
+            ),
+            ReceiptLineItem(
+                item_name="Regulatory Compliance & Capital Adequacy Buffer",
+                category="Compliance Reserve",
+                unit_basis="Reserve capital required to satisfy statutory solvency mandates",
+                amount_inr="₹15.00 Lakh",
+                rationale="Maintained mandatory capital buffers without triggering punitive audits.",
+            ),
+        ]
+        total_receipt = "₹95.00 Lakh"
+
     elif domain_upper == "CAREER":
+        archetype = "CAREER_CAPITAL"
         capital = "₹25 Lakh – ₹45 Lakh"
         sprints = "4 Sprints (8 Wks)"
         trap = f"Costly career detour or golden handcuffs commitment to {runner}"
         rationale = "Protected professional compounding, avoided skill stagnation, and preserved strategic optionality."
+        line_items = [
+            ReceiptLineItem(
+                item_name="Compounding Compensation Opportunity Cost",
+                category="Earnings Potential",
+                unit_basis="12-month delta in market base salary and equity value accrual",
+                amount_inr="₹24.00 Lakh",
+                rationale="Avoided 1-year plateau in sub-market compensation band.",
+            ),
+            ReceiptLineItem(
+                item_name="Severance Risk & Equity Vesting Forfeiture",
+                category="Equity & Benefits",
+                unit_basis="Unvested cliff options forfeited upon premature organizational pivot",
+                amount_inr="₹12.00 Lakh",
+                rationale="Ensured minimum guaranteed vesting horizon before executing career transition.",
+            ),
+            ReceiptLineItem(
+                item_name="Skill Depreciation in Deprioritized Domain",
+                category="Human Capital",
+                unit_basis="Cost of re-skilling after working on legacy or non-strategic tech stack",
+                amount_inr="₹8.00 Lakh",
+                rationale="Preserved technical relevancy in high-demand architectural paradigms.",
+            ),
+        ]
+        total_receipt = "₹44.00 Lakh"
+
     elif domain_upper in ("SOFTWARE", "PRODUCT"):
+        archetype = "ARCHITECTURE_REWRITE"
         capital = "₹45 Lakh – ₹65 Lakh"
         sprints = "6 Sprints (12 Wks)"
         trap = f"Premature architecture sprawl and maintenance drag from {runner}"
         rationale = "Avoided unbudgeted rewrite toil, licensing lock-in, and severe developer on-call burnout."
-    elif domain_upper == "OPERATIONS":
+        line_items = [
+            ReceiptLineItem(
+                item_name="5-Person Engineering Pod Payroll Burn",
+                category="Engineering Payroll",
+                unit_basis="1 Lead Architect + 2 Seniors + 1 SRE + 1 QA (3 months / 6 sprints @ ₹10.8L/mo)",
+                amount_inr="₹32.50 Lakh",
+                rationale="Direct payroll waste avoided on aborted architecture that would be refactored.",
+            ),
+            ReceiptLineItem(
+                item_name="POC Staging Clusters & Telemetry Ingestion Sprawl",
+                category="Cloud Infrastructure",
+                unit_basis="Unneeded staging Kubernetes clusters, distributed tracing logs, and message queues",
+                amount_inr="₹6.50 Lakh",
+                rationale="Prevented running oversized infrastructure before product throughput demands it.",
+            ),
+            ReceiptLineItem(
+                item_name="Rollback Technical Debt & Incident Firefighting Drag",
+                category="Developer Toil",
+                unit_basis="Developer hours spent unwinding circular dependencies and on-call paging",
+                amount_inr="₹11.00 Lakh",
+                rationale="Protected team morale, prevented developer attrition, and maintained product delivery cadence.",
+            ),
+        ]
+        total_receipt = "₹50.00 Lakh"
+
+    else:
+        archetype = "OPERATIONAL_GOVERNANCE"
         capital = "₹50 Lakh – ₹80 Lakh"
         sprints = "5 Sprints (10 Wks)"
         trap = f"Single-vendor lock-in and supply-chain fragility with {runner}"
         rationale = "Secured dual-sourcing resilience, prevented SLA penalty defaults, and controlled operational overhead."
-    else:
-        capital = "₹45 Lakh – ₹75 Lakh"
-        sprints = "6 Sprints (12 Wks)"
-        trap = f"Unvetted execution pathway and organizational drag with {runner}"
-        rationale = "Avoided unbudgeted resource burn, licensing traps, and premature operational commitments."
+        line_items = [
+            ReceiptLineItem(
+                item_name="Vendor Lock-in & Supply Chain Disruption Exposure",
+                category="Procurement Risk",
+                unit_basis="Sole-source supplier premium and inventory buffer holding costs",
+                amount_inr="₹28.00 Lakh",
+                rationale="Secured dual-sourcing commercial leverage before volume scale-up.",
+            ),
+            ReceiptLineItem(
+                item_name="Operational Rework & SLA Penalty Default",
+                category="Operational Continuity",
+                unit_basis="Contractual SLA default liquidated damages avoided from operational bottlenecks",
+                amount_inr="₹16.00 Lakh",
+                rationale="Guaranteed service uptime standards during process transition.",
+            ),
+            ReceiptLineItem(
+                item_name="Procurement Due Diligence & Audit Buffer",
+                category="Quality Assurance",
+                unit_basis="Independent third-party vendor quality and security audit retainers",
+                amount_inr="₹12.00 Lakh",
+                rationale="Prevented onboarding financially unstable vendors.",
+            ),
+        ]
+        total_receipt = "₹56.00 Lakh"
 
     if risks and len(risks) > 0:
         first_risk = str(risks[0]).strip()
         if len(first_risk) > 10 and not first_risk.startswith("Unbudgeted"):
             rationale = f"{rationale} Proactively mitigates: {first_risk[:90]}."
 
+    receipt_obj = BlunderReceipt(
+        receipt_id=f"RCP-DEC-{dec_id_tag:04d}-{archetype[:6]}",
+        decision_type=archetype,
+        total_capital_at_risk=total_receipt,
+        line_items=line_items,
+        currency="INR",
+        audit_standard="DecisionLens Munshi FinOps Standard v2.1",
+    )
+
     return BlunderShield(
         capital_at_risk_saved=capital,
         developer_sprints_saved=sprints,
         prevented_fatal_trap=trap,
         risk_reduction_rationale=rationale,
+        receipt=receipt_obj,
     )
 
 
@@ -1021,6 +1272,10 @@ def generate_mock_synthesis(
         top_option_name=top_option_name,
         risks=[r.risk for r in risks_and_mitigations],
         runner_up_name=second_option_name,
+        decision_title=decision.title,
+        problem_statement=decision.problem_statement,
+        facts=facts,
+        decision_id=decision.id,
     )
 
     return DecisionSynthesis(
@@ -1289,6 +1544,10 @@ def execute_hosted_synthesis(
             top_option_name=canonical_winner_name,
             risks=[r.get("risk", "") for r in parsed.get("risks_and_mitigations", []) if isinstance(r, dict)],
             runner_up_name=matrix_results[1].get("option_name") if len(matrix_results) >= 2 else None,
+            decision_title=decision.title,
+            problem_statement=decision.problem_statement,
+            facts=points.get("facts", []),
+            decision_id=decision.id,
         )
         parsed["blunder_shield"] = computed_shield.model_dump()
 

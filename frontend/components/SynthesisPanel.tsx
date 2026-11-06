@@ -47,6 +47,9 @@ import {
   AlertOctagon,
   Edit3,
   X,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import OutcomeTrackingCard from "@/components/OutcomeTrackingCard";
 
@@ -89,6 +92,7 @@ export default function SynthesisPanel({
   const [selectedOverrideOption, setSelectedOverrideOption] = useState<string>("");
   const [overrideReason, setOverrideReason] = useState<string>("");
   const [savingOverride, setSavingOverride] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // Dynamic date calculation based on leadership's start date
   function getPhaseDates(phaseIdx: number) {
@@ -903,6 +907,86 @@ jobs:
                   </p>
                 </div>
               </div>
+
+              {/* Receipt Toggle & Expanded Voucher */}
+              {displaySynthesis.blunder_shield?.receipt && (
+                <div className="pt-2 border-t border-emerald-500/20">
+                  <button
+                    type="button"
+                    onClick={() => setShowReceipt(!showReceipt)}
+                    className="flex items-center justify-between w-full text-left text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 transition-colors py-1"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Receipt className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>
+                        {showReceipt ? "Hide Itemized FinOps Receipt" : "Inspect Itemized Sunk-Cost Receipt (Munshi Audit Ledger)"}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                        {displaySynthesis.blunder_shield.receipt.receipt_id}
+                      </span>
+                    </span>
+                    {showReceipt ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {showReceipt && (
+                    <div className="mt-3 p-4 rounded-lg bg-paper-surface border border-emerald-500/30 font-mono text-xs space-y-3 shadow-inner">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border/60 pb-2 text-[11px] text-muted">
+                        <div>
+                          <span className="font-bold text-ink">ARCHETYPE:</span>{" "}
+                          <span className="px-1.5 py-0.5 rounded bg-muted/10 text-ink font-semibold">
+                            {displaySynthesis.blunder_shield.receipt.decision_type}
+                          </span>
+                        </div>
+                        <div className="text-[10px]">
+                          STANDARD: {displaySynthesis.blunder_shield.receipt.audit_standard || "Munshi FinOps Matrix v2.1"}
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-[11px] divide-y divide-border/60">
+                          <thead>
+                            <tr className="text-[10px] uppercase text-muted font-bold">
+                              <th className="py-1.5 pr-2">Cost Vector</th>
+                              <th className="py-1.5 px-2">Category</th>
+                              <th className="py-1.5 px-2">Unit / Basis</th>
+                              <th className="py-1.5 pl-2 text-right">Protected (INR)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/40">
+                            {displaySynthesis.blunder_shield.receipt.line_items.map((item, idx) => (
+                              <tr key={idx} className="hover:bg-emerald-500/5 transition-colors">
+                                <td className="py-2 pr-2">
+                                  <div className="font-bold text-ink">{item.item_name}</div>
+                                  <div className="text-[10px] text-muted font-sans line-clamp-1">{item.rationale}</div>
+                                </td>
+                                <td className="py-2 px-2 text-[10px] text-muted whitespace-nowrap">
+                                  <span className="px-1.5 py-0.5 rounded bg-paper-surface border border-border text-[9px]">
+                                    {item.category}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-2 text-[10px] text-muted">{item.unit_basis}</td>
+                                <td className="py-2 pl-2 text-right font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                                  {item.amount_inr}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 border-emerald-500/40 font-bold">
+                              <td colSpan={3} className="py-2 text-ink uppercase text-[10px]">
+                                Total Capital at Risk Neutralized:
+                              </td>
+                              <td className="py-2 text-right font-bold text-sm text-emerald-700 dark:text-emerald-400">
+                                {displaySynthesis.blunder_shield.receipt.total_capital_at_risk}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ========================================================================= */}

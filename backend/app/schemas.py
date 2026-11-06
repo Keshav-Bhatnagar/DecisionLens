@@ -1000,11 +1000,29 @@ class RoadmapData(BaseModel):
     phases: List[RoadmapPhase] = Field(default_factory=list)
 
 
+class ReceiptLineItem(BaseModel):
+    item_name: str = Field(..., description="Name of the cost vector / expense avoided")
+    category: str = Field(..., description="FinOps category (e.g. Payroll, Cloud Infra, Vendor Licensing, Compliance)")
+    unit_basis: str = Field(..., description="Calculation basis (e.g. '3 months @ ₹10.5L/mo pod burn', '40TB Egress + Commit Lock')")
+    amount_inr: str = Field(..., description="Estimated cost amount in INR (e.g. '₹31.50 Lakh')")
+    rationale: str = Field(..., description="Specific operational rationale explaining why this cost was avoided")
+
+
+class BlunderReceipt(BaseModel):
+    receipt_id: str = Field(..., description="Unique financial voucher identifier, e.g. 'RCP-DEC-0042-FINOPS'")
+    decision_type: str = Field(..., description="Classified archetype (e.g. CLOUD_MIGRATION, ARCHITECTURE_REWRITE, BUILD_VS_BUY)")
+    total_capital_at_risk: str = Field(..., description="Sum total of all line items protected")
+    line_items: List[ReceiptLineItem] = Field(default_factory=list, description="Itemized financial line items")
+    currency: str = Field("INR", description="Financial currency token")
+    audit_standard: str = Field("DecisionLens Munshi FinOps Standard v2.1", description="Governance standard used for audit")
+
+
 class BlunderShield(BaseModel):
     capital_at_risk_saved: str = Field(..., description="Estimated direct capital at risk prevented (e.g. ₹45L – ₹65L)")
     developer_sprints_saved: str = Field(..., description="Estimated engineering velocity saved (e.g. 4 – 6 Sprints)")
     prevented_fatal_trap: str = Field(..., description="The primary structural decision trap neutralized")
     risk_reduction_rationale: str = Field(..., description="Operational rationale explaining risk reduction")
+    receipt: Optional[BlunderReceipt] = Field(None, description="Itemized financial receipt breaking down capital at risk line items")
 
 
 class DecisionSynthesis(BaseModel):
