@@ -737,3 +737,48 @@ def test_cloud_migration_receipt_vs_services_archetype(
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 2000
 
+
+def test_kubernetes_vs_serverless_microservices_receipt(
+    client: TestClient, auth_headers: dict, test_user: User, test_folder: Folder, db_session: Session
+):
+    """
+    Verify that Monolith vs Microservices dynamically differentiates between
+    Kubernetes/Kafka stacks (EKS control plane, MSK broker minimums)
+    and Serverless stacks (API Gateway request metering, cold starts).
+    """
+    from app.services.recommendation import compute_blunder_shield
+
+    # 1. Kubernetes + Kafka Microservices Stack
+    k8s_shield = compute_blunder_shield(
+        domain="SOFTWARE",
+        top_option_name="Modular Monolith (Go/PostgreSQL)",
+        runner_up_name="Microservices Architecture (EKS/Kafka)",
+        decision_title="Microservices vs Modular Monolith",
+        problem_statement="Choose between modular monolith and microservices on AWS EKS with MSK Kafka event broker.",
+        facts=["Team has zero dedicated Kubernetes platform engineers."],
+        decision_id=601,
+    )
+    assert k8s_shield.receipt is not None
+    assert k8s_shield.receipt.decision_type == "KUBERNETES_MICROSERVICES"
+    k8s_items = [i.item_name for i in k8s_shield.receipt.line_items]
+    assert any("Managed K8s Control Plane" in name for name in k8s_items)
+    assert any("Managed Kafka" in name for name in k8s_items)
+    assert any("APM Telemetry" in name for name in k8s_items)
+
+    # 2. Serverless Lambda Microservices Stack
+    srv_shield = compute_blunder_shield(
+        domain="SOFTWARE",
+        top_option_name="FastAPI Monolith",
+        runner_up_name="Serverless Microservices (AWS Lambda)",
+        decision_title="Monolith vs Serverless Architecture",
+        problem_statement="Deconstruct backend into serverless microservices with AWS Lambda, API Gateway, and EventBridge.",
+        facts=["Latency SLAs must be under 50ms at p99."],
+        decision_id=602,
+    )
+    assert srv_shield.receipt is not None
+    assert srv_shield.receipt.decision_type == "SERVERLESS_MICROSERVICES"
+    srv_items = [i.item_name for i in srv_shield.receipt.line_items]
+    assert any("API Gateway & Ingress" in name for name in srv_items)
+    assert any("Provisioned Concurrency & Cold-Start" in name for name in srv_items)
+    assert any("CloudWatch Log Ingestion" in name for name in srv_items)
+

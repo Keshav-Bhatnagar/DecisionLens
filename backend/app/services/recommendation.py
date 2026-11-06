@@ -212,9 +212,17 @@ def compute_blunder_shield(
     # Analyze contextual keywords to determine exact financial archetype
     context_text = f"{decision_title or ''} {problem_statement or ''} {top_option_name or ''} {runner_up_name or ''} {' '.join(str(f) for f in (facts or []))}".lower()
 
-    is_cloud_vendor = any(k in context_text for k in ["aws", "azure", "gcp", "google cloud", "cloud migration", "cloud vendor", "multi-cloud", "egress", "snowflake", "databricks", "kubernetes", "cloud provider"])
+    # Cloud-to-cloud vendor migration (e.g. AWS vs Azure, GCP vs AWS, on-prem to cloud)
+    is_cloud_vendor = (
+        ("aws" in context_text and "azure" in context_text)
+        or ("cloud migration" in context_text)
+        or ("multi-cloud" in context_text)
+        or ("cloud provider" in context_text)
+        or any(k in context_text for k in ["aws vs", "azure vs", "gcp vs", "google cloud vs", "on-prem vs", "on-premise vs"])
+    ) and not any(k in context_text for k in ["microservices vs", "monolith vs", "modular monolith"])
+
     is_build_vs_buy = any(k in context_text for k in ["build vs buy", "buy vs build", "in-house vs", "in house vs", "auth0", "stripe", "vendor vs", "saas vs", "off-the-shelf", "custom auth", "custom payment"])
-    is_database_engine = any(k in context_text for k in ["postgres", "postgresql", "dynamodb", "mongodb", "cassandra", "sql vs nosql", "database migration", "acid vs"])
+    is_database_engine = any(k in context_text for k in ["database migration", "sql vs nosql", "acid vs", "postgres vs", "dynamodb vs", "mongodb vs", "cassandra vs"]) and not any(k in context_text for k in ["microservices vs", "monolith vs"])
 
     dec_id_tag = decision_id or 101
     line_items: List[ReceiptLineItem] = []
@@ -413,35 +421,116 @@ def compute_blunder_shield(
         total_receipt = "₹44.00 Lakh"
 
     elif domain_upper in ("SOFTWARE", "PRODUCT"):
-        archetype = "ARCHITECTURE_REWRITE"
-        capital = "₹45 Lakh – ₹65 Lakh"
-        sprints = "6 Sprints (12 Wks)"
-        trap = f"Premature architecture sprawl and maintenance drag from {runner}"
-        rationale = "Avoided unbudgeted rewrite toil, licensing lock-in, and severe developer on-call burnout."
-        line_items = [
-            ReceiptLineItem(
-                item_name="5-Person Engineering Pod Payroll Burn",
-                category="Engineering Payroll",
-                unit_basis="1 Lead Architect + 2 Seniors + 1 SRE + 1 QA (3 months / 6 sprints @ ₹10.8L/mo)",
-                amount_inr="₹32.50 Lakh",
-                rationale="Direct payroll waste avoided on aborted architecture that would be refactored.",
-            ),
-            ReceiptLineItem(
-                item_name="POC Staging Clusters & Telemetry Ingestion Sprawl",
-                category="Cloud Infrastructure",
-                unit_basis="Unneeded staging Kubernetes clusters, distributed tracing logs, and message queues",
-                amount_inr="₹6.50 Lakh",
-                rationale="Prevented running oversized infrastructure before product throughput demands it.",
-            ),
-            ReceiptLineItem(
-                item_name="Rollback Technical Debt & Incident Firefighting Drag",
-                category="Developer Toil",
-                unit_basis="Developer hours spent unwinding circular dependencies and on-call paging",
-                amount_inr="₹11.00 Lakh",
-                rationale="Protected team morale, prevented developer attrition, and maintained product delivery cadence.",
-            ),
-        ]
-        total_receipt = "₹50.00 Lakh"
+        has_k8s = any(k in context_text for k in ["k8s", "kubernetes", "eks", "gke", "aks", "helm", "service mesh", "istio"])
+        has_kafka = any(k in context_text for k in ["kafka", "msk", "event-driven", "event driven", "confluent", "rabbitmq", "pubsub"])
+        has_serverless = any(k in context_text for k in ["serverless", "lambda", "fargate", "api gateway", "eventbridge", "cloud functions"])
+
+        if has_k8s or has_kafka:
+            archetype = "KUBERNETES_MICROSERVICES"
+            capital = "₹52 Lakh – ₹78 Lakh"
+            sprints = "6 Sprints (12 Wks)"
+            trap = f"Managed Kubernetes (EKS/GKE) & Kafka cluster sprawl with {runner} vs lean modular architecture"
+            rationale = "Neutralized multi-AZ control plane tariffs, node overprovisioning, managed Kafka broker minimums, and service-mesh telemetry sprawl."
+            line_items = [
+                ReceiptLineItem(
+                    item_name="Engineering SRE & Platform Pod Payroll",
+                    category="DevOps & Platform Engineering",
+                    unit_basis="1 Platform/K8s Architect + 2 Backend Seniors + 1 SRE (3 months / 6 sprints @ ₹11.2L/mo)",
+                    amount_inr="₹33.60 Lakh",
+                    rationale="Avoided hiring specialized Kubernetes/Helm infrastructure engineers before traffic justifies it.",
+                ),
+                ReceiptLineItem(
+                    item_name="Managed K8s Control Plane & Multi-AZ Worker Nodes",
+                    category="Cloud Compute & Clusters",
+                    unit_basis="EKS/GKE cluster fees ($73/mo) + minimum 6 multi-AZ worker nodes overprovisioned for pod headroom",
+                    amount_inr="₹8.40 Lakh",
+                    rationale="Eliminated baseline cluster tax and idle compute capacity reserved for autoscaling buffers.",
+                ),
+                ReceiptLineItem(
+                    item_name="Managed Kafka / Event Broker Minimum Cluster Commit",
+                    category="Message Streaming Infrastructure",
+                    unit_basis="3-broker production Kafka (MSK / Confluent) minimum cluster tier + storage IOPS",
+                    amount_inr="₹7.20 Lakh",
+                    rationale="Prevented paying high minimum cluster baselines for modest message throughput.",
+                ),
+                ReceiptLineItem(
+                    item_name="Distributed Tracing & APM Telemetry Ingestion",
+                    category="Observability & Log Tariffs",
+                    unit_basis="Datadog / APM host agents + distributed span ingestion and cross-AZ NAT gateway fees",
+                    amount_inr="₹5.80 Lakh",
+                    rationale="Avoided paying punitive per-gigabyte log and span ingestion fees across microservice hops.",
+                ),
+            ]
+            total_receipt = "₹55.00 Lakh"
+
+        elif has_serverless:
+            archetype = "SERVERLESS_MICROSERVICES"
+            capital = "₹42 Lakh – ₹64 Lakh"
+            sprints = "5 Sprints (10 Wks)"
+            trap = f"API Gateway request metering, cold-start latency mitigation, and distributed state fragmentation with {runner}"
+            rationale = "Avoided high API Gateway invocation surcharges, provisioned concurrency waste, and multi-service debugging drag."
+            line_items = [
+                ReceiptLineItem(
+                    item_name="Developer Pod Serverless Decomposition Burn",
+                    category="Developer Payroll",
+                    unit_basis="2 Backend Seniors + 1 Cloud Architect decomposing domains into discrete Lambda functions",
+                    amount_inr="₹28.00 Lakh",
+                    rationale="Prevented fragmentation of business logic across dozens of isolated serverless handlers.",
+                ),
+                ReceiptLineItem(
+                    item_name="API Gateway & Ingress Request Metering Surcharges",
+                    category="Cloud API Ingress",
+                    unit_basis="High-frequency HTTP calls through API Gateway ($3.50/M) + cross-function VPC NAT gateways",
+                    amount_inr="₹6.80 Lakh",
+                    rationale="Avoided paying per-request gateway taxes on high internal microservice-to-microservice traffic.",
+                ),
+                ReceiptLineItem(
+                    item_name="Provisioned Concurrency & Cold-Start Latency Buffer",
+                    category="Serverless Compute",
+                    unit_basis="Keeping pre-warmed execution environments active to satisfy latency SLAs",
+                    amount_inr="₹5.40 Lakh",
+                    rationale="Eliminated paying for idle compute in serverless architectures to mask cold start latency.",
+                ),
+                ReceiptLineItem(
+                    item_name="Distributed Observability & CloudWatch Log Ingestion",
+                    category="Telemetry Tariffs",
+                    unit_basis="CloudWatch Logs ingestion ($0.50/GB) + X-Ray distributed trace aggregation",
+                    amount_inr="₹4.80 Lakh",
+                    rationale="Prevented runaway CloudWatch logging bills from chatty microservice communications.",
+                ),
+            ]
+            total_receipt = "₹45.00 Lakh"
+
+        else:
+            archetype = "ARCHITECTURE_REWRITE"
+            capital = "₹45 Lakh – ₹65 Lakh"
+            sprints = "6 Sprints (12 Wks)"
+            trap = f"Premature architecture sprawl and maintenance drag from {runner}"
+            rationale = "Avoided unbudgeted rewrite toil, licensing lock-in, and severe developer on-call burnout."
+            line_items = [
+                ReceiptLineItem(
+                    item_name="5-Person Engineering Pod Payroll Burn",
+                    category="Engineering Payroll",
+                    unit_basis="1 Lead Architect + 2 Seniors + 1 SRE + 1 QA (3 months / 6 sprints @ ₹10.8L/mo)",
+                    amount_inr="₹32.50 Lakh",
+                    rationale="Direct payroll waste avoided on aborted architecture that would be refactored.",
+                ),
+                ReceiptLineItem(
+                    item_name="POC Staging Clusters & Telemetry Ingestion Sprawl",
+                    category="Cloud Infrastructure",
+                    unit_basis="Unneeded staging Kubernetes clusters, distributed tracing logs, and message queues",
+                    amount_inr="₹6.50 Lakh",
+                    rationale="Prevented running oversized infrastructure before product throughput demands it.",
+                ),
+                ReceiptLineItem(
+                    item_name="Rollback Technical Debt & Incident Firefighting Drag",
+                    category="Developer Toil",
+                    unit_basis="Developer hours spent unwinding circular dependencies and on-call paging",
+                    amount_inr="₹11.00 Lakh",
+                    rationale="Protected team morale, prevented developer attrition, and maintained product delivery cadence.",
+                ),
+            ]
+            total_receipt = "₹50.00 Lakh"
 
     else:
         archetype = "OPERATIONAL_GOVERNANCE"
