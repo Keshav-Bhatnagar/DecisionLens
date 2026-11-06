@@ -886,49 +886,45 @@ def generate_decision_latex_report(decision: Decision) -> str:
     return "\n".join(lines)
 
 
-def compile_latex_to_pdf_locally(tex_code: str) -> Optional[bytes]:
+def compile_latex_with_pylatex(tex_code: str) -> Optional[bytes]:
     """
-    Safely compile LaTeX source code directly to PDF using a local compiler
-    (tectonic, pdflatex, or xelatex) if available in the host PATH.
-    Returns compiled PDF bytes or None if no compiler is available or compilation fails.
+    Compile LaTeX source code strictly via PyLaTeX into PDF bytes.
+    Instantiates a PyLaTeX Document encapsulation and triggers PyLaTeX's PDF compilation engine.
+    Returns compiled PDF bytes, or None if PyLaTeX fails to compile.
     """
-    compiler = shutil.which("tectonic") or shutil.which("pdflatex") or shutil.which("xelatex")
-    if not compiler:
-        return None
-
     try:
+        import pylatex
+        from pylatex.errors import CompilerError
+
+        class RawLatexDocument(pylatex.Document):
+            """PyLaTeX Document container that encapsulates generated LaTeX source code."""
+            def __init__(self, raw_source: str, **kwargs):
+                super().__init__(**kwargs)
+                self.raw_source = raw_source
+
+            def dumps(self):
+                return self.raw_source
+
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
-            tex_file = tmp_path / "document.tex"
-            tex_file.write_text(tex_code, encoding="utf-8")
+            out_basename = str(tmp_path / "decision_dossier")
 
-            if "tectonic" in compiler.lower():
-                cmd = [compiler, str(tex_file), "--outdir", str(tmp_path)]
-            else:
-                cmd = [
-                    compiler,
-                    "-interaction=nonstopmode",
-                    "-halt-on-error",
-                    "-output-directory",
-                    str(tmp_path),
-                    str(tex_file),
-                ]
+            doc = RawLatexDocument(raw_source=tex_code, default_filepath=out_basename)
+            # PyLaTeX compiles the document and manages compiler execution and file clean-up
+            doc.generate_pdf(out_basename, clean=True, clean_tex=False)
 
-            proc = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=30,
-                cwd=str(tmp_path),
-            )
-            pdf_file = tmp_path / "document.pdf"
+            pdf_file = Path(out_basename + ".pdf")
             if pdf_file.exists():
                 return pdf_file.read_bytes()
     except Exception as exc:
         logging.getLogger("decisionlens.report_generator").warning(
-            "Local LaTeX compilation failed (%s), falling back to native ReportLab.", exc
+            "PyLaTeX compilation failed (%s), falling back gracefully.", exc
         )
     return None
+
+
+# Backward-compatible alias
+compile_latex_to_pdf_locally = compile_latex_with_pylatex
 
 
 # ReportLab Color Palette

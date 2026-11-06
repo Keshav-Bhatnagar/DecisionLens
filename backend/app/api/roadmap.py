@@ -381,11 +381,11 @@ def export_decision_report(
     slug = re.sub(r"[^a-zA-Z0-9_-]", "_", decision.title)[:40] or f"decision_{decision.id}"
     fmt = format.lower().strip()
 
-    # 1. Interactive PDF format
-    if fmt == "pdf":
-        from app.services.report_generator import compile_latex_to_pdf_locally
+    # 1. Interactive PDF format (compiled via PyLaTeX with ReportLab fallback)
+    if fmt in ("pdf", "latex_pdf", "pylatex_pdf", "pylatex"):
+        from app.services.report_generator import compile_latex_with_pylatex
         tex_source = generate_decision_latex_report(decision)
-        compiled_latex_pdf = compile_latex_to_pdf_locally(tex_source)
+        compiled_latex_pdf = compile_latex_with_pylatex(tex_source)
         pdf_bytes = compiled_latex_pdf if compiled_latex_pdf else generate_decision_interactive_pdf(decision)
         disposition = "attachment" if download else "inline"
         return Response(
@@ -498,8 +498,10 @@ def save_decision_report_export(
     )
     db.add(att_tex)
 
-    # 3. Generate & Save Interactive Dossier PDF (.pdf)
-    pdf_bytes = generate_decision_interactive_pdf(decision)
+    # 3. Generate & Save Interactive Dossier PDF (.pdf via PyLaTeX)
+    from app.services.report_generator import compile_latex_with_pylatex
+    compiled_pylatex_pdf = compile_latex_with_pylatex(tex_content)
+    pdf_bytes = compiled_pylatex_pdf if compiled_pylatex_pdf else generate_decision_interactive_pdf(decision)
     pdf_filename = f"{slug}_Executive_Dossier_{timestamp_suffix}.pdf"
     pdf_storage_path = settings.storage_path / f"export_{decision_id}_{timestamp_suffix}.pdf"
     with open(pdf_storage_path, "wb") as f:
