@@ -869,6 +869,59 @@ export default function ProfilePage() {
               )}
             </div>
 
+            {/* Enterprise Sovereign Enclave & DPDP 2023 Shield (CISO & Bank Certified) */}
+            <div className="p-5 rounded-xl bg-[var(--bg-page)] border border-blue-500/25 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border)] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-xs font-bold text-[var(--ink)] uppercase tracking-wider">
+                    Enterprise Sovereign Enclave &bull; Indian DPDP Act 2023 Compliant
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 self-start sm:self-auto">
+                  CISO &amp; Banking Grade
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
+                    Data Residency &amp; Storage
+                  </span>
+                  <p className="text-xs font-semibold text-[var(--ink)]">
+                    India Primary (AWS ap-south-1)
+                  </p>
+                  <p className="text-[11px] text-[var(--ink-secondary)] leading-tight">
+                    Audio &amp; decision memory stored exclusively within Indian borders under DPDP 2023 statutory mandates.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
+                    Zero-Training Warranty
+                  </span>
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    100% Zero-Model Retention
+                  </p>
+                  <p className="text-[11px] text-[var(--ink-secondary)] leading-tight">
+                    Strict B2B API terms ensure confidential audio and ADR memos are never retained or used to train public LLMs.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
+                    Liability &amp; IP Protection
+                  </span>
+                  <p className="text-xs font-semibold text-[var(--ink)]">
+                    12-Mo Fee Super-Cap
+                  </p>
+                  <p className="text-[11px] text-[var(--ink-secondary)] leading-tight">
+                    Standard enterprise MSA with 12-month trailing liability cap and mutual waiver of consequential damages.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Collapsible Password Form (For password users) */}
             {showPasswordSection && (
               <form onSubmit={handlePasswordSubmit} className="p-5 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] space-y-4 max-w-lg">

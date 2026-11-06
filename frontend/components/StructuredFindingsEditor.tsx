@@ -744,6 +744,7 @@ export default function StructuredFindingsEditor({
 
               {activeSlide === 1 && (
                 <div className="space-y-3">
+
                   <PointCircularGallery
                     categoryKey="assumptions"
                     title="Working Assumption"

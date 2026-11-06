@@ -64,7 +64,11 @@ def create_decision(
         folder_id=body.folder_id,
         title=clean_title,
         description=body.description.strip() if body.description else "",
-        problem_statement=(body.problem_statement.strip() if (body.problem_statement and body.problem_statement.strip()) else clean_title),
+        problem_statement=(
+            body.problem_statement.strip()
+            if body.problem_statement is not None
+            else clean_title
+        ),
         record_type=body.record_type or "decision",
         status=body.status or "draft",
         domain=initial_domain,
