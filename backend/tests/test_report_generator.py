@@ -6,6 +6,7 @@ from app.services.report_generator import (
     compile_latex_to_pdf_locally,
     generate_decision_latex_report,
     generate_decision_markdown_report,
+    generate_decision_interactive_pdf,
 )
 from app.models import Decision, User, Folder, AnalysisSnapshot
 
@@ -110,3 +111,88 @@ def test_generate_decision_latex_report_structure(db_session):
     assert "Capital at Risk" in tex_code
     assert r"Phase 1: Due Diligence \& Validation" in tex_code
     assert r"\end{document}" in tex_code
+
+
+def test_generate_decision_interactive_pdf_publication_grade(db_session):
+    """Verify generate_decision_interactive_pdf builds an A4 publication-grade PDF dossier."""
+    test_user = User(
+        email="test_pdf_pub@decisionlens.ai",
+        password_hash="hash",
+    )
+    db_session.add(test_user)
+    db_session.flush()
+
+    test_folder = Folder(
+        owner_id=test_user.id,
+        name="Architecture Sprints",
+    )
+    db_session.add(test_folder)
+    db_session.flush()
+
+    dec = Decision(
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+        title="Monolith vs Microservices Architecture Dossier",
+        domain="SOFTWARE",
+        status="decided",
+        problem_statement="Evaluate migration from monolith to microservices.",
+        description="Comprehensive architecture and FinOps review.",
+        points={
+            "facts": ["Peak 5,000 req/s", "RDS at 75% load"],
+            "assumptions": ["Microservices enable independent scaling"],
+            "pros": ["Modular monolith preserves single DB consistency"],
+            "cons": ["Microservices add distributed tracing overhead"],
+        },
+        recommendation={
+            "headline": "Adopt Modular Monolith with Domain Boundaries",
+            "recommendation_text": "Option 1 is confirmed as the optimal strategic path with 88% confidence.",
+            "confidence_assessment": {"score": 0.88, "level": "HIGH"},
+            "blunder_shield": {
+                "capital_at_risk_saved": "₹45 Lakh – ₹65 Lakh",
+                "developer_sprints_saved": "6 Sprints (12 Wks)",
+                "prevented_fatal_trap": "Premature microservices sprawl",
+                "risk_reduction_rationale": "Avoided unbudgeted distributed tracing and APM licensing.",
+                "receipt": {
+                    "receipt_id": "MUNSHI-FINOPS-TEST",
+                    "total_capital_at_risk": "₹52,50,000",
+                    "decision_type": "MIGRATION",
+                    "line_items": [
+                        {
+                            "item_name": "APM Tooling Avoided",
+                            "category": "Licensing",
+                            "unit_basis": "12 months Datadog",
+                            "amount_inr": "₹18,50,000",
+                            "rationale": "In-memory monolith needs zero APM tracing agents.",
+                        }
+                    ],
+                },
+            },
+        },
+        roadmap={
+            "title": "Modular Monolith Execution Plan",
+            "phases": [
+                {
+                    "title": "Phase 1: Package Boundaries",
+                    "timeline": "Weeks 1-2",
+                    "tasks": [
+                        {
+                            "title": "Setup ArchUnit boundary enforcement",
+                            "owner_role": "Lead Architect",
+                            "timeline": "Week 1",
+                            "is_completed": True,
+                            "success_criteria": "Zero cyclic dependencies",
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    db_session.add(dec)
+    db_session.commit()
+
+    pdf_bytes = generate_decision_interactive_pdf(dec)
+    assert pdf_bytes is not None
+    assert isinstance(pdf_bytes, bytes)
+    assert pdf_bytes.startswith(b"%PDF")
+    assert len(pdf_bytes) > 5000  # Multi-page typeset PDF is at least 5KB
+

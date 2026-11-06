@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib import colors
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether, HRFlowable, Flowable
@@ -939,7 +939,10 @@ COLOR_SUCCESS = colors.HexColor("#166534")
 
 
 class NumberedCanvas(canvas.Canvas):
-    """Two-pass canvas calculating total pages and rendering running editorial headers & footers."""
+    """Two-pass canvas calculating total pages and rendering running editorial headers & footers (fancyhdr style)."""
+    record_id: str = "DEC-RECORD"
+    dossier_subtitle: str = "DECISIONLENS STRATEGIC INTELLIGENCE DOSSIER"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._saved_page_states = []
@@ -958,24 +961,27 @@ class NumberedCanvas(canvas.Canvas):
 
     def draw_page_decorations(self, total_pages: int):
         self.saveState()
-        # Running header (pages > 1)
+        # Page dimensions for A4: 595.27 x 841.89 pt
+        # Left margin: 48, Right margin: 547 (printable width = 499 pt)
         if self._pageNumber > 1:
-            self.setFont("Helvetica-Bold", 8)
+            self.setFont("Times-Roman", 7.5)
             self.setFillColor(COLOR_MUTED)
-            self.drawString(54, 752, "DECISIONLENS STRATEGIC INTELLIGENCE DOSSIER")
-            self.drawRightString(558, 752, "EXECUTIVE BRIEF")
+            self.drawString(48, 804, self.dossier_subtitle)
+            self.setFont("Times-Bold", 8)
+            self.setFillColor(COLOR_STEEL)
+            self.drawRightString(547, 804, self.record_id)
             self.setStrokeColor(COLOR_BORDER)
-            self.setLineWidth(0.5)
-            self.line(54, 745, 558, 745)
+            self.setLineWidth(0.4)
+            self.line(48, 798, 547, 798)
 
         # Running footer (all pages)
         self.setStrokeColor(COLOR_BORDER)
-        self.setLineWidth(0.5)
-        self.line(54, 45, 558, 45)
-        self.setFont("Helvetica", 8)
+        self.setLineWidth(0.4)
+        self.line(48, 44, 547, 44)
+        self.setFont("Times-Roman", 7.5)
         self.setFillColor(COLOR_MUTED)
-        self.drawString(54, 32, "CONFIDENTIAL & GROUNDED — AI DECISION INTELLIGENCE PLATFORM")
-        self.drawRightString(558, 32, f"Page {self._pageNumber} of {total_pages}")
+        self.drawString(48, 32, "CONFIDENTIAL & GROUNDED — AI-POWERED DECISION GOVERNANCE")
+        self.drawRightString(547, 32, f"Page {self._pageNumber} of {total_pages}")
         self.restoreState()
 
 
@@ -995,14 +1001,16 @@ class BookmarkFlowable(Flowable):
 
 
 def generate_decision_interactive_pdf(decision: Decision) -> bytes:
-    """
-    Generate a full-fidelity interactive PDF executive dossier.
+    r"""
+    Generate an A4 publication-grade typeset executive dossier matching LaTeX visual elegance.
     Features:
-    - Editorial dossier layout matching DecisionLens tokens
-    - Interactive PDF bookmarks outline tree for Acrobat / Chrome sidebar
-    - Clickable internal navigation links (Table of Contents)
-    - Clickable external citations to verified research sources
-    - Styled 8-category cognitive tables, normalized decision matrix, SWOT, and roadmap
+    - Times-Roman academic typography hierarchy matching LaTeX \usepackage{times}
+    - LaTeX tcolorbox card replicas with SteelBlue left accents and CardSurface background
+    - Booktabs table formatting (\toprule, \midrule, \bottomrule) with zero spreadsheet gridlines
+    - Dotted-leader interactive Table of Contents with section navigation links
+    - Itemized FinOps Sunk-Cost Receipt table matching LaTeX dossier line items
+    - fancyhdr running header and footer with total page budget calculation
+    - Interactive outline bookmarks for Chrome/Acrobat reader sidebar
     """
     points = decision.points or {}
     gaps = decision.gaps or {}
@@ -1014,9 +1022,9 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf,
-        pagesize=letter,
-        leftMargin=54,
-        rightMargin=54,
+        pagesize=A4,
+        leftMargin=48,
+        rightMargin=48,
         topMargin=54,
         bottomMargin=54,
     )
@@ -1026,79 +1034,96 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     title_style = ParagraphStyle(
         "DocTitle",
         parent=base_styles["Heading1"],
-        fontName="Helvetica-Bold",
-        fontSize=18,
-        leading=22,
+        fontName="Times-Bold",
+        fontSize=16,
+        leading=20,
         textColor=COLOR_NAVY,
-        spaceAfter=4,
+        spaceAfter=2,
     )
-    meta_style = ParagraphStyle(
-        "MetaText",
+    kicker_style = ParagraphStyle(
+        "DocKicker",
         parent=base_styles["Normal"],
-        fontName="Helvetica",
-        fontSize=8.5,
-        leading=12.5,
-        textColor=COLOR_MUTED,
+        fontName="Times-Bold",
+        fontSize=8,
+        leading=11,
+        textColor=COLOR_STEEL,
+    )
+    meta_label = ParagraphStyle(
+        "MetaLabel",
+        parent=base_styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=8,
+        leading=11,
+        textColor=COLOR_NAVY,
+    )
+    meta_val = ParagraphStyle(
+        "MetaVal",
+        parent=base_styles["Normal"],
+        fontName="Times-Roman",
+        fontSize=8,
+        leading=11,
+        textColor=COLOR_NAVY,
     )
     h1_style = ParagraphStyle(
         "Heading1Style",
         parent=base_styles["Heading1"],
-        fontName="Helvetica-Bold",
+        fontName="Times-Bold",
         fontSize=12,
-        leading=16,
+        leading=15,
         textColor=COLOR_NAVY,
         spaceBefore=12,
-        spaceAfter=5,
+        spaceAfter=2,
         keepWithNext=True,
     )
     h2_style = ParagraphStyle(
         "Heading2Style",
         parent=base_styles["Heading2"],
-        fontName="Helvetica-Bold",
-        fontSize=10,
-        leading=13.5,
+        fontName="Times-Bold",
+        fontSize=9.5,
+        leading=13,
         textColor=COLOR_STEEL,
-        spaceBefore=8,
-        spaceAfter=3,
+        spaceBefore=6,
+        spaceAfter=2,
         keepWithNext=True,
     )
     body_style = ParagraphStyle(
         "BodyStyle",
         parent=base_styles["Normal"],
-        fontName="Helvetica",
+        fontName="Times-Roman",
         fontSize=8.5,
         leading=12.5,
         textColor=COLOR_NAVY,
-        spaceAfter=3,
+        spaceAfter=2.5,
     )
     body_muted = ParagraphStyle(
         "BodyMuted",
         parent=body_style,
+        fontName="Times-Italic",
         textColor=COLOR_MUTED,
     )
     bullet_style = ParagraphStyle(
         "BulletStyle",
         parent=body_style,
-        leftIndent=10,
-        firstLineIndent=-10,
-        spaceAfter=2.5,
+        leftIndent=11,
+        firstLineIndent=-11,
+        spaceAfter=2,
     )
     table_cell = ParagraphStyle(
         "TableCell",
         parent=body_style,
         fontSize=8,
         leading=11,
+        spaceAfter=0,
     )
     table_header = ParagraphStyle(
         "TableHeader",
         parent=table_cell,
-        fontName="Helvetica-Bold",
+        fontName="Times-Bold",
         textColor=COLOR_NAVY,
     )
 
     story: List[Flowable] = []
 
-    # Title Banner
     now_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
     status_str = (decision.status or "EVALUATING").upper()
     domain_str = (decision.domain or "BUSINESS").upper()
@@ -1109,64 +1134,129 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
 
     banner_subtitle = "DECISIONLENS EXECUTIVE MEETING MINUTES" if is_meeting else "DECISIONLENS STRATEGIC INTELLIGENCE DOSSIER"
     record_id_prefix = "MTG" if is_meeting else "DEC"
+    record_id_tag = f"{record_id_prefix}-{decision.id:04d}"
 
-    banner_data = [
+    NumberedCanvas.record_id = record_id_tag
+    NumberedCanvas.dossier_subtitle = banner_subtitle
+
+    # 1. LaTeX-Grade Title Banner (tcolorbox Replica)
+    top_bar = Table([
         [
-            Paragraph(f"<b>{banner_subtitle}</b>", ParagraphStyle("BTop", parent=meta_style, fontName="Helvetica-Bold", textColor=COLOR_STEEL)),
-            Paragraph(f"<b>STATUS:</b> <font color=\"#166534\">{escape_xml(status_str)}</font>", ParagraphStyle("BStat", parent=meta_style, alignment=2)),
-        ],
-        [
-            Paragraph(f"<b>{escape_xml(decision.title)}</b>", title_style),
-            Paragraph(f"<b>ID:</b> {record_id_prefix}-{decision.id:04d}<br/><b>Date:</b> {now_str}<br/><b>Domain:</b> {escape_xml(domain_str)}", meta_style),
-        ],
-        [
-            Paragraph(f"<b>Confidence Assessment:</b> {conf_pct}% ({escape_xml(conf_level)}) &bull; <b>Record Type:</b> {escape_xml('Meeting Discussion' if is_meeting else 'Decision Analysis')}", ParagraphStyle("BBot", parent=meta_style, textColor=COLOR_NAVY)),
-            Paragraph("<b>Verified Evidence:</b> Grounded", ParagraphStyle("BBotR", parent=meta_style, alignment=2, textColor=COLOR_MUTED)),
+            Paragraph(f"<b>{banner_subtitle}</b> &nbsp;&bull;&nbsp; <font color='#5A6275'>Verified Epistemic Evidence</font>", kicker_style),
+            Paragraph(f"<b>STATUS:</b> <font color=\"#166534\"><b>{escape_xml(status_str)}</b></font>", ParagraphStyle("BStat", parent=kicker_style, alignment=2)),
         ]
-    ]
-    banner_table = Table(banner_data, colWidths=[360, 144])
-    banner_table.setStyle(TableStyle([
+    ], colWidths=[360, 123])
+    top_bar.setStyle(TableStyle([
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+
+    meta_grid = Table([
+        [
+            Paragraph("<b>Record ID:</b>", meta_label), Paragraph(record_id_tag, meta_val),
+            Paragraph("<b>Date:</b>", meta_label), Paragraph(now_str, meta_val),
+        ],
+        [
+            Paragraph("<b>Domain:</b>", meta_label), Paragraph(escape_xml(domain_str), meta_val),
+            Paragraph("<b>Record Type:</b>", meta_label), Paragraph(escape_xml("Meeting Discussion" if is_meeting else "Decision Analysis"), meta_val),
+        ],
+        [
+            Paragraph("<b>Confidence:</b>", meta_label), Paragraph(f"{conf_pct}% ({escape_xml(conf_level)})", meta_val),
+            Paragraph("<b>CI Governance:</b>", meta_label), Paragraph("100% Grounded in CI", meta_val),
+        ],
+    ], colWidths=[70, 172, 75, 166])
+    meta_grid.setStyle(TableStyle([
+        ('TOPPADDING', (0, 0), (-1, -1), 1),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+
+    banner_container = Table([
+        [top_bar],
+        [Paragraph(f"<b>{escape_xml(decision.title)}</b>", title_style)],
+        [HRFlowable(width="100%", thickness=0.4, color=COLOR_BORDER, spaceBefore=2, spaceAfter=3)],
+        [meta_grid],
+    ], colWidths=[499])
+    banner_container.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), COLOR_SURFACE),
-        ('BOX', (0, 0), (-1, -1), 1, COLOR_BORDER),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOX', (0, 0), (-1, -1), 1.0, COLOR_STEEL),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
-    story.append(banner_table)
-    story.append(Spacer(1, 8))
+    story.append(banner_container)
+    story.append(Spacer(1, 6))
 
-    # Interactive Table of Contents
+    # 2. LaTeX-Style Table of Contents
     story.append(BookmarkFlowable("sec_toc", "Table of Contents", 0))
-    story.append(Paragraph("<b>Table of Contents (Click to Jump Directly)</b>", h2_style))
-    toc_links = [
-        f'<a href="#sec_problem" color="#2F5D8F">{ "1. Meeting Purpose & Agenda Objectives" if is_meeting else "1. Problem Statement & Operational Scope" }</a>',
-        '<a href="#sec_cognitive" color="#2F5D8F">2. Cognitive Structuring (8 Distinct Categories)</a>',
-        '<a href="#sec_gaps" color="#2F5D8F">3. Information Gaps & Web Research Resolution</a>',
-        f'<a href="#sec_frameworks" color="#2F5D8F">{ "4. Meeting Alignment & Analytical Frameworks" if is_meeting else "4. Multi-Lens Analytical Framework Results" }</a>',
-        f'<a href="#sec_synthesis" color="#2F5D8F">{ "5. Meeting Decisions & Executive Minutes" if is_meeting else "5. Strategic Recommendation & Decision Synthesis" }</a>',
-        '<a href="#sec_roadmap" color="#2F5D8F">6. Actionable Implementation Roadmap</a>',
+    toc_rows = [
+        [
+            Paragraph("<b>1.</b>", table_header),
+            Paragraph(f'<a href="#sec_problem" color="#161E33">{ "Meeting Purpose & Agenda Objectives" if is_meeting else "Problem Statement & Operational Scope" }</a> <font color="#C4BCAD">. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .</font>', table_cell),
+            Paragraph('<a href="#sec_problem" color="#2F5D8F"><b>§ 1</b></a>', ParagraphStyle("TR", parent=table_cell, alignment=2)),
+        ],
+        [
+            Paragraph("<b>2.</b>", table_header),
+            Paragraph('<a href="#sec_cognitive" color="#161E33">Cognitive Structuring (8 Distinct Categories)</a> <font color="#C4BCAD">. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .</font>', table_cell),
+            Paragraph('<a href="#sec_cognitive" color="#2F5D8F"><b>§ 2</b></a>', ParagraphStyle("TR", parent=table_cell, alignment=2)),
+        ],
+        [
+            Paragraph("<b>3.</b>", table_header),
+            Paragraph('<a href="#sec_gaps" color="#161E33">Information Gaps & Web Research Resolution</a> <font color="#C4BCAD">. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .</font>', table_cell),
+            Paragraph('<a href="#sec_gaps" color="#2F5D8F"><b>§ 3</b></a>', ParagraphStyle("TR", parent=table_cell, alignment=2)),
+        ],
+        [
+            Paragraph("<b>4.</b>", table_header),
+            Paragraph(f'<a href="#sec_frameworks" color="#161E33">{ "Meeting Alignment & Analytical Frameworks" if is_meeting else "Multi-Lens Analytical Framework Results" }</a> <font color="#C4BCAD">. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .</font>', table_cell),
+            Paragraph('<a href="#sec_frameworks" color="#2F5D8F"><b>§ 4</b></a>', ParagraphStyle("TR", parent=table_cell, alignment=2)),
+        ],
+        [
+            Paragraph("<b>5.</b>", table_header),
+            Paragraph(f'<a href="#sec_synthesis" color="#161E33">{ "Meeting Decisions & Executive Minutes" if is_meeting else "Strategic Recommendation & Decision Synthesis" }</a> <font color="#C4BCAD">. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .</font>', table_cell),
+            Paragraph('<a href="#sec_synthesis" color="#2F5D8F"><b>§ 5</b></a>', ParagraphStyle("TR", parent=table_cell, alignment=2)),
+        ],
+        [
+            Paragraph("<b>6.</b>", table_header),
+            Paragraph('<a href="#sec_roadmap" color="#161E33">Actionable Implementation Roadmap</a> <font color="#C4BCAD">. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .</font>', table_cell),
+            Paragraph('<a href="#sec_roadmap" color="#2F5D8F"><b>§ 6</b></a>', ParagraphStyle("TR", parent=table_cell, alignment=2)),
+        ],
     ]
-    toc_data = [[Paragraph(link, body_style)] for link in toc_links]
-    toc_table = Table(toc_data, colWidths=[504])
-    toc_table.setStyle(TableStyle([
+    toc_inner = Table(toc_rows, colWidths=[18, 439, 26])
+    toc_inner.setStyle(TableStyle([
+        ('TOPPADDING', (0, 0), (-1, -1), 1.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1.5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+
+    toc_box = Table([
+        [Paragraph("<b>TABLE OF CONTENTS</b>", kicker_style)],
+        [HRFlowable(width="100%", thickness=0.3, color=COLOR_BORDER, spaceBefore=1, spaceAfter=2)],
+        [toc_inner],
+    ], colWidths=[499])
+    toc_box.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), COLOR_PAGE),
         ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
-    story.append(toc_table)
-    story.append(Spacer(1, 10))
+    story.append(toc_box)
+    story.append(Spacer(1, 8))
 
     # Section 1: Problem Statement
     story.append(BookmarkFlowable("sec_problem", "1. Problem Statement & Scope", 0))
-    story.append(Paragraph('<a name="sec_problem"/><b>1. Problem Statement & Operational Scope</b>', h1_style))
+    story.append(Paragraph('<a name="sec_problem"/><b>1. Problem Statement &amp; Operational Scope</b>', h1_style))
+    story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
     story.append(Paragraph(f"<b>Core Problem:</b> {escape_xml(decision.problem_statement or 'No explicit problem statement recorded.')}", body_style))
     if decision.description:
         story.append(Paragraph(f"<b>Background Context:</b> {escape_xml(decision.description)}", body_style))
-    
+
     ingest_txt = (
         f"<b>Ingestion Overview:</b> Attached Documents: {len(decision.attachments) if decision.attachments else 0} &bull; "
         f"Audio Recordings: {len(decision.audio_recordings) if decision.audio_recordings else 0} &bull; "
@@ -1178,6 +1268,8 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     # Section 2: Cognitive Structuring
     story.append(BookmarkFlowable("sec_cognitive", "2. Cognitive Structuring", 0))
     story.append(Paragraph('<a name="sec_cognitive"/><b>2. Cognitive Structuring (8 Distinct Cognitive Categories)</b>', h1_style))
+    story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
+
     cat_keys = [
         ("Facts (Concrete, Verified)", "facts"),
         ("Assumptions (Unverified Hypotheses)", "assumptions"),
@@ -1188,11 +1280,12 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
         ("Contradictions (Direct Inconsistencies)", "contradictions"),
         ("Unknowns (Information Blindspots)", "unknowns"),
     ]
+
     for i in range(0, len(cat_keys), 2):
         title_a, key_a = cat_keys[i]
         items_a = points.get(key_a, [])
         items_a_txt = "<br/>".join([f"&bull; {escape_xml(item)}" for item in items_a]) if items_a else "<i>None noted.</i>"
-        
+
         if i + 1 < len(cat_keys):
             title_b, key_b = cat_keys[i + 1]
             items_b = points.get(key_b, [])
@@ -1204,20 +1297,24 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             [Paragraph(f"<b>{title_a}</b>", h2_style), Paragraph(f"<b>{title_b}</b>", h2_style)],
             [Paragraph(items_a_txt, table_cell), Paragraph(items_b_txt, table_cell)],
         ]
-        t = Table(pair_data, colWidths=[248, 248])
+        t = Table(pair_data, colWidths=[246, 246])
         t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), COLOR_SURFACE),
-            ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+            ('BACKGROUND', (0, 0), (0, 0), COLOR_PAGE),
+            ('BACKGROUND', (1, 0), (1, 0), COLOR_PAGE),
+            ('BACKGROUND', (0, 1), (-1, -1), COLOR_SURFACE),
+            ('BOX', (0, 0), (0, -1), 0.5, COLOR_BORDER),
+            ('BOX', (1, 0), (1, -1), 0.5, COLOR_BORDER),
+            ('LINEBELOW', (0, 0), (0, 0), 0.4, COLOR_BORDER),
+            ('LINEBELOW', (1, 0), (1, 0), 0.4, COLOR_BORDER),
             ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
         ]))
         story.append(t)
         story.append(Spacer(1, 3))
 
-    # Private feedback
+    # Private feedback card
     feedback = points.get("private_feedback")
     if feedback and isinstance(feedback, dict):
         fb_txt = (
@@ -1226,7 +1323,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             f"<b>Cognitive Biases Detected:</b> {escape_xml(', '.join(feedback.get('potential_biases', ['None detected'])))}<br/>"
             f"<b>Strategic Feedback:</b> {escape_xml(feedback.get('feedback_notes', 'N/A'))}"
         )
-        fb_table = Table([[Paragraph("<b>Private Reflective Feedback</b>", h2_style)], [Paragraph(fb_txt, table_cell)]], colWidths=[504])
+        fb_table = Table([[Paragraph("<b>Private Reflective Feedback (Anti-Bias Analysis)</b>", h2_style)], [Paragraph(fb_txt, table_cell)]], colWidths=[499])
         fb_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), COLOR_PAGE),
             ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
@@ -1234,14 +1331,15 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             ('TOPPADDING', (0, 0), (-1, -1), 3),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
-        story.append(Spacer(1, 3))
+        story.append(Spacer(1, 2))
         story.append(fb_table)
 
     story.append(Spacer(1, 6))
 
     # Section 3: Gaps & Web Research
     story.append(BookmarkFlowable("sec_gaps", "3. Information Gaps & Research", 0))
-    story.append(Paragraph('<a name="sec_gaps"/><b>3. Information Gaps & External Research Resolution</b>', h1_style))
+    story.append(Paragraph('<a name="sec_gaps"/><b>3. Information Gaps &amp; External Research Resolution</b>', h1_style))
+    story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
     gap_items = gaps.get("gaps", []) if isinstance(gaps, dict) else (gaps if isinstance(gaps, list) else [])
     if gap_items:
         story.append(Paragraph("<b>Identified Information Gaps:</b>", h2_style))
@@ -1252,15 +1350,15 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
                 imp = escape_xml(g.get("importance", "medium").capitalize())
                 ans = f" &mdash; <i>Answer:</i> {escape_xml(g.get('user_answer'))}" if g.get("user_answer") else ""
                 story.append(Paragraph(f"&bull; <b>{q}</b> [Importance: {imp}, Status: {st}]{ans}", bullet_style))
-    
+
     research_list = research.get("research", []) if isinstance(research, dict) else (research if isinstance(research, list) else [])
     if research_list:
-        story.append(Spacer(1, 3))
+        story.append(Spacer(1, 2))
         story.append(Paragraph("<b>Verified Web Research Citations (Zero-Hallucination):</b>", h2_style))
         for r_entry in research_list:
             if isinstance(r_entry, dict):
                 q = escape_xml(r_entry.get("query", ""))
-                story.append(Paragraph(f"<b>Query:</b> <code>{q}</code>", body_style))
+                story.append(Paragraph(f"<b>Query:</b> <font name=\"Courier\">{q}</font>", body_style))
                 claims = r_entry.get("claims", [])
                 for c in claims:
                     if isinstance(c, dict):
@@ -1274,19 +1372,19 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
 
     story.append(Spacer(1, 6))
 
-    # Section 4: Frameworks
+    # Section 4: Frameworks (Booktabs Decision Matrix)
     story.append(BookmarkFlowable("sec_frameworks", "4. Multi-Lens Frameworks", 0))
     story.append(Paragraph('<a name="sec_frameworks"/><b>4. Multi-Lens Analytical Framework Results</b>', h1_style))
+    story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
     matrix = analysis.get("decision_matrix", {}) if isinstance(analysis, dict) else {}
     if matrix and matrix.get("applicable"):
         story.append(Paragraph("<b>Weighted Decision Matrix (Normalized to 100% Weight):</b>", h2_style))
         criteria = matrix.get("criteria", [])
         ranked_opts = matrix.get("ranked_options", [])
         if criteria and ranked_opts:
-            m_header = [Paragraph("<b>Option</b>", table_header), Paragraph("<b>Score</b>", table_header)]
+            m_header = [Paragraph("<b>Rank</b>", table_header), Paragraph("<b>Option Candidate</b>", table_header), Paragraph("<b>Weighted Score</b>", table_header)]
             for c in criteria:
                 m_header.append(Paragraph(f"<b>{escape_xml(c.get('name', 'C'))}</b><br/>({c.get('weight', 0):.0f}%)", table_header))
-            m_header.append(Paragraph("<b>Rank</b>", table_header))
 
             m_rows = [m_header]
             for opt in ranked_opts:
@@ -1294,52 +1392,62 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
                 w_score = opt.get("score", opt.get("weighted_score", 0.0))
                 rank = opt.get("rank", 1)
                 opt_ratings = opt.get("scores", {})
-                row = [Paragraph(f"<b>{opt_name}</b>", table_cell), Paragraph(f"<b>{w_score:.2f}</b>", table_cell)]
+                is_winner = rank == 1
+                name_cell = f"<font color=\"#166534\"><b>★ {opt_name}</b></font>" if is_winner else f"<b>{opt_name}</b>"
+                row = [Paragraph(f"Rank {rank}", table_cell), Paragraph(name_cell, table_cell), Paragraph(f"<b>{w_score:.2f}</b>", table_cell)]
                 for c in criteria:
                     cid = c.get("id")
                     val = opt_ratings.get(cid, "-")
                     row.append(Paragraph(f"{val:.1f}" if isinstance(val, (int, float)) else str(val), table_cell))
-                row.append(Paragraph(f"Rank {rank}", table_cell))
                 m_rows.append(row)
 
+            # Booktabs Matrix Layout
             num_cols = len(m_header)
-            col_w = 504 / num_cols
+            col_w = 499 / num_cols
             m_table = Table(m_rows, colWidths=[col_w] * num_cols)
             m_table.setStyle(TableStyle([
+                ('LINEABOVE', (0, 0), (-1, 0), 1.2, COLOR_NAVY),     # \toprule
+                ('LINEBELOW', (0, 0), (-1, 0), 0.6, COLOR_NAVY),     # \midrule
+                ('LINEBELOW', (0, -1), (-1, -1), 1.2, COLOR_NAVY),   # \bottomrule
                 ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
-                ('BACKGROUND', (0, 1), (-1, -1), COLOR_SURFACE),
-                ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-                ('INNERGRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_SURFACE, colors.white]),
                 ('TOPPADDING', (0, 0), (-1, -1), 3),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
                 ('LEFTPADDING', (0, 0), (-1, -1), 4),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ]))
             story.append(m_table)
             story.append(Spacer(1, 4))
 
-    # Section 5: Synthesis & Recommendation
+    # Section 5: Synthesis & Recommendation (tcolorbox Callout Replica)
     story.append(BookmarkFlowable("sec_synthesis", "5. Strategic Recommendation", 0))
-    story.append(Paragraph('<a name="sec_synthesis"/><b>5. Strategic Recommendation & Decision Synthesis</b>', h1_style))
+    story.append(Paragraph('<a name="sec_synthesis"/><b>5. Strategic Recommendation &amp; Decision Synthesis</b>', h1_style))
+    story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
+
     rec_title = escape_xml(rec.get("headline", "Strategic Decision Synthesis"))
     rec_text = escape_xml(rec.get("recommendation_text", "No recommendation produced."))
+
     rec_card = Table(
-        [[Paragraph(f"<b>{rec_title}</b>", h1_style)], [Paragraph(rec_text, body_style)]],
-        colWidths=[504]
+        [
+            [Paragraph(f"<b>RECOMMENDED STRATEGY:</b> <font color=\"#2F5D8F\">{rec_title}</font>", h2_style)],
+            [Paragraph(rec_text, body_style)]
+        ],
+        colWidths=[499]
     )
     rec_card.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), COLOR_SURFACE),
-        ('BOX', (0, 0), (-1, -1), 1, COLOR_STEEL),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LINEBEFORE', (0, 0), (0, -1), 3.5, COLOR_STEEL),  # Left accent bar
+        ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(rec_card)
-    story.append(Spacer(1, 5))
+    story.append(Spacer(1, 6))
 
-    # 5.1 Capital at Risk & Blunder Shield Table
+    # 5.1 Blunder Shield (Booktabs Style)
     pdf_shield = rec.get("blunder_shield")
     if not pdf_shield or not isinstance(pdf_shield, dict):
         try:
@@ -1362,7 +1470,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     p_rationale = escape_xml(str(pdf_shield.get("risk_reduction_rationale", "Avoided toil & risk.")))
     adr_status_pdf = "ACCEPTED (Active CI Guardrail)" if decision.status == "decided" else "PROPOSED (Pending Clearance)"
 
-    story.append(Paragraph("<b>🛡️ Capital at Risk & Blunder Shield (Executive ROI Assurance):</b>", h2_style))
+    story.append(Paragraph("<b>🛡️ Capital at Risk &amp; Blunder Shield (Executive ROI Assurance):</b>", h2_style))
     shield_rows = [
         [
             Paragraph("<b>Protection Vector</b>", table_header),
@@ -1385,12 +1493,13 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             Paragraph(p_rationale, table_cell),
         ],
     ]
-    shield_table = Table(shield_rows, colWidths=[120, 114, 270])
+    shield_table = Table(shield_rows, colWidths=[125, 115, 259])
     shield_table.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 1.2, COLOR_NAVY),     # \toprule
+        ('LINEBELOW', (0, 0), (-1, 0), 0.6, COLOR_NAVY),     # \midrule
+        ('LINEBELOW', (0, -1), (-1, -1), 1.2, COLOR_NAVY),   # \bottomrule
         ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
-        ('BACKGROUND', (0, 1), (-1, -1), COLOR_SURFACE),
-        ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_SURFACE, colors.white]),
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ('LEFTPADDING', (0, 0), (-1, -1), 5),
@@ -1399,7 +1508,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     story.append(shield_table)
     story.append(Spacer(1, 4))
 
-    # Itemized FinOps Receipt Table
+    # 5.2 Itemized FinOps Sunk-Cost Receipt (Munshi Table)
     pdf_receipt = pdf_shield.get("receipt")
     if pdf_receipt and isinstance(pdf_receipt, dict) and pdf_receipt.get("line_items"):
         story.append(Paragraph(f"<b>🧾 Itemized FinOps Sunk-Cost Receipt ({escape_xml(pdf_receipt.get('receipt_id', 'RCP'))}):</b>", h2_style))
@@ -1407,7 +1516,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             Paragraph("<b>Cost Vector</b>", table_header),
             Paragraph("<b>Category</b>", table_header),
             Paragraph("<b>Unit / Basis</b>", table_header),
-            Paragraph("<b>Amount</b>", table_header),
+            Paragraph("<b>Protected Capital (INR)</b>", table_header),
         ]]
         for it in pdf_receipt.get("line_items", []):
             if isinstance(it, dict):
@@ -1423,13 +1532,15 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             Paragraph("<i>Munshi FinOps Matrix v2.1</i>", table_header),
             Paragraph(f"<font color='#166534'><b>{escape_xml(pdf_receipt.get('total_capital_at_risk', p_cap))}</b></font>", table_header),
         ])
-        rcpt_table = Table(rcpt_rows, colWidths=[174, 95, 150, 85])
+        rcpt_table = Table(rcpt_rows, colWidths=[165, 95, 145, 94])
         rcpt_table.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 1.2, COLOR_NAVY),     # \toprule
+            ('LINEBELOW', (0, 0), (-1, 0), 0.6, COLOR_NAVY),     # \midrule
+            ('LINEABOVE', (0, -1), (-1, -1), 0.6, COLOR_NAVY),   # Above total row
+            ('LINEBELOW', (0, -1), (-1, -1), 1.2, COLOR_NAVY),   # \bottomrule
             ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
-            ('BACKGROUND', (0, 1), (-1, -2), COLOR_SURFACE),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [COLOR_SURFACE, colors.white]),
             ('BACKGROUND', (0, -1), (-1, -1), COLOR_PAGE),
-            ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
             ('TOPPADDING', (0, 0), (-1, -1), 3),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ('LEFTPADDING', (0, 0), (-1, -1), 4),
@@ -1438,26 +1549,46 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
         story.append(rcpt_table)
         story.append(Spacer(1, 4))
 
+    # Alternatives Considered
+    alts = rec.get("alternatives", [])
+    if alts:
+        story.append(Paragraph("<b>Evaluated Alternatives & Trade-offs:</b>", h2_style))
+        for alt in alts:
+            if isinstance(alt, dict):
+                alt_name = escape_xml(alt.get("name", "Option"))
+                status = "RECOMMENDED" if alt.get("is_recommended") else "ALTERNATIVE"
+                desc = escape_xml(alt.get("description", ""))
+                tradeoffs = escape_xml(alt.get("tradeoffs", ""))
+                rejection = escape_xml(alt.get("why_not_recommended", ""))
+                alt_txt = f"<b>{alt_name}</b> [<i>{status}</i>] &mdash; {desc}"
+                if tradeoffs:
+                    alt_txt += f"<br/><i>Trade-offs:</i> {tradeoffs}"
+                if rejection:
+                    alt_txt += f"<br/><font color='#991B1B'>Why Not Chosen: {rejection}</font>"
+                story.append(Paragraph(alt_txt, bullet_style))
+        story.append(Spacer(1, 3))
+
     # MADR Callout Card
     adr_card = Table(
-        [[Paragraph(f"<b>📜 Architectural Decision Record (Git-Native MADR 3.0.0):</b> <font color='#2F5D8F'>ADR-{decision.id:04d}</font> &bull; Status: <b>{adr_status_pdf}</b> &bull; Drift-Guarded in CI", meta_style)]],
-        colWidths=[504]
+        [[Paragraph(f"<b>📜 Architectural Decision Record (Git-Native MADR 3.0.0):</b> <font color='#2F5D8F'>ADR-{decision.id:04d}</font> &bull; Status: <b>{adr_status_pdf}</b> &bull; Drift-Guarded in CI", meta_val)]],
+        colWidths=[499]
     )
     adr_card.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), COLOR_PAGE),
-        ('BOX', (0, 0), (-1, -1), 0.5, COLOR_STEEL),
+        ('LINEBEFORE', (0, 0), (0, -1), 2.5, COLOR_STEEL),
+        ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ]))
     story.append(adr_card)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 5))
 
-    # Risks and Mitigations table
+    # Risks and Mitigations (Booktabs)
     risks = rec.get("risks_and_mitigations", [])
     if risks:
-        story.append(Paragraph("<b>Risk Matrix & Mitigation Strategies:</b>", h2_style))
+        story.append(Paragraph("<b>Risk Matrix &amp; Mitigation Strategies:</b>", h2_style))
         r_rows = [[Paragraph("<b>Severity</b>", table_header), Paragraph("<b>Identified Risk</b>", table_header), Paragraph("<b>Mitigation Strategy</b>", table_header)]]
         for r in risks:
             if isinstance(r, dict):
@@ -1465,23 +1596,25 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
                 risk_txt = escape_xml(r.get("risk", ""))
                 mit_txt = escape_xml(r.get("mitigation", ""))
                 r_rows.append([Paragraph(f"<b>{sev}</b>", table_cell), Paragraph(risk_txt, table_cell), Paragraph(mit_txt, table_cell)])
-        r_table = Table(r_rows, colWidths=[70, 217, 217])
+        r_table = Table(r_rows, colWidths=[70, 214, 215])
         r_table.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 1.2, COLOR_NAVY),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.6, COLOR_NAVY),
+            ('LINEBELOW', (0, -1), (-1, -1), 1.2, COLOR_NAVY),
             ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
-            ('BACKGROUND', (0, 1), (-1, -1), COLOR_SURFACE),
-            ('BOX', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_SURFACE, colors.white]),
             ('TOPPADDING', (0, 0), (-1, -1), 3),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(r_table)
-        story.append(Spacer(1, 6))
+        story.append(Spacer(1, 5))
 
     # Section 6: Roadmap
     story.append(BookmarkFlowable("sec_roadmap", "6. Implementation Roadmap", 0))
     story.append(Paragraph('<a name="sec_roadmap"/><b>6. Actionable Implementation Roadmap</b>', h1_style))
+    story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
     rm_phases = roadmap.get("phases", [])
     if rm_phases:
         for pidx, phase in enumerate(rm_phases, 1):
