@@ -128,6 +128,8 @@ def init_db() -> None:
                 folder_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(folders);")).fetchall()]
                 if "color" not in folder_cols:
                     conn.execute(text("ALTER TABLE folders ADD COLUMN color VARCHAR(30) DEFAULT '#4F46E5';"))
+                if "domain" not in folder_cols:
+                    conn.execute(text("ALTER TABLE folders ADD COLUMN domain VARCHAR(50);"))
                 if "updated_at" not in folder_cols:
                     conn.execute(text("ALTER TABLE folders ADD COLUMN updated_at DATETIME;"))
 
