@@ -483,10 +483,10 @@ export default function StructuredFindingsEditor({
           <span className="text-xs font-mono font-bold tracking-wider text-[#7a4e10] dark:text-[#D4AA50] uppercase">
             Stage 02 • Evidence &amp; Cognitive Triage
           </span>
-          <h2 className="text-xl sm:text-2xl font-bold text-[#161E33] dark:text-[#F0EAE1] tracking-tight mt-1">
+          <h2 className="font-newsreader text-2xl sm:text-3xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight mt-1">
             The Evidence Orbit
           </h2>
-          <p className="text-xs sm:text-sm text-[#5A6275] dark:text-[#A89F91] mt-1 max-w-2xl leading-relaxed">
+          <p className="text-sm font-sans text-[#4f4b40] dark:text-[#A89F91] mt-1.5 max-w-2xl leading-relaxed">
             Review direct facts, untested assumptions, and unspoken friction in a 3D rotating stage before committing to a decision.
           </p>
         </div>
@@ -557,10 +557,10 @@ export default function StructuredFindingsEditor({
         <div className="p-6 sm:p-8 bg-[#E5DEC9]/50 dark:bg-[#1A1815] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-[#161E33] dark:text-[#F0EAE1]">
+              <h3 className="font-newsreader text-lg sm:text-xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
                 Input Signal Readiness Audit
               </h3>
-              <p className="text-xs text-[#5A6275] dark:text-[#A89F91] mt-0.5">
+              <p className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
                 Aggregates your problem statement, meeting scribe, and dossier into 4 structured dimensions.
               </p>
             </div>
@@ -571,37 +571,37 @@ export default function StructuredFindingsEditor({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
             <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
-              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+              <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Problem Statement
               </span>
-              <p className="text-xs sm:text-sm text-[#161E33] dark:text-[#F0EAE1] line-clamp-2">
+              <p className="font-newsreader text-base text-[#1d1d1b] dark:text-[#F0EAE1] line-clamp-2 leading-relaxed">
                 {problemStatement ? problemStatement : "Pending framing in Stage 1"}
               </p>
-              <span className="text-[11px] text-[#5A6275] dark:text-[#A89F91] block font-mono">
+              <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
                 {problemStatement ? `${problemStatement.split(/\s+/).length} words framed` : "0 words"}
               </span>
             </div>
 
             <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
-              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+              <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Meeting Scribe &amp; Audio
               </span>
-              <p className="text-xs sm:text-sm text-[#161E33] dark:text-[#F0EAE1]">
+              <p className="font-newsreader text-base text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
                 {wordCount > 0 ? `${wordCount} words transcribed` : "No voice recording uploaded"}
               </p>
-              <span className="text-[11px] text-[#5A6275] dark:text-[#A89F91] block font-mono">
+              <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
                 {wordCount > 0 ? "IIT Madras / IndicReady" : "Optional input"}
               </span>
             </div>
 
             <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
-              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+              <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Document Dossier
               </span>
-              <p className="text-xs sm:text-sm text-[#161E33] dark:text-[#F0EAE1]">
+              <p className="font-newsreader text-base text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
                 {attachmentCount > 0 ? `${attachmentCount} attachment(s) parsed` : "No attachments parsed"}
               </p>
-              <span className="text-[11px] text-[#5A6275] dark:text-[#A89F91] block font-mono">
+              <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
                 PDF, DOCX, TXT Evidence
               </span>
             </div>
@@ -654,10 +654,10 @@ export default function StructuredFindingsEditor({
                       {s.count} items
                     </span>
                   </div>
-                  <div className="text-xs sm:text-sm font-bold text-[#161E33] dark:text-[#F0EAE1] truncate mt-1.5">
+                  <div className="font-newsreader text-base sm:text-lg font-normal text-[#1d1d1b] dark:text-[#F0EAE1] truncate mt-1.5">
                     {s.title}
                   </div>
-                  <div className="text-[11px] text-[#5A6275] dark:text-[#A89F91] truncate mt-0.5">
+                  <div className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] truncate mt-0.5">
                     {s.subtitle}
                   </div>
                 </button>
@@ -671,7 +671,7 @@ export default function StructuredFindingsEditor({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C]">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base sm:text-lg font-bold text-[#161E33] dark:text-[#F0EAE1]">
+                  <h3 className="font-newsreader text-xl sm:text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
                     {currentSlide.title}
                   </h3>
                   <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-[#EDE7D6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">

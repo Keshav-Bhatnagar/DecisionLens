@@ -396,7 +396,7 @@ export default function PointCircularGallery({
                         >
                           {String(idx + 1).padStart(2, "0")}
                         </span>
-                        <span className="text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] truncate max-w-[200px]">
+                        <span className="font-newsreader text-base font-normal text-[#1d1d1b] dark:text-[#F0EAE1] truncate max-w-[200px]">
                           {title} #{idx + 1}
                         </span>
                       </div>
@@ -444,10 +444,10 @@ export default function PointCircularGallery({
                           value={item}
                           onChange={(e) => onUpdateItem(idx, e.target.value)}
                           placeholder={`Describe this ${title.toLowerCase().slice(0, -1)} in detail...`}
-                          className="w-full h-full text-[15px] sm:text-[15.5px] leading-[1.7] text-[#161E33] dark:text-[#F0EAE1] placeholder-[#8B909C] bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-sans font-normal scrollbar-none subpixel-antialiased select-text"
+                          className="w-full h-full text-base sm:text-base leading-[1.7] text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#8B909C] bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-newsreader font-normal scrollbar-none subpixel-antialiased select-text"
                         />
                       ) : (
-                        <p className="text-sm text-[#5A6275] dark:text-[#A89F91] line-clamp-6 leading-relaxed select-none">
+                        <p className="text-base font-newsreader text-[#4f4b40] dark:text-[#A89F91] line-clamp-6 leading-relaxed select-none">
                           {item || `Empty ${title.toLowerCase()} point...`}
                         </p>
                       )}

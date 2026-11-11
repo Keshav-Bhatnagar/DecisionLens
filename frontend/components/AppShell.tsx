@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Sidebar, { formatDisplayName } from "@/components/Sidebar";
 import WorkspaceMembersPill from "@/components/WorkspaceMembersPill";
-import ApertureToggle from "@/components/ApertureToggle";
+import CelestialThemeToggle from "@/components/CelestialThemeToggle";
 import { useTheme } from "@/context/ThemeContext";
 
 import {
@@ -195,27 +195,9 @@ export default function AppShell({
               />
             )}
 
-            {/* Clear, Tactile Light / Dark Mode Toggle */}
-            <div className="pl-2.5 sm:pl-3 border-l border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] transition-colors cursor-pointer shadow-2xs"
-                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                aria-label={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {theme === "dark" ? (
-                  <>
-                    <Sun className="w-3.5 h-3.5 text-[#D4AA50]" />
-                    <span className="hidden md:inline font-sans text-xs">Light Mode</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="w-3.5 h-3.5 text-[#161E33]" />
-                    <span className="hidden md:inline font-sans text-xs">Dark Mode</span>
-                  </>
-                )}
-              </button>
+            {/* 3D Celestial Sun & Moon Theme Toggle (Icon Only) */}
+            <div className="pl-2 sm:pl-2.5 border-l border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center">
+              <CelestialThemeToggle theme={theme} onToggle={toggleTheme} />
             </div>
 
             {/* Extreme Right: User Account Profile */}

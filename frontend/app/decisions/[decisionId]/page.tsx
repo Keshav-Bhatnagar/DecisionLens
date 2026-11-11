@@ -405,20 +405,20 @@ export default function DecisionDetailPage({
                   <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-none p-6 sm:p-7 shadow-2xs space-y-5 transition-colors">
                     <div>
                       <div className="flex items-center justify-between">
-                        <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
-                          Supporting Evidence & Context{" "}
-                          <span className="font-courier text-xs text-[#7B8491] dark:text-[#A89F91] uppercase tracking-wider">
+                        <h2 className="font-newsreader text-2xl sm:text-3xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight">
+                          Supporting Evidence &amp; Context{" "}
+                          <span className="font-mono text-xs text-[#7B8491] dark:text-[#A89F91] uppercase tracking-wider">
                             (Optional)
                           </span>
                         </h2>
                       </div>
-                      <p className="text-xs font-courier text-[#4f4b40] dark:text-[#A89F91] mt-1">
+                      <p className="text-sm font-sans text-[#4f4b40] dark:text-[#A89F91] mt-1.5 leading-relaxed">
                         Your decision dilemma is framed above. Choose any source below to provide technical specifications, constraints, or meeting audio:
                       </p>
                     </div>
 
                     {/* 3 Clear, Mutually-Exclusive Modality Selector Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-courier">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {/* Option 1: Written Notes */}
                       <button
                         type="button"
@@ -430,13 +430,13 @@ export default function DecisionDetailPage({
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5" />
                             Written Notes
                           </span>
                           {description.trim() ? (
                             <span
-                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                              className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-none ${
                                 ingestionTab === "context"
                                   ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
                                   : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
@@ -446,7 +446,7 @@ export default function DecisionDetailPage({
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-[11px] opacity-75 leading-snug">
+                        <p className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] leading-relaxed mt-1">
                           Add stakeholders, deadlines, budget limits, or known constraints.
                         </p>
                       </button>
@@ -462,13 +462,13 @@ export default function DecisionDetailPage({
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
                             <Paperclip className="w-3.5 h-3.5" />
                             Attach Specs
                           </span>
                           {attachments.length > 0 ? (
                             <span
-                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                              className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-none ${
                                 ingestionTab === "docs"
                                   ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
                                   : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
@@ -478,7 +478,7 @@ export default function DecisionDetailPage({
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-[11px] opacity-75 leading-snug">
+                        <p className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] leading-relaxed mt-1">
                           Upload architectural diagrams, PRDs, RFCs, or benchmark data.
                         </p>
                       </button>
@@ -494,13 +494,13 @@ export default function DecisionDetailPage({
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
                             <Mic className="w-3.5 h-3.5" />
-                            Voice & Meetings
+                            Voice &amp; Meetings
                           </span>
                           {Boolean(decision.transcript) ? (
                             <span
-                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                              className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-none ${
                                 ingestionTab === "voice" || ingestionTab === "meeting"
                                   ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
                                   : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
@@ -510,7 +510,7 @@ export default function DecisionDetailPage({
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-[11px] opacity-75 leading-snug">
+                        <p className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] leading-relaxed mt-1">
                           Record spoken notes, upload an audio file, or sync a live meeting call.
                         </p>
                       </button>
@@ -522,8 +522,8 @@ export default function DecisionDetailPage({
                       {ingestionTab === "context" && (
                         <div className="space-y-3 animate-in fade-in duration-150">
                           <div className="flex items-center justify-between">
-                            <label className="font-courier text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
-                              Background Notes, Constraints & Deadlines:
+                            <label className="font-mono text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+                              Background Notes, Constraints &amp; Deadlines:
                             </label>
                             <SpeechDictationButton
                               onTranscript={(text) =>
