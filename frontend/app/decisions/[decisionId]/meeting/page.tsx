@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Video,
+  Mic,
+  MicOff,
+  Radio,
   Lock,
   Send,
   Plus,
@@ -13,11 +15,16 @@ import {
   ArrowLeft,
   Sparkles,
   Loader2,
-  Radio,
+  Upload,
+  Volume2,
+  FileText,
+  Copy,
+  Trash2,
+  ShieldCheck,
+  Headphones,
+  Check,
+  AlertCircle,
   ExternalLink,
-  Mic,
-  Maximize2,
-  Users,
 } from "lucide-react";
 import {
   getDecision,
@@ -55,6 +62,33 @@ const PRESET_ROLES = [
   "Founder / Exec",
 ];
 
+const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  risk: {
+    bg: "bg-rose-50 dark:bg-rose-950/40",
+    text: "text-rose-700 dark:text-rose-300",
+    border: "border-rose-300 dark:border-rose-800",
+    label: "Risk / Flaw",
+  },
+  constraint: {
+    bg: "bg-amber-50 dark:bg-amber-950/40",
+    text: "text-amber-800 dark:text-amber-300",
+    border: "border-amber-300 dark:border-amber-800",
+    label: "Hard Constraint",
+  },
+  alternative: {
+    bg: "bg-blue-50 dark:bg-blue-950/40",
+    text: "text-blue-700 dark:text-blue-300",
+    border: "border-blue-300 dark:border-blue-800",
+    label: "Alternative",
+  },
+  criteria: {
+    bg: "bg-emerald-50 dark:bg-emerald-950/40",
+    text: "text-emerald-700 dark:text-emerald-300",
+    border: "border-emerald-300 dark:border-emerald-800",
+    label: "Decision Criteria",
+  },
+};
+
 export default function StandaloneMeetingPage({
   params,
 }: {
@@ -80,10 +114,13 @@ export default function StandaloneMeetingPage({
 
   // Audio capture & transcription state
   const [isCapturingAudio, setIsCapturingAudio] = useState(false);
+  const [audioSourceMode, setAudioSourceMode] = useState<"mic" | "tab">("mic");
   const [captureDuration, setCaptureDuration] = useState(0);
   const [liveCapturedText, setLiveCapturedText] = useState("");
   const [liveInterimText, setLiveInterimText] = useState("");
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const [copiedTranscript, setCopiedTranscript] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
 
   // Takeaways Modal state
@@ -91,11 +128,14 @@ export default function StandaloneMeetingPage({
   const [takeawaysData, setTakeawaysData] = useState<MeetingTakeawaysResponse | null>(null);
   const [isGeneratingTakeaways, setIsGeneratingTakeaways] = useState(false);
 
+  // Audio refs
   const audioStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const speechRecognitionRef = useRef<any>(null);
   const captureTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
   const storageKey = `decisionlens_caveats_${decisionId}`;
 
@@ -107,7 +147,13 @@ export default function StandaloneMeetingPage({
       getMe().catch(() => null),
     ]).then(([dec, user]) => {
       if (!isMounted) return;
-      if (dec) setDecision(dec);
+      if (dec) {
+        setDecision(dec);
+        // Pre-populate transcript if decision already has one
+        if (dec.transcript && dec.transcript.trim()) {
+          setLiveCapturedText(dec.transcript.trim());
+        }
+      }
       if (user) {
         const name = user.display_name || user.email.split("@")[0];
         setCurrentUser({ name, email: user.email });
@@ -138,21 +184,12 @@ export default function StandaloneMeetingPage({
     };
   }, [decisionId, storageKey]);
 
-  // Handle postMessage from Jitsi (auto-redirect when call ends)
+  // Scroll transcript to bottom when text updates
   useEffect(() => {
-    const handleJitsiMessage = (event: MessageEvent) => {
-      if (typeof event.data === "object" && event.data !== null) {
-        if (
-          event.data.eventName === "readyToClose" ||
-          event.data.eventName === "videoConferenceLeft"
-        ) {
-          handleEndMeetingAndReturn();
-        }
-      }
-    };
-    window.addEventListener("message", handleJitsiMessage);
-    return () => window.removeEventListener("message", handleJitsiMessage);
-  }, [decisionId, notesList, liveCapturedText]);
+    if (transcriptEndRef.current) {
+      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [liveCapturedText, liveInterimText]);
 
   // Audio cleanup on unmount
   useEffect(() => {
@@ -205,11 +242,43 @@ export default function StandaloneMeetingPage({
     } catch (_) {}
   };
 
-  const startLiveAudioCapture = async () => {
+  const handleDeleteNote = (id: string) => {
+    const updated = notesList.filter((n) => n.id !== id);
+    setNotesList(updated);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+    } catch (_) {}
+  };
+
+  // Start live microphone capture (Direct user mic, no screen-share prompt needed)
+  const startLiveMicCapture = async () => {
+    setCaptureError(null);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Your browser does not support microphone capture. Please use Chrome, Edge, or Firefox.");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      setupAudioStreamAndRecognition(stream, "mic");
+    } catch (err: unknown) {
+      setCaptureError(err instanceof Error ? err.message : "Microphone permission denied.");
+      setIsCapturingAudio(false);
+    }
+  };
+
+  // Start meeting tab audio capture (For Google Meet / Zoom tab in browser)
+  const startMeetingTabCapture = async () => {
     setCaptureError(null);
     try {
       if (!navigator.mediaDevices?.getDisplayMedia) {
-        throw new Error("Your browser does not support tab audio capture. Please use Chrome, Edge, or Brave.");
+        throw new Error("Your browser does not support tab audio capture. Please use Chrome or Edge.");
       }
 
       const displayStream = await navigator.mediaDevices.getDisplayMedia({
@@ -220,74 +289,84 @@ export default function StandaloneMeetingPage({
       const audioTrack = displayStream.getAudioTracks()[0];
       if (!audioTrack) {
         displayStream.getTracks().forEach((t) => t.stop());
-        throw new Error("No audio track detected. Make sure to check 'Share tab audio' in your browser prompt.");
+        throw new Error("No audio track detected. Make sure to toggle 'Share tab audio' in your browser prompt.");
       }
 
-      audioStreamRef.current = displayStream;
-      audioChunksRef.current = [];
-      setIsCapturingAudio(true);
-      setCaptureDuration(0);
+      setupAudioStreamAndRecognition(displayStream, "tab");
+    } catch (err: unknown) {
+      setCaptureError(err instanceof Error ? err.message : "Failed to capture meeting tab audio.");
+      setIsCapturingAudio(false);
+    }
+  };
 
-      captureTimerRef.current = setInterval(() => {
-        setCaptureDuration((prev) => prev + 1);
-      }, 1000);
+  const setupAudioStreamAndRecognition = (stream: MediaStream, mode: "mic" | "tab") => {
+    audioStreamRef.current = stream;
+    audioChunksRef.current = [];
+    setIsCapturingAudio(true);
+    setAudioSourceMode(mode);
+    setCaptureDuration(0);
 
-      try {
-        const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-          ? "audio/webm;codecs=opus"
-          : "audio/webm";
-        const mediaRec = new MediaRecorder(new MediaStream([audioTrack]), { mimeType });
-        mediaRec.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-        mediaRec.start(1000);
-        mediaRecorderRef.current = mediaRec;
-      } catch (recErr) {
-        console.warn("MediaRecorder setup notice:", recErr);
-      }
+    captureTimerRef.current = setInterval(() => {
+      setCaptureDuration((prev) => prev + 1);
+    }, 1000);
 
+    // Setup MediaRecorder for backend Whisper transcription
+    try {
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      const mediaRec = new MediaRecorder(stream, { mimeType });
+      mediaRec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+      mediaRec.start(1000);
+      mediaRecorderRef.current = mediaRec;
+    } catch (recErr) {
+      console.warn("MediaRecorder setup notice:", recErr);
+    }
+
+    const audioTrack = stream.getAudioTracks()[0];
+    if (audioTrack) {
       audioTrack.onended = () => {
         stopLiveAudioCapture();
       };
+    }
 
-      const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRec) {
-        try {
-          const rec = new SpeechRec();
-          rec.continuous = true;
-          rec.interimResults = true;
-          rec.lang = "en-US";
-          let transcriptBuffer = liveCapturedText;
+    // Setup Web Speech API for immediate live text preview
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRec) {
+      try {
+        const rec = new SpeechRec();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = "en-US";
+        let transcriptBuffer = liveCapturedText;
 
-          rec.onresult = (event: any) => {
-            let interim = "";
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              const text = event.results[i][0].transcript;
-              if (event.results[i].isFinal) {
-                transcriptBuffer = (transcriptBuffer + " " + text).trim();
-              } else {
-                interim += " " + text;
-              }
+        rec.onresult = (event: any) => {
+          let interim = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const text = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              transcriptBuffer = (transcriptBuffer + " " + text).trim();
+            } else {
+              interim += " " + text;
             }
-            setLiveCapturedText(transcriptBuffer);
-            setLiveInterimText(interim);
-          };
+          }
+          setLiveCapturedText(transcriptBuffer);
+          setLiveInterimText(interim);
+        };
 
-          rec.onerror = (e: any) => {
-            console.warn("Speech recognition notice:", e?.error);
-          };
+        rec.onerror = (e: any) => {
+          console.warn("Speech recognition notice:", e?.error);
+        };
 
-          rec.start();
-          speechRecognitionRef.current = rec;
-        } catch (e) {
-          console.warn("Web Speech API init:", e);
-        }
+        rec.start();
+        speechRecognitionRef.current = rec;
+      } catch (e) {
+        console.warn("Web Speech API init:", e);
       }
-    } catch (err: unknown) {
-      setCaptureError(err instanceof Error ? err.message : "Failed to start tab audio capture.");
-      setIsCapturingAudio(false);
     }
   };
 
@@ -312,6 +391,33 @@ export default function StandaloneMeetingPage({
       speechRecognitionRef.current = null;
     }
     setIsCapturingAudio(false);
+  };
+
+  // Upload meeting recording file directly
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingFile(true);
+    setCaptureError(null);
+    try {
+      const res = await uploadAudio(decisionId, file, { language: "en" });
+      if (res && res.transcript) {
+        setLiveCapturedText((prev) => (prev ? `${prev}\n\n${res.transcript}` : res.transcript));
+      }
+    } catch (err: unknown) {
+      setCaptureError(err instanceof Error ? err.message : "Audio upload failed.");
+    } finally {
+      setIsUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCopyTranscript = () => {
+    if (!liveCapturedText.trim()) return;
+    navigator.clipboard.writeText(liveCapturedText);
+    setCopiedTranscript(true);
+    setTimeout(() => setCopiedTranscript(false), 2000);
   };
 
   const handleGenerateTakeaways = async () => {
@@ -340,83 +446,64 @@ export default function StandaloneMeetingPage({
 
       let finalTranscript = liveCapturedText.trim();
 
+      // If audio chunks were recorded, upload blob to Whisper backend
       if (audioChunksRef.current.length > 0) {
         try {
           const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
             ? "audio/webm;codecs=opus"
             : "audio/webm";
           const blob = new Blob(audioChunksRef.current, { type: mimeType });
-          const res = await uploadAudio(decisionId, blob, {
-            language: "en",
-            clientTranscript: liveCapturedText.trim() || undefined,
-          });
-          if (res && res.transcript && res.transcript.trim()) {
-            finalTranscript = res.transcript.trim();
+          const res = await uploadAudio(decisionId, blob, { language: "en" });
+          if (res && res.transcript) {
+            finalTranscript = (finalTranscript + " " + res.transcript).trim();
           }
-        } catch (uploadErr) {
-          console.warn("Audio upload fallback to client transcript:", uploadErr);
+        } catch (audioErr) {
+          console.warn("Background audio upload fallback:", audioErr);
         }
       }
 
-      // Save transcript to decision
-      if (finalTranscript) {
-        try {
-          await updateTranscript(decisionId, finalTranscript, true);
-        } catch (e) {
-          console.warn("Failed to update transcript:", e);
-        }
+      // Format notes into structured markdown appendix
+      const formattedNotes =
+        notesList.length > 0
+          ? `\n\n### Stakeholder Caveats & Objections Log:\n` +
+            notesList
+              .map(
+                (n) =>
+                  `- **[${n.category.toUpperCase()}]** (${n.author}): ${n.content}`
+              )
+              .join("\n")
+          : "";
+
+      const fullDeliberationRecord = `${finalTranscript}${formattedNotes}`.trim();
+
+      if (fullDeliberationRecord) {
+        await updateTranscript(decisionId, fullDeliberationRecord);
       }
 
-      // Append submitted caveats to decision description
-      if (notesList.length > 0) {
-        try {
-          const notesSummary = notesList
-            .map((n) => `[${n.category.toUpperCase()}] ${n.content} (${n.isAnonymous ? "Anonymous" : n.author})`)
-            .join("\n");
-          const existingDesc = decision?.description || "";
-          const updatedDesc = existingDesc
-            ? `${existingDesc}\n\n### Anonymous Meeting Risks & Constraints:\n${notesSummary}`
-            : `### Anonymous Meeting Risks & Constraints:\n${notesSummary}`;
-          await updateDecision(decisionId, { description: updatedDesc });
-        } catch (e) {
-          console.warn("Failed to update decision description:", e);
-        }
-      }
-
-      // Redirect back to the decision page
-      window.location.href = `/decisions/${decisionId}`;
+      router.push(`/decisions/${decisionId}`);
     } catch (err) {
-      console.error("Error ending meeting:", err);
-      window.location.href = `/decisions/${decisionId}`;
-    } finally {
-      setIsFinishing(false);
+      console.error("Error finalizing deliberation:", err);
+      router.push(`/decisions/${decisionId}`);
     }
   };
 
-  const formatTimer = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formatTimer = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainingSecs = secs % 60;
+    return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
   };
 
-  const roomName = `DecisionLens-Room-${decisionId}`;
-  const displayNameParam = currentUser?.name
-    ? `&userInfo.displayName=${encodeURIComponent(currentUser.name)}`
-    : "";
-  const emailParam = currentUser?.email
-    ? `&userInfo.email=${encodeURIComponent(currentUser.email)}`
-    : "";
-  const jitsiUrl = `https://meet.jit.si/${roomName}#config.startWithAudioMuted=false&config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.enableClosePage=false${displayNameParam}${emailParam}`;
+  const wordCount = liveCapturedText ? liveCapturedText.trim().split(/\s+/).length : 0;
 
   return (
     <div
       data-theme={theme}
       className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${
-        theme === "dark" ? "dark bg-[#181614] text-[#F0EAE1]" : "bg-[#F4F0E6] text-[#1d1d1b]"
+        theme === "dark" ? "dark bg-[#181614] text-[#F0EAE1]" : "bg-[#F5F1E8] text-[#1d1d1b]"
       }`}
     >
-      {/* Executive Boardroom Topbar */}
-      <header className="h-14 border-b border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-xs z-30">
+      {/* Topbar: Executive Navigation & Status */}
+      <header className="h-14 border-b border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-2xs z-30">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href={`/decisions/${decisionId}`}
@@ -434,20 +521,20 @@ export default function StandaloneMeetingPage({
             <span className="font-newsreader font-bold text-base sm:text-lg text-[#1d1d1b] dark:text-[#F0EAE1] truncate">
               {decision?.title || `Decision #${decisionId}`}
             </span>
-            <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[#5c5549] dark:text-[#a89f91] shrink-0 hidden md:inline">
-              Room: {roomName}
+            <span className="font-mono text-[10px] uppercase px-2 py-0.5 rounded-full bg-[#F5F1E8] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] shrink-0 font-bold hidden md:inline">
+              Deliberation Companion
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <CelestialThemeToggle theme={theme} onToggle={toggleTheme} />
 
           <button
             type="button"
             onClick={handleGenerateTakeaways}
             disabled={isGeneratingTakeaways}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F5F1E8] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
           >
             {isGeneratingTakeaways ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -457,251 +544,408 @@ export default function StandaloneMeetingPage({
             <span>Takeaways</span>
           </button>
 
-          {/* Prominent End Meeting & Return Button */}
+          {/* End Meeting & Return Button */}
           <button
             type="button"
             onClick={handleEndMeetingAndReturn}
             disabled={isFinishing}
-            className="px-3.5 sm:px-4 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider bg-rose-700 hover:bg-rose-800 text-white shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
-            title="End meeting, save notes and transcript, and redirect back to decision"
+            className="px-3.5 sm:px-4 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[#F5F1E8] shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
+            title="End deliberation, save transcript and caveats, and return to decision workflow"
           >
             {isFinishing ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Saving &amp; Returning...</span>
+                <span>Synthesizing...</span>
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>End Meeting &amp; Return →</span>
+                <span>End Deliberation &amp; Return →</span>
               </>
             )}
           </button>
         </div>
       </header>
 
-      {/* Main Boardroom Grid: Video Chamber (Left) + Silent Stakeholder Scribe (Right) */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden">
-        {/* Left Video Chamber (8 cols on lg / 8 cols on xl) */}
-        <div className="lg:col-span-8 flex flex-col bg-black min-h-[500px] lg:min-h-0 border-b lg:border-b-0 lg:border-r border-[#cfc7b2] dark:border-[#38332C] relative">
-          <iframe
-            src={jitsiUrl}
-            allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"
-            className="w-full h-full min-h-[520px] flex-1 border-0"
-            title="Live Boardroom Video Conference"
-          />
-        </div>
-
-        {/* Right Silent Stakeholder Scribe Sidebar (4 cols) */}
-        <div className="lg:col-span-4 bg-[#EDE7D6] dark:bg-[#221F1C] flex flex-col h-full overflow-y-auto p-4 sm:p-5 space-y-4">
-          {/* Scribe Header */}
-          <div className="flex items-center justify-between pb-2 border-b border-[#cfc7b2]/70 dark:border-[#38332C]/70">
-            <div className="space-y-0.5">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-                Silent Stakeholder Scribe
-              </span>
-              <p className="text-[11px] text-[#5c5549] dark:text-[#a89f91]">
-                Drop objections, risks, or tech constraints without seniority bias.
+      {/* Main Deliberation Companion: Live Audio Feed (Left) + Silent Stakeholder Scribe (Right) */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden bg-executive-grid">
+        {/* Left Column: Live Audio Stream, Speech-to-Text & Evidence Feed (7 cols) */}
+        <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-[#cfc7b2] dark:border-[#38332C] bg-[#F5F1E8]/90 dark:bg-[#181614]/90 p-5 sm:p-6 overflow-y-auto space-y-5">
+          {/* Companion Banner */}
+          <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-4 sm:p-5 flex items-start justify-between gap-4 shadow-2xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                  Deliberation Companion Mode
+                </h2>
+              </div>
+              <p className="text-sm font-newsreader text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">
+                Runs silently alongside your <strong>Google Meet, Zoom, or Teams</strong> call to capture evidence, transcribe technical debates, and surface hidden risks.
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={isCapturingAudio ? stopLiveAudioCapture : startLiveAudioCapture}
-              className={`p-1.5 rounded-lg border text-xs font-mono transition-colors cursor-pointer inline-flex items-center gap-1 ${
-                isCapturingAudio
-                  ? "bg-rose-600 text-white border-rose-700 animate-pulse"
-                  : "bg-[#F4F0E6] text-[#7a4e10] dark:bg-[#181614] dark:text-[#D4AA50] border-[#cfc7b2] dark:border-[#38332C]"
-              }`}
-              title={isCapturingAudio ? "Stop Audio Capture" : "Capture Tab Audio & Transcribe"}
-            >
-              <Mic className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold uppercase">
-                {isCapturingAudio ? formatTimer(captureDuration) : "Sync Audio"}
+            <div className="shrink-0 text-right">
+              <span className="text-[11px] font-mono text-[#5c5549] dark:text-[#a89f91] block">Duration</span>
+              <span className="text-lg font-mono font-bold text-[#1d1d1b] dark:text-[#F0EAE1] tabular-nums">
+                {formatTimer(captureDuration)}
               </span>
-            </button>
-          </div>
-
-          {/* Category Selector */}
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-mono text-[#5c5549] dark:text-[#a89f91] font-bold uppercase tracking-wider block">
-              Category:
-            </span>
-            <div className="grid grid-cols-4 gap-1.5 text-xs font-mono font-bold uppercase tracking-wider">
-              {(["risk", "constraint", "alternative", "criteria"] as const).map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategory(cat)}
-                  className={`py-1 rounded text-center text-[11px] transition-colors cursor-pointer border ${
-                    category === cat
-                      ? "bg-[#7a4e10] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614] border-[#7a4e10] dark:border-[#D4AA50]"
-                      : "bg-[#F4F0E6] dark:bg-[#181614] text-[#5c5549] dark:text-[#a89f91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9]"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
             </div>
           </div>
 
-          {/* Authority Role Selector */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[10px] font-mono text-[#5c5549] dark:text-[#a89f91] font-bold uppercase tracking-wider">
-              <span>Authority Role:</span>
-              <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold">
-                [{authorRole}]
-              </span>
+          {/* Audio Capture Controls */}
+          <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-5 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] block">
+                  Audio Intelligence Engine
+                </span>
+                <span className="text-xs text-[#5c5549] dark:text-[#a89f91]">
+                  {isCapturingAudio
+                    ? `Listening via ${audioSourceMode === "mic" ? "Microphone" : "Meeting Tab"}...`
+                    : "Ready to capture meeting voice arguments."}
+                </span>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2">
+                {isCapturingAudio ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 animate-pulse">
+                    <Radio className="w-3.5 h-3.5" />
+                    Live Capturing
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-[#F5F1E8] dark:bg-[#181614] text-[#5c5549] dark:text-[#a89f91] border border-[#cfc7b2] dark:border-[#38332C]">
+                    Standby
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-0.5">
-              {PRESET_ROLES.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => {
-                    setAuthorRole(r);
-                    setIsAddingCustomRole(false);
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border transition-colors cursor-pointer ${
-                    authorRole === r && !isAddingCustomRole
-                      ? "bg-[#7a4e10] text-white dark:bg-[#D4AA50] dark:text-[#181614] border-[#7a4e10] dark:border-[#D4AA50]"
-                      : "bg-[#F4F0E6] dark:bg-[#181614] text-[#5c5549] dark:text-[#a89f91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9]"
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
-
+            {/* Main Action Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Primary Mic Button */}
               <button
                 type="button"
-                onClick={() => setIsAddingCustomRole((prev) => !prev)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border transition-colors cursor-pointer inline-flex items-center gap-1 ${
-                  isAddingCustomRole
-                    ? "bg-[#7a4e10] text-white border-[#7a4e10]"
-                    : "bg-[#F4F0E6] dark:bg-[#181614] text-[#7a4e10] dark:text-[#D4AA50] border-[#cfc7b2] dark:border-[#38332C]"
+                onClick={isCapturingAudio ? stopLiveAudioCapture : startLiveMicCapture}
+                className={`flex items-center justify-center gap-2.5 h-12 px-4 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm ${
+                  isCapturingAudio && audioSourceMode === "mic"
+                    ? "bg-rose-700 hover:bg-rose-800 text-white animate-pulse"
+                    : "bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] text-[#F5F1E8] dark:text-[#181614]"
                 }`}
               >
-                <Plus className="w-3 h-3" />
-                <span>Custom</span>
+                {isCapturingAudio && audioSourceMode === "mic" ? (
+                  <>
+                    <MicOff className="w-4 h-4" />
+                    <span>Pause Live Mic Capture</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4 text-[#D4AA50] dark:text-[#181614]" />
+                    <span>Start Live Mic Capture</span>
+                  </>
+                )}
+              </button>
+
+              {/* Secondary Tab Audio Button */}
+              <button
+                type="button"
+                onClick={isCapturingAudio ? stopLiveAudioCapture : startMeetingTabCapture}
+                className={`flex items-center justify-center gap-2 h-12 px-4 rounded-xl text-xs font-mono font-bold uppercase tracking-wider border transition-colors cursor-pointer ${
+                  isCapturingAudio && audioSourceMode === "tab"
+                    ? "bg-rose-700 text-white border-rose-800 animate-pulse"
+                    : "bg-[#F5F1E8] dark:bg-[#181614] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C]"
+                }`}
+                title="Capture audio directly from a Google Meet / Zoom Chrome tab"
+              >
+                <Headphones className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
+                <span>Share Meeting Tab Audio</span>
               </button>
             </div>
 
-            {isAddingCustomRole && (
-              <div className="flex gap-1.5 pt-1">
-                <input
-                  type="text"
-                  value={customRoleText}
-                  onChange={(e) => setCustomRoleText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleApplyCustomRole();
-                  }}
-                  placeholder="e.g. VP Cloud, Core DBA..."
-                  className="flex-1 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-mono px-2 py-1 text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#7a4e10] focus:outline-none rounded"
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyCustomRole}
-                  disabled={!customRoleText.trim()}
-                  className="px-2.5 py-1 bg-[#7a4e10] dark:bg-[#D4AA50] text-[#F5F1E8] dark:text-[#181614] text-[10px] font-mono font-bold uppercase rounded disabled:opacity-40"
-                >
-                  Set
-                </button>
+            {/* Upload File Fallback */}
+            <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C] flex items-center justify-between text-xs text-[#5c5549] dark:text-[#a89f91]">
+              <span className="font-mono text-[11px]">Or import pre-recorded meeting audio:</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="meeting-audio-upload"
+              />
+              <label
+                htmlFor="meeting-audio-upload"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] bg-[#F5F1E8] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] font-mono text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-colors"
+              >
+                {isUploadingFile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                <span>{isUploadingFile ? "Transcribing..." : "Upload Recording (.mp3, .wav)"}</span>
+              </label>
+            </div>
+
+            {captureError && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{captureError}</span>
               </div>
             )}
           </div>
 
-          {/* Caveat Textarea */}
-          <div className="space-y-1">
-            <textarea
-              rows={3}
-              value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                  handleSubmitNote(e);
-                }
-              }}
-              placeholder={
-                category === "risk"
-                  ? "E.g. Read-replicas have 800ms replication lag under peak traffic..."
-                  : category === "constraint"
-                  ? "E.g. We have strict Q3 data-residency compliance in Mumbai..."
-                  : "Add technical note or trade-off (Ctrl+Enter to post)..."
-              }
-              className="w-full bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg p-2.5 text-xs text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors resize-none font-sans"
-            />
-          </div>
+          {/* Real-time Streaming Transcript Chamber */}
+          <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl flex flex-col flex-1 shadow-2xs overflow-hidden min-h-[340px]">
+            {/* Transcript Card Header */}
+            <div className="flex items-center justify-between px-5 h-12 border-b border-[#cfc7b2] dark:border-[#38332C] shrink-0 bg-[#E5DEC9]/40 dark:bg-[#1A1816]/40">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  Live Deliberation Transcript
+                </span>
+                <span className="text-[10px] font-mono text-[#5c5549] dark:text-[#a89f91]">
+                  ({wordCount} words)
+                </span>
+              </div>
 
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-xs text-[#5c5549] dark:text-[#a89f91] cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-                className="accent-[#7a4e10] dark:accent-[#D4AA50] cursor-pointer"
-              />
-              <span className="text-[11px]">Post anonymously</span>
-            </label>
-
-            <button
-              type="button"
-              onClick={handleSubmitNote}
-              disabled={!noteContent.trim()}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider bg-[#7a4e10] hover:bg-[#603e0d] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] text-[#F5F1E8] transition-colors shadow-2xs disabled:opacity-40 cursor-pointer inline-flex items-center gap-1.5"
-            >
-              <Send className="w-3 h-3" />
-              <span>Add Caveat</span>
-            </button>
-          </div>
-
-          {/* Live Transcript Stream Preview (if recording) */}
-          {liveCapturedText && (
-            <div className="p-2.5 rounded-lg bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
-              <span className="text-[10px] font-mono text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase flex items-center gap-1">
-                <Radio className="w-3 h-3 animate-pulse" /> Live Meeting Transcript Stream:
-              </span>
-              <p className="text-xs font-sans text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed max-h-24 overflow-y-auto">
-                {liveCapturedText}
-                {liveInterimText && (
-                  <span className="italic text-[#5c5549] dark:text-[#a89f91]"> {liveInterimText}</span>
-                )}
-              </p>
-            </div>
-          )}
-
-          {/* Submitted Caveats Feed */}
-          <div className="flex-1 space-y-2 pt-2 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70">
-            <div className="flex items-center justify-between text-[10px] font-mono text-[#5c5549] dark:text-[#a89f91] font-bold uppercase tracking-wider">
-              <span>Submitted Caveats ({notesList.length})</span>
-              <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold">● Live Synced</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyTranscript}
+                  disabled={!liveCapturedText.trim()}
+                  className="px-2.5 py-1 rounded text-[11px] font-mono font-bold uppercase tracking-wider border border-[#cfc7b2] dark:border-[#38332C] bg-[#F5F1E8] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-40"
+                  title="Copy full transcript"
+                >
+                  {copiedTranscript ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedTranscript ? "Copied" : "Copy"}</span>
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-              {notesList.length === 0 ? (
-                <div className="text-center py-6 text-xs text-[#5c5549] dark:text-[#a89f91] italic font-sans">
-                  No caveats submitted yet. As participants speak, drop unvetted assumptions or technical risks above.
+            {/* Transcript Body */}
+            <div className="p-5 flex-1 overflow-y-auto space-y-3 font-newsreader text-base text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
+              {!liveCapturedText && !liveInterimText ? (
+                <div className="h-full flex flex-col items-center justify-center text-center py-12 text-[#5c5549] dark:text-[#a89f91] space-y-2">
+                  <Volume2 className="w-8 h-8 opacity-40 text-[#7a4e10] dark:text-[#D4AA50]" />
+                  <p className="font-sans text-sm max-w-sm">
+                    No speech recorded yet. Start live mic capture or tab audio to transcribe your meeting discussion.
+                  </p>
                 </div>
               ) : (
-                notesList.map((n) => (
-                  <div
-                    key={n.id}
-                    className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-xs space-y-1"
+                <div className="space-y-3 whitespace-pre-wrap">
+                  {liveCapturedText}
+                  {liveInterimText && (
+                    <span className="italic text-[#7a4e10] dark:text-[#D4AA50] opacity-80">
+                      {" "}{liveInterimText}
+                    </span>
+                  )}
+                  <div ref={transcriptEndRef} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: The Silent Stakeholder Scribe (5 cols) */}
+        <div className="lg:col-span-5 bg-[#EDE7D6] dark:bg-[#221F1C] flex flex-col h-full overflow-y-auto p-5 sm:p-6 space-y-5">
+          {/* Scribe Header */}
+          <div className="pb-3 border-b border-[#cfc7b2] dark:border-[#38332C]">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2">
+                <Lock className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
+                Silent Stakeholder Scribe
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold">
+                Anti-Seniority Bias
+              </span>
+            </div>
+            <p className="text-xs text-[#5c5549] dark:text-[#a89f91] mt-1 font-sans">
+              Drop critical tech objections, risks, or compliance constraints without fear of corporate hierarchy.
+            </p>
+          </div>
+
+          {/* Scribe Submission Form */}
+          <form onSubmit={handleSubmitNote} className="space-y-4 font-sans text-xs">
+            {/* Category Selector */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-mono text-[#5c5549] dark:text-[#a89f91] font-bold uppercase tracking-wider block">
+                Objection Category:
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs font-mono font-bold uppercase tracking-wider">
+                {(["risk", "constraint", "alternative", "criteria"] as const).map((cat) => {
+                  const meta = CATEGORY_COLORS[cat];
+                  const isSelected = category === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setCategory(cat)}
+                      className={`py-2 rounded-xl text-center text-[11px] transition-all cursor-pointer border ${
+                        isSelected
+                          ? "bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F5F1E8] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm font-bold"
+                          : "bg-[#F5F1E8] dark:bg-[#181614] text-[#5c5549] dark:text-[#a89f91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9]"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Authority Role Selector */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-mono text-[#5c5549] dark:text-[#a89f91] font-bold uppercase tracking-wider">
+                <span>Authority Role:</span>
+                <span className="text-[#7a4e10] dark:text-[#D4AA50]">
+                  [{authorRole}]
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-0.5">
+                {PRESET_ROLES.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => {
+                      setAuthorRole(r);
+                      setIsAddingCustomRole(false);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider border transition-colors cursor-pointer ${
+                      authorRole === r && !isAddingCustomRole
+                        ? "bg-[#7a4e10] text-white dark:bg-[#D4AA50] dark:text-[#181614] border-[#7a4e10] dark:border-[#D4AA50]"
+                        : "bg-[#F5F1E8] dark:bg-[#181614] text-[#5c5549] dark:text-[#a89f91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9]"
+                    }`}
                   >
-                    <div className="flex items-center justify-between text-[10px] font-mono">
-                      <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
-                        [{n.category}]
-                      </span>
-                      <span className="text-[#5c5549] dark:text-[#a89f91]">
-                        {n.author} • {n.timestamp}
-                      </span>
+                    {r}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setIsAddingCustomRole((prev) => !prev)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+                    isAddingCustomRole
+                      ? "bg-[#7a4e10] text-white border-[#7a4e10]"
+                      : "bg-[#F5F1E8] dark:bg-[#181614] text-[#7a4e10] dark:text-[#D4AA50] border-[#cfc7b2] dark:border-[#38332C]"
+                  }`}
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Custom Role</span>
+                </button>
+              </div>
+
+              {isAddingCustomRole && (
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={customRoleText}
+                    onChange={(e) => setCustomRoleText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleApplyCustomRole();
+                    }}
+                    placeholder="e.g. Lead SRE, Security Auditor, DBA..."
+                    className="flex-1 bg-[#F5F1E8] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-mono px-3 py-1.5 text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#7a4e10] focus:outline-none rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCustomRole}
+                    disabled={!customRoleText.trim()}
+                    className="px-3 py-1.5 bg-[#7a4e10] dark:bg-[#D4AA50] text-[#F5F1E8] dark:text-[#181614] text-[10px] font-mono font-bold uppercase rounded-lg disabled:opacity-40"
+                  >
+                    Set
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Caveat Textarea */}
+            <div className="space-y-1">
+              <textarea
+                rows={3}
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    handleSubmitNote(e);
+                  }
+                }}
+                placeholder={
+                  category === "risk"
+                    ? "E.g. Read-replicas experience 800ms lag under peak write traffic during promotions..."
+                    : category === "constraint"
+                    ? "E.g. DPDP Act requires strict data residency within Mumbai cloud region..."
+                    : "Add technical caveat or trade-off (Ctrl+Enter to post)..."
+                }
+                className="w-full bg-[#F5F1E8] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl p-3 text-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors resize-none font-sans"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs text-[#5c5549] dark:text-[#a89f91] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="accent-[#7a4e10] dark:accent-[#D4AA50] cursor-pointer"
+                />
+                <span className="text-[11px] font-mono">Post anonymously</span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={!noteContent.trim()}
+                className="px-4 py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] text-[#F5F1E8] transition-all shadow-xs disabled:opacity-40 cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Add Caveat</span>
+              </button>
+            </div>
+          </form>
+
+          {/* Submitted Caveats Feed */}
+          <div className="flex-1 space-y-3 pt-3 border-t border-[#cfc7b2] dark:border-[#38332C]">
+            <div className="flex items-center justify-between text-xs font-mono text-[#5c5549] dark:text-[#a89f91] font-bold uppercase tracking-wider">
+              <span>Submitted Caveats ({notesList.length})</span>
+              <span className="text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" /> Real-time Synced
+              </span>
+            </div>
+
+            <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+              {notesList.length === 0 ? (
+                <div className="text-center py-10 text-xs text-[#5c5549] dark:text-[#a89f91] italic font-sans border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-xl p-6">
+                  No caveats submitted yet. As participants deliberate, drop unvetted assumptions or technical risks above.
+                </div>
+              ) : (
+                notesList.map((n) => {
+                  const meta = CATEGORY_COLORS[n.category] || CATEGORY_COLORS.risk;
+                  return (
+                    <div
+                      key={n.id}
+                      className={`p-3.5 rounded-xl border ${meta.border} ${meta.bg} text-xs space-y-1.5 shadow-2xs group relative`}
+                    >
+                      <div className="flex items-center justify-between text-[10px] font-mono">
+                        <span className={`font-bold uppercase tracking-wider ${meta.text}`}>
+                          [{n.category}]
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#5c5549] dark:text-[#a89f91]">
+                            {n.author} • {n.timestamp}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteNote(n.id)}
+                            className="opacity-0 group-hover:opacity-100 text-[#7B8491] hover:text-rose-600 transition-opacity p-0.5"
+                            title="Delete note"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-[#1d1d1b] dark:text-[#F0EAE1] text-xs leading-relaxed font-sans">
+                        {n.content}
+                      </p>
                     </div>
-                    <p className="text-[#1d1d1b] dark:text-[#F0EAE1] text-[11px] leading-snug font-sans">
-                      {n.content}
-                    </p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
