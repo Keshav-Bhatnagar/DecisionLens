@@ -193,7 +193,7 @@ export default function AppShell({
         }`}
       >
         {/* Calm Contextual Topbar: Breadcrumbs + User Info + Aperture Theme Shutter */}
-        <header className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-xs border-b border-[#cfc7b2] dark:border-[#38332C] px-4 sm:px-6 h-14 flex items-center justify-between transition-colors duration-200">
+        <header className="sticky top-0 z-50 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-xs border-b border-[#cfc7b2] dark:border-[#38332C] px-4 sm:px-6 h-14 flex items-center justify-between transition-colors duration-200">
           {/* Left: Mobile Menu & Breadcrumbs */}
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             {/* Mobile Hamburger Button */}
@@ -288,13 +288,13 @@ export default function AppShell({
                 {isUserMenuOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-40"
+                      className="fixed inset-0 z-[60]"
                       onClick={() => {
                         setIsUserMenuOpen(false);
                         setIsQuickEditingName(false);
                       }}
                     />
-                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-xl bg-[#FBF9F5] dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] shadow-xl z-50 p-4 space-y-3 font-sans animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-xl bg-[#FBF9F5] dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] shadow-2xl z-[70] p-4 space-y-3 font-sans animate-in fade-in slide-in-from-top-1 duration-150">
                       {/* User Header */}
                       <div className="flex items-center gap-3 pb-3 border-b border-[#cfc7b2]/70 dark:border-[#38332C]">
                         <div className="w-10 h-10 rounded-full bg-[#EDE7D6] dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] font-newsreader font-bold text-lg flex items-center justify-center shrink-0 shadow-inner">

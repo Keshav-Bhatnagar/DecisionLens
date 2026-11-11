@@ -369,11 +369,11 @@ export default function DecisionDetailPage({
 
 
 
-            {/* Phase 11: End-to-End Guided Workflow Stepper (Sticky on scroll) */}
+            {/* Phase 11: End-to-End Guided Workflow Stepper (Sticky on scroll below 56px header) */}
             <div
               id="deep-audit-section"
               ref={stepContentRef}
-              className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md pt-2 pb-2 -mx-2 px-2 sm:-mx-4 sm:px-4 border-b border-[#cfc7b2] dark:border-[#38332C] shadow-2xs transition-all font-courier"
+              className="sticky top-14 z-20 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md pt-2 pb-2 -mx-2 px-2 sm:-mx-4 sm:px-4 border-b border-[#cfc7b2] dark:border-[#38332C] shadow-2xs transition-all font-courier"
             >
               <WorkflowStepper
                 currentStage={workflowStage}

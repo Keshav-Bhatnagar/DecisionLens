@@ -231,14 +231,14 @@ export default function Sidebar({
       {mobileOpen && (
         <div
           onClick={closeMobile}
-          className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity duration-200"
+          className="lg:hidden fixed inset-0 z-[75] bg-black/50 backdrop-blur-xs transition-opacity duration-200"
           aria-hidden="true"
         />
       )}
 
       {/* Sidebar Container: 280px drawer on mobile, 240px (or 64px collapsed) on desktop */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#E5DEC9] dark:bg-[#1C1917] border-r border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] transition-transform lg:transition-all duration-200 ease-in-out font-courier shadow-2xl lg:shadow-none w-[280px] max-w-[85vw] ${
+        className={`fixed top-0 bottom-0 left-0 z-[80] flex flex-col bg-[#E5DEC9] dark:bg-[#1C1917] border-r border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] transition-transform lg:transition-all duration-200 ease-in-out font-courier shadow-2xl lg:shadow-none w-[280px] max-w-[85vw] ${
           collapsed ? "lg:w-16" : "lg:w-[240px]"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
