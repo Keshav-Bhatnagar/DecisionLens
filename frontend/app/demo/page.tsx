@@ -22,15 +22,19 @@ import {
   HelpCircle,
   Copy,
   Check,
+  Server,
+  DollarSign,
+  TrendingDown,
+  Building,
 } from "lucide-react";
 
 type Stage = "ingestion" | "structuring" | "analysis" | "frameworks" | "synthesis";
 
 const STAGES: { id: Stage; num: string; label: string; desc: string }[] = [
-  { id: "ingestion", num: "01", label: "DELIBERATION INPUT", desc: "Multi-stakeholder debate & voice recording" },
-  { id: "structuring", num: "02", label: "4-BUCKET EXTRACTION", desc: "Semantic cognitive categorization" },
-  { id: "analysis", num: "03", label: "BIAS & GAP RESOLUTION", desc: "Sunk-cost & fallacy stress-test" },
-  { id: "frameworks", num: "04", label: "TRADE-OFF MATRIX", desc: "Bayesian weighted decision scoring" },
+  { id: "ingestion", num: "01", label: "DELIBERATION INPUT", desc: "Live room debate & voice recording" },
+  { id: "structuring", num: "02", label: "4-BUCKET EXTRACTION", desc: "Risks, constraints, alternatives, criteria" },
+  { id: "analysis", num: "03", label: "BIAS & COGS AUDIT", desc: "Resume-hype & egress cost trap" },
+  { id: "frameworks", num: "04", label: "BAYESIAN TCO MATRIX", desc: "Cloud Exit vs Managed AWS 3-Yr Model" },
   { id: "synthesis", num: "05", label: "EXECUTIVE ADR SEAL", desc: "Cryptographic SHA-256 decision record" },
 ];
 
@@ -43,7 +47,7 @@ export default function DemoDecisionPage() {
   const isDark = theme === "dark";
 
   const handleCopySha = () => {
-    navigator.clipboard.writeText("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    navigator.clipboard.writeText("7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069");
     setCopiedSha(true);
     setTimeout(() => setCopiedSha(false), 2000);
   };
@@ -62,14 +66,14 @@ export default function DemoDecisionPage() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>
-            <strong>BENCHMARK DOSSIER (READ-ONLY DEMO):</strong> Synthetic data simulating high-stakes tech infrastructure decisions. Zero customer proprietary data.
+            <strong>EXECUTIVE BENCHMARK DOSSIER (READ-ONLY DEMO):</strong> The 2026 Cloud Exit Dilemma — AWS Cloud vs Bare-Metal Hybrid. Zero user data.
           </span>
         </div>
         <Link
           href="/auth?redirect=/dashboard?action=new"
           className="underline font-bold hover:text-white dark:hover:text-[#F0EAE1] ml-4 shrink-0"
         >
-          Create Real Decision →
+          Challenge Your Own Decision →
         </Link>
       </div>
 
@@ -78,7 +82,7 @@ export default function DemoDecisionPage() {
         <div className="flex items-center gap-6">
           <BrandLogo theme={theme} />
           <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-bold border border-[#172033]/20 dark:border-[#38332C] text-[#596474] dark:text-[#A89F91]">
-            DOSSIER #BM-2026-TITAN
+            DOSSIER #CLOUD-EXIT-2026-BHARAT
           </span>
         </div>
 
@@ -94,7 +98,7 @@ export default function DemoDecisionPage() {
             href="/auth?redirect=/dashboard?action=new"
             className="text-[11px] font-bold tracking-[0.08em] px-3.5 py-1.5 border border-[#172033] bg-[#172033] text-[#F5F1E8] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] hover:opacity-90 transition-opacity"
           >
-            Launch Your Decision →
+            Challenge a Real Decision →
           </Link>
         </div>
       </header>
@@ -143,15 +147,15 @@ export default function DemoDecisionPage() {
         {/* Title & Metadata Card */}
         <div className="space-y-2 border-b border-[#172033]/15 dark:border-[#38332C] pb-6">
           <div className="flex items-center gap-2 text-[10px] font-courier uppercase tracking-widest text-[#596474] dark:text-[#A89F91]">
-            <span>CATEGORY: INFRASTRUCTURE &amp; VECTOR AI</span>
+            <span>CATEGORY: CLOUD EXIT &amp; INFRASTRUCTURE TCO</span>
             <span>•</span>
-            <span>DELIBERATION STATUS: SYNTHESIZED &amp; VERIFIED</span>
+            <span>DECISION STATUS: AUDITED &amp; SEALED</span>
           </div>
           <h1 className="font-newsreader text-3xl sm:text-5xl font-normal text-[#172033] dark:text-[#F0EAE1] leading-tight">
-            “Project Titan: In-House Vector Search (pgvector) vs Managed Dedicated Cloud (Pinecone)”
+            “The Cloud Exit Dilemma: Repatriate Core Workloads from AWS to Bare-Metal or Renew 3-Year Enterprise Discount?”
           </h1>
           <p className="text-xs sm:text-sm font-courier text-[#596474] dark:text-[#A89F91] max-w-3xl leading-relaxed">
-            Dilemma: As AI search queries surge 14x, should we scale our existing PostgreSQL 16 cluster with pgvector HNSW indices, or offload embeddings to an external dedicated managed vector database?
+            Dilemma: Following the 37signals cloud repatriation playbook, our annual AWS compute, cross-AZ egress, and managed EKS bill hit ₹64 Lakhs/year. Should we migrate database and steady-state workers to colocated bare-metal servers (saving ₹38L/yr) or accept cloud lock-in?
           </p>
         </div>
 
@@ -162,7 +166,7 @@ export default function DemoDecisionPage() {
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
                 <h2 className="text-sm font-bold uppercase tracking-wider">
-                  Raw Stakeholder Deliberation Transcript
+                  Raw Architectural Deliberation (Speech-to-Text)
                 </h2>
               </div>
               <span className="text-[11px] text-[#596474] dark:text-[#A89F91]">
@@ -172,27 +176,27 @@ export default function DemoDecisionPage() {
 
             <div className="p-5 rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6]/60 dark:bg-[#1E1B17]/60 space-y-4 text-xs font-courier leading-relaxed">
               <div className="space-y-1">
-                <span className="font-bold text-[#172033] dark:text-[#D4AA50]">[00:04:12] VP of Engineering:</span>
+                <span className="font-bold text-[#172033] dark:text-[#D4AA50]">[00:03:14] VP of Engineering:</span>
                 <p className="italic">
-                  “Our engineers already know PostgreSQL inside out. If we adopt Pinecone, that’s another external vendor, another SOC-2 audit, and another monthly bill of ₹12 Lakhs as vector queries expand.”
+                  “DHH saved over $3M pulling Basecamp out of AWS. Look at our cloud bill—we are paying ₹5.3 Lakhs every month to AWS. Almost 35% of that is pure egress fees between availability zones and managed RDS markup! If we buy Dell PowerEdge servers and colocate them in Mumbai (CtrlS/Sify), the hardware pays for itself in 9 months.”
                 </p>
               </div>
               <div className="space-y-1">
-                <span className="font-bold text-[#172033] dark:text-[#D4AA50]">[00:06:45] Lead AI Architect:</span>
+                <span className="font-bold text-[#172033] dark:text-[#D4AA50]">[00:06:50] DevOps / Lead SRE:</span>
                 <p className="italic">
-                  “True, but pgvector HNSW indices require RAM that matches the full vector dataset. Once we cross 20 million vectors, our DB cache will be blown out, causing massive p99 latency spikes on ordinary OLTP checkout queries.”
+                  “Wait, who is going to drive to the Mumbai data center when a NVMe drive fails at 3 AM on a Sunday? In AWS, automated failover takes 30 seconds. On bare-metal, we need redundant hot spares, physical smart hands contracts, and our 2-person infra team will burn out.”
                 </p>
               </div>
               <div className="space-y-1">
-                <span className="font-bold text-[#172033] dark:text-[#D4AA50]">[00:09:20] Security &amp; Compliance Lead:</span>
+                <span className="font-bold text-[#172033] dark:text-[#D4AA50]">[00:10:05] Chief Financial Officer (CFO):</span>
                 <p className="italic">
-                  “Under the DPDP Act 2023, customer medical and banking prompts cannot leave our Indian cloud VPC without explicit consent. Does Pinecone have an AWS Mumbai / GCP Delhi region with local data guarantees?”
+                  “AWS offered us a 28% Enterprise Discount Plan (EDP) if we commit for 3 years today. But if we sign that 3-year agreement, we are legally locked into ₹1.4 Crores minimum spend even if our user traffic drops.”
                 </p>
               </div>
               <div className="space-y-1">
-                <span className="font-bold text-[#172033] dark:text-[#D4AA50]">[00:13:02] CFO / Finance Director:</span>
+                <span className="font-bold text-[#172033] dark:text-[#D4AA50]">[00:14:22] Security &amp; Compliance Officer:</span>
                 <p className="italic">
-                  “We budgeted ₹25L total for AI search infra this fiscal year. If an in-house cluster requires 2 full-time DevOps engineers to babysit sharding, our operational salary cost will double that savings.”
+                  “Under the DPDP Act 2023, bare-metal colocated inside India gives us complete air-gapped physical data sovereignty. No foreign subpoenas, no shared multitenant hypervisor vulnerabilities.”
                 </p>
               </div>
             </div>
@@ -228,12 +232,12 @@ export default function DemoDecisionPage() {
               {/* Risks */}
               <div className="p-4 rounded-xl border border-rose-300 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-bold text-rose-700 dark:text-rose-400">
-                  <span>[RISKS &amp; VULNERABILITIES]</span>
+                  <span>[RISKS &amp; HIDDEN COSTS]</span>
                   <span>(2 IDENTIFIED)</span>
                 </div>
                 <ul className="text-xs font-courier space-y-1.5 list-disc pl-4 text-[#172033] dark:text-[#F0EAE1]">
-                  <li>Shared buffer cache thrashing when vector embeddings exceed available RAM.</li>
-                  <li>Vendor lock-in: Pinecone proprietary API creates migration friction if pricing spikes.</li>
+                  <li>Physical Hardware Failures: Drive/RAM degradation requires on-site replacement protocol.</li>
+                  <li>3-Year AWS Contract Lock-In: ₹1.4 Crore irrevocable liability under the proposed EDP.</li>
                 </ul>
               </div>
 
@@ -244,34 +248,34 @@ export default function DemoDecisionPage() {
                   <span>(2 IDENTIFIED)</span>
                 </div>
                 <ul className="text-xs font-courier space-y-1.5 list-disc pl-4 text-[#172033] dark:text-[#F0EAE1]">
-                  <li>DPDP Act 2023 Data Residency: Embeddings must remain strictly inside India (ap-south-1).</li>
-                  <li>Annual Capital Cap: Total fiscal spend cannot exceed ₹25 Lakhs inclusive of egress.</li>
+                  <li>SRE Headcount Cap: Team cannot hire more than 2 dedicated infrastructure engineers.</li>
+                  <li>Uptime SLA: Must maintain 99.95% API availability during payment processing peaks.</li>
                 </ul>
               </div>
 
               {/* Alternatives */}
               <div className="p-4 rounded-xl border border-blue-300 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-bold text-blue-700 dark:text-blue-400">
-                  <span>[EXPLORED ALTERNATIVES]</span>
+                  <span>[EXPLORED STRATEGIES]</span>
                   <span>(3 OPTIONS)</span>
                 </div>
                 <ul className="text-xs font-courier space-y-1.5 list-disc pl-4 text-[#172033] dark:text-[#F0EAE1]">
-                  <li>Option A: Dedicated read-replica PostgreSQL instance isolated exclusively for pgvector.</li>
-                  <li>Option B: Pinecone Serverless (Multi-tenant with Indian VPC peering).</li>
-                  <li>Option C: Self-hosted Qdrant on local Kubernetes cluster.</li>
+                  <li>Strategy A: 100% Cloud Repatriation (Colocated Dell hardware in Mumbai tier-4 DC).</li>
+                  <li>Strategy B: Sign 3-Year AWS EDP with Savings Plans.</li>
+                  <li>Strategy C: <strong>Hybrid Symmetrical Model (Databases on bare-metal, frontends on AWS)</strong>.</li>
                 </ul>
               </div>
 
               {/* Evaluation Criteria */}
               <div className="p-4 rounded-xl border border-emerald-300 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2">
                 <div className="flex items-center justify-between text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                  <span>[DECISION CRITERIA]</span>
+                  <span>[EVALUATION METRICS]</span>
                   <span>(WEIGHTED)</span>
                 </div>
                 <ul className="text-xs font-courier space-y-1.5 list-disc pl-4 text-[#172033] dark:text-[#F0EAE1]">
-                  <li>p99 Query Latency under 50ms at 25M vectors (Weight: 35%).</li>
-                  <li>Total Cost of Ownership (TCO) inclusive of SRE maintenance (Weight: 35%).</li>
-                  <li>Regulatory Compliance &amp; Audit Trail (Weight: 30%).</li>
+                  <li>3-Year Cumulative TCO Savings (Weight: 40%).</li>
+                  <li>Operational Burden on 2-person SRE Team (Weight: 35%).</li>
+                  <li>Disaster Recovery &amp; Redundancy (Weight: 25%).</li>
                 </ul>
               </div>
             </div>
@@ -282,31 +286,31 @@ export default function DemoDecisionPage() {
                 onClick={() => setCurrentStage("ingestion")}
                 className="text-xs underline font-bold"
               >
-                ← Back to Transcript
+                ← Back to Deliberation
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentStage("analysis")}
                 className="px-5 py-2.5 rounded bg-[#172033] text-white dark:bg-[#D4AA50] dark:text-[#181614] font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer shadow-sm"
               >
-                <span>Inspect Bias &amp; Gaps (Stage 3) →</span>
+                <span>Inspect Bias &amp; Cost Leaks (Stage 3) →</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* STAGE 3: ANALYSIS (Bias & Gap Stress-Test) */}
+        {/* STAGE 3: ANALYSIS (Bias & COGS Stress-Test) */}
         {currentStage === "analysis" && (
           <div className="space-y-6 animate-in fade-in">
             <div className="flex items-center justify-between border-b pb-3 border-[#172033]/15 dark:border-[#38332C]">
               <div className="flex items-center gap-2">
                 <BrainCircuit className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
                 <h2 className="text-sm font-bold uppercase tracking-wider">
-                  Cognitive Bias &amp; Reasoning Flaws Flagged
+                  Cognitive Biases &amp; Unvetted Financial Traps
                 </h2>
               </div>
               <span className="text-[11px] text-rose-600 dark:text-rose-400 font-bold">
-                2 Critical Traps Exposed
+                2 Critical Fallacies Flagged
               </span>
             </div>
 
@@ -314,22 +318,22 @@ export default function DemoDecisionPage() {
               <div className="p-4 rounded-xl border border-rose-300 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 space-y-2">
                 <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 text-xs font-bold font-mono">
                   <AlertTriangle className="w-4 h-4" />
-                  <span>TRAP #1: SUNK-COST FALLACY (Dev Familiarity Bias)</span>
+                  <span>TRAP #1: DOGMATIC CLOUD CONVENIENCE BIAS (The AWS Sunk-Cost)</span>
                 </div>
                 <p className="text-xs font-courier text-[#172033] dark:text-[#F0EAE1] leading-relaxed">
-                  <strong>The Flaw:</strong> Leadership argued <em>“We already mastered Postgres, so pgvector is free.”</em>  
-                  <strong>The Reality:</strong> pgvector is not free when scale hits 25M vectors. Managing memory indexing requires upgrading AWS RDS Aurora to a memory-optimized `db.r6g.4xlarge` (costing ₹18.2L/yr), completely erasing the presumed cost advantage.
+                  <strong>The False Assumption:</strong> Leadership assumed <em>“Cloud is always cheaper because we don’t buy physical servers.”</em>  
+                  <strong>The Audited Reality:</strong> AWS RDS markup charges a 4.2x multiple over raw compute. The company paid ₹22 Lakhs in 2025 purely for cross-AZ traffic and managed database tax for steady-state transactional loads that never fluctuated.
                 </p>
               </div>
 
               <div className="p-4 rounded-xl border border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 space-y-2">
                 <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-xs font-bold font-mono">
                   <AlertTriangle className="w-4 h-4" />
-                  <span>TRAP #2: SILENT REGULATORY BLIND SPOT (DPDP Act Data Residency)</span>
+                  <span>TRAP #2: THE FULL-EXIT SRE BURNOUT RISK (The 100% Repatriation Blind Spot)</span>
                 </div>
                 <p className="text-xs font-courier text-[#172033] dark:text-[#F0EAE1] leading-relaxed">
-                  <strong>The Flaw:</strong> Proposing Pinecone without verifying Indian VPC availability.
-                  <strong>The Reality:</strong> Shipping raw prompt vector embeddings to US-East violates Section 43A and DPDP Act provisions for cross-border transfer of sensitive financial identifiers.
+                  <strong>The False Assumption:</strong> <em>“We can just buy servers and completely turn off AWS in 3 months.”</em>  
+                  <strong>The Audited Reality:</strong> Moving elastic customer-facing microservices to bare-metal requires building custom autoscaling and edge DDoS defense, requiring 2 extra SRE hires (costing ₹36 Lakhs/year in salaries), completely negating the hardware savings.
                 </p>
               </div>
             </div>
@@ -347,24 +351,24 @@ export default function DemoDecisionPage() {
                 onClick={() => setCurrentStage("frameworks")}
                 className="px-5 py-2.5 rounded bg-[#172033] text-white dark:bg-[#D4AA50] dark:text-[#181614] font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer shadow-sm"
               >
-                <span>View Trade-Off Matrix (Stage 4) →</span>
+                <span>View Bayesian TCO Matrix (Stage 4) →</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* STAGE 4: FRAMEWORKS (Trade-off Matrix) */}
+        {/* STAGE 4: FRAMEWORKS (Bayesian TCO Matrix) */}
         {currentStage === "frameworks" && (
           <div className="space-y-6 animate-in fade-in">
             <div className="flex items-center justify-between border-b pb-3 border-[#172033]/15 dark:border-[#38332C]">
               <div className="flex items-center gap-2">
                 <Scale className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
                 <h2 className="text-sm font-bold uppercase tracking-wider">
-                  Weighted Trade-Off Matrix
+                  Bayesian 3-Year TCO &amp; Risk Matrix
                 </h2>
               </div>
               <span className="text-[11px] text-[#596474] dark:text-[#A89F91]">
-                Scored via Bayesian Multi-Criteria Analysis
+                Comparing Pure Cloud vs Full Exit vs Hybrid Repatriation
               </span>
             </div>
 
@@ -372,36 +376,41 @@ export default function DemoDecisionPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#EDE7D6] dark:bg-[#201C18] border-b border-[#cfc7b2] dark:border-[#38332C]">
-                    <th className="p-3 font-bold">Criteria</th>
+                    <th className="p-3 font-bold">Decision Dimension</th>
                     <th className="p-3 font-bold">Weight</th>
-                    <th className="p-3 font-bold">Option A: pgvector (Dedicated Replica)</th>
-                    <th className="p-3 font-bold">Option B: Pinecone (Managed Cloud)</th>
+                    <th className="p-3 font-bold">Option 1: AWS 3-Yr EDP</th>
+                    <th className="p-3 font-bold">Option 2: 100% Bare-Metal</th>
+                    <th className="p-3 font-bold text-[#7a4e10] dark:text-[#D4AA50]">Option 3: Hybrid Repatriation</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#cfc7b2]/40 dark:divide-[#38332C]">
                   <tr>
-                    <td className="p-3 font-semibold">Latency under Scale (&lt;50ms p99)</td>
-                    <td className="p-3 opacity-75">35%</td>
-                    <td className="p-3 text-amber-700 dark:text-amber-400 font-bold">7.2 / 10 (RAM Bound)</td>
-                    <td className="p-3 text-emerald-700 dark:text-emerald-400 font-bold">9.4 / 10 (Fast HNSW)</td>
+                    <td className="p-3 font-semibold">3-Year Cumulative Cost</td>
+                    <td className="p-3 opacity-75">40%</td>
+                    <td className="p-3 text-rose-700 dark:text-rose-400">₹1.48 Crores</td>
+                    <td className="p-3 text-emerald-700 dark:text-emerald-400">₹62 Lakhs</td>
+                    <td className="p-3 text-emerald-700 dark:text-emerald-400 font-bold">₹74 Lakhs (₹74L Net Savings)</td>
                   </tr>
                   <tr>
-                    <td className="p-3 font-semibold">Total Cost of Ownership (₹25L Cap)</td>
+                    <td className="p-3 font-semibold">SRE Operational Burden</td>
                     <td className="p-3 opacity-75">35%</td>
-                    <td className="p-3 text-emerald-700 dark:text-emerald-400 font-bold">8.8 / 10 (₹14.2L/yr)</td>
-                    <td className="p-3 text-rose-700 dark:text-rose-400 font-bold">5.5 / 10 (₹28.5L/yr at scale)</td>
+                    <td className="p-3 text-emerald-700 dark:text-emerald-400">Low (Managed AWS)</td>
+                    <td className="p-3 text-rose-700 dark:text-rose-400">Very High (Burnout)</td>
+                    <td className="p-3 text-emerald-700 dark:text-emerald-400 font-bold">Medium (Zero Headcount Bump)</td>
                   </tr>
                   <tr>
-                    <td className="p-3 font-semibold">DPDP Act Compliance &amp; Residency</td>
-                    <td className="p-3 opacity-75">30%</td>
-                    <td className="p-3 text-emerald-700 dark:text-emerald-400 font-bold">10 / 10 (In-VPC VPC)</td>
-                    <td className="p-3 text-rose-700 dark:text-rose-400 font-bold">4.0 / 10 (Requires Cross-Border)</td>
+                    <td className="p-3 font-semibold">Contractual Flexibility</td>
+                    <td className="p-3 opacity-75">25%</td>
+                    <td className="p-3 text-rose-700 dark:text-rose-400">Locked 36 Months</td>
+                    <td className="p-3 text-emerald-700 dark:text-emerald-400">100% Owned Capex</td>
+                    <td className="p-3 text-emerald-700 dark:text-emerald-400 font-bold">High (Elastic Burst in AWS)</td>
                   </tr>
                   <tr className="bg-[#EDE7D6]/40 dark:bg-[#201C18]/40 font-bold text-sm">
-                    <td className="p-3">OVERALL WEIGHTED SCORE</td>
+                    <td className="p-3">OVERALL BAYESIAN SCORE</td>
                     <td className="p-3">100%</td>
-                    <td className="p-3 text-emerald-700 dark:text-emerald-400">8.60 / 10 (RECOMMENDED)</td>
-                    <td className="p-3 text-[#596474] dark:text-[#A89F91]">6.42 / 10</td>
+                    <td className="p-3 text-rose-700 dark:text-rose-400">5.85 / 10</td>
+                    <td className="p-3 text-amber-700 dark:text-amber-400">6.90 / 10</td>
+                    <td className="p-3 text-emerald-700 dark:text-emerald-400 font-bold">8.95 / 10 (WINNER)</td>
                   </tr>
                 </tbody>
               </table>
@@ -413,14 +422,14 @@ export default function DemoDecisionPage() {
                 onClick={() => setCurrentStage("analysis")}
                 className="text-xs underline font-bold"
               >
-                ← Back to Bias Analysis
+                ← Back to Bias Audit
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentStage("synthesis")}
                 className="px-5 py-2.5 rounded bg-[#172033] text-white dark:bg-[#D4AA50] dark:text-[#181614] font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer shadow-sm"
               >
-                <span>Read Final Executive ADR (Stage 5) →</span>
+                <span>Read Boardroom ADR `#ADR-2026-EXIT` (Stage 5) →</span>
               </button>
             </div>
           </div>
@@ -434,10 +443,10 @@ export default function DemoDecisionPage() {
               <div className="flex items-center justify-between border-b pb-4 border-[#172033]/20 dark:border-[#38332C]">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50] block">
-                    ARCHITECTURAL DECISION RECORD #ADR-0419
+                    ARCHITECTURAL DECISION RECORD #ADR-2026-EXIT
                   </span>
                   <h3 className="text-xl sm:text-2xl font-newsreader font-bold text-[#172033] dark:text-[#F0EAE1]">
-                    Deploy Isolated pgvector Read-Replica Inside Indian Cloud VPC
+                    Execute Hybrid Cloud Exit: Repatriate Primary Database &amp; Steady-State Workers to Indian Bare-Metal DC
                   </h3>
                 </div>
 
@@ -452,30 +461,30 @@ export default function DemoDecisionPage() {
               <div className="space-y-4 text-xs font-courier leading-relaxed">
                 <div>
                   <h4 className="font-bold text-[#172033] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
-                    1. Context &amp; Problem
+                    1. Context &amp; Problem Statement
                   </h4>
                   <p className="mt-1 opacity-90">
-                    Vector query volume increased 14x due to conversational search features. Embedding lookups were risking primary transaction DB stability and facing DPDP Act residency constraints.
+                    Annual AWS infrastructure spend reached ₹64 Lakhs/yr, with 35% consumed by cross-AZ data egress and managed RDS markups. The proposed 3-year AWS enterprise commitment of ₹1.4 Crores would lock capital during uncertain macro conditions.
                   </p>
                 </div>
 
                 <div>
                   <h4 className="font-bold text-[#172033] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
-                    2. Considered Options
+                    2. Evaluated Options
                   </h4>
                   <p className="mt-1 opacity-90">
-                    1. Colocated pgvector on primary Aurora DB. (Rejected: buffer lock contention).<br />
-                    2. Pinecone Serverless Cloud. (Rejected: fails ₹25L TCO cap and data residency).<br />
-                    3. <strong>Dedicated PostgreSQL Read-Replica with pgvector HNSW indexing. (Accepted)</strong>
+                    <strong>Option 1 (AWS 3-Year EDP):</strong> 28% discount, but locks ₹1.48 Crores cumulative capital.<br />
+                    <strong>Option 2 (100% Bare-Metal Migration):</strong> High initial hardware savings, but overloads the 2-person SRE team with physical edge maintenance.<br />
+                    <strong>Option 3 (Hybrid Repatriation): Accepted.</strong> Colocate 4 Dell PowerEdge servers in a Mumbai tier-4 data center for PostgreSQL and heavy background jobs; retain customer-facing APIs and CDN on AWS for elastic burst scaling.
                   </p>
                 </div>
 
                 <div>
                   <h4 className="font-bold text-[#172033] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
-                    3. Decision &amp; Consequences
+                    3. Consequence &amp; Verified Financial Impact
                   </h4>
                   <p className="mt-1 opacity-90">
-                    Provision a dedicated `db.r6g.2xlarge` read-replica purely for vector queries. Primary OLTP database remains 100% unaffected. Total annual spend locked at ₹14.2 Lakhs (saving ₹10.8L against budget), with zero external cross-border data leakage.
+                    Saves ₹74 Lakhs over 36 months. Database query latency drops from 18ms to 2.1ms due to dedicated NVMe PCIe bus. Zero new SRE hires required. 100% DPDP Act 2023 compliant data residency guaranteed.
                   </p>
                 </div>
               </div>
@@ -485,7 +494,7 @@ export default function DemoDecisionPage() {
                 <div className="flex items-center gap-2 text-[#5c5549] dark:text-[#a89f91]">
                   <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>
-                    SHA-256 Audit Digest: <code className="text-[#172033] dark:text-[#F0EAE1]">e3b0c44...b855</code>
+                    Cryptographic SHA-256 Seal: <code className="text-[#172033] dark:text-[#F0EAE1]">7f83b16...9069</code>
                   </span>
                   <button
                     type="button"
@@ -498,7 +507,7 @@ export default function DemoDecisionPage() {
                 </div>
 
                 <div className="text-[10px] text-[#5c5549] dark:text-[#a89f91]">
-                  SOC-2 Type II Certified • Non-Repudiable Audit Stamp
+                  SOC-2 Type II Certified • Non-Repudiable Boardroom Audit Digest
                 </div>
               </div>
             </div>
@@ -507,10 +516,10 @@ export default function DemoDecisionPage() {
             <div className="p-6 rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#201C18] flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="space-y-1 text-center sm:text-left">
                 <h4 className="font-newsreader text-lg font-bold text-[#172033] dark:text-[#F0EAE1]">
-                  Ready to put your company&apos;s critical decisions under scrutiny?
+                  Ready to put your company&apos;s critical infrastructure bets under scrutiny?
                 </h4>
                 <p className="text-xs font-courier text-[#5c5549] dark:text-[#a89f91]">
-                  Invite your leadership team, capture live meeting debates, and generate living ADRs.
+                  Capture live meeting audio, stress-test cloud egress traps, and seal living ADRs.
                 </p>
               </div>
 
@@ -518,7 +527,7 @@ export default function DemoDecisionPage() {
                 href="/auth?redirect=/dashboard?action=new"
                 className="px-6 py-3 rounded-lg bg-[#172033] text-white dark:bg-[#D4AA50] dark:text-[#181614] font-courier font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-opacity shrink-0 shadow-sm"
               >
-                Start Free Decision →
+                Challenge Your Decision →
               </Link>
             </div>
           </div>
