@@ -646,33 +646,33 @@ export default function FolderDetailPage({
               {/* Giant faint DECISIONS watermark behind right side */}
               <div
                 aria-hidden="true"
-                className="absolute right-0 bottom-[-20px] text-[#1d1d1b]/[0.035] dark:text-[#F0EAE1]/[0.035] font-newsreader font-bold text-[100px] sm:text-[150px] lg:text-[200px] leading-none select-none pointer-events-none -z-0 tracking-tight"
+                className="absolute right-0 bottom-[-10px] text-[#1d1d1b]/[0.03] dark:text-[#F0EAE1]/[0.03] font-newsreader font-bold text-[60px] sm:text-[80px] lg:text-[100px] leading-none select-none pointer-events-none -z-0 tracking-tight"
               >
                 DECISIONS
               </div>
 
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-                <div className="space-y-3 max-w-4xl">
+                <div className="space-y-2 max-w-4xl">
                   {/* Small amber eyebrow */}
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-[34px] h-[3px] bg-[#7a4e10] dark:bg-[#D4AA50] inline-block" />
-                    <span className="font-courier text-xs font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#D4AA50]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-[2px] bg-[#7a4e10] dark:bg-[#D4AA50] inline-block" />
+                    <span className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#D4AA50]">
                       WORKSPACE
                     </span>
                   </div>
 
-                  {/* Huge Serif Workspace Name */}
-                  <h1 className="font-newsreader text-[56px] sm:text-[76px] lg:text-[96px] xl:text-[112px] font-normal leading-[0.92] tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  {/* Refined Workspace Name (Calibrated down from giant 112px book text) */}
+                  <h1 className="font-newsreader text-3xl sm:text-4xl lg:text-[42px] font-medium leading-tight tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
                     {folder.name}
                   </h1>
 
                   {/* Description: Italic serif */}
                   {folder.description && folder.description.trim() ? (
-                    <p className="font-newsreader italic text-[17px] sm:text-[19px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed max-w-3xl">
+                    <p className="font-newsreader italic text-sm sm:text-base text-[#4f4b40] dark:text-[#A89F91] leading-relaxed max-w-3xl">
                       {folder.description}
                     </p>
                   ) : (
-                    <p className="font-newsreader italic text-[17px] sm:text-[19px] text-[#7B8491] dark:text-[#8E867B] leading-relaxed max-w-3xl">
+                    <p className="font-newsreader italic text-sm sm:text-base text-[#7B8491] dark:text-[#8E867B] leading-relaxed max-w-3xl">
                       No description for this workspace.
                     </p>
                   )}
@@ -881,7 +881,7 @@ export default function FolderDetailPage({
                             </div>
 
                             {/* Row 2: Title in Serif */}
-                            <h2 className="font-newsreader text-[24px] sm:text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] transition-colors truncate">
+                            <h2 className="font-newsreader text-lg sm:text-xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] transition-colors truncate">
                               {decision.title}
                             </h2>
 

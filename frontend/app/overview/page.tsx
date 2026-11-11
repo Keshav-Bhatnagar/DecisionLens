@@ -175,26 +175,26 @@ export default function OverviewPage() {
                 <span className="w-2 h-2 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50]" />
                 {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
               </p>
-              <h1 className="font-newsreader text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight">
+              <h1 className="font-newsreader text-2xl sm:text-3xl lg:text-4xl font-medium tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight">
                 {loading || !user ? "Loading…" : `${greeting()}, ${firstName(user.display_name, user.email)}`}
               </h1>
-              <p className="text-[17px] sm:text-[18px] text-[#4f4b40] dark:text-[#A89F91] mt-2.5 max-w-[620px] leading-relaxed">
+              <p className="text-sm sm:text-base text-[#4f4b40] dark:text-[#A89F91] mt-2 max-w-[620px] leading-relaxed">
                 Here&apos;s where your decisions and strategic mandates stand today.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2.5 shrink-0">
               <Link
                 href="/dashboard?view=workspaces"
-                className="inline-flex items-center justify-center gap-2 h-12 px-5 border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] rounded-xl text-[16px] font-medium transition-colors shadow-2xs"
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] rounded-xl text-sm font-medium transition-colors shadow-2xs"
               >
-                <FolderPlus className="w-5 h-5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                <FolderPlus className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
                 Workspaces
               </Link>
               <Link
                 href="/dashboard?action=new"
-                className="inline-flex items-center justify-center gap-2 h-12 px-5 bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] text-[#F4F0E6] dark:text-[#181614] rounded-xl text-[16px] font-semibold transition-colors shadow-sm"
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] text-[#F4F0E6] dark:text-[#181614] rounded-xl text-sm font-semibold transition-colors shadow-sm"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
                 New decision
               </Link>
             </div>
@@ -206,15 +206,15 @@ export default function OverviewPage() {
               <Link
                 key={label}
                 href={href}
-                className="group bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-5 sm:p-6 hover:border-[#7a4e10] dark:hover:border-[#D4AA50] hover:shadow-soft transition-all"
+                className="group bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-4 sm:p-5 hover:border-[#7a4e10] dark:hover:border-[#D4AA50] hover:shadow-soft transition-all"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[14px] sm:text-[15px] font-mono uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] font-bold">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs sm:text-[13px] font-mono uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] font-bold">
                     {label}
                   </span>
-                  <Icon className="w-5 h-5 text-[#7a4e10] dark:text-[#D4AA50] group-hover:scale-110 transition-transform" />
+                  <Icon className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] group-hover:scale-110 transition-transform" />
                 </div>
-                <div className="font-newsreader text-4xl sm:text-5xl font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] leading-none tabular-nums">
+                <div className="font-newsreader text-2xl sm:text-3xl font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] leading-none tabular-nums">
                   {loading ? <span className="inline-block w-12 h-9 rounded-lg bg-[#cfc7b2]/40 dark:bg-[#38332C] animate-pulse" /> : value}
                 </div>
               </Link>

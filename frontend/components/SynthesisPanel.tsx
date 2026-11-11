@@ -102,6 +102,8 @@ export default function SynthesisPanel({
   const [overrideReason, setOverrideReason] = useState<string>("");
   const [savingOverride, setSavingOverride] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showSpikes, setShowSpikes] = useState(false);
+  const [expandedNarrative, setExpandedNarrative] = useState(false);
 
   // Interactive FinOps Calibrator State
   const [isCalibratorOpen, setIsCalibratorOpen] = useState(false);
@@ -986,11 +988,11 @@ jobs:
           )}
 
           {/* ========================================================================= */}
-          {/* 1. EXECUTIVE VERDICT & BOARDROOM ADR HEADER (Hero Card)                   */}
+          {/* 1. EXECUTIVE COMMAND BRIEF (Compact 60/40 Asymmetric Boardroom Hero)      */}
           {/* ========================================================================= */}
-          <div className="bg-paper-surface border border-border rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xs">
+          <div className="bg-paper-surface border border-border rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 font-sans">
             {/* Top Meta Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-border">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2.5 py-0.5 rounded-md text-[11px] font-mono uppercase bg-paper-sidebar text-ink border border-border font-bold">
                   {displaySynthesis.domain} DOMAIN
@@ -1011,441 +1013,407 @@ jobs:
 
               {displaySynthesis.canonical_result && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-muted uppercase">Gauntlet Score:</span>
-                  <span className="font-mono text-sm font-bold text-accent bg-paper-sidebar px-2 py-0.5 rounded border border-border">
+                  <span className="text-[11px] font-mono text-muted uppercase font-semibold">Gauntlet Score:</span>
+                  <span className="font-mono text-xs sm:text-sm font-bold text-accent bg-paper-sidebar px-2 py-0.5 rounded-md border border-border">
                     {displaySynthesis.canonical_result.winner_score.toFixed(1)} / 10
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Headline & Recommendation Body */}
-            <div>
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent block mb-1">
-                EXECUTIVE VERDICT & DIRECTIVE
-              </span>
-              <h3 className="font-newsreader text-2xl sm:text-3xl font-normal text-ink leading-tight mb-3">
-                {displaySynthesis.headline}
-              </h3>
-              <p className="text-sm text-ink leading-relaxed font-sans whitespace-pre-line">
-                {displaySynthesis.recommendation_text}
-              </p>
-            </div>
-
-            {/* ========================================================================= */}
-            {/* 1.5. CAPITAL AT RISK & BLUNDER SHIELD (Munshi Procurement & ROI Proof)   */}
-            {/* ========================================================================= */}
-            <div className="rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6]/50 dark:bg-[#1E1B18] p-5 space-y-3.5 transition-all shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#cfc7b2]/70 dark:border-[#38332C] pb-3">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
-                    Executive ROI &amp; Sunk-Cost Shield
+            {/* Asymmetric 60/40 Split: Left (Verdict & Directives) | Right (FinOps Sunk-Cost Shield) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              {/* Left Column (7 cols ~58%): Executive Verdict, Mandate & Spikes */}
+              <div className="lg:col-span-7 space-y-3">
+                <div>
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-accent block mb-1">
+                    EXECUTIVE VERDICT & DIRECTIVE
                   </span>
-                  {isCalibrated && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] font-bold">
-                      Live Calibrated
-                    </span>
+                  <h3 className="font-newsreader text-xl sm:text-2xl font-medium text-ink leading-snug">
+                    {displaySynthesis.headline}
+                  </h3>
+                </div>
+
+                {/* Directive Narrative with clean clamping to prevent giant book text */}
+                <div className="space-y-1.5">
+                  <p className={`text-xs sm:text-[13px] text-ink leading-relaxed font-sans whitespace-pre-line ${
+                    expandedNarrative ? "" : "line-clamp-3"
+                  }`}>
+                    {displaySynthesis.recommendation_text}
+                  </p>
+                  {displaySynthesis.recommendation_text && displaySynthesis.recommendation_text.length > 220 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedNarrative(!expandedNarrative)}
+                      className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:underline cursor-pointer inline-flex items-center gap-1"
+                    >
+                      <span>{expandedNarrative ? "Show Less" : "Read Full Directive"}</span>
+                      {expandedNarrative ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
-                  <button
-                    type="button"
-                    onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
-                      isCalibratorOpen || isCalibrated
-                        ? "bg-[#7a4e10] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#7a4e10] shadow-xs"
-                        : "border-[#cfc7b2] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#2C2723] hover:bg-[#EDE7D6] text-[#7a4e10] dark:text-[#D4AA50]"
-                    }`}
-                    title="Calibrate headcount, geography rate card, and cloud scale tier"
-                  >
-                    <Sliders className="w-3 h-3" />
-                    <span>{isCalibratorOpen ? "Hide Calibrator" : "Calibrate FinOps Assumptions"}</span>
-                  </button>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
-                    Procurement ROI: Verified 10x+
-                  </span>
+
+                {/* Compact Pre-Commitment Gated Spikes (Collapsible, takes 34px instead of 250px!) */}
+                {displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
+                  <div className="rounded-xl border border-amber-200/90 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/30 overflow-hidden text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setShowSpikes(!showSpikes)}
+                      className="w-full flex items-center justify-between p-2.5 sm:px-3 text-left font-mono font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100/50 dark:hover:bg-amber-900/30 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <ShieldAlert className="w-3.5 h-3.5 text-amber-800 dark:text-amber-400 shrink-0" />
+                        <span className="text-[11px] uppercase tracking-wider truncate">
+                          Pre-Commitment Conditions: {displaySynthesis.conditional_triggers.length} Gated Spikes
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 text-[10px] text-amber-800 dark:text-amber-400">
+                        <span>{showSpikes ? "Hide" : "Inspect Spikes"}</span>
+                        {showSpikes ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </div>
+                    </button>
+
+                    {showSpikes && (
+                      <div className="p-3 pt-0 border-t border-amber-200/60 dark:border-amber-800/40 space-y-2 mt-2">
+                        {displaySynthesis.conditional_triggers.map((trigger, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2.5 bg-paper-surface border border-amber-200 dark:border-amber-800/80 rounded-lg text-[11px] text-amber-950 dark:text-amber-200 flex items-start gap-2"
+                          >
+                            <span className="font-mono text-amber-800 dark:text-amber-400 font-bold shrink-0 mt-0.5">
+                              SPIKE 0{idx + 1}
+                            </span>
+                            <span className="leading-snug">{trigger}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sovereign Override Button / Notice */}
+                <div className="pt-2 flex items-center justify-between gap-3 text-xs border-t border-border/70">
+                  <div className="flex items-center gap-1.5 text-muted text-[11px] font-mono">
+                    <UserCheck className="w-3.5 h-3.5 text-accent shrink-0" />
+                    <span className="hidden sm:inline">Human Sovereignty: AI advises, leadership decides.</span>
+                  </div>
+                  {displaySynthesis.override ? (
+                    <button
+                      type="button"
+                      onClick={handleRevertOverride}
+                      disabled={savingOverride}
+                      className="text-[11px] font-mono font-bold text-amber-800 dark:text-amber-300 underline hover:no-underline cursor-pointer"
+                    >
+                      Revert Override
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultOther = displaySynthesis.alternatives_considered.find((a: any) => !a.is_recommended)?.name || "Alternative";
+                        setSelectedOverrideOption(defaultOther);
+                        setIsOverrideModalOpen(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg border border-border bg-paper-sidebar hover:border-accent text-ink font-bold text-[11px] font-mono uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                    >
+                      <span>⚡ Override Mandate</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Collapsible FinOps Assumptions Calibrator Drawer */}
-              {isCalibratorOpen && (
-                <div className="p-4 rounded-xl bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-4 animate-in fade-in duration-150">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Sliders className="w-3.5 h-3.5 text-accent" />
-                        <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-ink">
-                          FinOps Baseline Calibrator
-                        </h4>
-                      </div>
-                      <p className="text-[11px] text-muted font-sans mt-0.5">
-                        Fine-tune capital risk assumptions according to your actual squad size, market salary rates, and cloud scale.
-                      </p>
-                    </div>
-                    {isCalibrated && (
-                      <button
-                        type="button"
-                        onClick={handleResetCalibrator}
-                        className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-muted hover:text-ink px-2 py-1 rounded border border-border hover:bg-paper-sidebar transition-colors cursor-pointer self-start sm:self-auto"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>Reset to AI Baseline</span>
-                      </button>
-                    )}
+              {/* Right Column (5 cols ~42%): Executive ROI & Sunk-Cost Shield */}
+              <div className="lg:col-span-5 rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6]/60 dark:bg-[#1E1B18] p-4 space-y-3 shadow-xs">
+                <div className="flex items-center justify-between gap-2 border-b border-[#cfc7b2]/70 dark:border-[#38332C] pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
+                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                      ROI & Sunk-Cost Shield
+                    </span>
                   </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    {/* Control 1: Team Headcount Slider */}
-                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-ink flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5 text-accent" />
-                          <span>Squad Headcount</span>
-                        </span>
-                        <span className="px-2 py-0.5 rounded bg-paper-surface border border-border font-bold text-accent text-xs">
-                          {customTeamSize} Engineers
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min={2}
-                        max={25}
-                        step={1}
-                        value={customTeamSize}
-                        onChange={(e) => setCustomTeamSize(parseInt(e.target.value, 10))}
-                        className="w-full h-1.5 bg-border rounded-lg appearance-none cursor-pointer accent-accent"
-                      />
-                      <div className="flex justify-between text-[10px] font-mono text-muted">
-                        <span>2 (Lean Pod)</span>
-                        <span className={customTeamSize === 5 ? "font-bold text-accent" : ""}>5 (AI Base)</span>
-                        <span>12 (Squad)</span>
-                        <span>25 (Org)</span>
-                      </div>
-                      <p className="text-[10px] text-muted">
-                        Scales developer payroll, platform SRE toil, and transition burn.
-                      </p>
-                    </div>
-
-                    {/* Control 2: Geography Rate Card */}
-                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-ink flex items-center gap-1.5">
-                          <Globe className="w-3.5 h-3.5 text-accent" />
-                          <span>Market Rate Card</span>
-                        </span>
-                        <span className="text-[10px] text-muted font-bold">
-                          {GEO_RATES[selectedGeoRate].multiplier}x
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {(Object.keys(GEO_RATES) as GeoKey[]).map((geoKey) => (
-                          <button
-                            key={geoKey}
-                            type="button"
-                            onClick={() => setSelectedGeoRate(geoKey)}
-                            className={`p-1.5 rounded text-left border transition-all cursor-pointer ${
-                              selectedGeoRate === geoKey
-                                ? "bg-accent/15 border-accent text-accent font-bold"
-                                : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
-                            }`}
-                          >
-                            <div className="text-[11px] leading-tight truncate">{GEO_RATES[geoKey].label}</div>
-                            <div className="text-[9px] font-mono opacity-80 truncate">{GEO_RATES[geoKey].rateStr}</div>
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-muted">
-                        Adjusts compensation rates across international engineering hubs.
-                      </p>
-                    </div>
-
-                    {/* Control 3: Cloud Scale Tier */}
-                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-ink flex items-center gap-1.5">
-                          <Server className="w-3.5 h-3.5 text-accent" />
-                          <span>Cloud Scale Tier</span>
-                        </span>
-                        <span className="text-[10px] text-muted font-bold">
-                          {SCALE_TIERS[selectedScaleTier].multiplier}x
-                        </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {(Object.keys(SCALE_TIERS) as ScaleKey[]).map((tierKey) => (
-                          <button
-                            key={tierKey}
-                            type="button"
-                            onClick={() => setSelectedScaleTier(tierKey)}
-                            className={`w-full p-1.5 rounded flex items-center justify-between text-left border transition-all cursor-pointer ${
-                              selectedScaleTier === tierKey
-                                ? "bg-accent/15 border-accent text-accent font-bold"
-                                : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
-                            }`}
-                          >
-                            <span className="text-[11px]">{SCALE_TIERS[tierKey].label}</span>
-                            <span className="text-[9px] font-mono opacity-80">{SCALE_TIERS[tierKey].desc}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-muted">
-                        Scales multi-AZ node commitments, ingress egress, and managed broker floors.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Summary Footer */}
-                  <div className="pt-2 border-t border-border/60 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-muted">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-ink">Active Multipliers:</span>
-                      <span>Headcount: {(customTeamSize / 5).toFixed(2)}x</span>
-                      <span>•</span>
-                      <span>Rate Card: {GEO_RATES[selectedGeoRate].multiplier}x</span>
-                      <span>•</span>
-                      <span>Infrastructure: {SCALE_TIERS[selectedScaleTier].multiplier}x</span>
-                    </div>
-                    {isCalibrated && (
-                      <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold">
-                        ✓ Calibrated values applied across headline and itemized voucher
-                      </span>
-                    )}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold rounded border transition-all cursor-pointer ${
+                        isCalibratorOpen || isCalibrated
+                          ? "bg-[#7a4e10] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#7a4e10]"
+                          : "border-[#cfc7b2] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#2C2723] text-[#7a4e10] dark:text-[#D4AA50]"
+                      }`}
+                      title="Calibrate assumptions"
+                    >
+                      <Sliders className="w-2.5 h-2.5" />
+                      <span>{isCalibratorOpen ? "Close" : "Calibrate"}</span>
+                    </button>
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
+                      10x+ ROI
+                    </span>
                   </div>
                 </div>
-              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                {/* Metric 1: Capital at Risk Prevented */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
-                      Capital at Risk Prevented
+                {/* 2 Metric Mini-Cards */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C]">
+                    <span className="text-[9px] font-mono uppercase text-muted font-bold block mb-0.5">
+                      Capital Protected
                     </span>
-                    {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
-                        Calibrated
-                      </span>
-                    )}
+                    <div className="font-newsreader text-lg font-bold text-[#7a4e10] dark:text-[#E8BC66] leading-none mb-1">
+                      {calibratedBlunderShield?.capital_at_risk_saved || displaySynthesis.blunder_shield?.capital_at_risk_saved || "₹52L – ₹78L"}
+                    </div>
+                    <p className="text-[10px] text-muted leading-tight line-clamp-2">
+                      Neutralized multi-AZ control plane tariffs & overprovisioning.
+                    </p>
                   </div>
-                  <div className="font-newsreader text-2xl font-bold text-[#7a4e10] dark:text-[#E8BC66]">
-                    {calibratedBlunderShield?.capital_at_risk_saved || displaySynthesis.blunder_shield?.capital_at_risk_saved || (
-                      displaySynthesis.domain === "REAL_ESTATE"
-                        ? "₹1.50 Cr – ₹2.80 Cr"
-                        : displaySynthesis.domain === "FINANCE"
-                        ? "₹85 Lakh – ₹1.40 Cr"
-                        : "₹45 Lakh – ₹65 Lakh"
-                    )}
+
+                  <div className="p-2.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C]">
+                    <span className="text-[9px] font-mono uppercase text-muted font-bold block mb-0.5">
+                      Velocity Saved
+                    </span>
+                    <div className="font-newsreader text-lg font-bold text-ink leading-none mb-1">
+                      {calibratedBlunderShield?.developer_sprints_saved || displaySynthesis.blunder_shield?.developer_sprints_saved || "6 Sprints"}
+                    </div>
+                    <p className="text-[10px] text-muted leading-tight line-clamp-2">
+                      Prevented dead-end prototype iterations & on-call toil.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted leading-tight">
-                    {calibratedBlunderShield?.risk_reduction_rationale || displaySynthesis.blunder_shield?.risk_reduction_rationale || "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments."}
+                </div>
+
+                {/* Fatal Trap Blocked */}
+                <div className="p-2.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-mono uppercase text-muted font-bold block">
+                      Fatal Trap Neutralized
+                    </span>
+                    <span className="text-[9px] font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                      Blocked
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-bold text-ink truncate">
+                    {calibratedBlunderShield?.prevented_fatal_trap || displaySynthesis.blunder_shield?.prevented_fatal_trap || "Premature Complexity"}
+                  </div>
+                  <p className="text-[10px] text-muted line-clamp-1 leading-tight">
+                    {displaySynthesis.blunder_shield?.risk_reduction_rationale || "Avoided unbudgeted cluster sprawl and operational drag."}
                   </p>
                 </div>
 
-                {/* Metric 2: Sprint Velocity Saved */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
-                      Engineering Velocity Saved
-                    </span>
-                    {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
-                        Calibrated
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-newsreader text-2xl font-bold text-ink">
-                    {calibratedBlunderShield?.developer_sprints_saved || displaySynthesis.blunder_shield?.developer_sprints_saved || "6 Sprints (12 Wks)"}
-                  </div>
-                  <p className="text-[11px] text-muted leading-tight">
-                    {isCalibrated
-                      ? `Calibrated for ${customTeamSize} engineers. Prevents dead-end prototyping sprints and on-call operational drag.`
-                      : "Prevented dead-end prototype iterations and on-call operational drag before validation."}
-                  </p>
-                </div>
-
-                {/* Metric 3: Fatal Sunk-Cost Trap Neutralized */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
-                      Fatal Sunk-Cost Trap Blocked
-                    </span>
-                    {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
-                        Mitigated
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs font-bold text-ink truncate">
-                    {calibratedBlunderShield?.prevented_fatal_trap || displaySynthesis.blunder_shield?.prevented_fatal_trap || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity"}
-                  </div>
-                  <p className="text-[11px] text-muted line-clamp-2 leading-tight">
-                    {isCalibrated
-                      ? `Deprioritized to eliminate ${SCALE_TIERS[selectedScaleTier].label} infrastructure tax and ${GEO_RATES[selectedGeoRate].label} hiring overhead.`
-                      : (displaySynthesis.blunder_shield?.risk_reduction_rationale || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.why_not_recommended || "Deprioritized due to operational friction, high maintenance drag, and criteria misalignment.")}
-                  </p>
-                </div>
-              </div>
-
-              {/* Receipt Toggle & Expanded Voucher */}
-              {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt) && (
-                <div className="pt-2 border-t border-[#cfc7b2] dark:border-[#38332C]">
+                {/* Receipt Toggle Button */}
+                {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt) && (
                   <button
                     type="button"
                     onClick={() => setShowReceipt(!showReceipt)}
-                    className="flex items-center justify-between w-full text-left text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:text-[#5c3a0a] dark:hover:text-[#F0EAE1] transition-colors py-1 cursor-pointer"
+                    className="w-full flex items-center justify-between text-left text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:text-[#5c3a0a] pt-1 border-t border-[#cfc7b2]/60 dark:border-[#38332C] cursor-pointer"
                   >
-                    <span className="flex items-center gap-1.5">
-                      <Receipt className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-                      <span>
-                        {showReceipt ? "Hide Itemized FinOps Receipt" : "Inspect Itemized Sunk-Cost Receipt (Munshi Audit Ledger)"}
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50]">
-                        {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.receipt_id}
-                      </span>
-                      {isCalibrated && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#7a4e10] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614] font-bold">
-                          Custom Calibrated
-                        </span>
-                      )}
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Receipt className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50]" />
+                      <span className="truncate">{showReceipt ? "Hide FinOps Ledger" : "Inspect Sunk-Cost Receipt"}</span>
                     </span>
-                    {showReceipt ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] text-muted">
+                      {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.receipt_id}
+                    </span>
                   </button>
-
-                  {showReceipt && (
-                    <div className="mt-3 p-4 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] font-mono text-xs space-y-3 shadow-inner">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border/60 pb-2 text-[11px] text-muted">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div>
-                            <span className="font-bold text-ink">ARCHETYPE:</span>{" "}
-                            <span className="px-1.5 py-0.5 rounded bg-muted/10 text-ink font-semibold">
-                              {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.decision_type}
-                            </span>
-                          </div>
-                          {isCalibrated && (
-                            <span className="text-[10px] text-[#7a4e10] dark:text-[#D4AA50] font-bold">
-                              [{customTeamSize} Devs • {GEO_RATES[selectedGeoRate].label} • {SCALE_TIERS[selectedScaleTier].label}]
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px]">
-                          STANDARD: {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.audit_standard || "Munshi FinOps Matrix v2.1"}
-                        </div>
-                      </div>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-[11px] divide-y divide-border/60">
-                          <thead>
-                            <tr className="text-[10px] uppercase text-muted font-bold">
-                              <th className="py-1.5 pr-2">Cost Vector</th>
-                              <th className="py-1.5 px-2">Category</th>
-                              <th className="py-1.5 px-2">Unit / Basis</th>
-                              <th className="py-1.5 pl-2 text-right">Protected (INR)</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y border-border/40">
-                            {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.line_items.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-[#EDE7D6]/30 dark:hover:bg-[#2C2723]/30 transition-colors">
-                                <td className="py-2 pr-2">
-                                  <div className="font-bold text-ink">{item.item_name}</div>
-                                  <div className="text-[10px] text-muted font-sans line-clamp-1">{item.rationale}</div>
-                                </td>
-                                <td className="py-2 px-2 text-[10px] text-muted whitespace-nowrap">
-                                  <span className="px-1.5 py-0.5 rounded bg-paper-surface border border-border text-[9px]">
-                                    {item.category}
-                                  </span>
-                                </td>
-                                <td className="py-2 px-2 text-[10px] text-muted">{item.unit_basis}</td>
-                                <td className="py-2 pl-2 text-right font-bold text-[#7a4e10] dark:text-[#D4AA50] whitespace-nowrap">
-                                  {item.amount_inr}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr className="border-t-2 border-[#cfc7b2] dark:border-[#38332C] font-bold">
-                              <td colSpan={3} className="py-2 text-ink uppercase text-[10px]">
-                                Total Capital at Risk Neutralized {isCalibrated ? "(Calibrated)" : ""}:
-                              </td>
-                              <td className="py-2 text-right font-bold text-sm text-[#7a4e10] dark:text-[#D4AA50]">
-                                {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.total_capital_at_risk}
-                              </td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* ========================================================================= */}
-            {/* 2. MANDATORY DUE DILIGENCE CLEARANCE SPIKES (The Kisan Gate)              */}
-            {/* ========================================================================= */}
-            {/* Mandatory Pre-Commitment Gated Spikes */}
-            {displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
-              <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/60 space-y-3">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-800 dark:text-amber-400 shrink-0" />
-                  <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-950 dark:text-amber-200">
-                    Mandatory Pre-Commitment Due Diligence Spikes (Clear Before Merging)
-                  </h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {displaySynthesis.conditional_triggers.map((trigger, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 bg-paper-surface border border-amber-200 dark:border-amber-800/80 rounded-lg text-xs text-amber-950 dark:text-amber-200 flex items-start gap-2.5"
-                    >
-                      <span className="font-mono text-amber-800 dark:text-amber-400 font-bold shrink-0 mt-0.5">
-                        SPIKE 0{idx + 1}
-                      </span>
-                      <span className="leading-snug">{trigger}</span>
+            {/* Collapsible FinOps Assumptions Calibrator Drawer (Full width below 60/40 when open) */}
+            {isCalibratorOpen && (
+              <div className="p-4 rounded-xl bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-3 animate-in fade-in duration-150">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 pb-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Sliders className="w-3.5 h-3.5 text-accent" />
+                      <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-ink">
+                        FinOps Baseline Calibrator
+                      </h4>
                     </div>
-                  ))}
+                    <p className="text-[11px] text-muted font-sans mt-0.5">
+                      Fine-tune capital risk assumptions according to your actual squad size, market salary rates, and cloud scale.
+                    </p>
+                  </div>
+                  {isCalibrated && (
+                    <button
+                      type="button"
+                      onClick={handleResetCalibrator}
+                      className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-muted hover:text-ink px-2 py-1 rounded border border-border hover:bg-paper-sidebar transition-colors cursor-pointer self-start sm:self-auto"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset to AI Baseline</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  {/* Control 1: Team Headcount Slider */}
+                  <div className="space-y-1.5 p-2.5 rounded-lg bg-paper-sidebar border border-border/70">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="font-bold text-ink flex items-center gap-1.5">
+                        <Users className="w-3 h-3 text-accent" />
+                        <span>Squad Headcount</span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-paper-surface border border-border font-bold text-accent text-xs">
+                        {customTeamSize} Engineers
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={2}
+                      max={25}
+                      step={1}
+                      value={customTeamSize}
+                      onChange={(e) => setCustomTeamSize(parseInt(e.target.value, 10))}
+                      className="w-full h-1.5 bg-border rounded-lg appearance-none cursor-pointer accent-accent"
+                    />
+                    <div className="flex justify-between text-[9px] font-mono text-muted">
+                      <span>2 (Lean)</span>
+                      <span className={customTeamSize === 5 ? "font-bold text-accent" : ""}>5 (AI Base)</span>
+                      <span>12 (Squad)</span>
+                      <span>25 (Org)</span>
+                    </div>
+                  </div>
+
+                  {/* Control 2: Geography Rate Card */}
+                  <div className="space-y-1.5 p-2.5 rounded-lg bg-paper-sidebar border border-border/70">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="font-bold text-ink flex items-center gap-1.5">
+                        <Globe className="w-3 h-3 text-accent" />
+                        <span>Market Rate Card</span>
+                      </span>
+                      <span className="text-[9px] text-muted font-bold">
+                        {GEO_RATES[selectedGeoRate].multiplier}x
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {(Object.keys(GEO_RATES) as GeoKey[]).map((geoKey) => (
+                        <button
+                          key={geoKey}
+                          type="button"
+                          onClick={() => setSelectedGeoRate(geoKey)}
+                          className={`p-1 rounded text-left border transition-all cursor-pointer ${
+                            selectedGeoRate === geoKey
+                              ? "bg-accent/15 border-accent text-accent font-bold"
+                              : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
+                          }`}
+                        >
+                          <div className="text-[10px] leading-tight truncate">{GEO_RATES[geoKey].label}</div>
+                          <div className="text-[9px] font-mono opacity-80 truncate">{GEO_RATES[geoKey].rateStr}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Control 3: Cloud Scale Tier */}
+                  <div className="space-y-1.5 p-2.5 rounded-lg bg-paper-sidebar border border-border/70">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="font-bold text-ink flex items-center gap-1.5">
+                        <Server className="w-3 h-3 text-accent" />
+                        <span>Cloud Scale Tier</span>
+                      </span>
+                      <span className="text-[9px] text-muted font-bold">
+                        {SCALE_TIERS[selectedScaleTier].multiplier}x
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {(Object.keys(SCALE_TIERS) as ScaleKey[]).map((tierKey) => (
+                        <button
+                          key={tierKey}
+                          type="button"
+                          onClick={() => setSelectedScaleTier(tierKey)}
+                          className={`w-full p-1 rounded flex items-center justify-between text-left border transition-all cursor-pointer ${
+                            selectedScaleTier === tierKey
+                              ? "bg-accent/15 border-accent text-accent font-bold"
+                              : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
+                          }`}
+                        >
+                          <span className="text-[10px]">{SCALE_TIERS[tierKey].label}</span>
+                          <span className="text-[9px] font-mono opacity-80">{SCALE_TIERS[tierKey].desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary Footer */}
+                <div className="pt-2 border-t border-border/60 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-muted">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-ink">Active Multipliers:</span>
+                    <span>Headcount: {(customTeamSize / 5).toFixed(2)}x</span>
+                    <span>•</span>
+                    <span>Rate Card: {GEO_RATES[selectedGeoRate].multiplier}x</span>
+                    <span>•</span>
+                    <span>Scale: {SCALE_TIERS[selectedScaleTier].multiplier}x</span>
+                  </div>
+                  {isCalibrated && (
+                    <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold">
+                      ✓ Calibrated values applied
+                    </span>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Sovereign Executive Override Banner */}
-            {displaySynthesis.override ? (
-              <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-xl space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <AlertOctagon className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
-                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
-                      Leadership Sovereign Override Active: {displaySynthesis.override.overridden_winner}
-                    </span>
+            {/* Receipt Modal/Table (When open) */}
+            {showReceipt && (calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt) && (
+              <div className="p-3.5 rounded-xl bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] font-mono text-xs space-y-2.5 shadow-inner animate-in fade-in duration-150">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border/60 pb-2 text-[11px] text-muted">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div>
+                      <span className="font-bold text-ink">ARCHETYPE:</span>{" "}
+                      <span className="px-1.5 py-0.5 rounded bg-muted/10 text-ink font-semibold">
+                        {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.decision_type}
+                      </span>
+                    </div>
+                    {isCalibrated && (
+                      <span className="text-[10px] text-[#7a4e10] dark:text-[#D4AA50] font-bold">
+                        [{customTeamSize} Devs • {GEO_RATES[selectedGeoRate].label} • {SCALE_TIERS[selectedScaleTier].label}]
+                      </span>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRevertOverride}
-                    disabled={savingOverride}
-                    className="text-xs font-mono font-bold text-amber-800 dark:text-amber-300 underline hover:no-underline cursor-pointer"
-                  >
-                    Revert to AI Verdict ({displaySynthesis.override.previous_winner || "Option C"})
-                  </button>
+                  <div className="text-[10px]">
+                    STANDARD: {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.audit_standard || "Munshi FinOps Matrix v2.1"}
+                  </div>
                 </div>
-                <p className="text-xs text-amber-900/90 dark:text-amber-200/90 font-sans leading-relaxed">
-                  <strong>Leadership Mandate:</strong> "{displaySynthesis.override.reason}" • <span className="opacity-75">{new Date(displaySynthesis.override.timestamp).toLocaleDateString()} by {displaySynthesis.override.overridden_by || "Executive Lead"}</span>
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border text-xs font-mono">
-                <div className="flex items-center gap-2 text-muted">
-                  <UserCheck className="w-3.5 h-3.5 text-accent" />
-                  <span>Human Sovereignty: AI advises, leadership decides. You hold final fiduciary authority.</span>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[11px] divide-y divide-border/60">
+                    <thead>
+                      <tr className="text-[10px] uppercase text-muted font-bold">
+                        <th className="py-1.5 pr-2">Cost Vector</th>
+                        <th className="py-1.5 px-2">Category</th>
+                        <th className="py-1.5 px-2">Unit / Basis</th>
+                        <th className="py-1.5 pl-2 text-right">Protected (INR)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y border-border/40">
+                      {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.line_items.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-[#EDE7D6]/30 dark:hover:bg-[#2C2723]/30 transition-colors">
+                          <td className="py-1.5 pr-2">
+                            <div className="font-bold text-ink text-[11px]">{item.item_name}</div>
+                            <div className="text-[10px] text-muted font-sans line-clamp-1">{item.rationale}</div>
+                          </td>
+                          <td className="py-1.5 px-2 text-[10px] text-muted whitespace-nowrap">
+                            <span className="px-1.5 py-0.5 rounded bg-paper-surface border border-border text-[9px]">
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-2 text-[10px] text-muted">{item.unit_basis}</td>
+                          <td className="py-1.5 pl-2 text-right font-bold text-[#7a4e10] dark:text-[#D4AA50] whitespace-nowrap">
+                            {item.amount_inr}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-[#cfc7b2] dark:border-[#38332C] font-bold">
+                        <td colSpan={3} className="py-1.5 text-ink uppercase text-[10px]">
+                          Total Capital at Risk Neutralized {isCalibrated ? "(Calibrated)" : ""}:
+                        </td>
+                        <td className="py-1.5 text-right font-bold text-sm text-[#7a4e10] dark:text-[#D4AA50]">
+                          {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.total_capital_at_risk}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const defaultOther = displaySynthesis.alternatives_considered.find((a: any) => !a.is_recommended)?.name || "Microservices (Kafka/Go)";
-                    setSelectedOverrideOption(defaultOther);
-                    setIsOverrideModalOpen(true);
-                  }}
-                  className="px-3.5 py-1.5 rounded-lg border border-border bg-paper-sidebar hover:border-accent text-ink font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                >
-                  <span>⚡ Override Winner / Choose Alternative</span>
-                </button>
               </div>
             )}
           </div>
@@ -1453,14 +1421,14 @@ jobs:
           {/* ========================================================================= */}
           {/* EXECUTIVE DOSSIER TABS (Eliminates Lengthy Scrolling & Cognitive Overload) */}
           {/* ========================================================================= */}
-          <div className="sticky top-12 z-20 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md py-2 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-center justify-between gap-3 font-courier">
-            <div className="inline-flex items-center p-1 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none gap-1">
+          <div className="sticky top-12 z-20 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md py-2 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-center justify-between gap-3 font-sans">
+            <div className="inline-flex items-center p-1 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl gap-1 shadow-2xs">
               <button
                 type="button"
                 onClick={() => setActiveTab("memo")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   activeTab === "memo"
-                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-xs"
                     : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                 }`}
               >
@@ -1471,16 +1439,16 @@ jobs:
               <button
                 type="button"
                 onClick={() => setActiveTab("roadmap")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   activeTab === "roadmap"
-                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-xs"
                     : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                 }`}
               >
                 <Calendar className="w-3.5 h-3.5" />
                 <span>2. Execution Roadmap</span>
                 {displayRoadmap && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-none font-courier ${
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold ${
                     activeTab === "roadmap" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
                   }`}>
                     {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)} tasks
@@ -1491,15 +1459,15 @@ jobs:
               <button
                 type="button"
                 onClick={() => setActiveTab("audit")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   activeTab === "audit"
-                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-xs"
                     : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>3. Trade-Offs & Epistemic Audit</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-none font-courier ${
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold ${
                   activeTab === "audit" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
                 }`}>
                   {displaySynthesis.alternatives_considered.length} alts

@@ -276,14 +276,14 @@ export default function DashboardPage() {
         <div className="space-y-8 sm:space-y-10 font-sans text-[#1d1d1b] dark:text-[#F0EAE1]">
           {/* HEADER: Workspaces */}
           <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4 transition-colors">
-            <h1 className="font-newsreader text-[32px] sm:text-[40px] font-normal tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
+            <h1 className="font-newsreader text-2xl sm:text-3xl font-medium tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
               Workspaces
             </h1>
 
             <button
               type="button"
               onClick={() => setShowCreateFolderModal(true)}
-              className="px-4.5 py-2.5 bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs sm:text-sm font-semibold uppercase tracking-wider rounded-xl transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2 bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs sm:text-[13px] font-semibold uppercase tracking-wider rounded-xl transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
             >
               <Plus className="w-4 h-4 text-[#EFEADF] dark:text-[#181614]" />
               <span>New Workspace</span>
@@ -292,39 +292,39 @@ export default function DashboardPage() {
 
           {/* STATS ROW: Editorial Ledger Box */}
           {activeFoldersCount > 0 && (
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-xl py-5 px-6 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#cfc7b2] dark:divide-[#38332C] transition-colors shadow-2xs">
-              <div className="py-2 sm:py-0 sm:px-5 first:pl-0">
-                <div className="font-newsreader text-4xl sm:text-5xl font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight">
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-xl py-4 px-5 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#cfc7b2] dark:divide-[#38332C] transition-colors shadow-2xs">
+              <div className="py-1.5 sm:py-0 sm:px-4 first:pl-0">
+                <div className="font-newsreader text-2xl sm:text-3xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight">
                   {activeFoldersCount}
                 </div>
-                <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] mt-1">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
                   Workspaces
                 </div>
               </div>
 
-              <div className="py-2 sm:py-0 sm:px-5">
-                <div className="font-newsreader text-4xl sm:text-5xl font-semibold text-[#2B4C8C] dark:text-[#D4AA50] leading-tight">
+              <div className="py-1.5 sm:py-0 sm:px-4">
+                <div className="font-newsreader text-2xl sm:text-3xl font-medium text-[#2B4C8C] dark:text-[#D4AA50] leading-tight">
                   {activeDecisionsCount}
                 </div>
-                <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#2B4C8C] dark:text-[#D4AA50] mt-1">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#2B4C8C] dark:text-[#D4AA50] mt-0.5">
                   Total Decisions
                 </div>
               </div>
 
-              <div className="py-2 sm:py-0 sm:px-5">
-                <div className="font-newsreader text-4xl sm:text-5xl font-semibold text-[#7a4e10] dark:text-[#e5a93c] leading-tight">
+              <div className="py-1.5 sm:py-0 sm:px-4">
+                <div className="font-newsreader text-2xl sm:text-3xl font-medium text-[#7a4e10] dark:text-[#e5a93c] leading-tight">
                   {underScrutinyCount}
                 </div>
-                <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#e5a93c] mt-1">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#e5a93c] mt-0.5">
                   Under Scrutiny
                 </div>
               </div>
 
-              <div className="py-2 sm:py-0 sm:px-5 last:pr-0">
-                <div className="font-newsreader text-4xl sm:text-5xl font-semibold text-[#1B4332] dark:text-[#52b788] leading-tight">
+              <div className="py-1.5 sm:py-0 sm:px-4 last:pr-0">
+                <div className="font-newsreader text-2xl sm:text-3xl font-medium text-[#1B4332] dark:text-[#52b788] leading-tight">
                   {decidedCount}
                 </div>
-                <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#1B4332] dark:text-[#52b788] mt-1">
+                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#1B4332] dark:text-[#52b788] mt-0.5">
                   Decided
                 </div>
               </div>
@@ -380,15 +380,15 @@ export default function DashboardPage() {
                       >
                         <div className="space-y-3">
                           <div className="flex items-start justify-between gap-3">
-                            <h2 className="font-newsreader text-2xl font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#7a4e10] dark:group-hover:text-[#D4AA50] transition-colors leading-tight">
+                            <h2 className="font-newsreader text-lg sm:text-xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#7a4e10] dark:group-hover:text-[#D4AA50] transition-colors leading-tight">
                               {f.name}
                             </h2>
-                            <span className="font-mono text-xs uppercase tracking-wider font-bold px-2.5 py-1 rounded-lg bg-[#cfc7b2]/50 dark:bg-[#38332C]/60 text-[#7a4e10] dark:text-[#D4AA50] shrink-0 border border-[#cfc7b2] dark:border-[#38332C]">
+                            <span className="font-mono text-[11px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-lg bg-[#cfc7b2]/50 dark:bg-[#38332C]/60 text-[#7a4e10] dark:text-[#D4AA50] shrink-0 border border-[#cfc7b2] dark:border-[#38332C]">
                               {count} {count === 1 ? "DECISION" : "DECISIONS"}
                             </span>
                           </div>
 
-                          <p className="text-[14px] sm:text-[15px] font-sans text-[#4f4b40] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
+                          <p className="text-xs sm:text-sm font-sans text-[#4f4b40] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
                             {f.description || "Workspace for strategic decisions."}
                           </p>
 
