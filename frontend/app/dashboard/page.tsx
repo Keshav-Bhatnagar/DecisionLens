@@ -88,27 +88,14 @@ export default function DashboardPage() {
   const handleCloseCreateFolderModal = useCallback(() => {
     setShowCreateFolderModal(false);
     setError(null);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get("action") === "new-workspace") {
-        url.searchParams.delete("action");
-        window.history.replaceState(null, "", url.pathname + (url.search ? url.search : ""));
-      }
-    }
-  }, []);
+    router.replace("/dashboard", { scroll: false });
+  }, [router]);
 
   const handleCloseChallengeModal = useCallback(() => {
     setShowChallengeModal(false);
     setError(null);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has("action") || url.searchParams.has("challenge")) {
-        url.searchParams.delete("action");
-        url.searchParams.delete("challenge");
-        window.history.replaceState(null, "", url.pathname + (url.search ? url.search : ""));
-      }
-    }
-  }, []);
+    router.replace("/dashboard", { scroll: false });
+  }, [router]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

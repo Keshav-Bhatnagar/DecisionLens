@@ -119,12 +119,16 @@ export function clearStoredToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+export interface FetchApiOptions extends RequestInit {
+  timeoutMs?: number;
+}
+
 /**
  * Common fetch helper with auto token injection and standardized error handling
  */
 export async function fetchApi<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: FetchApiOptions
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getStoredToken();
@@ -135,9 +139,21 @@ export async function fetchApi<T>(
     ...(options?.headers as Record<string, string>),
   };
 
-  // Add 15s timeout to prevent infinite UI freeze if backend is restarting
+  // Heavy AI multi-model endpoints need up to 120s; standard CRUD gets generous 30s
+  const isHeavyAiEndpoint =
+    endpoint.includes("/analysis") ||
+    endpoint.includes("/synthesis") ||
+    endpoint.includes("/gaps") ||
+    endpoint.includes("/transcribe") ||
+    endpoint.includes("/autopilot") ||
+    endpoint.includes("/structure") ||
+    endpoint.includes("/deliberate") ||
+    endpoint.includes("/matrix");
+
+  const defaultTimeout = isHeavyAiEndpoint ? 120000 : 30000;
+  const timeoutMs = options?.signal ? undefined : (options?.timeoutMs ?? defaultTimeout);
+
   const controller = new AbortController();
-  const timeoutMs = options?.signal ? undefined : 15000;
   const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
   try {
@@ -169,7 +185,12 @@ export async function fetchApi<T>(
   } catch (err: unknown) {
     if (err instanceof ApiError) throw err;
     if (err instanceof Error && err.name === "AbortError") {
-      throw new ApiError(504, "Backend request timed out. Please verify the backend server on port 8000 is active.");
+      throw new ApiError(
+        504,
+        isHeavyAiEndpoint
+          ? "AI Analysis is taking longer than expected while executing multi-model evaluations. Please wait a moment or click Re-Run."
+          : "Backend request timed out. Please verify the backend server on port 8000 is active."
+      );
     }
     throw err;
   } finally {

@@ -1001,12 +1001,13 @@ export default function FolderDetailPage({
         {showCreateModal && (
           <ModalPortal>
             <div
-              className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) setShowCreateModal(false);
-              }}
+              className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier cursor-pointer animate-in fade-in duration-150"
+              onClick={() => setShowCreateModal(false)}
             >
-              <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-none shadow-2xl border-2 border-l-5 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-lg w-full p-6 text-[#1d1d1b] dark:text-[#F0EAE1]">
+              <div
+                className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-none shadow-2xl border-2 border-l-5 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-lg w-full p-6 text-[#1d1d1b] dark:text-[#F0EAE1] cursor-default"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
                   <div>
                     <span className="font-courier text-xs font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-[0.1em] block">

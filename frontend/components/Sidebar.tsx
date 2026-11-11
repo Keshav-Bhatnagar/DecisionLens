@@ -584,8 +584,14 @@ export default function Sidebar({
       {/* Modal: New Workspace */}
       {showNewFolderModal && (
         <ModalPortal>
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier">
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
+          <div
+            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier animate-in fade-in duration-150 cursor-pointer"
+            onClick={() => setShowNewFolderModal(false)}
+          >
+            <div
+              className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1] cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
                 <h3 className="font-newsreader text-[22px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
                   New workspace
@@ -683,8 +689,14 @@ export default function Sidebar({
       {/* Modal: Challenge a Decision */}
       {showNewDecisionModal && (
         <ModalPortal>
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier">
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
+          <div
+            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier animate-in fade-in duration-150 cursor-pointer"
+            onClick={() => setShowNewDecisionModal(false)}
+          >
+            <div
+              className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1] cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
                 <div>
                   <span className="font-courier text-[10px] tracking-[0.14em] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase block">
