@@ -94,6 +94,15 @@ interface FrameworkPanelProps {
   onAdvanceToNextStage?: () => void;
 }
 
+const hasExecutedAnalysis = (data: any): boolean => {
+  return Boolean(
+    data &&
+    typeof data === "object" &&
+    Array.isArray(data.selected_frameworks) &&
+    data.selected_frameworks.length > 0
+  );
+};
+
 export default function FrameworkPanel({
   decisionId,
   initialAnalysis,
@@ -101,7 +110,7 @@ export default function FrameworkPanel({
   onAdvanceToNextStage,
 }: FrameworkPanelProps) {
   const [analysis, setAnalysis] = useState<FrameworkAnalysisResponse | null>(
-    initialAnalysis || null
+    hasExecutedAnalysis(initialAnalysis) ? initialAnalysis : null
   );
   const [loading, setLoading] = useState(false);
   const [evaluatingMatrix, setEvaluatingMatrix] = useState(false);
@@ -122,16 +131,22 @@ export default function FrameworkPanel({
 
   // Sync initial analysis
   useEffect(() => {
-    if (initialAnalysis) {
+    if (hasExecutedAnalysis(initialAnalysis)) {
       setAnalysis(initialAnalysis);
       initMatrixState(initialAnalysis);
     } else {
       getFrameworkAnalysis(decisionId, false)
         .then((data) => {
-          setAnalysis(data);
-          initMatrixState(data);
+          if (hasExecutedAnalysis(data)) {
+            setAnalysis(data);
+            initMatrixState(data);
+          } else {
+            setAnalysis(null);
+          }
         })
-        .catch(() => {});
+        .catch(() => {
+          setAnalysis(null);
+        });
     }
   }, [initialAnalysis, decisionId]);
 
@@ -323,22 +338,34 @@ export default function FrameworkPanel({
 
   const totalMatrixWeight = matrixCriteria.reduce((sum, c) => sum + c.weight, 0);
 
-  // Canonical Winner details
+  // Canonical Winner details - ZERO HARDCODING DIRECTIVE
   const canonicalWinner = useMemo(() => {
-    if (!analysis) return null;
+    if (!hasExecutedAnalysis(analysis)) return null;
+
     const name =
-      analysis.canonical_result?.winner_option_name ||
+      analysis?.canonical_result?.winner_option_name ||
       matrixWinner ||
-      matrixResults[0]?.option_name ||
-      "Dominant Option";
-    const score =
-      analysis.canonical_result?.winner_score ??
-      matrixResults[0]?.weighted_score ??
-      8.5;
-    const status = analysis.canonical_result?.decision_status || "READY";
+      matrixResults[0]?.option_name;
+
+    // Strict validation: if no dynamic option name is derived, return null
+    if (!name || typeof name !== "string" || name.trim() === "") return null;
+
+    const rawScore =
+      analysis?.canonical_result?.winner_score ??
+      matrixResults[0]?.weighted_score;
+
+    // Strict validation: if no genuine score was computed, return null
+    if (rawScore === undefined || rawScore === null || typeof rawScore !== "number" || isNaN(rawScore)) {
+      return null;
+    }
+
+    const score = rawScore;
+    const status = analysis?.canonical_result?.decision_status || "READY";
     const margin =
-      analysis.canonical_result?.margin_over_runner_up ??
-      (matrixResults.length > 1
+      analysis?.canonical_result?.margin_over_runner_up ??
+      (matrixResults.length > 1 &&
+      matrixResults[0]?.weighted_score !== undefined &&
+      matrixResults[1]?.weighted_score !== undefined
         ? matrixResults[0].weighted_score - matrixResults[1].weighted_score
         : null);
 
@@ -350,33 +377,33 @@ export default function FrameworkPanel({
     };
   }, [analysis, matrixWinner, matrixResults]);
 
-  // Adversarial Friction point (What the Red Team caught)
+  // Adversarial Friction point (What the Red Team genuinely flagged)
   const adversarialFriction = useMemo(() => {
-    if (!analysis) return null;
+    if (!hasExecutedAnalysis(analysis)) return null;
     return (
-      analysis.six_hats?.hats?.black?.key_takeaway ||
-      analysis.six_hats?.hats?.black?.points?.[0] ||
-      analysis.five_whys?.root_cause ||
-      "No critical operational vulnerabilities or blockers were flagged by the adversarial stress-test."
+      analysis?.six_hats?.hats?.black?.key_takeaway ||
+      analysis?.six_hats?.hats?.black?.points?.[0] ||
+      analysis?.five_whys?.root_cause ||
+      null
     );
   }, [analysis]);
 
   // Operational Condition Precedent (How to neutralize the trap)
   const operationalCondition = useMemo(() => {
-    if (!analysis) return null;
+    if (!hasExecutedAnalysis(analysis)) return null;
     if (
-      analysis.canonical_result?.conditions_precedent &&
+      analysis?.canonical_result?.conditions_precedent &&
       analysis.canonical_result.conditions_precedent.length > 0
     ) {
       return analysis.canonical_result.conditions_precedent[0];
     }
     if (
-      analysis.five_whys?.countermeasures &&
+      analysis?.five_whys?.countermeasures &&
       analysis.five_whys.countermeasures.length > 0
     ) {
       return analysis.five_whys.countermeasures[0];
     }
-    return "Proceed with standard phased deployment and monitor latency SLAs during initial rollout.";
+    return null;
   }, [analysis]);
 
   return (
@@ -410,7 +437,7 @@ export default function FrameworkPanel({
           <Sparkles className={`w-3.5 h-3.5 text-accent ${loading ? "animate-spin" : ""}`} />
           {loading
             ? "Running Crash Tests..."
-            : analysis
+            : hasExecutedAnalysis(analysis)
             ? "Re-Run Gauntlet"
             : "Run Decision Gauntlet"}
         </button>
@@ -441,14 +468,14 @@ export default function FrameworkPanel({
       )}
 
       {/* Empty State when no analysis has been run yet */}
-      {!analysis && !loading && (
+      {!hasExecutedAnalysis(analysis) && !loading && (
         <div className="text-center py-14 px-4 rounded-2xl border border-dashed border-border bg-paper-sidebar space-y-3">
           <Scale className="w-10 h-10 text-accent/60 mx-auto" />
           <h3 className="text-base font-serif font-bold text-ink">
             No Decision Gauntlet Run Yet
           </h3>
           <p className="text-xs text-ink-secondary max-w-md mx-auto leading-relaxed">
-            Click <strong>Run Decision Gauntlet</strong> to put your options through the 5 background crash-tests and extract the unified verdict.
+            Click <strong>Run Decision Gauntlet</strong> to evaluate your options through multi-criteria decision matrix scoring and adversarial crash-tests.
           </p>
           <div className="pt-2">
             <button
@@ -466,7 +493,7 @@ export default function FrameworkPanel({
       {/* ========================================================================= */}
       {/* THE EXECUTIVE GAUNTLET VERDICT (The Single Source of Truth)              */}
       {/* ========================================================================= */}
-      {analysis && canonicalWinner && (
+      {hasExecutedAnalysis(analysis) && canonicalWinner && (
         <div className="rounded-2xl border border-border bg-paper-surface p-6 sm:p-7 space-y-6 shadow-sm">
           
           {/* Winner Row */}
@@ -488,7 +515,9 @@ export default function FrameworkPanel({
                   {canonicalWinner.name}
                 </h3>
                 <p className="text-sm text-ink-secondary leading-relaxed font-sans">
-                  Option {canonicalWinner.name} emerged as the dominant strategic choice across multi-criteria scoring and empirical citations.
+                  {analysis?.canonical_result?.decision_status === "CONDITIONAL"
+                    ? `Option "${canonicalWinner.name}" emerged with the highest weighted score (${canonicalWinner.score.toFixed(2)} / 10), subject to critical pre-execution conditions.`
+                    : `Option "${canonicalWinner.name}" emerged as the highest ranked alternative with a verified score of ${canonicalWinner.score.toFixed(2)} / 10.`}
                 </p>
               </div>
             </div>
@@ -505,36 +534,38 @@ export default function FrameworkPanel({
             </div>
           </div>
 
-          {/* The Tension & Resolution */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* The Adversarial Trap Caught */}
-            <div className="p-4 sm:p-5 rounded-xl bg-paper-sidebar border border-border space-y-2">
-              <div className="flex items-center gap-2 font-mono text-xs font-bold text-ink uppercase tracking-wider">
-                <ShieldAlert className="w-4 h-4 text-ink-secondary shrink-0" />
-                <span>Primary Risk Identified:</span>
+          {/* The Tension & Resolution (Rendered only when real friction or condition exists) */}
+          {(adversarialFriction || operationalCondition) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* The Adversarial Trap Caught */}
+              <div className="p-4 sm:p-5 rounded-xl bg-paper-sidebar border border-border space-y-2">
+                <div className="flex items-center gap-2 font-mono text-xs font-bold text-ink uppercase tracking-wider">
+                  <ShieldAlert className="w-4 h-4 text-ink-secondary shrink-0" />
+                  <span>Primary Risk Identified:</span>
+                </div>
+                <p className="text-sm text-ink leading-relaxed font-sans">
+                  {adversarialFriction || "No critical adversarial failure modes flagged by Red-Team."}
+                </p>
+                <div className="pt-2 border-t border-border/60 text-xs text-ink-secondary font-mono">
+                  Flagged by: <strong>Adversarial Red-Team Analysis</strong>
+                </div>
               </div>
-              <p className="text-sm text-ink leading-relaxed font-sans">
-                {adversarialFriction}
-              </p>
-              <div className="pt-2 border-t border-border/60 text-xs text-ink-secondary font-mono">
-                Flagged by: <strong>Adversarial Red-Team Analysis</strong>
-              </div>
-            </div>
 
-            {/* The Clear Resolution & Protection */}
-            <div className="p-4 sm:p-5 rounded-xl bg-paper-sidebar border border-border space-y-2">
-              <div className="flex items-center gap-2 font-mono text-xs font-bold text-ink uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4 text-ink-secondary shrink-0" />
-                <span>Safe Execution Condition:</span>
-              </div>
-              <p className="text-sm text-ink leading-relaxed font-sans">
-                {operationalCondition}
-              </p>
-              <div className="pt-2 border-t border-border/60 text-xs text-ink-secondary font-mono">
-                Mandated in: <strong>Executive Decision Memo &amp; ADR</strong>
+              {/* The Clear Resolution & Protection */}
+              <div className="p-4 sm:p-5 rounded-xl bg-paper-sidebar border border-border space-y-2">
+                <div className="flex items-center gap-2 font-mono text-xs font-bold text-ink uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4 text-ink-secondary shrink-0" />
+                  <span>Safe Execution Condition:</span>
+                </div>
+                <p className="text-sm text-ink leading-relaxed font-sans">
+                  {operationalCondition || "Standard execution verified under current criteria constraints."}
+                </p>
+                <div className="pt-2 border-t border-border/60 text-xs text-ink-secondary font-mono">
+                  Mandated in: <strong>Executive Decision Memo &amp; ADR</strong>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
         </div>
       )}
@@ -850,7 +881,7 @@ export default function FrameworkPanel({
       {/* ========================================================================= */}
       {/* 6. Stage 5 Readiness & Advance Gate (Bottom Action Banner)                */}
       {/* ========================================================================= */}
-      {analysis && canonicalWinner && (
+      {hasExecutedAnalysis(analysis) && canonicalWinner && (
         <div className="pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2 text-xs font-mono text-ink">
@@ -860,7 +891,7 @@ export default function FrameworkPanel({
               </span>
             </div>
             <p className="text-xs text-ink-secondary pl-6">
-              Option {canonicalWinner.name} is ready for executive decision memo formulation.
+              Option &quot;{canonicalWinner.name}&quot; ({canonicalWinner.score.toFixed(2)}/10) is ready for executive decision memo formulation.
             </p>
           </div>
 

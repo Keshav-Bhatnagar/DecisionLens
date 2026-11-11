@@ -789,7 +789,15 @@ export default function DecisionDetailPage({
                 <div className="animate-in fade-in duration-200">
                   <FrameworkPanel
                     decisionId={decisionId}
-                    initialAnalysis={decision.analysis}
+                    initialAnalysis={
+                      decision.analysis &&
+                      typeof decision.analysis === "object" &&
+                      "selected_frameworks" in decision.analysis &&
+                      Array.isArray(decision.analysis.selected_frameworks) &&
+                      decision.analysis.selected_frameworks.length > 0
+                        ? decision.analysis
+                        : null
+                    }
                     onAnalysisUpdated={() => loadData()}
                     onAdvanceToNextStage={() => handleSelectStage("synthesis")}
                   />

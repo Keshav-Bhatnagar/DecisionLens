@@ -289,8 +289,8 @@ def run_ai_framework_evaluation(
         if domain == DecisionDomain.REAL_ESTATE.value:
             candidate_options = ["Direct Outright Purchase", "Structured Buyout", "Joint Venture Land Bank Hybrid"]
         else:
-            opt_a = candidate_options[0] if candidate_options else "Option A: Primary Strategic Direction"
-            candidate_options = [opt_a, "Option B: Modular Staged Execution"]
+            opt_a = candidate_options[0] if candidate_options else (f"Proposed: {decision.problem_statement[:30].strip()}" if decision.problem_statement and len(decision.problem_statement.strip()) > 5 else "Option A: Primary Direction")
+            candidate_options = [opt_a, "Option B: Phased Risk-Mitigated Approach"]
 
     options_anchor_lines = [
         "MANDATORY CANDIDATE OPTIONS TO EVALUATE (Use EXACT names and IDs across Decision Matrix and Decision Tree):"
@@ -1105,7 +1105,29 @@ def detect_candidate_options(
                         if clean_opt and clean_opt.lower() not in {existing.lower() for existing in options}:
                             options.append(clean_opt)
 
-    # Priority 2: Check for specific architectural or platform options in text keywords
+    # Priority 2: Harvest options from Structured Points (Stage 2)
+    if isinstance(structured_points, dict):
+        for candidate_key in ["options", "alternatives", "candidate_options"]:
+            candidates = structured_points.get(candidate_key, [])
+            if isinstance(candidates, list):
+                for c in candidates:
+                    name = c.get("name") if isinstance(c, dict) else str(c)
+                    clean_name = str(name).strip()
+                    if clean_name and clean_name.lower() not in {existing.lower() for existing in options}:
+                        options.append(clean_name)
+
+    # Priority 3: Dynamic extraction from problem statement (e.g., "X vs Y" or "Choose between X and Y")
+    combined_prompt = f"{problem_statement} {context_text}"
+    vs_matches = re.findall(r'([A-Za-z0-9][A-Za-z0-9\s\-_]{2,35})\s+(?:vs\.?|versus)\s+([A-Za-z0-9][A-Za-z0-9\s\-_]{2,35})', combined_prompt, re.IGNORECASE)
+    for m1, m2 in vs_matches:
+        o1 = re.sub(r'^(?:should\s+we\s+|choose\s+between\s+|decide\s+between\s+|evaluating\s+|select\s+)', '', m1, flags=re.IGNORECASE).strip()
+        o2 = re.sub(r'^(?:or\s+)', '', m2, flags=re.IGNORECASE).strip()
+        if o1 and len(o1) > 2 and o1.lower() not in {existing.lower() for existing in options}:
+            options.append(o1.strip().title() if o1.islower() else o1.strip())
+        if o2 and len(o2) > 2 and o2.lower() not in {existing.lower() for existing in options}:
+            options.append(o2.strip().title() if o2.islower() else o2.strip())
+
+    # Priority 4: Check for specific architectural or platform options in text keywords
     text = f"{context_text} {problem_statement}"
     text_lower = text.lower()
 
@@ -1123,15 +1145,18 @@ def detect_candidate_options(
     elif any(k in text_lower for k in ["land", "property", "acre", "plot", "real estate", "buyout", "outright", "joint venture"]):
         detected_text_opts = ["Direct Outright Purchase", "Structured Buyout", "Joint Venture Land Bank Hybrid"]
     elif len(options) < 2:
-        # Only fallback to generic placeholders if we don't already have at least 2 real options
+        # Dynamic fallback based on problem text or structured points
         mixed = structured_points.get("mixed_points", []) if isinstance(structured_points, dict) else []
         contradictions = structured_points.get("contradictions", []) if isinstance(structured_points, dict) else []
         if mixed or contradictions:
             detected_text_opts = ["Primary Proposed Strategy", "Conservative Fallback Strategy"]
+        elif problem_statement and len(problem_statement.strip()) > 5:
+            clean_stmt = problem_statement.strip()[:30]
+            detected_text_opts = [f"Direct Path: {clean_stmt}", "Alternative Phased Mitigation"]
         else:
-            detected_text_opts = ["Option A: Recommended Strategy", "Option B: Alternative Approach"]
+            detected_text_opts = ["Option A: Primary Direction", "Option B: Phased Approach"]
 
-    # Priority 3: Union with deduplication (case-insensitive)
+    # Union with deduplication (case-insensitive)
     for opt in detected_text_opts:
         clean_opt = str(opt).strip()
         if clean_opt and clean_opt.lower() not in {existing.lower() for existing in options}:
@@ -1700,8 +1725,8 @@ def run_decision_matrix_module(
             opt_names = ["Direct Outright Purchase", "Structured Buyout", "Joint Venture Land Bank Hybrid"]
             options = create_stable_matrix_options(opt_names)
         else:
-            opt_a_name = detected_opts[0] if len(detected_opts) > 0 else "Option A: Primary Strategic Direction"
-            opt_b_name = detected_opts[1] if len(detected_opts) > 1 else "Option B: Modular Staged Execution"
+            opt_a_name = detected_opts[0] if len(detected_opts) > 0 else (f"Proposed: {decision.problem_statement[:30].strip()}" if decision.problem_statement and len(decision.problem_statement.strip()) > 5 else "Option A: Primary Direction")
+            opt_b_name = detected_opts[1] if len(detected_opts) > 1 else "Option B: Phased Risk-Mitigated Approach"
             options = create_stable_matrix_options([opt_a_name, opt_b_name])
 
     scale_min = 1.0

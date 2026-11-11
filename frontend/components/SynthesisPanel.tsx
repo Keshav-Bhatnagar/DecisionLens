@@ -602,7 +602,7 @@ Domain: ${(displaySynthesis.domain || "ENGINEERING").toUpperCase()}
 ${displaySynthesis.recommendation_text || displaySynthesis.headline || "Architectural decision deliberated in DecisionLens."}
 
 ## Decision Drivers
-- Epistemic Score: ${displaySynthesis.canonical_result?.winner_score?.toFixed(1) || "8.5"} / 10
+- Epistemic Score: ${displaySynthesis.canonical_result?.winner_score !== undefined && displaySynthesis.canonical_result.winner_score !== null ? `${displaySynthesis.canonical_result.winner_score.toFixed(1)} / 10` : "Empirical Weighted Gauntlet Score"}
 - Mathematical Multi-Criteria Gauntlet Verification
 - Zero-Hallucination Empirical Proof Baseline
 
