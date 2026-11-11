@@ -441,6 +441,27 @@ export default function DashboardPage() {
                       </Link>
                     );
                   })}
+
+                  {/* Subtle Actionable "New Workspace" Slot Card to Prevent Empty Grid Look */}
+                  {!searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateFolderModal(true)}
+                      className="border-2 border-dashed border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] rounded-xl p-6 flex flex-col items-center justify-center gap-3 text-center text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#EDE7D6]/50 dark:hover:bg-[#221F1C]/50 transition-all min-h-[180px] cursor-pointer group shadow-2xs"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] group-hover:scale-110 transition-transform">
+                        <Plus className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="font-newsreader text-base sm:text-lg font-medium block leading-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
+                          Create new workspace
+                        </span>
+                        <span className="text-xs text-[#7B8491] dark:text-[#A89F91] font-sans mt-1 block">
+                          Organize strategic decisions by initiative
+                        </span>
+                      </div>
+                    </button>
+                  )}
                 </div>
               )}
             </div>

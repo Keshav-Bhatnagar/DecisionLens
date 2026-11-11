@@ -132,6 +132,27 @@ body {
   font-family: 'Courier Prime', Courier, monospace;
 }
 
+/* Executive Architectural Dot Grid & Ambient Vignette Pattern */
+.bg-executive-grid {
+  background-color: #F4F0E6;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(122, 78, 16, 0.045) 0%, transparent 70%),
+    radial-gradient(rgba(122, 78, 16, 0.13) 1px, transparent 1px);
+  background-size: 100% 100%, 28px 28px;
+  background-position: center top, 0 0;
+}
+
+.dark .bg-executive-grid,
+[data-theme="dark"].bg-executive-grid,
+.dark.bg-executive-grid {
+  background-color: #181614;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(212, 170, 80, 0.055) 0%, transparent 70%),
+    radial-gradient(rgba(212, 170, 80, 0.13) 1px, transparent 1px);
+  background-size: 100% 100%, 28px 28px;
+  background-position: center top, 0 0;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

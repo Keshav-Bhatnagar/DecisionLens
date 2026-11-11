@@ -165,10 +165,10 @@ export default function AppShell({
   return (
     <div
       data-theme={theme}
-      className={`min-h-screen flex flex-col antialiased transition-colors duration-300 ${
+      className={`min-h-screen flex flex-col antialiased transition-colors duration-300 bg-executive-grid relative ${
         theme === "dark"
-          ? "dark bg-[#181614] text-[#F0EAE1]"
-          : "bg-[#F4F0E6] text-[#1d1d1b]"
+          ? "dark text-[#F0EAE1]"
+          : "text-[#1d1d1b]"
       }`}
     >
       {/* Sidebar Component */}

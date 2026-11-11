@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import SpeechDictationButton from "@/components/SpeechDictationButton";
 import ModalPortal from "@/components/ModalPortal";
 import BrandLogo from "@/components/BrandLogo";
+import { DecisionLensIcon } from "@/components/DecisionLensLogo";
 import { useTheme } from "@/context/ThemeContext";
 import {
   LayoutDashboard,
@@ -243,30 +244,54 @@ export default function Sidebar({
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Header: Antique Magnifying Lens Logo + Actions */}
-        <div className="h-14 px-4 border-b border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-between shrink-0 bg-[#E5DEC9] dark:bg-[#1C1917]">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <BrandLogo
-              href="/dashboard"
-              theme={theme}
-              showWordmark={isExpanded}
-              iconSizeClass="w-[44px] h-[44px]"
-            />
-          </div>
+        <div className={`h-14 border-b border-[#cfc7b2] dark:border-[#38332C] flex items-center shrink-0 bg-[#E5DEC9] dark:bg-[#1C1917] transition-all relative ${
+          collapsed ? "px-0 justify-center" : "px-4 justify-between"
+        }`}>
+          {collapsed ? (
+            <div className="flex items-center justify-center w-full relative">
+              <Link
+                href="/dashboard"
+                className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40 transition-colors"
+                title="DecisionLens - Home"
+                aria-label="DecisionLens Home"
+              >
+                <DecisionLensIcon size={34} />
+              </Link>
 
-          {/* Desktop collapse toggle */}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/50 dark:hover:bg-[#38332C]/60 transition-colors cursor-pointer"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
+              {/* Desktop Floating Edge Collapse Toggle */}
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                className="hidden lg:flex items-center justify-center absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:scale-110 shadow-sm z-30 transition-all cursor-pointer"
+                title="Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <BrandLogo
+                  href="/dashboard"
+                  theme={theme}
+                  showWordmark={true}
+                  iconSizeClass="w-9 h-9"
+                />
+              </div>
+
+              {/* Desktop collapse toggle */}
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                className="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/50 dark:hover:bg-[#38332C]/60 transition-colors cursor-pointer"
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
+          )}
 
           {/* Mobile close button */}
           <button
@@ -320,7 +345,7 @@ export default function Sidebar({
             <Link
               href="/overview"
               onClick={closeMobile}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] font-medium transition-all ${
+              className={`flex items-center ${isExpanded ? "gap-3 px-3" : "justify-center px-0"} py-2.5 rounded-xl text-[15px] font-medium transition-all ${
                 pathname === "/overview"
                   ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/15 border-l-3 border-l-[#7a4e10] dark:border-l-[#D4AA50] shadow-2xs"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40"
@@ -336,7 +361,7 @@ export default function Sidebar({
             <Link
               href="/dashboard"
               onClick={closeMobile}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] font-medium transition-all ${
+              className={`flex items-center ${isExpanded ? "gap-3 px-3" : "justify-center px-0"} py-2.5 rounded-xl text-[15px] font-medium transition-all ${
                 pathname === "/dashboard"
                   ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/15 border-l-3 border-l-[#7a4e10] dark:border-l-[#D4AA50] shadow-2xs"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40"
@@ -352,7 +377,7 @@ export default function Sidebar({
             <Link
               href="/profile"
               onClick={closeMobile}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[15px] font-medium transition-all ${
+              className={`flex items-center ${isExpanded ? "gap-3 px-3" : "justify-center px-0"} py-2.5 rounded-xl text-[15px] font-medium transition-all ${
                 pathname === "/profile"
                   ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/15 border-l-3 border-l-[#7a4e10] dark:border-l-[#D4AA50] shadow-2xs"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40"
