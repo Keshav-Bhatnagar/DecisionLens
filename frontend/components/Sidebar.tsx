@@ -22,6 +22,7 @@ import {
   Users,
   Compass,
   Video,
+  Sparkles,
 } from "lucide-react";
 import {
   getFolders,
@@ -34,11 +35,10 @@ import {
   Decision,
   User,
 } from "@/lib/api";
+import { formatDisplayName as formatDisplayNameLib } from "@/lib/userDisplay";
 
 export function formatDisplayName(name?: string | null, email?: string): string {
-  if (!name && !email) return "User";
-  const raw = name && name.trim() ? name.trim() : (email?.split("@")[0] || "User");
-  return raw.replace(/\s*\([^)]*\)$/, "").trim();
+  return formatDisplayNameLib(name, email);
 }
 
 interface SidebarProps {
@@ -315,8 +315,24 @@ export default function Sidebar({
 
         {/* Navigation Sections */}
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
-          {/* Main Nav (All Decisions / Ledger / Portfolio) */}
+          {/* Main Nav (Overview / Workspaces / Portfolio / Folio) */}
           <nav className="space-y-0.5">
+            <Link
+              href="/overview"
+              onClick={closeMobile}
+              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[13px] transition-colors ${
+                pathname === "/overview"
+                  ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                  : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
+              }`}
+              title="Overview & Executive Briefing"
+            >
+              <Sparkles className={`w-4 h-4 shrink-0 ${
+                pathname === "/overview" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#4f4b40] dark:text-[#A89F91]"
+              }`} />
+              {isExpanded && <span>Overview</span>}
+            </Link>
+
             <Link
               href="/dashboard"
               onClick={closeMobile}
