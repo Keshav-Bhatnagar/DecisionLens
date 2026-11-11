@@ -406,7 +406,7 @@ export default function EditorialLandingPage() {
             {/* Header: Dossier Badge + Domain Tabs */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3.5 font-courier text-xs">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-current" />
                 <span className="font-bold tracking-widest uppercase text-[#172033] dark:text-[#F0EAE1]">
                   REASONING AUDIT DOSSIER
                 </span>
@@ -458,9 +458,9 @@ export default function EditorialLandingPage() {
                     : "bg-[#EDE7D6] border-[#172033]/25"
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91]">
+                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#172033] dark:text-[#F0EAE1]">
                   <span>[01 BLIND SPOT]</span>
-                  <span className="text-rose-600 dark:text-rose-400">UNVETTED</span>
+                  <span className="text-[10px] font-mono tracking-wider opacity-60">UNVETTED</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-[#172033] dark:text-[#F0EAE1]">
                   {currentCase.flaggedAssumption}
@@ -475,9 +475,9 @@ export default function EditorialLandingPage() {
                     : "bg-[#EDE7D6] border-[#172033]/25"
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91]">
+                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#172033] dark:text-[#F0EAE1]">
                   <span>[02 STRESS TEST]</span>
-                  <span className="text-amber-600 dark:text-amber-400">SOCRATIC</span>
+                  <span className="text-[10px] font-mono tracking-wider opacity-60">SOCRATIC</span>
                 </div>
                 <p className="text-[11px] leading-relaxed italic text-[#172033] dark:text-[#F0EAE1]">
                   “{currentCase.followUpQuestion}”
@@ -492,9 +492,9 @@ export default function EditorialLandingPage() {
                     : "bg-[#EDE7D6] border-[#172033]/25"
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91]">
+                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#172033] dark:text-[#F0EAE1]">
                   <span>[03 ADR VERDICT]</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">ACTIONABLE</span>
+                  <span className="text-[10px] font-mono tracking-wider opacity-60">ACTIONABLE</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-[#172033] dark:text-[#F0EAE1]">
                   {currentCase.auditDetail}
