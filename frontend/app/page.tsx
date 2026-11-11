@@ -331,41 +331,41 @@ export default function EditorialLandingPage() {
               theme === "dark" ? "text-[#F0EAE1]" : "text-[#172033]"
             }`}
           >
-            Don&apos;t just make the decision.{" "}
+            Kill bad architectural bets{" "}
             <span
               className={`italic font-normal block sm:inline ${
                 theme === "dark" ? "text-[#D4AA50]" : "text-[#315C8A]"
               }`}
             >
-              Challenge it.
+              before they hit production.
             </span>
           </h1>
 
           {/* Supporting Copy */}
           <p
-            className={`font-courier text-xs sm:text-sm leading-[1.9] max-w-2xl mb-8 ${
+            className={`font-courier text-xs sm:text-sm leading-[1.9] max-w-2xl mb-6 ${
               theme === "dark" ? "text-[#A89F91]" : "text-[#596474]"
             }`}
           >
-            DecisionLens puts your decisions under scrutiny. Explore trade-offs, test assumptions,
-            uncover gaps, and see how your reasoning holds up from multiple perspectives — before you commit.
+            Turn messy engineering debates and meeting transcripts into auditable Architectural Decision Records (ADRs).
+            Expose hidden single points of failure, calculate real cloud egress traps, and stress-test trade-offs before committing engineering budget.
           </p>
 
-          {/* Primary & Secondary CTAs */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10">
+          {/* Primary & Secondary CTAs + Instant Demo Trigger */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6">
             <Link
               href={CTA_ROUTE}
-              className={`px-6 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase font-bold transition-colors text-center inline-block ${
+              className={`px-7 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase font-bold transition-all text-center inline-flex items-center justify-center gap-2 shadow-sm ${
                 theme === "dark"
                   ? "border-[#D4AA50] bg-[#D4AA50] text-[#181614] hover:bg-[#E5BE64] hover:text-[#181614]"
-                  : "border-[#172033] bg-[#172033] text-[#F5F1E8] hover:bg-transparent hover:text-[#172033]"
+                  : "border-[#172033] bg-[#172033] text-[#F5F1E8] hover:bg-[#2C2723] hover:text-[#F5F1E8]"
               }`}
             >
-              Challenge a Decision →
+              <span>Challenge a Decision →</span>
             </Link>
             <a
               href="#the-flow"
-              className={`px-6 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase transition-colors text-center ${
+              className={`px-5 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase transition-colors text-center ${
                 theme === "dark"
                   ? "border-[#38332C] bg-transparent text-[#F0EAE1] hover:border-[#D4AA50]"
                   : "border-[#172033]/30 bg-transparent text-[#172033] hover:border-[#172033]"
@@ -373,6 +373,101 @@ export default function EditorialLandingPage() {
             >
               See How It Works ↓
             </a>
+          </div>
+
+          {/* Trust & Enterprise Assurance Strip */}
+          <div
+            className={`flex flex-wrap items-center gap-y-2 gap-x-4 py-2.5 px-3.5 rounded-lg border text-[11px] font-courier mb-8 ${
+              theme === "dark"
+                ? "bg-[#181614]/70 border-[#38332C] text-[#A89F91]"
+                : "bg-[#EDE7D6] border-[#cfc7b2] text-[#4f4b40]"
+            }`}
+          >
+            <span className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              DPDP Act 2023 Compliant
+            </span>
+            <span className="opacity-40">•</span>
+            <span>🔒 In-Memory Audio Encryption</span>
+            <span className="opacity-40">•</span>
+            <span>⚡ Zero Cloud Audio Training</span>
+            <span className="opacity-40">•</span>
+            <span className="font-bold text-[#172033] dark:text-[#F0EAE1]">
+              SOC-2 Ready Audit Trails
+            </span>
+          </div>
+
+          {/* Live Decision Scrutiny Preview Card (Above the Fold Proof) */}
+          <div
+            className={`p-4 sm:p-5 rounded-xl border shadow-lg space-y-3 mb-8 transition-all ${
+              theme === "dark"
+                ? "bg-[#1C1A17] border-[#38332C]"
+                : "bg-[#F5F1E8] border-[#cfc7b2]"
+            }`}
+          >
+            <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] font-courier uppercase tracking-wider">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-[#7a4e10] dark:text-[#D4AA50] font-bold border border-amber-500/30">
+                  LIVE REASONING AUDIT SAMPLE
+                </span>
+                <span className="text-[#596474] dark:text-[#A89F91]">
+                  DECISION: MIGRATING REDIS TO DYNAMODB
+                </span>
+              </div>
+              <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                ✓ 3 COGNITIVE BIASES EXPOSED
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div
+                className={`p-2.5 rounded-lg border text-xs font-courier ${
+                  theme === "dark" ? "bg-[#141210] border-[#38332C]" : "bg-[#EDE7D6] border-[#cfc7b2]"
+                }`}
+              >
+                <span className="text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91] block">
+                  FLAGGED TRAP
+                </span>
+                <p className="font-newsreader text-sm font-semibold text-rose-700 dark:text-rose-400 mt-1">
+                  Sunk-Cost Fallacy Detected
+                </p>
+                <p className="text-[11px] opacity-80 mt-0.5">
+                  Overvaluing 3 months spent on custom cache wrappers.
+                </p>
+              </div>
+
+              <div
+                className={`p-2.5 rounded-lg border text-xs font-courier ${
+                  theme === "dark" ? "bg-[#141210] border-[#38332C]" : "bg-[#EDE7D6] border-[#cfc7b2]"
+                }`}
+              >
+                <span className="text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91] block">
+                  HIDDEN COGS LEAK
+                </span>
+                <p className="font-newsreader text-sm font-semibold text-amber-700 dark:text-amber-400 mt-1">
+                  ₹18.4L / yr Cross-AZ Egress
+                </p>
+                <p className="text-[11px] opacity-80 mt-0.5">
+                  Multi-region replication will trigger secondary burst charges.
+                </p>
+              </div>
+
+              <div
+                className={`p-2.5 rounded-lg border text-xs font-courier ${
+                  theme === "dark" ? "bg-[#141210] border-[#38332C]" : "bg-[#EDE7D6] border-[#cfc7b2]"
+                }`}
+              >
+                <span className="text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91] block">
+                  ADR SYNTHESIS
+                </span>
+                <p className="font-newsreader text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-1">
+                  Maintain Redis Cluster
+                </p>
+                <p className="text-[11px] opacity-80 mt-0.5">
+                  Partition hot key namespaces to solve memory pressure.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Process Index Strip */}
