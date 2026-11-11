@@ -380,7 +380,7 @@ export default function PointCircularGallery({
                     style={{ transform: "none", backfaceVisibility: "hidden" }}
                     className={`w-full h-full rounded-xl flex flex-col justify-between p-5 sm:p-6 transition-all duration-300 relative ${
                       isCenter
-                        ? "bg-[#FCFBF8] dark:bg-[#221F1C] border-2 border-[#B4874B] dark:border-[#D4AA50] shadow-md opacity-100"
+                        ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-md opacity-100"
                         : "bg-[#EDE7D6] dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] opacity-85 hover:opacity-100"
                     }`}
                   >

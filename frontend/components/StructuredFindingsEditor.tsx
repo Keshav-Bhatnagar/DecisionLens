@@ -476,9 +476,9 @@ export default function StructuredFindingsEditor({
   const currentSlide = slides[activeSlide];
 
   return (
-    <div className="bg-[#FCFBF8] dark:bg-[#181614] rounded-xl border border-[#D9D2C3] dark:border-[#38332C] p-6 sm:p-8 space-y-6 font-sans">
+    <div className="bg-[#EDE7D6] dark:bg-[#181614] rounded-xl border border-[#cfc7b2] dark:border-[#38332C] p-6 sm:p-8 space-y-6 font-sans">
       {/* Editorial Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-[#D9D2C3]/60 dark:border-[#38332C]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-[#cfc7b2] dark:border-[#38332C]">
         <div>
           <span className="text-xs font-mono font-bold tracking-wider text-[#7a4e10] dark:text-[#D4AA50] uppercase">
             Stage 02 • Evidence &amp; Cognitive Triage
@@ -499,8 +499,8 @@ export default function StructuredFindingsEditor({
               disabled={isSaving}
               className={`px-3.5 py-2 text-xs font-bold rounded-lg border transition-colors cursor-pointer ${
                 reviewed
-                  ? "bg-[#EDE7D6] text-[#7a4e10] border-[#cfc7b2] dark:bg-[#221F1C] dark:text-[#D4AA50] dark:border-[#38332C]"
-                  : "bg-[#F5F1E8] text-[#5A6275] border-[#D9D2C3] dark:bg-[#1A1815] dark:text-[#A89F91] dark:border-[#38332C]"
+                  ? "bg-[#E5DEC9] text-[#7a4e10] border-[#cfc7b2] dark:bg-[#221F1C] dark:text-[#D4AA50] dark:border-[#38332C]"
+                  : "bg-[#F4F0E6] text-[#5A6275] border-[#cfc7b2] dark:bg-[#1A1815] dark:text-[#A89F91] dark:border-[#38332C]"
               }`}
             >
               {reviewed ? "Ground Truth Locked" : "Lock Ground Truth"}
@@ -527,7 +527,7 @@ export default function StructuredFindingsEditor({
 
       {/* Ingestion Sources Summary */}
       {sourceSummary && sourceSummary !== "None" && (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#EDE7D6]/50 dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#5A6275] dark:text-[#A89F91]">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#E5DEC9]/50 dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#5A6275] dark:text-[#A89F91]">
           <span>
             Context Sources: <strong className="font-bold text-[#161E33] dark:text-[#F0EAE1]">{sourceSummary}</strong>
           </span>
@@ -547,14 +547,14 @@ export default function StructuredFindingsEditor({
       )}
 
       {successMsg && (
-        <div className="p-3 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#D4AA50]">
+        <div className="p-3 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#D4AA50]">
           {successMsg}
         </div>
       )}
 
       {/* COLD START: Signal Readiness Audit (When No Findings Yet) */}
       {!findings && !isAnalyzing && (
-        <div className="p-6 sm:p-8 bg-[#F5F1E8]/70 dark:bg-[#1A1815] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-5">
+        <div className="p-6 sm:p-8 bg-[#E5DEC9]/50 dark:bg-[#1A1815] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-5">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm sm:text-base font-bold text-[#161E33] dark:text-[#F0EAE1]">
@@ -564,13 +564,13 @@ export default function StructuredFindingsEditor({
                 Aggregates your problem statement, meeting scribe, and dossier into 4 structured dimensions.
               </p>
             </div>
-            <span className="text-xs font-mono font-bold px-2.5 py-1 bg-[#EDE7D6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-md">
+            <span className="text-xs font-mono font-bold px-2.5 py-1 bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-md">
               Ready to Structure
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
               <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Problem Statement
               </span>
@@ -582,7 +582,7 @@ export default function StructuredFindingsEditor({
               </span>
             </div>
 
-            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
               <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Meeting Scribe &amp; Audio
               </span>
@@ -594,7 +594,7 @@ export default function StructuredFindingsEditor({
               </span>
             </div>
 
-            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
               <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Document Dossier
               </span>
@@ -607,7 +607,7 @@ export default function StructuredFindingsEditor({
             </div>
           </div>
 
-          <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#D9D2C3]/60 dark:border-[#38332C]">
+          <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#cfc7b2] dark:border-[#38332C]">
             <p className="text-xs text-[#5A6275] dark:text-[#A89F91]">
               Click below to initiate the 3D rotating evidence carousel.
             </p>
@@ -637,7 +637,7 @@ export default function StructuredFindingsEditor({
                   className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
                     isActive
                       ? "bg-[#EDE7D6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-xs"
-                      : "bg-[#F5F1E8]/70 dark:bg-[#1A1815] border-[#D9D2C3] dark:border-[#38332C] hover:bg-[#EDE7D6]/50"
+                      : "bg-[#E5DEC9]/50 dark:bg-[#1A1815] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE7D6]"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1">
@@ -648,7 +648,7 @@ export default function StructuredFindingsEditor({
                       className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md ${
                         isActive
                           ? "bg-[#161E33] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]"
-                          : "bg-[#D9D2C3]/70 dark:bg-[#2C2722] text-[#5A6275] dark:text-[#A89F91]"
+                          : "bg-[#cfc7b2] dark:bg-[#2C2722] text-[#5A6275] dark:text-[#A89F91]"
                       }`}
                     >
                       {s.count} items
@@ -666,9 +666,9 @@ export default function StructuredFindingsEditor({
           </div>
 
           {/* Active Dimension Orbit Stage */}
-          <div className="rounded-xl border border-[#D9D2C3] dark:border-[#38332C] bg-[#FCFBF8] dark:bg-[#1A1815] p-5 sm:p-6 space-y-4">
+          <div className="rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#E5DEC9]/35 dark:bg-[#1A1815] p-5 sm:p-6 space-y-4">
             {/* Header: Title & Stepper */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#D9D2C3]/60 dark:border-[#38332C]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C]">
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-base sm:text-lg font-bold text-[#161E33] dark:text-[#F0EAE1]">

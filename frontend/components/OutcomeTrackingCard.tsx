@@ -330,7 +330,7 @@ export default function OutcomeTrackingCard({
                       onClick={() => setStatus(s.id)}
                       className={`p-2.5 rounded text-left border transition-all cursor-pointer ${
                         status === s.id
-                          ? "bg-[#2F5D8F] dark:bg-[#D4AA50] text-[#FCFBF8] dark:text-[#181614] border-[#2F5D8F] dark:border-[#D4AA50] font-bold shadow-xs"
+                          ? "bg-[#2F5D8F] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] border-[#2F5D8F] dark:border-[#D4AA50] font-bold shadow-xs"
                           : "bg-[#EFEADF] dark:bg-[#1C1917] text-[#161E33] dark:text-[#F0EAE1] border-[#D9D2C3] dark:border-[#38332C] hover:border-[#2F5D8F] dark:hover:border-[#D4AA50]"
                       }`}
                     >
@@ -363,7 +363,7 @@ export default function OutcomeTrackingCard({
                     value={chosenOption}
                     onChange={(e) => setChosenOption(e.target.value)}
                     placeholder="e.g., Microservices (Kafka/Go) or Managed In-Memory Redis"
-                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-amber-300 dark:border-amber-700 rounded text-[#161E33] dark:text-[#F0EAE1] focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                    className="w-full px-2.5 py-1.5 bg-[#F4F0E6] dark:bg-[#181614] border border-amber-300 dark:border-amber-700 rounded text-[#161E33] dark:text-[#F0EAE1] focus:outline-hidden focus:ring-1 focus:ring-amber-500"
                     required
                   />
                   <p className="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
@@ -380,7 +380,7 @@ export default function OutcomeTrackingCard({
                     value={chosenOption}
                     onChange={(e) => setChosenOption(e.target.value)}
                     placeholder="e.g., Priority shifted to compliance audit; cloud budget frozen"
-                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-stone-300 dark:border-stone-700 rounded text-[#161E33] dark:text-[#F0EAE1]"
+                    className="w-full px-2.5 py-1.5 bg-[#F4F0E6] dark:bg-[#181614] border border-stone-300 dark:border-stone-700 rounded text-[#161E33] dark:text-[#F0EAE1]"
                   />
                 </div>
               )}
@@ -404,7 +404,7 @@ export default function OutcomeTrackingCard({
                       onClick={() => setDaysElapsed(h.days)}
                       className={`px-2.5 py-1 text-xs rounded border transition cursor-pointer font-mono font-medium ${
                         daysElapsed === h.days
-                          ? "bg-[#161E33] dark:bg-[#D4AA50] text-[#FCFBF8] dark:text-[#181614] border-[#161E33] dark:border-[#D4AA50] shadow-xs"
+                          ? "bg-[#161E33] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] border-[#161E33] dark:border-[#D4AA50] shadow-xs"
                           : "bg-[#EFEADF] dark:bg-[#1C1917] text-[#161E33] dark:text-[#F0EAE1] border-[#D9D2C3] dark:border-[#38332C] hover:border-[#161E33] dark:hover:border-[#D4AA50]"
                       }`}
                     >
@@ -505,7 +505,7 @@ export default function OutcomeTrackingCard({
                   value={lessonsLearned}
                   onChange={(e) => setLessonsLearned(e.target.value)}
                   placeholder="Summarize production results: What succeeded? Did PgBouncer hold connection load? Any runbook surprises or tuning tips that subsequent decisions in this workspace must remember?"
-                  className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-[#D9D2C3] dark:border-[#38332C] rounded text-[#161E33] dark:text-[#F0EAE1] leading-relaxed text-xs focus:ring-1 focus:ring-[#2F5D8F] dark:focus:ring-[#D4AA50] focus:outline-hidden"
+                  className="w-full px-2.5 py-1.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[#161E33] dark:text-[#F0EAE1] leading-relaxed text-xs focus:ring-1 focus:ring-[#7a4e10] dark:focus:ring-[#D4AA50] focus:outline-hidden"
                 />
               </div>
 
@@ -526,7 +526,7 @@ export default function OutcomeTrackingCard({
                       }
                     }}
                     placeholder="Add an unexpected incident/pitfall and press Enter..."
-                    className="flex-1 px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-[#D9D2C3] dark:border-[#38332C] rounded text-[#161E33] dark:text-[#F0EAE1]"
+                    className="flex-1 px-2.5 py-1.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[#161E33] dark:text-[#F0EAE1]"
                   />
                   <button
                     type="button"
@@ -570,7 +570,7 @@ export default function OutcomeTrackingCard({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-1.5 bg-[#2F5D8F] hover:bg-[#254b73] text-[#FCFBF8] font-bold rounded transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                  className="px-4 py-1.5 bg-[#161E33] dark:bg-[#D4AA50] hover:opacity-90 text-[#F4F0E6] dark:text-[#181614] font-bold rounded transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   {submitting ? "Saving Outcome..." : "Save Outcome Review"}
                 </button>

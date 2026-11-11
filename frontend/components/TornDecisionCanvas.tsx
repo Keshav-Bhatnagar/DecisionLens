@@ -1170,7 +1170,7 @@ export default function TornDecisionCanvas({
                 className={`relative w-full max-w-lg p-6 sm:p-8 shadow-2xl font-courier space-y-4 animate-in zoom-in-95 duration-200 border-2 border-l-4 ${
                   isDark
                     ? "bg-[#221F1C] border-[#38332C] border-l-[#D4AA50] text-[#F0EAE1] shadow-black/40"
-                    : "bg-[#FCFBF8] border-[#D9D2C3] border-l-[#b08a3c] text-[#161E33] shadow-[#161E33]/10"
+                    : "bg-[#EDE7D6] border-[#cfc7b2] border-l-[#7a4e10] text-[#1d1d1b] shadow-[#1d1d1b]/10"
                 }`}
                 onClick={(e) => e.stopPropagation()}
                 style={{
@@ -1180,12 +1180,12 @@ export default function TornDecisionCanvas({
                 {/* Header Row */}
                 <div
                   className={`flex items-center justify-between pb-3 border-b ${
-                    isDark ? "border-[#38332C]" : "border-[#D9D2C3]"
+                    isDark ? "border-[#38332C]" : "border-[#cfc7b2]"
                   }`}
                 >
                   <span
                     className={`text-xs font-bold uppercase tracking-wider ${
-                      isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                      isDark ? "text-[#D4AA50]" : "text-[#7a4e10]"
                     }`}
                   >
                     {selectedShard.tag}
@@ -1196,7 +1196,7 @@ export default function TornDecisionCanvas({
                     className={`text-xs font-bold px-2.5 py-1 border transition cursor-pointer ${
                       isDark
                         ? "border-[#38332C] bg-[#181614] text-[#F0EAE1] hover:bg-[#F0EAE1] hover:text-[#181614]"
-                        : "border-[#D9D2C3] bg-[#EFEADF] text-[#161E33] hover:bg-[#161E33] hover:text-[#FCFBF8]"
+                        : "border-[#cfc7b2] bg-[#E5DEC9] text-[#1d1d1b] hover:bg-[#1d1d1b] hover:text-[#F4F0E6]"
                     }`}
                     title="Press ESC to close"
                   >
@@ -1409,7 +1409,7 @@ export default function TornDecisionCanvas({
                 className={`w-full max-w-lg border-2 border-l-4 p-6 shadow-2xl space-y-4 ${
                   isDark
                     ? "bg-[#221F1C] border-[#38332C] border-l-[#D4AA50] text-[#F0EAE1]"
-                    : "bg-[#FCFBF8] border-[#D9D2C3] border-l-[#b08a3c] text-[#161E33]"
+                    : "bg-[#EDE7D6] border-[#cfc7b2] border-l-[#7a4e10] text-[#1d1d1b]"
                 }`}
                 onClick={(e) => e.stopPropagation()}
               >

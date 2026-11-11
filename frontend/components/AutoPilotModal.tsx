@@ -219,23 +219,23 @@ export default function AutoPilotModal({
   return (
     <ModalPortal>
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-[#161E33]/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="w-full max-w-2xl bg-[#FCFBF8] border border-[#D9D2C3] rounded-2xl shadow-2xl overflow-hidden flex flex-col font-ui text-[#161E33]">
+        <div className="w-full max-w-2xl bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl shadow-2xl overflow-hidden flex flex-col font-sans text-[#1d1d1b] dark:text-[#F0EAE1]">
           {/* Modal Header */}
-          <div className="px-6 py-5 border-b border-[#D9D2C3] bg-[#F5F1E8] flex items-center justify-between">
+          <div className="px-6 py-5 border-b border-[#cfc7b2] dark:border-[#38332C] bg-[#E5DEC9] dark:bg-[#221F1C] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#161E33] text-[#FCFBF8] flex items-center justify-center font-bold">
-                <Sparkles className="w-4 h-4 text-[#F5F1E8]" />
+              <div className="w-8 h-8 rounded-lg bg-[#161E33] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] flex items-center justify-center font-bold">
+                <Sparkles className="w-4 h-4 text-[#F4F0E6] dark:text-[#181614]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold tracking-tight text-[#161E33]">
+                  <h3 className="text-sm font-bold tracking-tight text-[#161E33] dark:text-[#F0EAE1]">
                     Auto-Pilot Decision Dossier Run
                   </h3>
-                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#161E33]/10 text-[#161E33] font-bold">
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#161E33]/10 dark:bg-[#D4AA50]/20 text-[#161E33] dark:text-[#D4AA50] font-bold">
                     Sequential Orchestration
                   </span>
                 </div>
-                <p className="text-xs text-[#5A6275] truncate max-w-md mt-0.5 font-mono">
+                <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] truncate max-w-md mt-0.5 font-mono">
                   Target: {decisionTitle || "Untitled Decision"}
                 </p>
               </div>
@@ -280,12 +280,12 @@ export default function AutoPilotModal({
                     key={step.id}
                     className={`p-3.5 rounded-xl border transition-all flex items-start gap-3.5 ${
                       step.status === "completed"
-                        ? "bg-[#FCFBF8] border-emerald-500/40"
+                        ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-[#cfc7b2] dark:border-[#38332C]"
                         : step.status === "running"
-                        ? "bg-white border-[#161E33] shadow-sm ring-1 ring-[#161E33]/20"
+                        ? "bg-[#E5DEC9] dark:bg-[#2C2723] border-[#7a4e10] dark:border-[#D4AA50] shadow-sm ring-1 ring-[#7a4e10]/20"
                         : step.status === "error"
-                        ? "bg-red-50/50 border-red-300"
-                        : "bg-[#F5F1E8]/50 border-[#D9D2C3]/80 opacity-75"
+                        ? "bg-red-50/50 dark:bg-red-950/40 border-red-300 dark:border-red-800"
+                        : "bg-[#E5DEC9]/40 dark:bg-[#1A1815] border-[#cfc7b2]/70 dark:border-[#38332C] opacity-75"
                     }`}
                   >
                     {/* Status Icon */}
@@ -386,7 +386,7 @@ export default function AutoPilotModal({
           </div>
 
           {/* Modal Footer */}
-          <div className="px-6 py-4 bg-[#F5F1E8] border-t border-[#D9D2C3] flex items-center justify-between">
+          <div className="px-6 py-4 bg-[#E5DEC9] dark:bg-[#221F1C] border-t border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-between">
             <button
               type="button"
               onClick={() => {
@@ -394,7 +394,7 @@ export default function AutoPilotModal({
                 onClose();
               }}
               disabled={isRunning}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/40 transition disabled:opacity-40"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 transition disabled:opacity-40"
             >
               {allCompleted ? "Close" : "Cancel"}
             </button>
@@ -406,7 +406,7 @@ export default function AutoPilotModal({
                   onComplete();
                   onClose();
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#161E33] text-[#FCFBF8] hover:bg-[#253252] shadow-sm transition cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#161E33] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] hover:opacity-90 shadow-sm transition cursor-pointer"
               >
                 <span>View Finalized Dossier</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -415,7 +415,7 @@ export default function AutoPilotModal({
               <button
                 type="button"
                 disabled
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#161E33]/70 text-[#FCFBF8] cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#161E33]/70 dark:bg-[#D4AA50]/70 text-[#F4F0E6] dark:text-[#181614] cursor-not-allowed"
               >
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Synthesizing Dossier...</span>
