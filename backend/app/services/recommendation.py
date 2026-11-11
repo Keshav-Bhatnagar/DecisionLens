@@ -787,85 +787,245 @@ def generate_domain_grounded_roadmap(
             )
         )
 
-    # Phase 2: Core Execution, System Build & Canary Rollout (Weeks 3-5)
-    phase2_tasks: List[RoadmapTask] = [
-        RoadmapTask(
-            task_id="task-p2-terms",
-            title=f"Draft System Specifications & Finalize Contracts for {top_option_name}",
-            description=f"Establish architectural API contracts, milestone-linked delivery SLAs, and vendor indemnity terms.",
-            owner_role=ops_role if ops_role != "Lead Technical Architect" else "Lead Technical Architect",
-            timeline="Weeks 3-4",
-            dependencies=[t.task_id for t in phase1_tasks[:1]],
-            success_criteria="Executed definitive specification charter and contractual agreements signed.",
-            is_completed=False,
-            source_type="decision_requirement",
-            reason="Translates strategic intent into binding architectural contracts and operational governance.",
-        ),
-        RoadmapTask(
-            task_id="task-p2-exec",
-            title=f"Launch Core Implementation & Dual-Run Canary Migration",
-            description=f"Mobilize engineering pods, build core service modules, and establish real-time telemetry pipelines.",
-            owner_role="Lead Technical Architect",
-            timeline="Weeks 4-5",
-            dependencies=["task-p2-terms"],
-            success_criteria="Core functional modules deployed to staging environment passing end-to-end integration tests.",
-            is_completed=False,
-            source_type="decision_requirement",
-            reason="Unleashes primary execution within controlled risk parameters.",
-        ),
-        RoadmapTask(
-            task_id="task-p2-canary",
-            title="Deploy Automated Canary Routing with Rollback Circuit Breakers",
-            description="Configure staged 5% -> 25% -> 100% traffic shifting with automated rollback triggered on P99 latency spikes or error budget burn.",
-            owner_role="Staff SRE / Platform Lead",
-            timeline="Week 5",
-            dependencies=["task-p2-exec"],
-            success_criteria="Canary routing verified in staging with automated rollback drill executed successfully.",
-            is_completed=False,
-            source_type="risk",
-            reason="Guarantees zero-outage blast radius containment during initial production exposure.",
-        ),
-    ]
+    # Phase 2: Core Execution, System Build & Milestone Rollout (Weeks 3-5)
+    if domain_upper == "REAL_ESTATE":
+        phase2_tasks: List[RoadmapTask] = [
+            RoadmapTask(
+                task_id="task-p2-terms",
+                title=f"Draft Joint Development Agreements & Finalize Conveyance Terms for {top_option_name}",
+                description=f"Establish binding conveyance covenants, milestone-linked escrow payment schedules, and title indemnity terms with the registrar.",
+                owner_role=legal_role,
+                timeline="Weeks 3-4",
+                dependencies=[t.task_id for t in phase1_tasks[:1]],
+                success_criteria="Executed definitive conveyance charter and escrow agreements signed with registrar.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Translates strategic intent into binding legal agreements and financial escrow controls.",
+            ),
+            RoadmapTask(
+                task_id="task-p2-exec",
+                title=f"Site Demarcation, Perimeter Fencing & Utility Mobilization",
+                description=f"Conduct physical boundary survey, erect permanent perimeter markers, and clear right-of-way feeder road access for {top_option_name}.",
+                owner_role=ops_role,
+                timeline="Weeks 4-5",
+                dependencies=["task-p2-terms"],
+                success_criteria="Complete boundary demarcation and physical perimeter handover certificate signed.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Secures physical possession and site control within verified zoning parameters.",
+            ),
+            RoadmapTask(
+                task_id="task-p2-canary",
+                title="Statutory Zoning Sanctions & Master Plan Layout Sanctions",
+                description="Submit master layout to competent town planning authority and procure statutory environmental and zoning clearances.",
+                owner_role=risk_role,
+                timeline="Week 5",
+                dependencies=["task-p2-exec"],
+                success_criteria="Sanctioned master layout plan and formal zoning commencement certificate obtained.",
+                is_completed=False,
+                source_type="risk",
+                reason="Guarantees regulatory compliance and eliminates municipal halt risk during execution.",
+            ),
+        ]
 
-    # Phase 3: Operationalization, Hardening & Value Realization (Weeks 6-8)
-    phase3_tasks: List[RoadmapTask] = [
-        RoadmapTask(
-            task_id="task-p3-close",
-            title=f"Complete Production Cutover & Deprecate Stranded Legacy Assets{title_context}",
-            description=f"Execute full production cutover, decommission deprioritized infrastructure, and eliminate stranded cloud spend.",
-            owner_role="Staff SRE / Platform Lead",
-            timeline="Weeks 6-7",
-            dependencies=["task-p2-canary"],
-            success_criteria="Full production traffic cutover complete with 100% of legacy resources cleanly de-provisioned.",
-            is_completed=False,
-            source_type="condition",
-            reason="Formalizes cutover commitment and prevents lingering zombie asset cloud burn.",
-        ),
-        RoadmapTask(
-            task_id="task-p3-runbook",
-            title="Operational Runbook Handover & 24/7 Incident Escalation Playbook",
-            description="Transfer steady-state operating runbooks, alert runbooks, and SLA dashboards to on-call platform engineers.",
-            owner_role="Staff SRE / Platform Lead",
-            timeline="Week 7",
-            dependencies=["task-p3-close"],
-            success_criteria="Operations team completes simulation walkthrough with documented runbooks verified.",
-            is_completed=False,
-            source_type="decision_requirement",
-            reason="Ensures operational continuity and prevents single-engineer bus-factor vulnerability.",
-        ),
-        RoadmapTask(
-            task_id="task-p3-gov",
-            title="Institute Boardroom Audit Cadence & 30-Day Fiduciary ROI Review",
-            description=f"Establish monthly executive committee cadence to audit realized outcomes against the Sunk-Cost Shield target.",
-            owner_role="Fiduciary Sponsor / VP Eng",
-            timeline="Week 8",
-            dependencies=["task-p3-runbook"],
-            success_criteria="First 30-day post-closing governance scorecard signed off by executive stakeholders.",
-            is_completed=False,
-            source_type="decision_requirement",
-            reason="Guarantees sustained fiduciary accountability and ensures expected strategic ROI is captured.",
-        ),
-    ]
+        # Phase 3: Operationalization, Hardening & Value Realization (Weeks 6-8)
+        phase3_tasks: List[RoadmapTask] = [
+            RoadmapTask(
+                task_id="task-p3-close",
+                title=f"Complete Final Deed Registration & Escrow Tranche Disbursement{title_context}",
+                description=f"Register definitive deed at the sub-registrar office, disburse escrow milestone tranches, and clear residual encumbrance liabilities.",
+                owner_role=legal_role,
+                timeline="Weeks 6-7",
+                dependencies=["task-p2-canary"],
+                success_criteria="Registered sale deed index-II issued and non-encumbrance certificate verified.",
+                is_completed=False,
+                source_type="condition",
+                reason="Formalizes legal conveyance and secures unencumbered asset ownership.",
+            ),
+            RoadmapTask(
+                task_id="task-p3-runbook",
+                title="Anchor Tenant Commercial Leasing & Facility Handover Protocol",
+                description="Finalize institutional warehouse lease agreements and transfer site operating protocols to asset managers.",
+                owner_role=ops_role,
+                timeline="Week 7",
+                dependencies=["task-p3-close"],
+                success_criteria="Executed pre-lease LOIs covering >= 30% of planned gross leasable area.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Ensures immediate cash-flow generation and operational continuity.",
+            ),
+            RoadmapTask(
+                task_id="task-p3-gov",
+                title="Institute Boardroom Audit Cadence & 30-Day Fiduciary Valuation Review",
+                description=f"Establish monthly executive committee cadence to audit realized outcomes against the Sunk-Cost Shield target and asset valuation benchmarks.",
+                owner_role=exec_role,
+                timeline="Week 8",
+                dependencies=["task-p3-runbook"],
+                success_criteria="First 30-day post-closing governance scorecard signed off by executive stakeholders.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Guarantees sustained fiduciary accountability and ensures expected strategic ROI is captured.",
+            ),
+        ]
+    elif domain_upper == "SOFTWARE":
+        phase2_tasks: List[RoadmapTask] = [
+            RoadmapTask(
+                task_id="task-p2-terms",
+                title=f"Draft System Specifications & Finalize Contracts for {top_option_name}",
+                description=f"Establish architectural API contracts, milestone-linked delivery SLAs, and vendor indemnity terms.",
+                owner_role=ops_role if ops_role != "Lead Technical Architect" else "Lead Technical Architect",
+                timeline="Weeks 3-4",
+                dependencies=[t.task_id for t in phase1_tasks[:1]],
+                success_criteria="Executed definitive specification charter and contractual agreements signed.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Translates strategic intent into binding architectural contracts and operational governance.",
+            ),
+            RoadmapTask(
+                task_id="task-p2-exec",
+                title=f"Launch Core Implementation & Dual-Run Canary Migration",
+                description=f"Mobilize engineering pods, build core service modules, and establish real-time telemetry pipelines.",
+                owner_role="Lead Technical Architect",
+                timeline="Weeks 4-5",
+                dependencies=["task-p2-terms"],
+                success_criteria="Core functional modules deployed to staging environment passing end-to-end integration tests.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Unleashes primary execution within controlled risk parameters.",
+            ),
+            RoadmapTask(
+                task_id="task-p2-canary",
+                title="Deploy Automated Canary Routing with Rollback Circuit Breakers",
+                description="Configure staged 5% -> 25% -> 100% traffic shifting with automated rollback triggered on P99 latency spikes or error budget burn.",
+                owner_role="Staff SRE / Platform Lead",
+                timeline="Week 5",
+                dependencies=["task-p2-exec"],
+                success_criteria="Canary routing verified in staging with automated rollback drill executed successfully.",
+                is_completed=False,
+                source_type="risk",
+                reason="Guarantees zero-outage blast radius containment during initial production exposure.",
+            ),
+        ]
+
+        # Phase 3: Operationalization, Hardening & Value Realization (Weeks 6-8)
+        phase3_tasks: List[RoadmapTask] = [
+            RoadmapTask(
+                task_id="task-p3-close",
+                title=f"Complete Production Cutover & Deprecate Stranded Legacy Assets{title_context}",
+                description=f"Execute full production cutover, decommission deprioritized infrastructure, and eliminate stranded cloud spend.",
+                owner_role="Staff SRE / Platform Lead",
+                timeline="Weeks 6-7",
+                dependencies=["task-p2-canary"],
+                success_criteria="Full production traffic cutover complete with 100% of legacy resources cleanly de-provisioned.",
+                is_completed=False,
+                source_type="condition",
+                reason="Formalizes cutover commitment and prevents lingering zombie asset cloud burn.",
+            ),
+            RoadmapTask(
+                task_id="task-p3-runbook",
+                title="Operational Runbook Handover & 24/7 Incident Escalation Playbook",
+                description="Transfer steady-state operating runbooks, alert runbooks, and SLA dashboards to on-call platform engineers.",
+                owner_role="Staff SRE / Platform Lead",
+                timeline="Week 7",
+                dependencies=["task-p3-close"],
+                success_criteria="Operations team completes simulation walkthrough with documented runbooks verified.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Ensures operational continuity and prevents single-engineer bus-factor vulnerability.",
+            ),
+            RoadmapTask(
+                task_id="task-p3-gov",
+                title="Institute Boardroom Audit Cadence & 30-Day Fiduciary ROI Review",
+                description=f"Establish monthly executive committee cadence to audit realized outcomes against the Sunk-Cost Shield target.",
+                owner_role="Fiduciary Sponsor / VP Eng",
+                timeline="Week 8",
+                dependencies=["task-p3-runbook"],
+                success_criteria="First 30-day post-closing governance scorecard signed off by executive stakeholders.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Guarantees sustained fiduciary accountability and ensures expected strategic ROI is captured.",
+            ),
+        ]
+    else:
+        # Cross-Domain Business & Operational Roadmap (Free from Software Jargon)
+        phase2_tasks: List[RoadmapTask] = [
+            RoadmapTask(
+                task_id="task-p2-terms",
+                title=f"Draft Operational Charter & Finalize Vendor SLA Agreements for {top_option_name}",
+                description=f"Establish formal delivery milestones, quality benchmarks, and supplier indemnity provisions.",
+                owner_role=legal_role,
+                timeline="Weeks 3-4",
+                dependencies=[t.task_id for t in phase1_tasks[:1]],
+                success_criteria="Executed operational agreements and commercial contracts formally approved.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Translates strategic intent into binding contractual commitments and performance governance.",
+            ),
+            RoadmapTask(
+                task_id="task-p2-exec",
+                title=f"Mobilize Core Execution Pods & Pilot Workstream Delivery",
+                description=f"Deploy cross-functional execution teams, configure pilot workflows, and establish KPI tracking dashboards.",
+                owner_role=ops_role,
+                timeline="Weeks 4-5",
+                dependencies=["task-p2-terms"],
+                success_criteria="Pilot workflow operational with initial cohort transactions processed cleanly.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Launches core operational capability within measured trial parameters.",
+            ),
+            RoadmapTask(
+                task_id="task-p2-canary",
+                title="Audit Quality Control Gates & Risk Containment Protocols",
+                description="Execute operational fire drills to verify contingency responses and fail-safe exception protocols.",
+                owner_role=risk_role,
+                timeline="Week 5",
+                dependencies=["task-p2-exec"],
+                success_criteria="Exception drill completed successfully with zero compliance breaches.",
+                is_completed=False,
+                source_type="risk",
+                reason="Guarantees operational resilience before enterprise-wide scale-up.",
+            ),
+        ]
+
+        # Phase 3: Enterprise Operationalization & Value Realization (Weeks 6-8)
+        phase3_tasks: List[RoadmapTask] = [
+            RoadmapTask(
+                task_id="task-p3-close",
+                title=f"Complete Full Operational Rollout & Decommission Deprioritized Workstreams{title_context}",
+                description=f"Execute organization-wide operational transition and sunset redundant vendor contracts.",
+                owner_role=ops_role,
+                timeline="Weeks 6-7",
+                dependencies=["task-p2-canary"],
+                success_criteria="100% operational volume transitioned with redundant commitments cleanly decommissioned.",
+                is_completed=False,
+                source_type="condition",
+                reason="Consolidates organizational focus and eliminates lingering cost drag.",
+            ),
+            RoadmapTask(
+                task_id="task-p3-runbook",
+                title="Operational SOP Handover & Steady-State Governance Protocols",
+                description="Transfer standard operating procedures, escalation matrices, and performance reporting to operational owners.",
+                owner_role=ops_role,
+                timeline="Week 7",
+                dependencies=["task-p3-close"],
+                success_criteria="Operational owners sign off on comprehensive procedural handover.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Secures operational stability and prevents single-point-of-failure vulnerabilities.",
+            ),
+            RoadmapTask(
+                task_id="task-p3-gov",
+                title="Institute Executive Governance Cadence & 30-Day Fiduciary ROI Audit",
+                description=f"Establish monthly executive committee review to audit realized outcomes against strategic baseline targets for {top_option_name}.",
+                owner_role=exec_role,
+                timeline="Week 8",
+                dependencies=["task-p3-runbook"],
+                success_criteria="First 30-day post-transition performance review approved by executive stakeholders.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Ensures sustained accountability and guarantees projected return on investment.",
+            ),
+        ]
 
     return RoadmapData(
         title=f"Strategic Execution Roadmap: {top_option_name}",
@@ -1077,8 +1237,8 @@ def build_grounded_alternatives(
 
             primary_divergence = low_criteria_cons[0].lower() if low_criteria_cons else "lower operational and delivery efficiency"
             why_deprioritized = (
-                f"Ranked #{opt_rank} ({opt_score:.2f}/10 vs {canonical_winner_score:.2f}/10). "
-                f"Deprioritized primarily due to {primary_divergence} relative to {top_option_name}."
+                f"Rank #{opt_rank} ({opt_score:.2f}/10 vs {canonical_winner_score:.2f}/10). "
+                f"Deprioritized with lower deterministic score primarily due to {primary_divergence} relative to {top_option_name}."
             )
 
             alternatives.append(

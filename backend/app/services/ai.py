@@ -653,9 +653,9 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
     }
 
     feedback = PrivateTranscriptFeedback(
-        tone_observations="",
+        tone_observations="Deliberative and analytical tone with focused stakeholder engagement.",
         potential_biases=biases,
-        clarity_rating="",
+        clarity_rating="High",
         feedback_notes=feedback_notes,
     )
 
