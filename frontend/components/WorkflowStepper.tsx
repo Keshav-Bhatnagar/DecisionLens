@@ -207,10 +207,10 @@ export default function WorkflowStepper({
               </span>
 
               <div className="truncate min-w-0">
-                <span className="text-xs truncate block leading-tight font-semibold">
+                <span className="font-newsreader text-[14px] sm:text-[15px] truncate block leading-tight font-semibold">
                   {stage.label}
                 </span>
-                <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] truncate block font-normal hidden lg:block">
+                <span className="text-[12px] text-[#4f4b40] dark:text-[#A89F91] truncate block font-sans font-normal hidden lg:block">
                   {stage.shortDesc}
                 </span>
               </div>

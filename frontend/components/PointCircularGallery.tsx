@@ -202,13 +202,13 @@ export default function PointCircularGallery({
   return (
     <div className="space-y-3 font-sans">
       {/* Sub-header: Point counter, zoom mode & view toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-[#5A6275] dark:text-[#A89F91]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs sm:text-sm text-[#5A6275] dark:text-[#A89F91]">
         <div className="flex items-center gap-2">
           <span className="font-bold text-[#161E33] dark:text-[#F0EAE1]">
             Item {activeIndex + 1} of {items.length}
           </span>
           {viewMode === "circular" && items[activeIndex] && (
-            <span className="text-[11px] font-mono text-[#5A6275] dark:text-[#A89F91] border border-[#D9D2C3] dark:border-[#38332C] px-2 py-0.5 rounded-md bg-[#FCFBF8] dark:bg-[#1E1B18] hidden sm:inline-block">
+            <span className="text-xs font-mono text-[#5A6275] dark:text-[#A89F91] border border-[#D9D2C3] dark:border-[#38332C] px-2.5 py-0.5 rounded-md bg-[#FCFBF8] dark:bg-[#1E1B18] hidden sm:inline-block">
               {getReadingStats(items[activeIndex]).readTimeText}
             </span>
           )}
@@ -217,11 +217,11 @@ export default function PointCircularGallery({
         {/* View mode & Zoom controls */}
         <div className="flex items-center gap-2">
           {viewMode === "circular" && (
-            <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-[11px]">
+            <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-xs">
               <button
                 type="button"
                 onClick={() => handleSetZoom("zoomOut")}
-                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "zoomOut"
                     ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
                     : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
@@ -233,7 +233,7 @@ export default function PointCircularGallery({
               <button
                 type="button"
                 onClick={() => handleSetZoom("spacious")}
-                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "spacious"
                     ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
                     : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
@@ -245,7 +245,7 @@ export default function PointCircularGallery({
               <button
                 type="button"
                 onClick={() => handleSetZoom("focus")}
-                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "focus"
                     ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
                     : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
@@ -257,11 +257,11 @@ export default function PointCircularGallery({
             </div>
           )}
 
-          <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-[11px]">
+          <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-xs">
             <button
               type="button"
               onClick={() => setViewMode("circular")}
-              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
                 viewMode === "circular"
                   ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
                   : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
@@ -272,7 +272,7 @@ export default function PointCircularGallery({
             <button
               type="button"
               onClick={() => setViewMode("list")}
-              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
                 viewMode === "list"
                   ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
                   : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
@@ -429,8 +429,8 @@ export default function PointCircularGallery({
 
                     {/* Epistemic Rationale on Active Card */}
                     {isCenter && (getItemWhyClassified ? getItemWhyClassified(idx, item) : whyClassified) && (
-                      <div className="mt-2.5 mb-1 px-3 py-2 bg-[#F5F1E8] dark:bg-[#1A1815] rounded-lg border border-[#D9D2C3]/70 dark:border-[#38332C] text-[11px] leading-relaxed text-[#5A6275] dark:text-[#A89F91] shrink-0 font-sans">
-                        <span className="font-bold font-mono text-[10px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                      <div className="mt-2.5 mb-1 px-3.5 py-2.5 bg-[#F5F1E8] dark:bg-[#1A1815] rounded-xl border border-[#D9D2C3]/70 dark:border-[#38332C] text-xs sm:text-[13px] leading-relaxed text-[#4f4b40] dark:text-[#A89F91] shrink-0 font-sans">
+                        <span className="font-bold font-mono text-xs text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block mb-0.5">
                           Why {title}?
                         </span>
                         <span>{getItemWhyClassified ? getItemWhyClassified(idx, item) : whyClassified}</span>
@@ -444,17 +444,17 @@ export default function PointCircularGallery({
                           value={item}
                           onChange={(e) => onUpdateItem(idx, e.target.value)}
                           placeholder={`Describe this ${title.toLowerCase().slice(0, -1)} in detail...`}
-                          className="w-full h-full text-base sm:text-base leading-[1.7] text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#8B909C] bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-newsreader font-normal scrollbar-none subpixel-antialiased select-text"
+                          className="w-full h-full text-[17px] sm:text-[18px] leading-[1.65] text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#8B909C] bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-newsreader font-normal scrollbar-none subpixel-antialiased select-text"
                         />
                       ) : (
-                        <p className="text-base font-newsreader text-[#4f4b40] dark:text-[#A89F91] line-clamp-6 leading-relaxed select-none">
+                        <p className="text-[17px] sm:text-[18px] font-newsreader text-[#4f4b40] dark:text-[#A89F91] line-clamp-6 leading-[1.65] select-none">
                           {item || `Empty ${title.toLowerCase()} point...`}
                         </p>
                       )}
                     </div>
 
                     {/* Footer */}
-                    <div className="pt-2.5 border-t border-[#D9D2C3]/60 dark:border-[#38332C] flex items-center justify-between text-[11px] text-[#5A6275] dark:text-[#A89F91] shrink-0 font-mono">
+                    <div className="pt-2.5 border-t border-[#D9D2C3]/60 dark:border-[#38332C] flex items-center justify-between text-xs text-[#5A6275] dark:text-[#A89F91] shrink-0 font-mono">
                       <span>
                         {stats.words} words • {stats.readTimeText}
                       </span>

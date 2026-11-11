@@ -480,13 +480,13 @@ export default function StructuredFindingsEditor({
       {/* Editorial Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-[#cfc7b2] dark:border-[#38332C]">
         <div>
-          <span className="text-xs font-mono font-bold tracking-wider text-[#7a4e10] dark:text-[#D4AA50] uppercase">
+          <span className="text-xs sm:text-sm font-mono font-bold tracking-wider text-[#7a4e10] dark:text-[#D4AA50] uppercase">
             Stage 02 • Evidence &amp; Cognitive Triage
           </span>
-          <h2 className="font-newsreader text-2xl sm:text-3xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight mt-1">
+          <h2 className="font-newsreader text-2xl sm:text-3xl lg:text-4xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight mt-1">
             The Evidence Orbit
           </h2>
-          <p className="text-sm font-sans text-[#4f4b40] dark:text-[#A89F91] mt-1.5 max-w-2xl leading-relaxed">
+          <p className="text-[15px] sm:text-[16px] font-sans text-[#4f4b40] dark:text-[#A89F91] mt-1.5 max-w-2xl leading-relaxed">
             Review direct facts, untested assumptions, and unspoken friction in a 3D rotating stage before committing to a decision.
           </p>
         </div>
@@ -497,7 +497,7 @@ export default function StructuredFindingsEditor({
               type="button"
               onClick={() => handleSaveAndApprove(!reviewed)}
               disabled={isSaving}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg border transition-colors cursor-pointer ${
+              className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border transition-colors cursor-pointer ${
                 reviewed
                   ? "bg-[#E5DEC9] text-[#7a4e10] border-[#cfc7b2] dark:bg-[#221F1C] dark:text-[#D4AA50] dark:border-[#38332C]"
                   : "bg-[#F4F0E6] text-[#5A6275] border-[#cfc7b2] dark:bg-[#1A1815] dark:text-[#A89F91] dark:border-[#38332C]"
@@ -511,7 +511,7 @@ export default function StructuredFindingsEditor({
             type="button"
             onClick={handleRunAnalysis}
             disabled={isAnalyzing}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-[#F5F1E8] bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer"
           >
             {isAnalyzing && <RotateCw className="w-3.5 h-3.5 animate-spin" />}
             <span>
@@ -527,12 +527,12 @@ export default function StructuredFindingsEditor({
 
       {/* Ingestion Sources Summary */}
       {sourceSummary && sourceSummary !== "None" && (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#E5DEC9]/50 dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#5A6275] dark:text-[#A89F91]">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-[#E5DEC9]/50 dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-xs sm:text-sm text-[#4f4b40] dark:text-[#A89F91]">
           <span>
-            Context Sources: <strong className="font-bold text-[#161E33] dark:text-[#F0EAE1]">{sourceSummary}</strong>
+            Context Sources: <strong className="font-semibold text-[#1d1d1b] dark:text-[#F0EAE1]">{sourceSummary}</strong>
           </span>
           {sourceSummary.includes("Folder Memory") && (
-            <span className="font-mono text-[11px] text-[#7a4e10] dark:text-[#D4AA50]">
+            <span className="font-mono text-xs text-[#7a4e10] dark:text-[#D4AA50] font-bold">
               [Linked to Prior Folder Decisions]
             </span>
           )}
@@ -541,40 +541,40 @@ export default function StructuredFindingsEditor({
 
       {/* Notifications */}
       {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg text-xs text-red-800 dark:text-red-300">
+        <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl text-xs sm:text-sm text-red-800 dark:text-red-300">
           {error}
         </div>
       )}
 
       {successMsg && (
-        <div className="p-3 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#D4AA50]">
+        <div className="p-3.5 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-xs sm:text-sm text-[#1d1d1b] dark:text-[#D4AA50]">
           {successMsg}
         </div>
       )}
 
       {/* COLD START: Signal Readiness Audit (When No Findings Yet) */}
       {!findings && !isAnalyzing && (
-        <div className="p-6 sm:p-8 bg-[#E5DEC9]/50 dark:bg-[#1A1815] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-5">
+        <div className="p-6 sm:p-8 bg-[#E5DEC9]/50 dark:bg-[#1A1815] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-2xl space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-newsreader text-lg sm:text-xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+              <h3 className="font-newsreader text-xl sm:text-2xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight">
                 Input Signal Readiness Audit
               </h3>
-              <p className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+              <p className="text-[14px] sm:text-[15px] font-sans text-[#4f4b40] dark:text-[#A89F91] mt-1">
                 Aggregates your problem statement, meeting scribe, and dossier into 4 structured dimensions.
               </p>
             </div>
-            <span className="text-xs font-mono font-bold px-2.5 py-1 bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-md">
+            <span className="text-xs sm:text-sm font-mono font-bold px-3 py-1.5 bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg">
               Ready to Structure
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-1.5">
               <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Problem Statement
               </span>
-              <p className="font-newsreader text-base text-[#1d1d1b] dark:text-[#F0EAE1] line-clamp-2 leading-relaxed">
+              <p className="font-newsreader text-[17px] sm:text-[18px] font-medium text-[#1d1d1b] dark:text-[#F0EAE1] line-clamp-2 leading-relaxed">
                 {problemStatement ? problemStatement : "Pending framing in Stage 1"}
               </p>
               <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
@@ -582,11 +582,11 @@ export default function StructuredFindingsEditor({
               </span>
             </div>
 
-            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
+            <div className="p-5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-1.5">
               <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Meeting Scribe &amp; Audio
               </span>
-              <p className="font-newsreader text-base text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
+              <p className="font-newsreader text-[17px] sm:text-[18px] font-medium text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
                 {wordCount > 0 ? `${wordCount} words transcribed` : "No voice recording uploaded"}
               </p>
               <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
@@ -594,11 +594,11 @@ export default function StructuredFindingsEditor({
               </span>
             </div>
 
-            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg space-y-1">
+            <div className="p-5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-1.5">
               <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Document Dossier
               </span>
-              <p className="font-newsreader text-base text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
+              <p className="font-newsreader text-[17px] sm:text-[18px] font-medium text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
                 {attachmentCount > 0 ? `${attachmentCount} attachment(s) parsed` : "No attachments parsed"}
               </p>
               <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
@@ -608,13 +608,13 @@ export default function StructuredFindingsEditor({
           </div>
 
           <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#cfc7b2] dark:border-[#38332C]">
-            <p className="text-xs text-[#5A6275] dark:text-[#A89F91]">
+            <p className="text-[14px] text-[#4f4b40] dark:text-[#A89F91]">
               Click below to initiate the 3D rotating evidence carousel.
             </p>
             <button
               type="button"
               onClick={handleRunAnalysis}
-              className="w-full sm:w-auto px-5 py-2 text-xs font-bold text-[#F5F1E8] bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
+              className="w-full sm:w-auto px-6 py-2.5 text-xs sm:text-sm font-semibold text-[#F5F1E8] bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-xl transition-all shadow-sm cursor-pointer"
             >
               Launch Evidence Orbit
             </button>
