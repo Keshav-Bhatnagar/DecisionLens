@@ -206,38 +206,41 @@ export default function AppShell({
               <Menu className="w-4 h-4" />
             </button>
 
-            {/* Breadcrumb Path: Breadcrumb only (Workspaces / Overview) */}
+            {/* Breadcrumb Path: Context-Aware Top Navigation */}
             <nav className="flex items-center gap-2 text-[14px] sm:text-[15px] font-sans text-[#4f4b40] dark:text-[#A89F91] overflow-hidden truncate">
-              <Link
-                href="/dashboard"
-                className="hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors shrink-0 font-medium"
-              >
-                Workspaces
-              </Link>
-
-              {breadcrumbs && breadcrumbs.length > 0 ? (
-                breadcrumbs.map((crumb, idx) => (
-                  <div key={idx} className="flex items-center gap-2 shrink-0 max-w-[280px] truncate">
-                    <ChevronRight className="w-4 h-4 text-[#7B8491] shrink-0" />
-                    {crumb.href ? (
-                      <Link
-                        href={crumb.href}
-                        className="hover:text-[#2B4C8C] dark:hover:text-[#D4AA50] truncate transition-colors text-[#1d1d1b] dark:text-[#F0EAE1] font-medium"
-                      >
-                        {crumb.label}
-                      </Link>
-                    ) : (
-                      <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold truncate">
-                        {crumb.label}
-                      </span>
-                    )}
-                  </div>
-                ))
+              {pathname === "/portfolio" || pathname === "/overview" ? (
+                <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold">
+                  Decision Portfolio
+                </span>
               ) : (
-                <div className="flex items-center gap-2">
-                  <ChevronRight className="w-4 h-4 text-[#7B8491] shrink-0" />
-                  <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold">Overview</span>
-                </div>
+                <>
+                  <Link
+                    href="/dashboard"
+                    className={`hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors shrink-0 ${
+                      !breadcrumbs || breadcrumbs.length === 0 ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold" : "font-medium"
+                    }`}
+                  >
+                    Workspaces
+                  </Link>
+
+                  {breadcrumbs && breadcrumbs.length > 0 && breadcrumbs.map((crumb, idx) => (
+                    <div key={idx} className="flex items-center gap-2 shrink-0 max-w-[280px] truncate">
+                      <ChevronRight className="w-4 h-4 text-[#7B8491] shrink-0" />
+                      {crumb.href ? (
+                        <Link
+                          href={crumb.href}
+                          className="hover:text-[#2B4C8C] dark:hover:text-[#D4AA50] truncate transition-colors text-[#1d1d1b] dark:text-[#F0EAE1] font-medium"
+                        >
+                          {crumb.label}
+                        </Link>
+                      ) : (
+                        <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold truncate">
+                          {crumb.label}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </>
               )}
             </nav>
           </div>

@@ -24,6 +24,7 @@ import {
   Compass,
   Video,
   Sparkles,
+  Briefcase,
 } from "lucide-react";
 import {
   getFolders,
@@ -340,22 +341,22 @@ export default function Sidebar({
 
         {/* Navigation Sections */}
         <div className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
-          {/* Main Nav (Overview / Workspaces / Executive Folio) */}
+          {/* Main Nav (Portfolio / Workspaces / Executive Folio) */}
           <nav className="space-y-1">
             <Link
-              href="/overview"
+              href="/portfolio"
               onClick={closeMobile}
               className={`flex items-center ${isExpanded ? "gap-3 px-3" : "justify-center px-0"} py-2.5 rounded-xl text-[15px] font-medium transition-all ${
-                pathname === "/overview"
+                pathname === "/portfolio" || pathname === "/overview"
                   ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/15 border-l-3 border-l-[#7a4e10] dark:border-l-[#D4AA50] shadow-2xs"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40"
               }`}
-              title="Overview & Executive Briefing"
+              title="Decision Portfolio & Executive Briefing"
             >
-              <Sparkles className={`w-[18px] h-[18px] shrink-0 ${
-                pathname === "/overview" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#7B8491]"
+              <Briefcase className={`w-[18px] h-[18px] shrink-0 ${
+                pathname === "/portfolio" || pathname === "/overview" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#7B8491]"
               }`} />
-              {isExpanded && <span>Overview</span>}
+              {isExpanded && <span>Portfolio</span>}
             </Link>
 
             <Link

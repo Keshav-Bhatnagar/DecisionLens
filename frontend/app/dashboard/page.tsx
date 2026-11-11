@@ -217,22 +217,8 @@ export default function DashboardPage() {
     }
   };
 
-  // Helper to resolve decision status
-  const resolveStatus = (d: Decision): "UNDER_SCRUTINY" | "NEEDS_EVIDENCE" | "READY_TO_DECIDE" | "DECIDED" => {
-    const rawGaps = d.gaps as { gaps?: unknown[] } | undefined;
-    const gapCount = Array.isArray(rawGaps?.gaps) ? rawGaps.gaps.length : 0;
-    if (d.status === "decided") return "DECIDED";
-    if (d.status === "evaluating" && gapCount > 0) return "NEEDS_EVIDENCE";
-    if (d.status === "evaluating") return "UNDER_SCRUTINY";
-    if (d.status === "ready") return "READY_TO_DECIDE";
-    return "UNDER_SCRUTINY";
-  };
-
   // Metrics
   const activeFoldersCount = folders.length;
-  const activeDecisionsCount = decisions.length;
-  const underScrutinyCount = decisions.filter((d) => resolveStatus(d) === "UNDER_SCRUTINY").length;
-  const decidedCount = decisions.filter((d) => resolveStatus(d) === "DECIDED").length;
 
   // Filtered workspaces
   const filteredFolders = useMemo(() => {
@@ -276,9 +262,14 @@ export default function DashboardPage() {
         <div className="space-y-8 sm:space-y-10 font-sans text-[#1d1d1b] dark:text-[#F0EAE1]">
           {/* HEADER: Workspaces */}
           <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4 transition-colors">
-            <h1 className="font-newsreader text-2xl sm:text-3xl font-medium tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
-              Workspaces
-            </h1>
+            <div>
+              <h1 className="font-newsreader text-2xl sm:text-3xl font-medium tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
+                Workspaces
+              </h1>
+              <p className="text-xs sm:text-sm text-[#4f4b40] dark:text-[#A89F91] mt-0.5 font-sans">
+                Manage your strategic initiatives and decision domains.
+              </p>
+            </div>
 
             <button
               type="button"
@@ -289,47 +280,6 @@ export default function DashboardPage() {
               <span>New Workspace</span>
             </button>
           </div>
-
-          {/* STATS ROW: Editorial Ledger Box */}
-          {activeFoldersCount > 0 && (
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-xl py-4 px-5 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#cfc7b2] dark:divide-[#38332C] transition-colors shadow-2xs">
-              <div className="py-1.5 sm:py-0 sm:px-4 first:pl-0">
-                <div className="font-newsreader text-2xl sm:text-3xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight">
-                  {activeFoldersCount}
-                </div>
-                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
-                  Workspaces
-                </div>
-              </div>
-
-              <div className="py-1.5 sm:py-0 sm:px-4">
-                <div className="font-newsreader text-2xl sm:text-3xl font-medium text-[#2B4C8C] dark:text-[#D4AA50] leading-tight">
-                  {activeDecisionsCount}
-                </div>
-                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#2B4C8C] dark:text-[#D4AA50] mt-0.5">
-                  Total Decisions
-                </div>
-              </div>
-
-              <div className="py-1.5 sm:py-0 sm:px-4">
-                <div className="font-newsreader text-2xl sm:text-3xl font-medium text-[#7a4e10] dark:text-[#e5a93c] leading-tight">
-                  {underScrutinyCount}
-                </div>
-                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#e5a93c] mt-0.5">
-                  Under Scrutiny
-                </div>
-              </div>
-
-              <div className="py-1.5 sm:py-0 sm:px-4 last:pr-0">
-                <div className="font-newsreader text-2xl sm:text-3xl font-medium text-[#1B4332] dark:text-[#52b788] leading-tight">
-                  {decidedCount}
-                </div>
-                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#1B4332] dark:text-[#52b788] mt-0.5">
-                  Decided
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* SEARCH & WORKSPACES CATALOG */}
           {activeFoldersCount > 0 ? (
