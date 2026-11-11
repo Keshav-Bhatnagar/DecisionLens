@@ -394,7 +394,7 @@ export default function EditorialLandingPage() {
           </p>
 
           {/* Primary & Secondary CTAs */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-10">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
             <Link
               href={CTA_ROUTE}
               className={`px-6 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase font-bold transition-colors text-center inline-block ${
@@ -415,6 +415,20 @@ export default function EditorialLandingPage() {
             >
               See How It Works ↓
             </a>
+          </div>
+
+          {/* Discreet Synthetic Benchmark Demo Action */}
+          <div className="mb-10 text-[11px] font-courier">
+            <Link
+              href="/demo"
+              className={`inline-flex items-center gap-1.5 underline underline-offset-4 transition-colors ${
+                theme === "dark"
+                  ? "text-[#A89F91] hover:text-[#D4AA50]"
+                  : "text-[#596474] hover:text-[#172033]"
+              }`}
+            >
+              <span>Or inspect a benchmark demo dossier (no login required) →</span>
+            </Link>
           </div>
 
           {/* Process Index Strip */}
