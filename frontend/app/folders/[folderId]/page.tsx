@@ -641,12 +641,12 @@ export default function FolderDetailPage({
           </div>
         ) : folder ? (
           <>
-            {/* A) MASTHEAD (Full-bleed typographic header with faint watermark) */}
+            {/* A) MASTHEAD (Full-bleed typographic header with bold architectural DECISIONS watermark) */}
             <div className="relative overflow-hidden pt-2 pb-6 border-b border-[#cfc7b2] dark:border-[#38332C]">
-              {/* Giant faint DECISIONS watermark behind right side */}
+              {/* Grand architectural DECISIONS watermark (Artistic editorial statement) */}
               <div
                 aria-hidden="true"
-                className="absolute right-0 bottom-[-10px] text-[#1d1d1b]/[0.03] dark:text-[#F0EAE1]/[0.03] font-newsreader font-bold text-[60px] sm:text-[80px] lg:text-[100px] leading-none select-none pointer-events-none -z-0 tracking-tight"
+                className="absolute right-[-10px] sm:right-[-30px] lg:right-[-50px] bottom-[-20px] sm:bottom-[-35px] lg:bottom-[-50px] text-[#1d1d1b]/[0.055] dark:text-[#F0EAE1]/[0.055] font-newsreader font-bold text-[120px] sm:text-[170px] lg:text-[220px] xl:text-[260px] leading-none select-none pointer-events-none -z-0 tracking-tight whitespace-nowrap transition-colors"
               >
                 DECISIONS
               </div>
