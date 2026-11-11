@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
@@ -33,14 +33,24 @@ function ActionParamWatcher({
   onOpenChallenge: () => void;
 }) {
   const searchParams = useSearchParams();
+  const handledKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!searchParams) return;
     const action = searchParams.get("action");
     const challenge = searchParams.get("challenge");
+    if (!action && !challenge) {
+      handledKeyRef.current = null;
+      return;
+    }
+    const key = `${action}-${challenge}`;
+    if (handledKeyRef.current === key) return;
+
     if (action === "new-workspace") {
+      handledKeyRef.current = key;
       onOpenNewFolder();
     } else if (action === "new" || challenge === "true") {
+      handledKeyRef.current = key;
       onOpenChallenge();
     }
   }, [searchParams, onOpenNewFolder, onOpenChallenge]);
@@ -74,6 +84,42 @@ export default function DashboardPage() {
   const [challengeTitle, setChallengeTitle] = useState("");
   const [challengeFolderId, setChallengeFolderId] = useState<number | "">("");
   const [challengeSubmitting, setChallengeSubmitting] = useState(false);
+
+  const handleCloseCreateFolderModal = useCallback(() => {
+    setShowCreateFolderModal(false);
+    setError(null);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("action") === "new-workspace") {
+        url.searchParams.delete("action");
+        window.history.replaceState(null, "", url.pathname + (url.search ? url.search : ""));
+      }
+    }
+  }, []);
+
+  const handleCloseChallengeModal = useCallback(() => {
+    setShowChallengeModal(false);
+    setError(null);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("action") || url.searchParams.has("challenge")) {
+        url.searchParams.delete("action");
+        url.searchParams.delete("challenge");
+        window.history.replaceState(null, "", url.pathname + (url.search ? url.search : ""));
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (showChallengeModal) handleCloseChallengeModal();
+        if (showCreateFolderModal) handleCloseCreateFolderModal();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showChallengeModal, showCreateFolderModal, handleCloseChallengeModal, handleCloseCreateFolderModal]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -423,30 +469,37 @@ export default function DashboardPage() {
       {/* MODAL: CREATE WORKSPACE */}
       {showCreateFolderModal && (
         <ModalPortal>
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier">
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
+          <div
+            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-sans animate-in fade-in duration-150"
+            onClick={handleCloseCreateFolderModal}
+          >
+            <div
+              className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-2xl border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
-                <h3 className="font-newsreader text-[22px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                <h3 className="font-newsreader text-2xl font-semibold text-[#1d1d1b] dark:text-[#F0EAE1]">
                   New Workspace
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setShowCreateFolderModal(false)}
-                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
+                  onClick={handleCloseCreateFolderModal}
+                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1.5 rounded-lg hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] transition-colors cursor-pointer"
+                  aria-label="Close modal"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               {error && (
-                <div className="mb-3 p-2.5 rounded-sm bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-courier">
+                <div className="mb-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs">
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleCreateFolder} className="space-y-4 font-courier text-xs sm:text-[13px]">
+              <form onSubmit={handleCreateFolder} className="space-y-4 font-sans text-sm">
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
                     Workspace name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -455,37 +508,37 @@ export default function DashboardPage() {
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="e.g. Infrastructure, Leadership, Product Strategy"
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                    className="w-full px-3.5 py-2.5 text-sm bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
                     Decision Domain / Focus
                   </label>
                   <select
                     value={newFolderDomain}
                     onChange={(e) => setNewFolderDomain(e.target.value)}
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-sm bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors cursor-pointer"
                   >
                     <option value="AUTO">⚡ Auto-Detect from Content (Recommended)</option>
-                    <option value="SOFTWARE">💻 Software Engineering & Cloud Infrastructure</option>
-                    <option value="BUSINESS">🏢 Enterprise Strategy & Corporate Deliberation</option>
-                    <option value="PRODUCT">🚀 Product Strategy & Growth Experiments</option>
-                    <option value="FINANCE">📈 Finance, Capital Allocation & Treasury</option>
-                    <option value="REAL_ESTATE">🏛️ Real Estate, Land & Property Acquisition</option>
-                    <option value="CAREER">👔 Executive Career & Leadership Hiring</option>
-                    <option value="OPERATIONS">📦 Operations, Logistics & Supply Chain</option>
-                    <option value="EDUCATION">🎓 Education & Academic Research</option>
-                    <option value="PERSONAL">🌱 Personal Life & Habit Changes</option>
+                    <option value="SOFTWARE">💻 Software Engineering &amp; Cloud Infrastructure</option>
+                    <option value="BUSINESS">🏢 Enterprise Strategy &amp; Corporate Deliberation</option>
+                    <option value="PRODUCT">🚀 Product Strategy &amp; Growth Experiments</option>
+                    <option value="FINANCE">📈 Finance, Capital Allocation &amp; Treasury</option>
+                    <option value="REAL_ESTATE">🏛️ Real Estate, Land &amp; Property Acquisition</option>
+                    <option value="CAREER">👔 Executive Career &amp; Leadership Hiring</option>
+                    <option value="OPERATIONS">📦 Operations, Logistics &amp; Supply Chain</option>
+                    <option value="EDUCATION">🎓 Education &amp; Academic Research</option>
+                    <option value="PERSONAL">🌱 Personal Life &amp; Habit Changes</option>
                   </select>
-                  <p className="text-[11px] text-[#7B8491] dark:text-[#A89F91] mt-1 font-courier">
+                  <p className="text-xs text-[#7B8491] dark:text-[#A89F91] mt-1.5 font-sans">
                     Pre-calibrates evaluation criteria and prevents technical jargon ambiguity across deliberations.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
                     Description (optional)
                   </label>
                   <textarea
@@ -493,22 +546,22 @@ export default function DashboardPage() {
                     value={newFolderDesc}
                     onChange={(e) => setNewFolderDesc(e.target.value)}
                     placeholder="Brief description (optional)..."
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                    className="w-full px-3.5 py-2.5 text-sm bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors"
                   />
                 </div>
 
-                <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#cfc7b2] dark:border-[#38332C]">
+                <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-[#cfc7b2] dark:border-[#38332C]">
                   <button
                     type="button"
-                    onClick={() => setShowCreateFolderModal(false)}
-                    className="px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
+                    onClick={handleCloseCreateFolderModal}
+                    className="px-4 py-2 text-sm font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-xl transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={folderSubmitting}
-                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[12px] font-bold font-courier uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50"
+                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-sm font-semibold rounded-xl transition-all disabled:opacity-50 shadow-sm cursor-pointer"
                   >
                     {folderSubmitting ? "Creating..." : "Create workspace"}
                   </button>
@@ -522,41 +575,48 @@ export default function DashboardPage() {
       {/* MODAL: CHALLENGE A DECISION (Target workspace selector) */}
       {showChallengeModal && (
         <ModalPortal>
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier">
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
+          <div
+            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-sans animate-in fade-in duration-150"
+            onClick={handleCloseChallengeModal}
+          >
+            <div
+              className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-2xl border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
                 <div>
-                  <span className="font-courier text-[10px] tracking-[0.14em] font-bold text-[#2B4C8C] dark:text-[#D4AA50] uppercase block">
+                  <span className="font-mono text-xs tracking-wider font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase block">
                     NEW DECISION SCRUTINY
                   </span>
-                  <h3 className="font-newsreader text-[22px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  <h3 className="font-newsreader text-2xl font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] mt-0.5">
                     Challenge a decision
                   </h3>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowChallengeModal(false)}
-                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
+                  onClick={handleCloseChallengeModal}
+                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1.5 rounded-lg hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] transition-colors cursor-pointer"
+                  aria-label="Close modal"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
               {error && (
-                <div className="mb-3 p-2.5 rounded-sm bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-courier">
+                <div className="mb-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs">
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleChallengeDecision} className="space-y-4 font-courier text-xs sm:text-[13px]">
+              <form onSubmit={handleChallengeDecision} className="space-y-4 font-sans text-sm">
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
                     Select Target Workspace <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={challengeFolderId}
                     onChange={(e) => setChallengeFolderId(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors font-courier"
+                    className="w-full px-3.5 py-2.5 text-sm bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors"
                   >
                     {folders.map((f) => (
                       <option key={f.id} value={f.id}>
@@ -570,7 +630,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
                     What decision are you weighing? <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -580,22 +640,22 @@ export default function DashboardPage() {
                     value={challengeTitle}
                     onChange={(e) => setChallengeTitle(e.target.value)}
                     placeholder="e.g. Choose between Kubernetes vs Cloud Run for multi-region scale"
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors font-courier"
+                    className="w-full px-3.5 py-2.5 text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
                   />
                 </div>
 
-                <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#cfc7b2] dark:border-[#38332C]">
+                <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-[#cfc7b2] dark:border-[#38332C]">
                   <button
                     type="button"
-                    onClick={() => setShowChallengeModal(false)}
-                    className="px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
+                    onClick={handleCloseChallengeModal}
+                    className="px-4 py-2 text-sm font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-xl transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={challengeSubmitting}
-                    className="px-5 py-2.5 text-[12px] font-bold uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50 font-courier bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64]"
+                    className="px-5 py-2.5 text-sm font-semibold rounded-xl transition-all disabled:opacity-50 bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] shadow-sm cursor-pointer"
                   >
                     {challengeSubmitting ? "Starting Scrutiny..." : "Challenge Decision →"}
                   </button>
