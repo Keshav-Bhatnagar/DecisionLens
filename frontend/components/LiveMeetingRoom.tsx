@@ -2,6 +2,7 @@
 
 import WorkspaceMembersPill from "@/components/WorkspaceMembersPill";
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import {
   Video,
@@ -62,8 +63,6 @@ export default function LiveMeetingRoom({
   recordType = "decision",
 }: LiveMeetingRoomProps) {
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
-  const [callProvider, setCallProvider] = useState<"custom" | "jitsi">("custom");
-  const [customMeetingUrl, setCustomMeetingUrl] = useState("");
   const [isJitsiLaunched, setIsJitsiLaunched] = useState(false);
   const [category, setCategory] = useState<"risk" | "constraint" | "alternative" | "criteria">("risk");
   const [noteContent, setNoteContent] = useState("");
@@ -176,7 +175,7 @@ export default function LiveMeetingRoom({
   const emailParam = currentUser?.email
     ? `&userInfo.email=${encodeURIComponent(currentUser.email)}`
     : "";
-  const jitsiUrl = `https://meet.jit.si/${roomName}#config.startWithAudioMuted=false&config.prejoinPageEnabled=false&config.disableDeepLinking=true${displayNameParam}${emailParam}`;
+  const jitsiUrl = `https://meet.jit.si/${roomName}#config.startWithAudioMuted=false&config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.enableClosePage=false${displayNameParam}${emailParam}`;
 
   const [speedWeight] = useState(40);
   const [costWeight] = useState(20);
@@ -442,6 +441,22 @@ export default function LiveMeetingRoom({
     }
   };
 
+  // Auto-intercept Jitsi hangup events (videoConferenceLeft, readyToClose) to save and redirect
+  useEffect(() => {
+    const handleJitsiMessage = (event: MessageEvent) => {
+      if (typeof event.data === "object" && event.data !== null) {
+        if (
+          event.data.eventName === "readyToClose" ||
+          event.data.eventName === "videoConferenceLeft"
+        ) {
+          handleFinishCall();
+        }
+      }
+    };
+    window.addEventListener("message", handleJitsiMessage);
+    return () => window.removeEventListener("message", handleJitsiMessage);
+  }, [handleFinishCall]);
+
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -665,31 +680,17 @@ export default function LiveMeetingRoom({
         <div className="flex items-center gap-2.5 flex-wrap font-courier">
           <WorkspaceMembersPill decisionId={decisionId} currentUserEmail={currentUser?.email} />
 
-          {/* Mode Switcher */}
-          <div className="bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] flex text-xs font-bold uppercase tracking-wider rounded-none">
-            <button
-              type="button"
-              onClick={() => setCallProvider("custom")}
-              className={`px-3 py-1.5 transition-colors cursor-pointer rounded-none ${
-                callProvider === "custom"
-                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1]"
-              }`}
-            >
-              Google Meet / Zoom
-            </button>
-            <button
-              type="button"
-              onClick={() => setCallProvider("jitsi")}
-              className={`px-3 py-1.5 transition-colors cursor-pointer rounded-none ${
-                callProvider === "jitsi"
-                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1]"
-              }`}
-            >
-              In-App Video Room
-            </button>
-          </div>
+          {/* Dedicated Standalone Chamber Button */}
+          <Link
+            href={`/decisions/${decisionId}/meeting`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3.5 py-2 rounded-none text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+            title="Open video meeting room with Silent Stakeholder Scribe in a dedicated standalone window"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span>Dedicated Tab (With Scribe)</span>
+          </Link>
 
           {/* Company Meeting Takeaways Trigger */}
           <button
@@ -725,182 +726,145 @@ export default function LiveMeetingRoom({
 
       {/* Main Studio View: True Side-by-Side Cockpit (Left = Call, Right = Scribe) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 font-courier items-stretch">
-        {/* Left Column: Call Connection, In-App Video or Google Meet Audio Sync (7 cols lg / 8 cols xl) */}
+        {/* Left Column: Native Video Chamber + Tab Audio Sync */}
         <div className="lg:col-span-7 xl:col-span-7 space-y-4 flex flex-col justify-between">
-          {callProvider === "jitsi" ? (
-            isJitsiLaunched ? (
-              /* Active In-Page Jitsi Video Frame (Side-by-side with scribe) */
-              <div className="bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] p-3 rounded-none flex-1 flex flex-col justify-between space-y-3">
-                <div className="flex items-center justify-between pb-1">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2">
-                    <Video className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
-                    Video Chamber · Room: {roomName}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <a
-                      href={jitsiUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase inline-flex items-center gap-1 hover:underline"
-                    >
-                      <Maximize2 className="w-3 h-3" />
-                      <span>Dedicated Tab</span>
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => setIsJitsiLaunched(false)}
-                      className="text-[11px] text-rose-700 dark:text-rose-400 font-bold uppercase hover:underline cursor-pointer"
-                    >
-                      Close Chamber
-                    </button>
-                  </div>
-                </div>
-
-                {/* Video canvas fills available space side-by-side */}
-                <div className="w-full flex-1 aspect-video min-h-[460px] lg:min-h-[520px] bg-black rounded-none overflow-hidden border border-[#cfc7b2] dark:border-[#38332C]">
-                  <iframe
-                    src={jitsiUrl}
-                    allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"
-                    className="w-full h-full border-0"
-                    title="Live Decision Video Conference"
-                  />
-                </div>
-              </div>
-            ) : (
-              /* Jitsi Launch Card */
-              <div className="p-6 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-center space-y-4 flex-1 flex flex-col justify-center items-center">
-                <div className="w-12 h-12 rounded-none bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] flex items-center justify-center mx-auto shadow-2xs">
-                  <Video className="w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-newsreader text-xl text-[#1d1d1b] dark:text-[#F0EAE1]">
-                    Private Video Room: {roomName}
-                  </h4>
-                  <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] max-w-md mx-auto">
-                    Launch directly beside your Silent Scribe. Both remain in the same window at 100% scale so you never lose conversational context.
-                  </p>
-                </div>
-                <div className="flex items-center justify-center gap-3 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsJitsiLaunched(true)}
-                    className="px-5 py-2.5 rounded-none bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] text-[#F4F0E6] font-bold text-xs uppercase tracking-wider shadow-2xs transition-colors cursor-pointer"
-                  >
-                    Launch Side-by-Side Video
-                  </button>
-                  <a
-                    href={jitsiUrl}
+          {isJitsiLaunched ? (
+            /* Active In-Page Jitsi Video Frame (Side-by-side with scribe) */
+            <div className="bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] p-3 rounded-none flex-1 flex flex-col justify-between space-y-3">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2">
+                  <Video className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
+                  Video Chamber · Room: {roomName}
+                </span>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/decisions/${decisionId}/meeting`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-5 py-2.5 rounded-none bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] font-bold text-xs uppercase tracking-wider border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                    className="text-[11px] text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase inline-flex items-center gap-1 hover:underline"
+                    title="Open full meeting room with scribe in new standalone tab"
                   >
-                    <span>Open Standalone Tab</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                    <Maximize2 className="w-3 h-3" />
+                    <span>Dedicated Tab</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setIsJitsiLaunched(false)}
+                    className="text-[11px] text-rose-700 dark:text-rose-400 font-bold uppercase hover:underline cursor-pointer"
+                  >
+                    Close Chamber
+                  </button>
                 </div>
               </div>
-            )
+
+              {/* Video canvas fills available space side-by-side */}
+              <div className="w-full flex-1 aspect-video min-h-[460px] lg:min-h-[520px] bg-black rounded-none overflow-hidden border border-[#cfc7b2] dark:border-[#38332C]">
+                <iframe
+                  src={jitsiUrl}
+                  allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"
+                  className="w-full h-full border-0"
+                  title="Live Decision Video Conference"
+                />
+              </div>
+            </div>
           ) : (
-            /* Google Meet / Zoom Tab Audio Sync */
-            <div className="p-5 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-4 flex-1 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2">
-                    <Video className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
-                    Connect Active Google Meet or Zoom Call
-                  </span>
-                  <p className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
-                    Paste meeting URL to launch, or use <strong>Float Scribe on Call</strong> to keep your private caveat scratchpad floating over your call window!
-                  </p>
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={customMeetingUrl}
-                    onChange={(e) => setCustomMeetingUrl(e.target.value)}
-                    placeholder="https://meet.google.com/abc-defg-hij or Zoom link"
-                    className="flex-1 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] rounded-none px-3.5 py-2 text-xs focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
-                  />
-                  {customMeetingUrl && (
-                    <a
-                      href={customMeetingUrl.startsWith("http") ? customMeetingUrl : `https://${customMeetingUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-none bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] text-[#F4F0E6] font-bold text-xs uppercase tracking-wider inline-flex items-center gap-1.5 shadow-2xs transition-colors"
-                    >
-                      <span>Join Call</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                </div>
-
-                {/* Tab Audio Sync Trigger */}
-                <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <Radio className={`w-4 h-4 ${isCapturingAudio ? "text-rose-600 animate-pulse" : "text-[#7a4e10] dark:text-[#D4AA50]"}`} />
-                      <div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] block">
-                          Tab Audio Sync
-                        </span>
-                        <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
-                          {isCapturingAudio
-                            ? `Recording dialogue: ${formatTimer(captureDuration)}`
-                            : "Captures call audio directly without meeting bot invites"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {isCapturingAudio ? (
-                      <button
-                        type="button"
-                        onClick={stopLiveAudioCapture}
-                        className="px-4 py-2 rounded-none bg-rose-800 hover:bg-rose-900 text-[#F4F0E6] font-bold text-xs uppercase tracking-wider shadow-2xs transition-colors cursor-pointer"
-                      >
-                        Stop Capture
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={startLiveAudioCapture}
-                        className="px-4 py-2 rounded-none bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] text-[#F4F0E6] font-bold text-xs uppercase tracking-wider shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
-                      >
-                        <Mic className="w-3.5 h-3.5" />
-                        <span>Start Tab Audio Sync</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {captureError && (
-                    <div className="p-2.5 bg-red-950/10 dark:bg-red-950/40 text-red-800 dark:text-red-300 rounded-none text-xs flex items-center gap-2 border border-red-400 dark:border-red-900">
-                      <AlertTriangle className="w-4 h-4 shrink-0" />
-                      <span>{captureError}</span>
-                    </div>
-                  )}
-
-                  {/* Live Speech Preview */}
-                  <div className="p-3 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs min-h-[60px] max-h-[120px] overflow-y-auto">
-                    {liveCapturedText ? (
-                      <p className="text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed font-mono text-[11px]">
-                        {liveCapturedText}
-                        {liveInterimText && <span className="opacity-60 italic"> {liveInterimText}</span>}
-                      </p>
-                    ) : isCapturingAudio ? (
-                      <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase tracking-wider italic flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                        Listening to meeting dialogue...
-                      </span>
-                    ) : (
-                      <span className="text-[#4f4b40] dark:text-[#A89F91] italic">
-                        Speech transcript will stream here once Tab Audio Sync starts.
-                      </span>
-                    )}
-                  </div>
-                </div>
+            /* Jitsi Launch Card */
+            <div className="p-6 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-center space-y-4 flex-1 flex flex-col justify-center items-center">
+              <div className="w-12 h-12 rounded-none bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] flex items-center justify-center mx-auto shadow-2xs">
+                <Video className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-newsreader text-xl text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  Private Video Room: {roomName}
+                </h4>
+                <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] max-w-md mx-auto">
+                  Encrypted, zero-install boardroom video room. Launch directly beside your Silent Scribe or open in a standalone tab with full scribe sync.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-1 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setIsJitsiLaunched(true)}
+                  className="px-5 py-2.5 rounded-none bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] text-[#F4F0E6] font-bold text-xs uppercase tracking-wider shadow-2xs transition-colors cursor-pointer"
+                >
+                  Launch Side-by-Side Video
+                </button>
+                <Link
+                  href={`/decisions/${decisionId}/meeting`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 rounded-none bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] font-bold text-xs uppercase tracking-wider border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <span>Open Standalone Tab (With Scribe)</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
               </div>
             </div>
           )}
+
+          {/* Integrated Tab Audio Sync & Live Speech Preview */}
+          <div className="p-3.5 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Radio className={`w-3.5 h-3.5 ${isCapturingAudio ? "text-rose-600 animate-pulse" : "text-[#7a4e10] dark:text-[#D4AA50]"}`} />
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] block">
+                    Live Tab Audio Sync
+                  </span>
+                  <span className="text-[10px] text-[#4f4b40] dark:text-[#A89F91]">
+                    {isCapturingAudio
+                      ? `Recording dialogue: ${formatTimer(captureDuration)}`
+                      : "Captures call audio directly without meeting bot invites"}
+                  </span>
+                </div>
+              </div>
+
+              {isCapturingAudio ? (
+                <button
+                  type="button"
+                  onClick={stopLiveAudioCapture}
+                  className="px-3 py-1.5 rounded-none bg-rose-800 hover:bg-rose-900 text-[#F4F0E6] font-bold text-[11px] uppercase tracking-wider shadow-2xs transition-colors cursor-pointer"
+                >
+                  Stop Audio Sync
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startLiveAudioCapture}
+                  className="px-3 py-1.5 rounded-none bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] font-bold text-[11px] uppercase tracking-wider border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Mic className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                  <span>Start Audio Sync</span>
+                </button>
+              )}
+            </div>
+
+            {captureError && (
+              <div className="p-2 bg-red-950/10 dark:bg-red-950/40 text-red-800 dark:text-red-300 rounded-none text-[11px] flex items-center gap-2 border border-red-400 dark:border-red-900">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>{captureError}</span>
+              </div>
+            )}
+
+            {/* Live Speech Preview */}
+            <div className="p-2.5 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs min-h-[48px] max-h-[96px] overflow-y-auto">
+              {liveCapturedText ? (
+                <p className="text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed font-mono text-[11px]">
+                  {liveCapturedText}
+                  {liveInterimText && <span className="opacity-60 italic"> {liveInterimText}</span>}
+                </p>
+              ) : isCapturingAudio ? (
+                <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase tracking-wider italic flex items-center gap-2 text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                  Listening to meeting dialogue...
+                </span>
+              ) : (
+                <span className="text-[#4f4b40] dark:text-[#A89F91] italic text-[11px]">
+                  Speech transcript will stream here once Audio Sync is started.
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Right Column: Silent Scribe & Role System (Permanently Docked Side-by-Side, 5 cols lg / 5 cols xl) */}
