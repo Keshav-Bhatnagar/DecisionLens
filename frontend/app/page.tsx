@@ -327,32 +327,32 @@ export default function EditorialLandingPage() {
 
           {/* Headline */}
           <h1
-            className={`font-newsreader text-4xl sm:text-6xl lg:text-7xl font-normal tracking-[-0.02em] leading-[1.08] mb-6 ${
+            className={`font-newsreader text-4xl sm:text-6xl lg:text-7xl font-normal tracking-[-0.02em] leading-[1.05] mb-6 ${
               theme === "dark" ? "text-[#F0EAE1]" : "text-[#172033]"
             }`}
           >
-            Kill bad architectural bets{" "}
+            Kill costly blind spots{" "}
             <span
               className={`italic font-normal block sm:inline ${
-                theme === "dark" ? "text-[#D4AA50]" : "text-[#315C8A]"
+                theme === "dark" ? "text-[#D4AA50]" : "text-[#172033]"
               }`}
             >
-              before they hit production.
+              before you commit capital, code, or headcount.
             </span>
           </h1>
 
           {/* Supporting Copy */}
           <p
-            className={`font-courier text-xs sm:text-sm leading-[1.9] max-w-2xl mb-6 ${
+            className={`font-courier text-xs sm:text-sm leading-[1.9] max-w-2xl mb-7 ${
               theme === "dark" ? "text-[#A89F91]" : "text-[#596474]"
             }`}
           >
-            Turn messy engineering debates and meeting transcripts into auditable Architectural Decision Records (ADRs).
-            Expose hidden single points of failure, calculate real cloud egress traps, and stress-test trade-offs before committing engineering budget.
+            DecisionLens puts contentious boardroom debates, hiring dilemmas, and architectural bets under rigorous scrutiny.
+            Expose unvetted assumptions, calculate hidden sunk costs, and align leadership with auditable Decision Records (ADRs).
           </p>
 
-          {/* Primary & Secondary CTAs + Instant Demo Trigger */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6">
+          {/* Primary & Secondary CTAs */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-7">
             <Link
               href={CTA_ROUTE}
               className={`px-7 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase font-bold transition-all text-center inline-flex items-center justify-center gap-2 shadow-sm ${
@@ -375,96 +375,129 @@ export default function EditorialLandingPage() {
             </a>
           </div>
 
-          {/* Trust & Enterprise Assurance Strip */}
+          {/* Trust & Enterprise Assurance Strip (Monochrome Industrial Minimal) */}
           <div
-            className={`flex flex-wrap items-center gap-y-2 gap-x-4 py-2.5 px-3.5 rounded-lg border text-[11px] font-courier mb-8 ${
+            className={`flex flex-wrap items-center gap-y-2 gap-x-4 py-2 px-3.5 rounded border text-[11px] font-courier mb-8 ${
               theme === "dark"
-                ? "bg-[#181614]/70 border-[#38332C] text-[#A89F91]"
-                : "bg-[#EDE7D6] border-[#cfc7b2] text-[#4f4b40]"
+                ? "bg-[#181614] border-[#38332C] text-[#A89F91]"
+                : "bg-[#F5F1E8] border-[#172033]/20 text-[#172033]"
             }`}
           >
-            <span className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              DPDP Act 2023 Compliant
+            <span className="font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+              DPDP ACT 2023 COMPLIANT
             </span>
-            <span className="opacity-40">•</span>
-            <span>🔒 In-Memory Audio Encryption</span>
-            <span className="opacity-40">•</span>
-            <span>⚡ Zero Cloud Audio Training</span>
-            <span className="opacity-40">•</span>
-            <span className="font-bold text-[#172033] dark:text-[#F0EAE1]">
-              SOC-2 Ready Audit Trails
-            </span>
+            <span className="opacity-30">/</span>
+            <span>IN-MEMORY AUDIO ENCRYPTION</span>
+            <span className="opacity-30">/</span>
+            <span>ZERO CLOUD TRAINING</span>
+            <span className="opacity-30">/</span>
+            <span className="font-bold">SOC-2 TYPE II AUDIT READY</span>
           </div>
 
-          {/* Live Decision Scrutiny Preview Card (Above the Fold Proof) */}
+          {/* Interactive Multi-Disciplinary Scrutiny Dossier Card (Bold Cerebras Industrial Style) */}
           <div
-            className={`p-4 sm:p-5 rounded-xl border shadow-lg space-y-3 mb-8 transition-all ${
+            className={`p-5 sm:p-6 rounded-lg border shadow-xl space-y-4 mb-8 transition-all ${
               theme === "dark"
-                ? "bg-[#1C1A17] border-[#38332C]"
-                : "bg-[#F5F1E8] border-[#cfc7b2]"
+                ? "bg-[#181614] border-[#38332C]"
+                : "bg-[#F5F1E8] border-[#172033]"
             }`}
           >
-            <div className="flex items-center justify-between flex-wrap gap-2 text-[10px] font-courier uppercase tracking-wider">
+            {/* Header: Dossier Badge + Domain Tabs */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3.5 font-courier text-xs">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-[#7a4e10] dark:text-[#D4AA50] font-bold border border-amber-500/30">
-                  LIVE REASONING AUDIT SAMPLE
-                </span>
-                <span className="text-[#596474] dark:text-[#A89F91]">
-                  DECISION: MIGRATING REDIS TO DYNAMODB
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="font-bold tracking-widest uppercase text-[#172033] dark:text-[#F0EAE1]">
+                  REASONING AUDIT DOSSIER
                 </span>
               </div>
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-                ✓ 3 COGNITIVE BIASES EXPOSED
-              </span>
+
+              {/* Multi-Domain Interactive Switcher */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+                {[
+                  { id: "cloud", label: "01 ARCHITECTURE" },
+                  { id: "hire", label: "02 TALENT & ORG" },
+                  { id: "launch", label: "03 GTM STRATEGY" },
+                  { id: "offer", label: "04 CAPITAL & M&A" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveCaseTab(tab.id)}
+                    className={`px-2.5 py-1 text-[10px] tracking-wider uppercase font-bold transition-all cursor-pointer rounded-xs ${
+                      activeCaseTab === tab.id
+                        ? theme === "dark"
+                          ? "bg-[#D4AA50] text-[#181614]"
+                          : "bg-[#172033] text-[#F5F1E8]"
+                        : "text-[#596474] dark:text-[#A89F91] hover:text-[#172033] dark:hover:text-[#F0EAE1]"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
+            {/* Central Subject Dilemma */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-courier uppercase tracking-widest text-[#596474] dark:text-[#A89F91] block">
+                DELIBERATION SUBJECT:
+              </span>
+              <p className="font-newsreader text-xl sm:text-2xl font-normal leading-snug text-[#172033] dark:text-[#F0EAE1]">
+                “{currentCase.question}”
+              </p>
+            </div>
+
+            {/* 3 Bold Analytical Scrutiny Panels (Monochrome High Contrast) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              {/* Panel 1: Blindspot / Unvetted Assumption */}
               <div
-                className={`p-2.5 rounded-lg border text-xs font-courier ${
-                  theme === "dark" ? "bg-[#141210] border-[#38332C]" : "bg-[#EDE7D6] border-[#cfc7b2]"
+                className={`p-3.5 rounded border text-xs font-courier space-y-1.5 ${
+                  theme === "dark"
+                    ? "bg-[#141210] border-[#38332C]"
+                    : "bg-[#EDE7D6] border-[#172033]/25"
                 }`}
               >
-                <span className="text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91] block">
-                  FLAGGED TRAP
-                </span>
-                <p className="font-newsreader text-sm font-semibold text-rose-700 dark:text-rose-400 mt-1">
-                  Sunk-Cost Fallacy Detected
-                </p>
-                <p className="text-[11px] opacity-80 mt-0.5">
-                  Overvaluing 3 months spent on custom cache wrappers.
+                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91]">
+                  <span>[01 BLIND SPOT]</span>
+                  <span className="text-rose-600 dark:text-rose-400">UNVETTED</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-[#172033] dark:text-[#F0EAE1]">
+                  {currentCase.flaggedAssumption}
                 </p>
               </div>
 
+              {/* Panel 2: The Socratic Stress-Test */}
               <div
-                className={`p-2.5 rounded-lg border text-xs font-courier ${
-                  theme === "dark" ? "bg-[#141210] border-[#38332C]" : "bg-[#EDE7D6] border-[#cfc7b2]"
+                className={`p-3.5 rounded border text-xs font-courier space-y-1.5 ${
+                  theme === "dark"
+                    ? "bg-[#141210] border-[#38332C]"
+                    : "bg-[#EDE7D6] border-[#172033]/25"
                 }`}
               >
-                <span className="text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91] block">
-                  HIDDEN COGS LEAK
-                </span>
-                <p className="font-newsreader text-sm font-semibold text-amber-700 dark:text-amber-400 mt-1">
-                  ₹18.4L / yr Cross-AZ Egress
-                </p>
-                <p className="text-[11px] opacity-80 mt-0.5">
-                  Multi-region replication will trigger secondary burst charges.
+                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91]">
+                  <span>[02 STRESS TEST]</span>
+                  <span className="text-amber-600 dark:text-amber-400">SOCRATIC</span>
+                </div>
+                <p className="text-[11px] leading-relaxed italic text-[#172033] dark:text-[#F0EAE1]">
+                  “{currentCase.followUpQuestion}”
                 </p>
               </div>
 
+              {/* Panel 3: Evidence & Synthesis */}
               <div
-                className={`p-2.5 rounded-lg border text-xs font-courier ${
-                  theme === "dark" ? "bg-[#141210] border-[#38332C]" : "bg-[#EDE7D6] border-[#cfc7b2]"
+                className={`p-3.5 rounded border text-xs font-courier space-y-1.5 ${
+                  theme === "dark"
+                    ? "bg-[#141210] border-[#38332C]"
+                    : "bg-[#EDE7D6] border-[#172033]/25"
                 }`}
               >
-                <span className="text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91] block">
-                  ADR SYNTHESIS
-                </span>
-                <p className="font-newsreader text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-1">
-                  Maintain Redis Cluster
-                </p>
-                <p className="text-[11px] opacity-80 mt-0.5">
-                  Partition hot key namespaces to solve memory pressure.
+                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-[#596474] dark:text-[#A89F91]">
+                  <span>[03 ADR VERDICT]</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">ACTIONABLE</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-[#172033] dark:text-[#F0EAE1]">
+                  {currentCase.auditDetail}
                 </p>
               </div>
             </div>
