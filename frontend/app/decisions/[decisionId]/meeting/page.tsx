@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef, use } from "react";
+import React, { useState, useEffect, useRef, use, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Mic,
   MicOff,
+  Video,
+  VideoOff,
   Radio,
   Lock,
   Send,
@@ -25,6 +27,9 @@ import {
   Check,
   AlertCircle,
   ExternalLink,
+  Users,
+  Monitor,
+  Share2,
 } from "lucide-react";
 import {
   getDecision,
@@ -89,6 +94,13 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
   },
 };
 
+const RTC_CONFIG: RTCConfiguration = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
+};
+
 export default function StandaloneMeetingPage({
   params,
 }: {
@@ -102,6 +114,9 @@ export default function StandaloneMeetingPage({
   const [decision, setDecision] = useState<Decision | null>(null);
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Chamber Mode: Companion Mode vs In-App Live Call
+  const [chamberMode, setChamberMode] = useState<"companion" | "inapp">("companion");
 
   // Scribe State
   const [category, setCategory] = useState<"risk" | "constraint" | "alternative" | "criteria">("risk");
@@ -120,15 +135,24 @@ export default function StandaloneMeetingPage({
   const [liveInterimText, setLiveInterimText] = useState("");
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
+
+  // Native In-App WebRTC Video Call State
+  const [isInCall, setIsInCall] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [remotePeerConnected, setRemotePeerConnected] = useState(false);
+  const [callPeerCount, setCallPeerCount] = useState(1);
 
   // Takeaways Modal state
   const [showTakeawaysModal, setShowTakeawaysModal] = useState(false);
   const [takeawaysData, setTakeawaysData] = useState<MeetingTakeawaysResponse | null>(null);
   const [isGeneratingTakeaways, setIsGeneratingTakeaways] = useState(false);
 
-  // Audio refs
+  // Audio / WebRTC refs
   const audioStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -137,7 +161,15 @@ export default function StandaloneMeetingPage({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Video refs for in-app call
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+
   const storageKey = `decisionlens_caveats_${decisionId}`;
+  const roomName = `decision-${decisionId}`;
 
   // Fetch Decision and User on mount
   useEffect(() => {
@@ -149,7 +181,6 @@ export default function StandaloneMeetingPage({
       if (!isMounted) return;
       if (dec) {
         setDecision(dec);
-        // Pre-populate transcript if decision already has one
         if (dec.transcript && dec.transcript.trim()) {
           setLiveCapturedText(dec.transcript.trim());
         }
@@ -161,7 +192,6 @@ export default function StandaloneMeetingPage({
       setLoading(false);
     });
 
-    // Load notes from localStorage
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
@@ -184,19 +214,21 @@ export default function StandaloneMeetingPage({
     };
   }, [decisionId, storageKey]);
 
-  // Scroll transcript to bottom when text updates
   useEffect(() => {
     if (transcriptEndRef.current) {
       transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [liveCapturedText, liveInterimText]);
 
-  // Audio cleanup on unmount
+  // Cleanup all media streams on unmount
   useEffect(() => {
     return () => {
       if (captureTimerRef.current) clearInterval(captureTimerRef.current);
       if (audioStreamRef.current) {
         audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         try {
@@ -207,6 +239,12 @@ export default function StandaloneMeetingPage({
         try {
           speechRecognitionRef.current.stop();
         } catch (_) {}
+      }
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+      }
+      if (socketRef.current) {
+        socketRef.current.close();
       }
     };
   }, []);
@@ -250,7 +288,188 @@ export default function StandaloneMeetingPage({
     } catch (_) {}
   };
 
-  // Start live microphone capture (Direct user mic, no screen-share prompt needed)
+  // ==========================================
+  // NATIVE WEBRTC IN-APP VIDEO ENGINE
+  // ==========================================
+
+  const startInAppCall = async () => {
+    setCaptureError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      setIsInCall(true);
+      setIsCameraOn(true);
+      setIsMicOn(true);
+
+      // Start duration counter
+      if (!isCapturingAudio) {
+        setCaptureDuration(0);
+        captureTimerRef.current = setInterval(() => {
+          setCaptureDuration((prev) => prev + 1);
+        }, 1000);
+      }
+
+      // Connect signaling WebSocket
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/ws/meeting/${roomName}`;
+      const ws = new WebSocket(wsUrl);
+      socketRef.current = ws;
+
+      const pc = new RTCPeerConnection(RTC_CONFIG);
+      peerConnectionRef.current = pc;
+
+      // Add local tracks to peer connection
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      // Handle remote track
+      pc.ontrack = (event) => {
+        if (remoteVideoRef.current && event.streams[0]) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+          setRemotePeerConnected(true);
+        }
+      };
+
+      // Send local ICE candidates to remote peers
+      pc.onicecandidate = (event) => {
+        if (event.candidate && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
+        }
+      };
+
+      ws.onmessage = async (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "peer-joined") {
+            setCallPeerCount(msg.peerCount || 2);
+            // Create offer for the new peer
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            ws.send(JSON.stringify({ type: "offer", sdp: offer }));
+          } else if (msg.type === "offer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            ws.send(JSON.stringify({ type: "answer", sdp: answer }));
+          } else if (msg.type === "answer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          } else if (msg.type === "candidate") {
+            await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+          } else if (msg.type === "peer-left") {
+            setCallPeerCount(msg.peerCount || 1);
+            if (msg.peerCount <= 1) {
+              setRemotePeerConnected(false);
+              if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+            }
+          }
+        } catch (err) {
+          console.warn("Signaling error:", err);
+        }
+      };
+
+      // Also pipe audio to Web Speech recognition for real-time transcription
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        setupSpeechRecognition();
+      }
+    } catch (err: unknown) {
+      setCaptureError(err instanceof Error ? err.message : "Failed to access camera or microphone.");
+      setIsInCall(false);
+    }
+  };
+
+  const endInAppCall = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+    setIsInCall(false);
+    setRemotePeerConnected(false);
+    setIsScreenSharing(false);
+  };
+
+  const toggleCamera = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsCameraOn(videoTrack.enabled);
+      }
+    }
+  };
+
+  const toggleMic = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMicOn(audioTrack.enabled);
+      }
+    }
+  };
+
+  const toggleScreenShare = async () => {
+    if (!isInCall || !peerConnectionRef.current) return;
+    try {
+      if (!isScreenSharing) {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = screenStream.getVideoTracks()[0];
+        const sender = peerConnectionRef.current
+          .getSenders()
+          .find((s) => s.track && s.track.kind === "video");
+        if (sender) {
+          sender.replaceTrack(screenTrack);
+        }
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = screenStream;
+        }
+        setIsScreenSharing(true);
+
+        screenTrack.onended = () => {
+          stopScreenSharing();
+        };
+      } else {
+        stopScreenSharing();
+      }
+    } catch (err) {
+      console.warn("Screen share cancelled:", err);
+    }
+  };
+
+  const stopScreenSharing = () => {
+    if (localStreamRef.current && peerConnectionRef.current) {
+      const originalTrack = localStreamRef.current.getVideoTracks()[0];
+      const sender = peerConnectionRef.current
+        .getSenders()
+        .find((s) => s.track && s.track.kind === "video");
+      if (sender && originalTrack) {
+        sender.replaceTrack(originalTrack);
+      }
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+      setIsScreenSharing(false);
+    }
+  };
+
+  // ==========================================
+  // COMPANION AUDIO CAPTURE & TRANSCRIPTION
+  // ==========================================
+
   const startLiveMicCapture = async () => {
     setCaptureError(null);
     try {
@@ -273,7 +492,6 @@ export default function StandaloneMeetingPage({
     }
   };
 
-  // Start meeting tab audio capture (For Google Meet / Zoom tab in browser)
   const startMeetingTabCapture = async () => {
     setCaptureError(null);
     try {
@@ -299,44 +517,9 @@ export default function StandaloneMeetingPage({
     }
   };
 
-  const setupAudioStreamAndRecognition = (stream: MediaStream, mode: "mic" | "tab") => {
-    audioStreamRef.current = stream;
-    audioChunksRef.current = [];
-    setIsCapturingAudio(true);
-    setAudioSourceMode(mode);
-    setCaptureDuration(0);
-
-    captureTimerRef.current = setInterval(() => {
-      setCaptureDuration((prev) => prev + 1);
-    }, 1000);
-
-    // Setup MediaRecorder for backend Whisper transcription
-    try {
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-      const mediaRec = new MediaRecorder(stream, { mimeType });
-      mediaRec.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
-      };
-      mediaRec.start(1000);
-      mediaRecorderRef.current = mediaRec;
-    } catch (recErr) {
-      console.warn("MediaRecorder setup notice:", recErr);
-    }
-
-    const audioTrack = stream.getAudioTracks()[0];
-    if (audioTrack) {
-      audioTrack.onended = () => {
-        stopLiveAudioCapture();
-      };
-    }
-
-    // Setup Web Speech API for immediate live text preview
+  const setupSpeechRecognition = () => {
     const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRec) {
+    if (SpeechRec && !speechRecognitionRef.current) {
       try {
         const rec = new SpeechRec();
         rec.continuous = true;
@@ -370,6 +553,43 @@ export default function StandaloneMeetingPage({
     }
   };
 
+  const setupAudioStreamAndRecognition = (stream: MediaStream, mode: "mic" | "tab") => {
+    audioStreamRef.current = stream;
+    audioChunksRef.current = [];
+    setIsCapturingAudio(true);
+    setAudioSourceMode(mode);
+    setCaptureDuration(0);
+
+    captureTimerRef.current = setInterval(() => {
+      setCaptureDuration((prev) => prev + 1);
+    }, 1000);
+
+    try {
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      const mediaRec = new MediaRecorder(stream, { mimeType });
+      mediaRec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+      mediaRec.start(1000);
+      mediaRecorderRef.current = mediaRec;
+    } catch (recErr) {
+      console.warn("MediaRecorder setup notice:", recErr);
+    }
+
+    const audioTrack = stream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.onended = () => {
+        stopLiveAudioCapture();
+      };
+    }
+
+    setupSpeechRecognition();
+  };
+
   const stopLiveAudioCapture = () => {
     if (captureTimerRef.current) {
       clearInterval(captureTimerRef.current);
@@ -393,7 +613,6 @@ export default function StandaloneMeetingPage({
     setIsCapturingAudio(false);
   };
 
-  // Upload meeting recording file directly
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -420,6 +639,14 @@ export default function StandaloneMeetingPage({
     setTimeout(() => setCopiedTranscript(false), 2000);
   };
 
+  const handleCopyInviteLink = () => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
   const handleGenerateTakeaways = async () => {
     setIsGeneratingTakeaways(true);
     setShowTakeawaysModal(true);
@@ -440,13 +667,11 @@ export default function StandaloneMeetingPage({
   const handleEndMeetingAndReturn = async () => {
     setIsFinishing(true);
     try {
-      if (isCapturingAudio) {
-        stopLiveAudioCapture();
-      }
+      if (isCapturingAudio) stopLiveAudioCapture();
+      if (isInCall) endInAppCall();
 
       let finalTranscript = liveCapturedText.trim();
 
-      // If audio chunks were recorded, upload blob to Whisper backend
       if (audioChunksRef.current.length > 0) {
         try {
           const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -462,7 +687,6 @@ export default function StandaloneMeetingPage({
         }
       }
 
-      // Format notes into structured markdown appendix
       const formattedNotes =
         notesList.length > 0
           ? `\n\n### Stakeholder Caveats & Objections Log:\n` +
@@ -502,7 +726,7 @@ export default function StandaloneMeetingPage({
         theme === "dark" ? "dark bg-[#181614] text-[#F0EAE1]" : "bg-[#F5F1E8] text-[#1d1d1b]"
       }`}
     >
-      {/* Topbar: Executive Navigation & Status */}
+      {/* Topbar: Executive Navigation & Mode Switcher */}
       <header className="h-14 border-b border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-2xs z-30">
         <div className="flex items-center gap-3 min-w-0">
           <Link
@@ -521,14 +745,54 @@ export default function StandaloneMeetingPage({
             <span className="font-newsreader font-bold text-base sm:text-lg text-[#1d1d1b] dark:text-[#F0EAE1] truncate">
               {decision?.title || `Decision #${decisionId}`}
             </span>
-            <span className="font-mono text-[10px] uppercase px-2 py-0.5 rounded-full bg-[#F5F1E8] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] shrink-0 font-bold hidden md:inline">
-              Deliberation Companion
-            </span>
           </div>
+        </div>
+
+        {/* Center: Mode Switcher (Companion Mode vs In-App Live Call) */}
+        <div className="hidden md:flex items-center gap-1 bg-[#F5F1E8] dark:bg-[#181614] p-1 rounded-xl border border-[#cfc7b2] dark:border-[#38332C]">
+          <button
+            type="button"
+            onClick={() => setChamberMode("companion")}
+            className={`px-3 py-1 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ${
+              chamberMode === "companion"
+                ? "bg-[#1d1d1b] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614] shadow-xs"
+                : "text-[#5c5549] dark:text-[#a89f91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+            }`}
+          >
+            <Headphones className="w-3.5 h-3.5" />
+            <span>Companion Mode</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setChamberMode("inapp");
+              if (!isInCall) startInAppCall();
+            }}
+            className={`px-3 py-1 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ${
+              chamberMode === "inapp"
+                ? "bg-[#1d1d1b] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614] shadow-xs"
+                : "text-[#5c5549] dark:text-[#a89f91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+            }`}
+          >
+            <Video className="w-3.5 h-3.5" />
+            <span>In-App Live Call</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <CelestialThemeToggle theme={theme} onToggle={toggleTheme} />
+
+          {/* Copy Meeting Link button */}
+          <button
+            type="button"
+            onClick={handleCopyInviteLink}
+            className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F5F1E8] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
+            title="Share this deliberation link with colleagues"
+          >
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />}
+            <span>{copiedLink ? "Link Copied" : "Invite Peers"}</span>
+          </button>
 
           <button
             type="button"
@@ -544,7 +808,7 @@ export default function StandaloneMeetingPage({
             <span>Takeaways</span>
           </button>
 
-          {/* End Meeting & Return Button */}
+          {/* End Deliberation Button */}
           <button
             type="button"
             onClick={handleEndMeetingAndReturn}
@@ -567,31 +831,162 @@ export default function StandaloneMeetingPage({
         </div>
       </header>
 
-      {/* Main Deliberation Companion: Live Audio Feed (Left) + Silent Stakeholder Scribe (Right) */}
+      {/* Main Deliberation Chamber: Live Audio/Video Feed (Left) + Silent Stakeholder Scribe (Right) */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden bg-executive-grid">
-        {/* Left Column: Live Audio Stream, Speech-to-Text & Evidence Feed (7 cols) */}
+        {/* Left Column: Live Audio / In-App Video & Live Transcript (7 cols) */}
         <div className="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-[#cfc7b2] dark:border-[#38332C] bg-[#F5F1E8]/90 dark:bg-[#181614]/90 p-5 sm:p-6 overflow-y-auto space-y-5">
-          {/* Companion Banner */}
-          <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-4 sm:p-5 flex items-start justify-between gap-4 shadow-2xs">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
-                  Deliberation Companion Mode
-                </h2>
-              </div>
-              <p className="text-sm font-newsreader text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">
-                Runs silently alongside your <strong>Google Meet, Zoom, or Teams</strong> call to capture evidence, transcribe technical debates, and surface hidden risks.
-              </p>
-            </div>
+          {/* IN-APP VIDEO CALL CHAMBER (When In-App Mode is Active) */}
+          {chamberMode === "inapp" && (
+            <div className="bg-[#181614] border border-[#38332C] rounded-2xl p-4 shadow-xl space-y-4 animate-in fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#D4AA50]">
+                    In-App WebRTC Video Call
+                  </span>
+                  <span className="text-[11px] font-mono text-[#A89F91]">
+                    ({callPeerCount} participant{callPeerCount === 1 ? "" : "s"})
+                  </span>
+                </div>
 
-            <div className="shrink-0 text-right">
-              <span className="text-[11px] font-mono text-[#5c5549] dark:text-[#a89f91] block">Duration</span>
-              <span className="text-lg font-mono font-bold text-[#1d1d1b] dark:text-[#F0EAE1] tabular-nums">
-                {formatTimer(captureDuration)}
-              </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold text-[#F0EAE1] tabular-nums">
+                    {formatTimer(captureDuration)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Video Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 min-h-[220px]">
+                {/* Local Video Tile */}
+                <div className="relative bg-[#221F1C] border border-[#38332C] rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className={`w-full h-full object-cover ${!isCameraOn ? "hidden" : ""}`}
+                  />
+                  {!isCameraOn && (
+                    <div className="flex flex-col items-center justify-center text-[#A89F91] space-y-2">
+                      <div className="w-14 h-14 rounded-full bg-[#2C2723] border border-[#38332C] flex items-center justify-center text-lg font-bold font-newsreader text-[#D4AA50]">
+                        {(currentUser?.name || "H").charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-xs font-mono">Camera Off</span>
+                    </div>
+                  )}
+                  <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded bg-black/70 text-[10px] font-mono font-bold text-white uppercase backdrop-blur-xs">
+                    You ({currentUser?.name || "Host"})
+                  </span>
+                </div>
+
+                {/* Remote Peer Video Tile or Waiting Slot */}
+                <div className="relative bg-[#221F1C] border border-[#38332C] rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className={`w-full h-full object-cover ${!remotePeerConnected ? "hidden" : ""}`}
+                  />
+                  {!remotePeerConnected && (
+                    <div className="flex flex-col items-center justify-center text-center p-4 text-[#A89F91] space-y-2.5">
+                      <Users className="w-8 h-8 opacity-40 text-[#D4AA50]" />
+                      <p className="text-xs font-sans max-w-[200px]">
+                        Waiting for colleagues to join this room...
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleCopyInviteLink}
+                        className="px-3 py-1.5 rounded-lg border border-[#38332C] bg-[#181614] hover:bg-[#2A2622] text-[#D4AA50] text-[11px] font-mono font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedLink ? "Link Copied" : "Copy Invite Link"}</span>
+                      </button>
+                    </div>
+                  )}
+                  {remotePeerConnected && (
+                    <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded bg-black/70 text-[10px] font-mono font-bold text-white uppercase backdrop-blur-xs">
+                      Remote Colleague
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* In-Call Controls Bar */}
+              <div className="flex items-center justify-center gap-2.5 pt-2 border-t border-[#38332C]">
+                <button
+                  type="button"
+                  onClick={toggleMic}
+                  className={`p-2.5 rounded-xl border text-xs transition-colors cursor-pointer ${
+                    isMicOn
+                      ? "bg-[#2A2622] border-[#38332C] text-[#F0EAE1] hover:bg-[#38332C]"
+                      : "bg-rose-900/60 border-rose-700 text-rose-300"
+                  }`}
+                  title={isMicOn ? "Mute Microphone" : "Unmute Microphone"}
+                >
+                  {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleCamera}
+                  className={`p-2.5 rounded-xl border text-xs transition-colors cursor-pointer ${
+                    isCameraOn
+                      ? "bg-[#2A2622] border-[#38332C] text-[#F0EAE1] hover:bg-[#38332C]"
+                      : "bg-rose-900/60 border-rose-700 text-rose-300"
+                  }`}
+                  title={isCameraOn ? "Turn Camera Off" : "Turn Camera On"}
+                >
+                  {isCameraOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleScreenShare}
+                  className={`p-2.5 rounded-xl border text-xs transition-colors cursor-pointer ${
+                    isScreenSharing
+                      ? "bg-emerald-900/60 border-emerald-700 text-emerald-300"
+                      : "bg-[#2A2622] border-[#38332C] text-[#F0EAE1] hover:bg-[#38332C]"
+                  }`}
+                  title={isScreenSharing ? "Stop Screen Share" : "Share Screen"}
+                >
+                  <Monitor className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={endInAppCall}
+                  className="px-4 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-mono text-xs font-bold uppercase tracking-wider cursor-pointer transition-colors"
+                >
+                  Disconnect Video
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* COMPANION MODE BANNER (When Companion Mode is Active) */}
+          {chamberMode === "companion" && (
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-4 sm:p-5 flex items-start justify-between gap-4 shadow-2xs">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                    Companion Deliberation Mode
+                  </h2>
+                </div>
+                <p className="text-sm font-newsreader text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">
+                  Runs silently alongside your <strong>Google Meet, Zoom, or Teams</strong> call to capture evidence, transcribe technical debates, and surface hidden risks.
+                </p>
+              </div>
+
+              <div className="shrink-0 text-right">
+                <span className="text-[11px] font-mono text-[#5c5549] dark:text-[#a89f91] block">Duration</span>
+                <span className="text-lg font-mono font-bold text-[#1d1d1b] dark:text-[#F0EAE1] tabular-nums">
+                  {formatTimer(captureDuration)}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Audio Capture Controls */}
           <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-5 shadow-2xs space-y-4">
@@ -601,18 +996,18 @@ export default function StandaloneMeetingPage({
                   Audio Intelligence Engine
                 </span>
                 <span className="text-xs text-[#5c5549] dark:text-[#a89f91]">
-                  {isCapturingAudio
-                    ? `Listening via ${audioSourceMode === "mic" ? "Microphone" : "Meeting Tab"}...`
+                  {isCapturingAudio || isInCall
+                    ? `Transcribing live speech arguments into the deliberation pool...`
                     : "Ready to capture meeting voice arguments."}
                 </span>
               </div>
 
               {/* Status Badge */}
               <div className="flex items-center gap-2">
-                {isCapturingAudio ? (
+                {isCapturingAudio || isInCall ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 animate-pulse">
                     <Radio className="w-3.5 h-3.5" />
-                    Live Capturing
+                    Transcribing
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-[#F5F1E8] dark:bg-[#181614] text-[#5c5549] dark:text-[#a89f91] border border-[#cfc7b2] dark:border-[#38332C]">
@@ -624,7 +1019,6 @@ export default function StandaloneMeetingPage({
 
             {/* Main Action Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Primary Mic Button */}
               <button
                 type="button"
                 onClick={isCapturingAudio ? stopLiveAudioCapture : startLiveMicCapture}
@@ -647,7 +1041,6 @@ export default function StandaloneMeetingPage({
                 )}
               </button>
 
-              {/* Secondary Tab Audio Button */}
               <button
                 type="button"
                 onClick={isCapturingAudio ? stopLiveAudioCapture : startMeetingTabCapture}
@@ -692,7 +1085,7 @@ export default function StandaloneMeetingPage({
           </div>
 
           {/* Real-time Streaming Transcript Chamber */}
-          <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl flex flex-col flex-1 shadow-2xs overflow-hidden min-h-[340px]">
+          <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl flex flex-col flex-1 shadow-2xs overflow-hidden min-h-[300px]">
             {/* Transcript Card Header */}
             <div className="flex items-center justify-between px-5 h-12 border-b border-[#cfc7b2] dark:border-[#38332C] shrink-0 bg-[#E5DEC9]/40 dark:bg-[#1A1816]/40">
               <div className="flex items-center gap-2">
@@ -725,7 +1118,7 @@ export default function StandaloneMeetingPage({
                 <div className="h-full flex flex-col items-center justify-center text-center py-12 text-[#5c5549] dark:text-[#a89f91] space-y-2">
                   <Volume2 className="w-8 h-8 opacity-40 text-[#7a4e10] dark:text-[#D4AA50]" />
                   <p className="font-sans text-sm max-w-sm">
-                    No speech recorded yet. Start live mic capture or tab audio to transcribe your meeting discussion.
+                    No speech recorded yet. Start live mic capture, tab audio, or in-app call to transcribe your meeting discussion.
                   </p>
                 </div>
               ) : (
