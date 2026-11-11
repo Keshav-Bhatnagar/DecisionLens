@@ -998,6 +998,8 @@ class RoadmapPhase(BaseModel):
 class RoadmapData(BaseModel):
     title: str = Field("Implementation Roadmap", description="Roadmap title")
     phases: List[RoadmapPhase] = Field(default_factory=list)
+    start_date: Optional[str] = Field(None, description="Leadership project kickoff anchor date, e.g. '2026-11-15'")
+    kickoff_date: Optional[str] = Field(None, description="Leadership project kickoff anchor date")
 
 
 class ReceiptLineItem(BaseModel):
@@ -1071,6 +1073,8 @@ class SynthesisRequest(BaseModel):
 class RoadmapUpdateRequest(BaseModel):
     title: Optional[str] = Field(None, description="Optional updated roadmap title")
     phases: List[RoadmapPhase] = Field(..., description="Updated phases and tasks")
+    start_date: Optional[str] = Field(None, description="Optional kickoff date")
+    kickoff_date: Optional[str] = Field(None, description="Optional kickoff date")
 
 
 class SnapshotSummary(BaseModel):

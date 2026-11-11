@@ -1177,6 +1177,8 @@ export interface RoadmapPhase {
 export interface RoadmapData {
   title: string;
   phases: RoadmapPhase[];
+  start_date?: string;
+  kickoff_date?: string;
 }
 
 export interface ReceiptLineItem {
@@ -1240,6 +1242,8 @@ export interface SynthesisRequest {
 export interface RoadmapUpdateRequest {
   title?: string;
   phases: RoadmapPhase[];
+  start_date?: string;
+  kickoff_date?: string;
 }
 
 export interface SnapshotSummary {

@@ -52,8 +52,10 @@ import {
   ChevronUp,
   Globe,
   Server,
+  Share2,
 } from "lucide-react";
 import OutcomeTrackingCard from "@/components/OutcomeTrackingCard";
+import Calendar3DPlanner from "@/components/Calendar3DPlanner";
 
 interface SynthesisPanelProps {
   decisionId: number;
@@ -83,11 +85,16 @@ export default function SynthesisPanel({
   const [copiedADR, setCopiedADR] = useState(false);
   const [activeTab, setActiveTab] = useState<"memo" | "roadmap" | "audit">("memo");
 
-  // Dynamic Sprint Calendar & Runway State
+  // Dynamic Sprint Calendar & Runway State (Fixed Permanent Kickoff Anchor)
   const [projectStartDate, setProjectStartDate] = useState<string>(() => {
-    return new Date().toISOString().split("T")[0];
+    return (
+      initialSynthesis?.roadmap?.kickoff_date ||
+      initialSynthesis?.roadmap?.start_date ||
+      "2026-11-16"
+    );
   });
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string>("ALL");
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   // Executive Sovereign Override State
   const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
@@ -206,12 +213,18 @@ export default function SynthesisPanel({
       if (synthRes.status === "fulfilled" && synthRes.value) {
         setSynthesis(synthRes.value);
         setActiveRoadmap(synthRes.value.roadmap);
+        if (synthRes.value.roadmap?.kickoff_date || synthRes.value.roadmap?.start_date) {
+          setProjectStartDate(synthRes.value.roadmap.kickoff_date || synthRes.value.roadmap.start_date || "2026-11-16");
+        }
       }
       if (snapListRes.status === "fulfilled" && snapListRes.value) {
         setSnapshots(snapListRes.value);
       }
       if (roadmapRes.status === "fulfilled" && roadmapRes.value) {
         setActiveRoadmap(roadmapRes.value);
+        if (roadmapRes.value?.kickoff_date || roadmapRes.value?.start_date) {
+          setProjectStartDate(roadmapRes.value.kickoff_date || roadmapRes.value.start_date || "2026-11-16");
+        }
       }
     } catch (err: unknown) {
       console.error(err);
@@ -338,9 +351,11 @@ export default function SynthesisPanel({
       const updated = await updateActiveRoadmap(decisionId, {
         title: activeRoadmap.title,
         phases: activeRoadmap.phases,
+        start_date: projectStartDate,
+        kickoff_date: projectStartDate,
       });
       setActiveRoadmap(updated);
-      setSuccessMsg("Roadmap updated successfully. Analysis snapshot preserved.");
+      setSuccessMsg("Roadmap updated successfully. Fixed kickoff anchor saved.");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to update roadmap";
@@ -758,49 +773,69 @@ jobs:
               </button>
             )}
 
+            {/* Consolidated Executive Action Hub (Single Dropdown for Export & Governance) */}
             {displaySynthesis && (
-              <>
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={handleCopyBoardroomADR}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-surface hover:bg-paper-sidebar border border-border text-ink font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-                  title="Copy full Architectural Decision Record (Markdown) to clipboard"
+                  onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-surface hover:bg-paper-sidebar border border-border text-ink font-semibold text-xs rounded-lg transition-colors cursor-pointer shadow-2xs"
+                  title="Export ADR, Brief, or CI Drift Guard"
                 >
-                  {copiedADR ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-700">Copied ADR!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 text-muted" />
-                      <span>Copy Boardroom ADR</span>
-                    </>
-                  )}
+                  <Share2 className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                  <span>Export &amp; Governance</span>
+                  <ChevronDown className="w-3 h-3 text-muted" />
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleDownloadGitADR}
-                  disabled={downloadingGitADR}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-surface hover:bg-paper-sidebar border border-border text-ink font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-                  title="Export MADR standard markdown file directly for Git / GitHub repository"
-                >
-                  <FileCode className="w-3.5 h-3.5 text-accent" />
-                  <span>{downloadingGitADR ? "Exporting..." : "Export Git ADR (.md)"}</span>
-                </button>
+                {isExportMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-1.5 w-60 rounded-xl bg-paper-surface border border-border shadow-xl p-1.5 z-40 space-y-1 animate-in fade-in"
+                    onClick={() => setIsExportMenuOpen(false)}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleCopyBoardroomADR}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs text-ink hover:bg-paper-sidebar transition-colors cursor-pointer"
+                    >
+                      {copiedADR ? (
+                        <Check className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-muted" />
+                      )}
+                      <div>
+                        <span className="font-semibold block">{copiedADR ? "Copied to Clipboard!" : "Copy Boardroom ADR"}</span>
+                        <span className="text-[10px] text-muted block">Full markdown memo for team</span>
+                      </div>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={handleDownloadCIGuard}
-                  disabled={downloadingCIGuard}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-surface hover:bg-paper-sidebar border border-border text-ink font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-                  title="Download GitHub Action workflow to detect Day-2 architecture drift in CI/CD"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{downloadingCIGuard ? "Exporting..." : "CI Drift Guard (.yml)"}</span>
-                </button>
-              </>
+                    <button
+                      type="button"
+                      onClick={handleDownloadGitADR}
+                      disabled={downloadingGitADR}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs text-ink hover:bg-paper-sidebar transition-colors cursor-pointer"
+                    >
+                      <FileCode className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
+                      <div>
+                        <span className="font-semibold block">{downloadingGitADR ? "Exporting..." : "Export Git ADR (.md)"}</span>
+                        <span className="text-[10px] text-muted block">Standard MADR for repository</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadCIGuard}
+                      disabled={downloadingCIGuard}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs text-ink hover:bg-paper-sidebar transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
+                      <div>
+                        <span className="font-semibold block">{downloadingCIGuard ? "Exporting..." : "CI Drift Guard (.yml)"}</span>
+                        <span className="text-[10px] text-muted block">GitHub Actions drift detector</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             <button
@@ -888,14 +923,14 @@ jobs:
         </div>
       )}
       {successMsg && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
             <span>{successMsg}</span>
           </div>
           <button
             onClick={() => setSuccessMsg(null)}
-            className="text-emerald-800 dark:text-emerald-300 hover:opacity-80 font-bold ml-2 cursor-pointer"
+            className="text-[#7a4e10] dark:text-[#D4AA50] hover:opacity-80 font-bold ml-2 cursor-pointer"
           >
             ×
           </button>
@@ -964,7 +999,7 @@ jobs:
                   className={`px-2.5 py-0.5 rounded-md text-[11px] font-mono uppercase font-bold border ${
                     isConditional
                       ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700"
-                      : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
+                      : "bg-[#EDE7D6] dark:bg-[#2C2723] text-[#7a4e10] dark:text-[#D4AA50] border-[#cfc7b2] dark:border-[#38332C]"
                   }`}
                 >
                   {isConditional ? "Conditional Pre-Commitment" : "Conclusive Recommendation"}
@@ -1000,15 +1035,15 @@ jobs:
             {/* ========================================================================= */}
             {/* 1.5. CAPITAL AT RISK & BLUNDER SHIELD (Munshi Procurement & ROI Proof)   */}
             {/* ========================================================================= */}
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-5 space-y-3.5 transition-all">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
+            <div className="rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6]/50 dark:bg-[#1E1B18] p-5 space-y-3.5 transition-all shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#cfc7b2]/70 dark:border-[#38332C] pb-3">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  <ShieldCheck className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
                     Executive ROI &amp; Sunk-Cost Shield
                   </span>
                   {isCalibrated && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40 font-bold animate-pulse">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] font-bold">
                       Live Calibrated
                     </span>
                   )}
@@ -1019,15 +1054,15 @@ jobs:
                     onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
                       isCalibratorOpen || isCalibrated
-                        ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
-                        : "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200"
+                        ? "bg-[#7a4e10] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#7a4e10] shadow-xs"
+                        : "border-[#cfc7b2] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#2C2723] hover:bg-[#EDE7D6] text-[#7a4e10] dark:text-[#D4AA50]"
                     }`}
                     title="Calibrate headcount, geography rate card, and cloud scale tier"
                   >
                     <Sliders className="w-3 h-3" />
                     <span>{isCalibratorOpen ? "Hide Calibrator" : "Calibrate FinOps Assumptions"}</span>
                   </button>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
                     Procurement ROI: Verified 10x+
                   </span>
                 </div>
@@ -1035,7 +1070,7 @@ jobs:
 
               {/* Collapsible FinOps Assumptions Calibrator Drawer */}
               {isCalibratorOpen && (
-                <div className="p-4 rounded-xl bg-paper-surface border border-emerald-500/30 space-y-4 animate-in fade-in duration-150">
+                <div className="p-4 rounded-xl bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-4 animate-in fade-in duration-150">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 pb-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1170,7 +1205,7 @@ jobs:
                       <span>Infrastructure: {SCALE_TIERS[selectedScaleTier].multiplier}x</span>
                     </div>
                     {isCalibrated && (
-                      <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                      <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold">
                         ✓ Calibrated values applied across headline and itemized voucher
                       </span>
                     )}
@@ -1180,18 +1215,18 @@ jobs:
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                 {/* Metric 1: Capital at Risk Prevented */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
+                <div className="p-3.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono uppercase text-muted font-bold block">
                       Capital at Risk Prevented
                     </span>
                     {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
                         Calibrated
                       </span>
                     )}
                   </div>
-                  <div className="font-newsreader text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                  <div className="font-newsreader text-2xl font-bold text-[#7a4e10] dark:text-[#E8BC66]">
                     {calibratedBlunderShield?.capital_at_risk_saved || displaySynthesis.blunder_shield?.capital_at_risk_saved || (
                       displaySynthesis.domain === "REAL_ESTATE"
                         ? "₹1.50 Cr – ₹2.80 Cr"
@@ -1206,13 +1241,13 @@ jobs:
                 </div>
 
                 {/* Metric 2: Sprint Velocity Saved */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
+                <div className="p-3.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono uppercase text-muted font-bold block">
                       Engineering Velocity Saved
                     </span>
                     {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
                         Calibrated
                       </span>
                     )}
@@ -1228,13 +1263,13 @@ jobs:
                 </div>
 
                 {/* Metric 3: Fatal Sunk-Cost Trap Neutralized */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
+                <div className="p-3.5 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono uppercase text-muted font-bold block">
                       Fatal Sunk-Cost Trap Blocked
                     </span>
                     {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#EDE7D6] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
                         Mitigated
                       </span>
                     )}
@@ -1252,22 +1287,22 @@ jobs:
 
               {/* Receipt Toggle & Expanded Voucher */}
               {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt) && (
-                <div className="pt-2 border-t border-emerald-500/20">
+                <div className="pt-2 border-t border-[#cfc7b2] dark:border-[#38332C]">
                   <button
                     type="button"
                     onClick={() => setShowReceipt(!showReceipt)}
-                    className="flex items-center justify-between w-full text-left text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 transition-colors py-1 cursor-pointer"
+                    className="flex items-center justify-between w-full text-left text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:text-[#5c3a0a] dark:hover:text-[#F0EAE1] transition-colors py-1 cursor-pointer"
                   >
                     <span className="flex items-center gap-1.5">
-                      <Receipt className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <Receipt className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
                       <span>
                         {showReceipt ? "Hide Itemized FinOps Receipt" : "Inspect Itemized Sunk-Cost Receipt (Munshi Audit Ledger)"}
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50]">
                         {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.receipt_id}
                       </span>
                       {isCalibrated && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#7a4e10] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614] font-bold">
                           Custom Calibrated
                         </span>
                       )}
@@ -1276,7 +1311,7 @@ jobs:
                   </button>
 
                   {showReceipt && (
-                    <div className="mt-3 p-4 rounded-lg bg-paper-surface border border-emerald-500/30 font-mono text-xs space-y-3 shadow-inner">
+                    <div className="mt-3 p-4 rounded-lg bg-paper-surface border border-[#cfc7b2] dark:border-[#38332C] font-mono text-xs space-y-3 shadow-inner">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border/60 pb-2 text-[11px] text-muted">
                         <div className="flex items-center gap-2 flex-wrap">
                           <div>
@@ -1286,7 +1321,7 @@ jobs:
                             </span>
                           </div>
                           {isCalibrated && (
-                            <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">
+                            <span className="text-[10px] text-[#7a4e10] dark:text-[#D4AA50] font-bold">
                               [{customTeamSize} Devs • {GEO_RATES[selectedGeoRate].label} • {SCALE_TIERS[selectedScaleTier].label}]
                             </span>
                           )}
@@ -1308,7 +1343,7 @@ jobs:
                           </thead>
                           <tbody className="divide-y border-border/40">
                             {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.line_items.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-emerald-500/5 transition-colors">
+                              <tr key={idx} className="hover:bg-[#EDE7D6]/30 dark:hover:bg-[#2C2723]/30 transition-colors">
                                 <td className="py-2 pr-2">
                                   <div className="font-bold text-ink">{item.item_name}</div>
                                   <div className="text-[10px] text-muted font-sans line-clamp-1">{item.rationale}</div>
@@ -1319,18 +1354,18 @@ jobs:
                                   </span>
                                 </td>
                                 <td className="py-2 px-2 text-[10px] text-muted">{item.unit_basis}</td>
-                                <td className="py-2 pl-2 text-right font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                                <td className="py-2 pl-2 text-right font-bold text-[#7a4e10] dark:text-[#D4AA50] whitespace-nowrap">
                                   {item.amount_inr}
                                 </td>
                               </tr>
                             ))}
                           </tbody>
                           <tfoot>
-                            <tr className="border-t-2 border-emerald-500/40 font-bold">
+                            <tr className="border-t-2 border-[#cfc7b2] dark:border-[#38332C] font-bold">
                               <td colSpan={3} className="py-2 text-ink uppercase text-[10px]">
                                 Total Capital at Risk Neutralized {isCalibrated ? "(Calibrated)" : ""}:
                               </td>
-                              <td className="py-2 text-right font-bold text-sm text-emerald-700 dark:text-emerald-400">
+                              <td className="py-2 text-right font-bold text-sm text-[#7a4e10] dark:text-[#D4AA50]">
                                 {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.total_capital_at_risk}
                               </td>
                             </tr>
@@ -1505,7 +1540,7 @@ jobs:
                   <span className="font-mono text-[11px] font-bold text-ink uppercase">
                     Architecture & Tech
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[10px] font-mono text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6] dark:bg-[#2C2723] px-2 py-0.5 rounded border border-[#cfc7b2] dark:border-[#38332C] font-bold">
                     Resolved
                   </span>
                 </div>
@@ -1523,7 +1558,7 @@ jobs:
                   <span className="font-mono text-[11px] font-bold text-ink uppercase">
                     DevOps & SRE
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[10px] font-mono text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6] dark:bg-[#2C2723] px-2 py-0.5 rounded border border-[#cfc7b2] dark:border-[#38332C] font-bold">
                     Protected
                   </span>
                 </div>
@@ -1541,7 +1576,7 @@ jobs:
                   <span className="font-mono text-[11px] font-bold text-ink uppercase">
                     Product & Velocity
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[10px] font-mono text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6] dark:bg-[#2C2723] px-2 py-0.5 rounded border border-[#cfc7b2] dark:border-[#38332C] font-bold">
                     Accommodated
                   </span>
                 </div>
@@ -1601,77 +1636,99 @@ jobs:
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {displaySynthesis.alternatives_considered.map((alt, idx) => (
-                <div
-                  key={idx}
-                  className={`rounded-xl p-4 border flex flex-col justify-between transition-colors ${
-                    alt.is_recommended
-                      ? "bg-paper-sidebar border-accent/80 shadow-xs"
-                      : "bg-paper-surface border-border"
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-border">
-                      <h4 className="font-semibold text-ink text-sm truncate">
-                        {alt.name}
-                      </h4>
-                      {alt.is_recommended ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-accent text-paper-surface">
-                          Selected
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-paper-sidebar text-muted border border-border">
-                          Alternative
-                        </span>
-                      )}
-                    </div>
+            {(() => {
+              // Deduplicate options sharing semantic root nouns
+              const winner = displaySynthesis.alternatives_considered.find(a => a.is_recommended);
+              const winnerWords = winner ? winner.name.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => !["option", "architecture", "approach", "standard", "alternative", "system"].includes(w)) : [];
+              const winnerKey = winnerWords.slice(0, 2).sort().join("-");
 
-                    <p className="text-xs text-muted leading-relaxed">
-                      {alt.description}
-                    </p>
+              const seenKeys = new Set<string>();
+              if (winnerKey) seenKeys.add(winnerKey);
 
-                    <div className="space-y-2">
-                      <div>
-                        <span className="text-[10px] font-mono uppercase font-bold text-emerald-700 block mb-1">
-                          Operational Advantages
-                        </span>
-                        <ul className="text-xs text-ink space-y-0.5">
-                          {alt.pros.map((p, pIdx) => (
-                            <li key={pIdx} className="flex items-start gap-1.5">
-                              <span className="text-emerald-700 font-bold">+</span>
-                              <span className="leading-snug">{p}</span>
-                            </li>
-                          ))}
-                        </ul>
+              const deduplicatedAlts = displaySynthesis.alternatives_considered.filter((alt) => {
+                if (alt.is_recommended) return true;
+                const words = alt.name.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => !["option", "architecture", "approach", "standard", "alternative", "system"].includes(w));
+                const key = words.slice(0, 2).sort().join("-");
+                if (key && seenKeys.has(key)) return false;
+                if (key) seenKeys.add(key);
+                return true;
+              });
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {deduplicatedAlts.map((alt, idx) => (
+                    <div
+                      key={idx}
+                      className={`rounded-xl p-4 border flex flex-col justify-between transition-colors shadow-xs ${
+                        alt.is_recommended
+                          ? "bg-[#EDE7D6] dark:bg-[#25221F] border-2 border-[#7a4e10] dark:border-[#D4AA50]"
+                          : "bg-paper-surface border-[#cfc7b2] dark:border-[#38332C]"
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#cfc7b2]/70 dark:border-[#38332C]">
+                          <h4 className="font-newsreader text-base font-bold text-ink truncate">
+                            {alt.name}
+                          </h4>
+                          {alt.is_recommended ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-[#7a4e10] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs">
+                              Selected
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[#EDE7D6] dark:bg-[#1E1B18] text-[#5A6275] dark:text-[#A89F91] border border-[#cfc7b2] dark:border-[#38332C]">
+                              Alternative
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-[#5A6275] dark:text-[#A89F91] leading-relaxed">
+                          {alt.description}
+                        </p>
+
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-[10px] font-mono uppercase font-bold text-[#7a4e10] dark:text-[#D4AA50] block mb-1">
+                              Operational Advantages
+                            </span>
+                            <ul className="text-xs text-ink space-y-1">
+                              {alt.pros.map((p, pIdx) => (
+                                <li key={pIdx} className="flex items-start gap-1.5">
+                                  <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold">+</span>
+                                  <span className="leading-snug">{p}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-mono uppercase font-bold text-[#8a3324] dark:text-[#E07A5F] block mb-1">
+                              Downsides &amp; Operational Drag
+                            </span>
+                            <ul className="text-xs text-ink space-y-1">
+                              {alt.cons.map((c, cIdx) => (
+                                <li key={cIdx} className="flex items-start gap-1.5">
+                                  <span className="text-[#8a3324] dark:text-[#E07A5F] font-bold">-</span>
+                                  <span className="leading-snug">{c}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
                       </div>
 
-                      <div>
-                        <span className="text-[10px] font-mono uppercase font-bold text-rose-700 block mb-1">
-                          Downsides & Operational Drag
-                        </span>
-                        <ul className="text-xs text-ink space-y-0.5">
-                          {alt.cons.map((c, cIdx) => (
-                            <li key={cIdx} className="flex items-start gap-1.5">
-                              <span className="text-rose-700 font-bold">-</span>
-                              <span className="leading-snug">{c}</span>
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C] mt-3 space-y-1 text-xs">
+                        {alt.why_not_recommended && (
+                          <div className="text-[11px] text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6]/60 dark:bg-[#1E1B18] p-2.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] leading-snug">
+                            <strong className="font-bold uppercase tracking-wider text-[10px] block mb-0.5">Decisive Factor:</strong>
+                            {alt.why_not_recommended}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-border mt-3 space-y-1 text-xs">
-                    {alt.why_not_recommended && (
-                      <p className="text-[11px] text-amber-900 bg-amber-50/60 p-2 rounded border border-amber-200/60">
-                        <strong className="font-bold">Why Deprioritized:</strong> {alt.why_not_recommended}
-                      </p>
-                    )}
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
 
           {/* ========================================================================= */}
@@ -1727,7 +1784,7 @@ jobs:
                       <span
                         className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
                           item.is_verified
-                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                            ? "bg-[#EDE7D6] dark:bg-[#2C2723] text-[#7a4e10] dark:text-[#D4AA50] border-[#cfc7b2] dark:border-[#38332C]"
                             : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
                         }`}
                       >
@@ -1837,102 +1894,32 @@ jobs:
                 )}
               </div>
 
-              {/* 1. LEAD-DRIVEN PROJECT KICKOFF CALENDAR BAR */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-paper-sidebar border border-border rounded-xl font-courier">
-                <div className="flex items-center gap-2.5">
-                  <CalendarDays className="w-4 h-4 text-accent shrink-0" />
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-ink block">
-                      Project Kickoff Anchor Date
-                    </span>
-                    <span className="text-[11px] text-muted">
-                      Leadership dictates the start date. All phased delivery windows calculate dynamically.
-                    </span>
-                  </div>
+              {/* 1. TACTILE 3D EXECUTIVE DESK CALENDAR & RUNWAY PLANNER */}
+              <Calendar3DPlanner
+                startDate={projectStartDate}
+                onStartDateChange={(newDate) => {
+                  setProjectStartDate(newDate);
+                }}
+                phases={displayRoadmap.phases}
+                onTaskToggle={(phaseId, taskId) => {
+                  handleToggleTask(phaseId, taskId);
+                }}
+                selectedOwnerFilter={selectedOwnerFilter}
+                onOwnerFilterChange={(filter) => {
+                  setSelectedOwnerFilter(filter);
+                }}
+              />
+
+              {/* Phases Detailed Milestone Editor */}
+              <div className="space-y-5 pt-3">
+                <div className="flex items-center justify-between px-1">
+                  <h4 className="font-newsreader text-xl font-bold text-ink">
+                    Detailed Phase Workstreams &amp; Task Governance
+                  </h4>
+                  <span className="text-xs font-mono text-muted">
+                    Total Milestones: {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-mono text-muted uppercase font-bold shrink-0">Kickoff:</label>
-                  <input
-                    type="date"
-                    value={projectStartDate}
-                    onChange={(e) => setProjectStartDate(e.target.value)}
-                    className="px-2.5 py-1 text-xs font-mono bg-paper-surface border border-border text-ink rounded focus:outline-none focus:border-accent cursor-pointer shadow-2xs"
-                  />
-                </div>
-              </div>
-
-              {/* 2. VISUAL PHASED RUNWAY (GANTT-LITE HORIZONTAL TIMELINE BAR) */}
-              <div className="space-y-2 font-courier">
-                <div className="flex items-center justify-between text-[11px] text-muted uppercase font-bold px-1">
-                  <span>Phased Timeline Runway (Weeks 1 to 8)</span>
-                  <span>Total Tasks: {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)}</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                  {displayRoadmap.phases.map((phase, pIdx) => {
-                    const phaseDates = getPhaseDates(pIdx);
-                    const completedCount = phase.tasks.filter((t) => t.is_completed).length;
-                    const totalCount = phase.tasks.length;
-                    const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-                    return (
-                      <div
-                        key={phase.phase_id}
-                        className="p-3 bg-paper-sidebar border border-border rounded-xl space-y-1.5 transition-all hover:border-accent"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-ink truncate">
-                            Phase {pIdx + 1}: {phase.timeline}
-                          </span>
-                          <span className="text-[10px] font-mono text-accent font-bold">
-                            {pct}% Done
-                          </span>
-                        </div>
-
-                        {/* Dynamically Projected Calendar Range */}
-                        <span className="text-[10px] font-mono text-muted block">
-                          📅 {phaseDates?.range || phase.timeline}
-                        </span>
-
-                        {/* Progress Bar */}
-                        <div className="w-full h-1.5 bg-paper-surface border border-border/60 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-accent transition-all duration-300"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-
-                        <span className="text-[10px] text-muted block text-right font-mono">
-                          {completedCount}/{totalCount} tasks cleared
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 3. OWNER ROLE FILTER CHIPS */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-border font-courier text-xs">
-                <span className="text-muted text-[11px] uppercase font-bold mr-1 flex items-center gap-1">
-                  <Filter className="w-3 h-3" /> Stakeholder Filter:
-                </span>
-                {["ALL", "Architecture", "SRE", "DevOps", "Product", "Executive"].map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => setSelectedOwnerFilter(role)}
-                    className={`px-2.5 py-1 text-[11px] uppercase font-bold rounded-lg border transition cursor-pointer ${
-                      selectedOwnerFilter === role
-                        ? "bg-ink text-paper-surface border-ink shadow-2xs"
-                        : "bg-paper-surface text-muted border-border hover:text-ink"
-                    }`}
-                  >
-                    {role === "ALL" ? "All Tasks" : role}
-                  </button>
-                ))}
-              </div>
-
-              {/* Phases */}
-              <div className="space-y-5">
                 {displayRoadmap.phases.map((phase, pIdx) => {
                   const phaseDates = getPhaseDates(pIdx);
                   return (
@@ -2012,7 +1999,7 @@ jobs:
                                   Timeline: {task.timeline}
                                 </span>
                                 {task.success_criteria && (
-                                  <span className="text-emerald-700 font-sans">
+                                  <span className="text-[#7a4e10] dark:text-[#D4AA50] font-sans">
                                     Target: {task.success_criteria}
                                   </span>
                                 )}

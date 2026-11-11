@@ -341,6 +341,7 @@ def update_active_roadmap(
 
     updated_phases = [p.model_dump() for p in payload.phases]
     updated_title = payload.title or (active_record.title if active_record else "Implementation Roadmap")
+    kickoff_anchor = payload.start_date or payload.kickoff_date or (decision.roadmap.get("kickoff_date") if isinstance(decision.roadmap, dict) else None)
 
     if active_record:
         active_record.phases = updated_phases
@@ -360,6 +361,8 @@ def update_active_roadmap(
     decision.roadmap = {
         "title": updated_title,
         "phases": updated_phases,
+        "start_date": kickoff_anchor,
+        "kickoff_date": kickoff_anchor,
     }
 
     db.commit()
@@ -368,6 +371,8 @@ def update_active_roadmap(
     return RoadmapData(
         title=active_record.title,
         phases=active_record.phases,
+        start_date=kickoff_anchor,
+        kickoff_date=kickoff_anchor,
     )
 
 

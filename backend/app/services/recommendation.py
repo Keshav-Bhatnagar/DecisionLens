@@ -787,59 +787,83 @@ def generate_domain_grounded_roadmap(
             )
         )
 
-    # Phase 2: Contract Structuring & Execution (Weeks 3-5)
+    # Phase 2: Core Execution, System Build & Canary Rollout (Weeks 3-5)
     phase2_tasks: List[RoadmapTask] = [
         RoadmapTask(
             task_id="task-p2-terms",
-            title=f"Draft & Negotiate Definitive Terms for {top_option_name}",
-            description=f"Incorporate milestone-linked payment schedules, exit covenants, and protective indemnity terms into definitive agreements.",
-            owner_role=ops_role,
+            title=f"Draft System Specifications & Finalize Contracts for {top_option_name}",
+            description=f"Establish architectural API contracts, milestone-linked delivery SLAs, and vendor indemnity terms.",
+            owner_role=ops_role if ops_role != "Lead Technical Architect" else "Lead Technical Architect",
             timeline="Weeks 3-4",
             dependencies=[t.task_id for t in phase1_tasks[:1]],
-            success_criteria="Executed definitive bilateral agreement or project charter signed by all key parties.",
+            success_criteria="Executed definitive specification charter and contractual agreements signed.",
             is_completed=False,
             source_type="decision_requirement",
-            reason="Translates strategic intent into binding contractual and operational governance.",
+            reason="Translates strategic intent into binding architectural contracts and operational governance.",
         ),
         RoadmapTask(
             task_id="task-p2-exec",
-            title=f"Launch Core Implementation Workstream: {top_option_name}",
-            description=f"Mobilize primary operating resources, establish telemetry tracking, and initiate initial execution tranches.",
-            owner_role=ops_role,
+            title=f"Launch Core Implementation & Dual-Run Canary Migration",
+            description=f"Mobilize engineering pods, build core service modules, and establish real-time telemetry pipelines.",
+            owner_role="Lead Technical Architect",
             timeline="Weeks 4-5",
             dependencies=["task-p2-terms"],
-            success_criteria="First execution milestone delivered within budget and timeline targets.",
+            success_criteria="Core functional modules deployed to staging environment passing end-to-end integration tests.",
             is_completed=False,
             source_type="decision_requirement",
             reason="Unleashes primary execution within controlled risk parameters.",
         ),
+        RoadmapTask(
+            task_id="task-p2-canary",
+            title="Deploy Automated Canary Routing with Rollback Circuit Breakers",
+            description="Configure staged 5% -> 25% -> 100% traffic shifting with automated rollback triggered on P99 latency spikes or error budget burn.",
+            owner_role="Staff SRE / Platform Lead",
+            timeline="Week 5",
+            dependencies=["task-p2-exec"],
+            success_criteria="Canary routing verified in staging with automated rollback drill executed successfully.",
+            is_completed=False,
+            source_type="risk",
+            reason="Guarantees zero-outage blast radius containment during initial production exposure.",
+        ),
     ]
 
-    # Phase 3: Operationalization & Performance Governance (Weeks 6-8)
+    # Phase 3: Operationalization, Hardening & Value Realization (Weeks 6-8)
     phase3_tasks: List[RoadmapTask] = [
         RoadmapTask(
             task_id="task-p3-close",
-            title=f"Complete Formal Closing & Operational Cutover{title_context}",
-            description=f"Execute final disbursements or cutover protocols, transferring full ownership and accountability to operating leads.",
-            owner_role=exec_role,
+            title=f"Complete Production Cutover & Deprecate Stranded Legacy Assets{title_context}",
+            description=f"Execute full production cutover, decommission deprioritized infrastructure, and eliminate stranded cloud spend.",
+            owner_role="Staff SRE / Platform Lead",
             timeline="Weeks 6-7",
-            dependencies=["task-p2-exec"],
-            success_criteria="Official legal closing or full operational production status achieved.",
+            dependencies=["task-p2-canary"],
+            success_criteria="Full production traffic cutover complete with 100% of legacy resources cleanly de-provisioned.",
             is_completed=False,
             source_type="condition",
-            reason="Formalizes irrevocable commitment and establishes stable operating equilibrium.",
+            reason="Formalizes cutover commitment and prevents lingering zombie asset cloud burn.",
+        ),
+        RoadmapTask(
+            task_id="task-p3-runbook",
+            title="Operational Runbook Handover & 24/7 Incident Escalation Playbook",
+            description="Transfer steady-state operating runbooks, alert runbooks, and SLA dashboards to on-call platform engineers.",
+            owner_role="Staff SRE / Platform Lead",
+            timeline="Week 7",
+            dependencies=["task-p3-close"],
+            success_criteria="Operations team completes simulation walkthrough with documented runbooks verified.",
+            is_completed=False,
+            source_type="decision_requirement",
+            reason="Ensures operational continuity and prevents single-engineer bus-factor vulnerability.",
         ),
         RoadmapTask(
             task_id="task-p3-gov",
-            title="Institute Post-Execution Governance & Audit Cadence",
-            description=f"Establish monthly review committee to audit realized outcomes, track KPIs against projections, and manage risk covenants.",
-            owner_role=exec_role,
+            title="Institute Boardroom Audit Cadence & 30-Day Fiduciary ROI Review",
+            description=f"Establish monthly executive committee cadence to audit realized outcomes against the Sunk-Cost Shield target.",
+            owner_role="Fiduciary Sponsor / VP Eng",
             timeline="Week 8",
-            dependencies=["task-p3-close"],
-            success_criteria="First post-closing governance review completed with baseline scorecard signed.",
+            dependencies=["task-p3-runbook"],
+            success_criteria="First 30-day post-closing governance scorecard signed off by executive stakeholders.",
             is_completed=False,
             source_type="decision_requirement",
-            reason="Guarantees sustained accountability and ensures expected strategic ROI is captured.",
+            reason="Guarantees sustained fiduciary accountability and ensures expected strategic ROI is captured.",
         ),
     ]
 
@@ -900,12 +924,33 @@ def build_grounded_alternatives(
     all_cons = points.get("cons", [])
     all_mixed = points.get("mixed_points", [])
 
-    # Step 1: Deduplicate redundant options (e.g. "Microservices (Kafka/Go)" and "Microservices Architecture")
-    seen_keys: List[set] = []
+    # Step 1: Deduplicate redundant options and filter out synonyms of the winner
+    winner_kws = _extract_option_keywords(top_option_name)
+    seen_keys: List[set] = [winner_kws]
     filtered_results: List[Dict[str, Any]] = []
+
+    # Ensure winner is always first
+    winner_added = False
     for r in matrix_results:
         opt_name = r.get("option_name") or ""
+        is_winner = (r.get("option_id") == top_option_id or opt_name == top_option_name or r.get("rank") == 1)
+        if is_winner and not winner_added:
+            filtered_results.append(r)
+            winner_added = True
+            break
+
+    for r in matrix_results:
+        opt_name = r.get("option_name") or ""
+        is_winner = (r.get("option_id") == top_option_id or opt_name == top_option_name or r.get("rank") == 1)
+        if is_winner:
+            continue
+
         kws = _extract_option_keywords(opt_name)
+        # Check if this alternative is a synonym of the winner
+        if kws and winner_kws and (kws == winner_kws or (len(kws & winner_kws) / max(len(kws), len(winner_kws)) >= 0.7)):
+            continue
+
+        # Check if this alternative is duplicate of an already added alternative
         is_dup = False
         for sk in seen_keys:
             if kws and sk and (kws.issubset(sk) or sk.issubset(kws) or (len(kws & sk) / max(len(kws), len(sk)) >= 0.6)):
@@ -952,24 +997,33 @@ def build_grounded_alternatives(
                 if _score_text_relevance(c, kws) > 0:
                     matched_cons.append(c)
 
+        # Synthesize domain-specific architectural reasoning if points lack explicit bullet points
+        opt_lower = opt_name.lower()
         if is_winner:
             pros = [
                 f"Highest weighted framework score ({opt_score:.2f}/10)",
-                "Superior alignment with critical operational criteria",
+                "Superior alignment with critical operational and financial criteria",
             ]
             if top_criteria_pros:
                 pros.extend(top_criteria_pros[:2])
             if matched_pros:
                 pros.extend(matched_pros[:1])
 
-            # Ensure winner cons ONLY match winner's domain; never slap other options' cons onto winner
+            if "monolith" in opt_lower:
+                pros.append("Single datastore ACID consistency with zero distributed lock contention")
+            elif "microservice" in opt_lower:
+                pros.append("Isolated deployment cadence and independent pod autoscaling")
+            elif "cloud" in opt_lower:
+                pros.append("Elastic resource allocation with reduced upfront on-prem capital outlay")
+
+            # Winner cons: ONLY winner-specific operational watchouts
             winner_cons = (
                 matched_cons[:2]
                 if matched_cons
                 else (
                     low_criteria_cons[:2]
                     if low_criteria_cons
-                    else ["Requires rigorous architectural boundary governance to avoid cross-module coupling."]
+                    else ["Requires rigorous architectural boundary enforcement to prevent cross-module coupling."]
                 )
             )
 
@@ -979,39 +1033,53 @@ def build_grounded_alternatives(
                     description=f"Primary recommended path achieving Rank #{opt_rank} in Weighted Decision Matrix ({opt_score:.2f}/10).",
                     pros=pros[:3],
                     cons=winner_cons[:2],
-                    tradeoffs="Delivers optimal delivery speed and low operational risk while accepting monolithic database query constraints.",
+                    tradeoffs="Delivers optimal delivery speed, lowest operational toil, and grounded cost efficiency.",
                     is_recommended=True,
                     why_not_recommended=None,
                 )
             )
         else:
-            # Runner-up alternative
-            alt_pros = (
-                matched_pros[:2]
-                if matched_pros
-                else (
-                    top_criteria_pros[:2]
-                    if top_criteria_pros
-                    else [f"Viable approach with positive attributes in {opt_name}."]
-                )
-            )
-            if top_criteria_pros and not any(p in alt_pros for p in top_criteria_pros):
-                alt_pros.insert(0, top_criteria_pros[0])
+            # Runner-up alternative: Generate concrete architectural trade-offs
+            alt_pros = list(matched_pros[:2])
+            if not alt_pros and top_criteria_pros:
+                alt_pros.extend(top_criteria_pros[:2])
 
-            alt_cons: List[str] = []
-            if low_criteria_cons:
-                alt_cons.extend(low_criteria_cons[:2])
+            if not alt_pros:
+                if "microservice" in opt_lower:
+                    alt_pros = ["Independent pod release cycles", "Fault isolation across service boundaries"]
+                elif "monolith" in opt_lower:
+                    alt_pros = ["Direct in-memory function calls", "Simplified single-repo deployment"]
+                elif "buy" in opt_lower or "vendor" in opt_lower:
+                    alt_pros = ["Turnkey commercial availability", "Offloaded maintenance responsibility"]
+                elif "outright" in opt_lower or "buyout" in opt_lower:
+                    alt_pros = ["Immediate 100% legal ownership", "Unfettered development discretion"]
+                else:
+                    alt_pros = [f"Viable approach with specific strengths in {opt_name}"]
+
+            alt_cons: List[str] = list(low_criteria_cons[:2])
             if matched_cons:
                 alt_cons.extend(matched_cons[:2])
-            if not alt_cons:
-                alt_cons = [f"Lower overall criteria alignment ({opt_score:.2f}/10 vs {canonical_winner_score:.2f}/10)."]
 
+            if not alt_cons:
+                if "microservice" in opt_lower:
+                    alt_cons = [
+                        "Eventual consistency and SAGA pattern complexity across transactional boundaries",
+                        "High network hop latency, distributed tracing overhead, and 3x SRE operational tax",
+                    ]
+                elif "monolith" in opt_lower:
+                    alt_cons = ["Shared deployment blast radius requiring synchronized test pipelines"]
+                elif "buy" in opt_lower or "vendor" in opt_lower:
+                    alt_cons = ["Escalating enterprise seat tax and vendor roadmap dependency lock-in"]
+                elif "outright" in opt_lower or "buyout" in opt_lower:
+                    alt_cons = ["High upfront capital commitment with severe liquidity impact"]
+                else:
+                    alt_cons = [f"Sub-optimal criteria score ({opt_score:.2f}/10 vs {canonical_winner_score:.2f}/10)"]
+
+            primary_divergence = low_criteria_cons[0].lower() if low_criteria_cons else "lower operational and delivery efficiency"
             why_deprioritized = (
-                f"Ranked #{opt_rank} with lower deterministic score ({opt_score:.2f}/10) "
-                f"compared to {top_option_name} ({canonical_winner_score:.2f}/10)."
+                f"Ranked #{opt_rank} ({opt_score:.2f}/10 vs {canonical_winner_score:.2f}/10). "
+                f"Deprioritized primarily due to {primary_divergence} relative to {top_option_name}."
             )
-            if low_criteria_cons:
-                why_deprioritized += f" Deprioritized primarily due to {low_criteria_cons[0].lower()}."
 
             alternatives.append(
                 AlternativeOption(
@@ -1019,7 +1087,7 @@ def build_grounded_alternatives(
                     description=f"Alternative evaluated in Decision Matrix (Rank #{opt_rank}, Score: {opt_score:.2f}/10).",
                     pros=alt_pros[:3],
                     cons=alt_cons[:3],
-                    tradeoffs=f"Trades away criteria performance and operational simplicity compared to {top_option_name}.",
+                    tradeoffs=f"Requires accepting higher operational overhead and lower criteria alignment than {top_option_name}.",
                     is_recommended=False,
                     why_not_recommended=why_deprioritized,
                 )

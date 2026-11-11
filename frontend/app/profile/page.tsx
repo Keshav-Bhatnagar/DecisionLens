@@ -103,6 +103,9 @@ export default function ProfilePage() {
       setCurrentUser(updated);
       setIsEditingName(false);
       setNameSuccess(`Username updated to "${clean}"`);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("user-profile-updated", { detail: updated }));
+      }
       setTimeout(() => setNameSuccess(null), 3500);
     } catch (err: unknown) {
       setNameError(err instanceof Error ? err.message : "Failed to update name");
@@ -326,8 +329,8 @@ export default function ProfilePage() {
 
           {/* Name Success / Error Toast */}
           {nameSuccess && (
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs font-medium flex items-center gap-2 animate-fadeIn">
-              <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-3 rounded-xl bg-[#EDE7D6] dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] text-xs font-medium flex items-center gap-2 animate-fadeIn">
+              <Check className="w-4 h-4 shrink-0 text-[#7a4e10] dark:text-[#D4AA50]" />
               <span>{nameSuccess}</span>
             </div>
           )}
@@ -672,7 +675,7 @@ export default function ProfilePage() {
               </div>
 
               {prefSavedMsg && (
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-fadeIn">
+                <span className="text-xs font-semibold text-[#7a4e10] dark:text-[#D4AA50] flex items-center gap-1.5 animate-fadeIn">
                   <Check className="w-3.5 h-3.5 stroke-[3]" /> Settings Applied
                 </span>
               )}
@@ -787,7 +790,7 @@ export default function ProfilePage() {
                       <Scale className="w-3.5 h-3.5 text-[var(--accent)]" />
                       Default Deliberation Mode
                     </span>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span className="text-[10px] font-mono text-[#7a4e10] dark:text-[#D4AA50] font-semibold">
                       AUTONOMOUS
                     </span>
                   </div>
@@ -1014,7 +1017,7 @@ export default function ProfilePage() {
                   </div>
                 )}
                 {passwordSuccess && (
-                  <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 text-xs flex items-center gap-2">
+                  <div className="p-3 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#2C2723] text-[#7a4e10] dark:text-[#D4AA50] text-xs flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>{passwordSuccess}</span>
                   </div>
