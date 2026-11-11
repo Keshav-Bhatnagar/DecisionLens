@@ -152,6 +152,9 @@ export default function StandaloneMeetingPage({
   const [takeawaysData, setTakeawaysData] = useState<MeetingTakeawaysResponse | null>(null);
   const [isGeneratingTakeaways, setIsGeneratingTakeaways] = useState(false);
 
+  // Terms of Deliberation & Privacy Modal (DPDP Act 2023 & Liability Cap)
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
   // Audio / WebRTC refs
   const audioStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1056,6 +1059,23 @@ export default function StandaloneMeetingPage({
               </button>
             </div>
 
+            {/* DPDP Act 2023 Consent & In-Memory Encryption Banner */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-[#F5F1E8] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] font-mono">
+              <div className="flex items-center gap-2 text-[#5c5549] dark:text-[#a89f91]">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>
+                  <strong>DPDP Act 2023 Compliant:</strong> Voice processed ephemeral in-memory. Zero retention of raw recordings without consent.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(true)}
+                className="shrink-0 ml-3 underline hover:text-[#7a4e10] dark:hover:text-[#D4AA50] font-bold text-[#1d1d1b] dark:text-[#F0EAE1] cursor-pointer"
+              >
+                Privacy &amp; Terms →
+              </button>
+            </div>
+
             {/* Upload File Fallback */}
             <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C] flex items-center justify-between text-xs text-[#5c5549] dark:text-[#a89f91]">
               <span className="font-mono text-[11px]">Or import pre-recorded meeting audio:</span>
@@ -1353,6 +1373,90 @@ export default function StandaloneMeetingPage({
           takeaways={takeawaysData}
           loading={isGeneratingTakeaways}
         />
+      )}
+
+      {/* Terms of Deliberation & Privacy Notice Modal (DPDP Act 2023 & Liability Cap) */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#F5F1E8] dark:bg-[#1C1A17] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50]">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-playfair font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                    Terms of Deliberation &amp; Privacy Notice
+                  </h3>
+                  <p className="text-xs font-mono text-[#5c5549] dark:text-[#a89f91]">
+                    DPDP Act 2023 • IT Act Section 43A • Enterprise Governance
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="p-1.5 rounded-lg text-[#5c5549] hover:text-[#1d1d1b] dark:text-[#a89f91] dark:hover:text-[#F0EAE1] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Clauses */}
+            <div className="space-y-4 text-xs font-sans text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
+              <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                <h4 className="font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <span>1. Audio Recording &amp; Consent (DPDP Act 2023)</span>
+                </h4>
+                <p>
+                  By initiating or participating in audio capture or WebRTC video inside DecisionLens, participants grant express consent for ephemeral acoustic-to-text transcription. Voice streams are processed in-memory via IIT Madras IndicWhisper / Whisper models. Raw audio is purged immediately post-session unless explicitly flagged for encrypted cold audit retention.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                <h4 className="font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <span>2. Limitation of Liability (Executive Decision Aid)</span>
+                </h4>
+                <p>
+                  DecisionLens and its AI scoring matrices (including Opportunity Cost calculations, Sunk Cost fallacies, and Bayesian priors) serve as <strong>advisory decision aids</strong>. The platform does not assume fiduciary, operational, or legal liability for boardroom resolutions. Final accountability and corporate sign-off rest exclusively with the enterprise&apos;s human executives. Total aggregate liability is strictly capped at the software fees paid in the preceding 12 months.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                <h4 className="font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <span>3. Intellectual Property &amp; Enterprise Confidentiality</span>
+                </h4>
+                <p>
+                  All architectural decision records (ADRs), stakeholder caveats, and synthesized takeaways generated within this workspace remain <strong>100% the proprietary Intellectual Property of the customer</strong>. Customer data is never used to train public foundation models or shared across multi-tenant boundaries.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                <h4 className="font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <span>4. Cryptographic Integrity &amp; Audit Trail</span>
+                </h4>
+                <p>
+                  Every verified ADR and caveat snapshot is cryptographically stamped with SHA-256 digests and linked to the authenticated participant ID, guaranteeing non-repudiation during ISO 27001 and SOC-2 Type II audits.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-[#cfc7b2] dark:border-[#38332C] pt-4">
+              <span className="text-[11px] font-mono text-[#5c5549] dark:text-[#a89f91]">
+                Compliance Jurisdiction: India (DPDP Act 2023, IT Act 2000)
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(false)}
+                className="px-5 py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:text-[#181614] text-[#F5F1E8] transition-colors cursor-pointer shadow-sm"
+              >
+                Acknowledge &amp; Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
