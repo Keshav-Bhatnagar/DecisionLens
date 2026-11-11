@@ -105,6 +105,10 @@ export default function EditorialLandingPage() {
   const [cardTilt, setCardTilt] = useState({ rx: 0, ry: 0 });
   const caseCardRef = useRef<HTMLDivElement>(null);
 
+  // Legal & DPDP Terms Modal State
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<"terms" | "privacy">("terms");
+
   // Check user authentication
   useEffect(() => {
     async function checkAuth() {
@@ -177,7 +181,45 @@ export default function EditorialLandingPage() {
         }`}
       >
         {/* Left Brand Identity: Antique Magnifying Lens Logo + Sleek Serif Wordmark */}
-        <BrandLogo theme={theme} />
+        <div className="flex items-center gap-8">
+          <BrandLogo theme={theme} />
+
+          {/* Desktop Masthead Section Anchors (Refined Editorial Spacing) */}
+          <div className="hidden lg:flex items-center gap-6 text-[10px] font-courier tracking-[0.14em] uppercase">
+            <a
+              href="#the-flow"
+              className={`transition-colors ${
+                theme === "dark"
+                  ? "text-[#A89F91] hover:text-[#D4AA50]"
+                  : "text-[#596474] hover:text-[#172033]"
+              }`}
+            >
+              The Flow
+            </a>
+            <span className="opacity-30">/</span>
+            <a
+              href="#cases-in-action"
+              className={`transition-colors ${
+                theme === "dark"
+                  ? "text-[#A89F91] hover:text-[#D4AA50]"
+                  : "text-[#596474] hover:text-[#172033]"
+              }`}
+            >
+              Lenses In Action
+            </a>
+            <span className="opacity-30">/</span>
+            <a
+              href="#philosophy"
+              className={`transition-colors ${
+                theme === "dark"
+                  ? "text-[#A89F91] hover:text-[#D4AA50]"
+                  : "text-[#596474] hover:text-[#172033]"
+              }`}
+            >
+              Epistemic Rigor
+            </a>
+          </div>
+        </div>
 
         {/* Right Section: Actions + Theme Shutter Dial + Extreme Right User Profile */}
         <div className="flex items-center space-x-2.5 sm:space-x-3">
@@ -806,11 +848,47 @@ export default function EditorialLandingPage() {
                 : "border-[#172033]/15 text-[#7B8491]"
             }`}
           >
-            <div className="text-[10px] font-courier tracking-[0.12em] uppercase opacity-65">
-              <span>EPISTEMIC REASONING & DECISION SCRUTINY ARCHIVE</span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+              <span className="text-[10px] font-courier tracking-[0.12em] uppercase opacity-65">
+                EPISTEMIC REASONING &amp; DECISION SCRUTINY ARCHIVE
+              </span>
+              <span className="hidden sm:inline opacity-30">•</span>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider">
+                DPDP ACT 2023 COMPLIANT
+              </span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center flex-wrap justify-center gap-4 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setLegalModalTab("terms");
+                  setShowLegalModal(true);
+                }}
+                className={`transition-colors underline cursor-pointer ${
+                  theme === "dark"
+                    ? "hover:text-[#F0EAE1]"
+                    : "hover:text-[#172033]"
+                }`}
+              >
+                Terms of Deliberation
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLegalModalTab("privacy");
+                  setShowLegalModal(true);
+                }}
+                className={`transition-colors underline cursor-pointer ${
+                  theme === "dark"
+                    ? "hover:text-[#F0EAE1]"
+                    : "hover:text-[#172033]"
+                }`}
+              >
+                Privacy Notice
+              </button>
+
               <Link
                 href="/softly"
                 className={`transition-colors ${
@@ -833,6 +911,146 @@ export default function EditorialLandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ==================================================
+          TERMS & PRIVACY MODAL (DPDP Act 2023 & Liability)
+          ================================================== */}
+      {showLegalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#F5F1E8] dark:bg-[#1C1A17] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] font-mono text-sm font-bold">
+                  §
+                </div>
+                <div>
+                  <h3 className="text-base font-newsreader font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                    {legalModalTab === "terms"
+                      ? "Terms of Deliberation & Liability Cap"
+                      : "Privacy & Data Protection Notice"}
+                  </h3>
+                  <p className="text-xs font-courier text-[#5c5549] dark:text-[#a89f91]">
+                    DPDP Act 2023 • IT Act Section 43A • Enterprise Governance
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#24211D] text-[10px] font-courier">
+                  <button
+                    type="button"
+                    onClick={() => setLegalModalTab("terms")}
+                    className={`px-2.5 py-1 rounded cursor-pointer font-bold transition-all ${
+                      legalModalTab === "terms"
+                        ? "bg-[#1d1d1b] text-white dark:bg-[#D4AA50] dark:text-[#181614]"
+                        : "text-[#5c5549] dark:text-[#a89f91]"
+                    }`}
+                  >
+                    TERMS
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLegalModalTab("privacy")}
+                    className={`px-2.5 py-1 rounded cursor-pointer font-bold transition-all ${
+                      legalModalTab === "privacy"
+                        ? "bg-[#1d1d1b] text-white dark:bg-[#D4AA50] dark:text-[#181614]"
+                        : "text-[#5c5549] dark:text-[#a89f91]"
+                    }`}
+                  >
+                    PRIVACY
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowLegalModal(false)}
+                  className="p-1.5 rounded-lg text-[#5c5549] hover:text-[#1d1d1b] dark:text-[#a89f91] dark:hover:text-[#F0EAE1] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] transition-colors cursor-pointer text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Content Body */}
+            <div className="space-y-4 text-xs font-sans text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
+              {legalModalTab === "terms" ? (
+                <>
+                  <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                    <h4 className="font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
+                      1. Executive Decision Aid (Limitation of Liability)
+                    </h4>
+                    <p>
+                      DecisionLens and its AI scoring matrices, Bayesian priors, and Sunk-Cost estimations operate as cognitive advisory aids. The platform does not assume fiduciary, financial, or operational liability for boardroom, technological, or organizational outcomes. Final fiduciary authority and decision execution rest exclusively with enterprise leadership.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                    <h4 className="font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
+                      2. Limitation of Liability Cap
+                    </h4>
+                    <p>
+                      To the maximum extent permitted under applicable law, DecisionLens&apos; aggregate contractual liability arising out of any decision audit dossier is strictly limited to the total subscription fees paid by the customer in the preceding twelve (12) months.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                    <h4 className="font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
+                      3. Customer Intellectual Property Ownership
+                    </h4>
+                    <p>
+                      All customer submissions, meeting transcripts, trade-off scoring matrices, stakeholder caveats, and synthesized Architectural Decision Records (ADRs) remain the exclusive proprietary Intellectual Property of the customer.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                    <h4 className="font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
+                      1. Digital Personal Data Protection (DPDP) Act 2023 Notice
+                    </h4>
+                    <p>
+                      In compliance with the Digital Personal Data Protection Act 2023 and Section 43A of the Information Technology Act 2000, DecisionLens acts as a Data Fiduciary / Processor for business workplace deliberation. Audio streams are transcribed ephemeral in-memory via IndicWhisper / Whisper models. Raw audio recordings are purged immediately post-session unless explicit cold storage is requested.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                    <h4 className="font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
+                      2. Zero Public Model Training
+                    </h4>
+                    <p>
+                      Customer proprietary code, confidential roadmaps, audio deliberations, and stakeholder caveats are never used to train public foundation models or shared across multi-tenant boundaries.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-[#EDE7D6] dark:bg-[#24211D] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
+                    <h4 className="font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[11px]">
+                      3. Cryptographic Audit Immutability
+                    </h4>
+                    <p>
+                      Verified ADRs and caveat records are cryptographically stamped with SHA-256 digests and authenticated author IDs, ensuring non-repudiation for ISO 27001 and SOC-2 Type II audit scrutiny.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-[#cfc7b2] dark:border-[#38332C] pt-4">
+              <span className="text-[11px] font-courier text-[#5c5549] dark:text-[#a89f91]">
+                Jurisdiction: India (DPDP Act 2023, IT Act 2000)
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowLegalModal(false)}
+                className="px-5 py-2 rounded-xl text-xs font-courier font-bold uppercase tracking-wider bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:text-[#181614] text-[#F5F1E8] transition-colors cursor-pointer shadow-sm"
+              >
+                Acknowledge &amp; Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
