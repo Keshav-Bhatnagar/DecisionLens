@@ -423,30 +423,30 @@ export default function DecisionDetailPage({
                       <button
                         type="button"
                         onClick={() => setIngestionTab("context")}
-                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
+                        className={`p-4 text-left border rounded-lg transition-all cursor-pointer ${
                           ingestionTab === "context"
-                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
-                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
+                            ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm ring-1 ring-[#7a4e10]/20"
+                            : "bg-[#EDE7D6]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#F4F0E6] dark:hover:bg-[#1E1B18] hover:border-[#7a4e10]/50"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <span className={`text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                            ingestionTab === "context" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#1d1d1b] dark:text-[#F0EAE1]"
+                          }`}>
                             <FileText className="w-3.5 h-3.5" />
                             Written Notes
                           </span>
                           {description.trim() ? (
                             <span
-                              className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-none ${
-                                ingestionTab === "context"
-                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
-                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
-                              }`}
+                              className="text-xs font-mono font-bold uppercase px-2 py-0.5 rounded bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]"
                             >
                               Filled
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] leading-relaxed mt-1">
+                        <p className={`text-xs font-sans leading-relaxed mt-1 ${
+                          ingestionTab === "context" ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-medium" : "text-[#4f4b40] dark:text-[#A89F91]"
+                        }`}>
                           Add stakeholders, deadlines, budget limits, or known constraints.
                         </p>
                       </button>
@@ -455,30 +455,30 @@ export default function DecisionDetailPage({
                       <button
                         type="button"
                         onClick={() => setIngestionTab("docs")}
-                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
+                        className={`p-4 text-left border rounded-lg transition-all cursor-pointer ${
                           ingestionTab === "docs"
-                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
-                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
+                            ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm ring-1 ring-[#7a4e10]/20"
+                            : "bg-[#EDE7D6]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#F4F0E6] dark:hover:bg-[#1E1B18] hover:border-[#7a4e10]/50"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <span className={`text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                            ingestionTab === "docs" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#1d1d1b] dark:text-[#F0EAE1]"
+                          }`}>
                             <Paperclip className="w-3.5 h-3.5" />
                             Attach Specs
                           </span>
                           {attachments.length > 0 ? (
                             <span
-                              className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-none ${
-                                ingestionTab === "docs"
-                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
-                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
-                              }`}
+                              className="text-xs font-mono font-bold uppercase px-2 py-0.5 rounded bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]"
                             >
                               {attachments.length} {attachments.length === 1 ? "doc" : "docs"}
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] leading-relaxed mt-1">
+                        <p className={`text-xs font-sans leading-relaxed mt-1 ${
+                          ingestionTab === "docs" ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-medium" : "text-[#4f4b40] dark:text-[#A89F91]"
+                        }`}>
                           Upload architectural diagrams, PRDs, RFCs, or benchmark data.
                         </p>
                       </button>
@@ -487,30 +487,30 @@ export default function DecisionDetailPage({
                       <button
                         type="button"
                         onClick={() => setIngestionTab("voice")}
-                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
+                        className={`p-4 text-left border rounded-lg transition-all cursor-pointer ${
                           ingestionTab === "voice" || ingestionTab === "meeting"
-                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
-                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
+                            ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm ring-1 ring-[#7a4e10]/20"
+                            : "bg-[#EDE7D6]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#F4F0E6] dark:hover:bg-[#1E1B18] hover:border-[#7a4e10]/50"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <span className={`text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                            ingestionTab === "voice" || ingestionTab === "meeting" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#1d1d1b] dark:text-[#F0EAE1]"
+                          }`}>
                             <Mic className="w-3.5 h-3.5" />
                             Voice &amp; Meetings
                           </span>
                           {Boolean(decision.transcript) ? (
                             <span
-                              className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-none ${
-                                ingestionTab === "voice" || ingestionTab === "meeting"
-                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
-                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
-                              }`}
+                              className="text-xs font-mono font-bold uppercase px-2 py-0.5 rounded bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]"
                             >
                               Transcribed
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] leading-relaxed mt-1">
+                        <p className={`text-xs font-sans leading-relaxed mt-1 ${
+                          ingestionTab === "voice" || ingestionTab === "meeting" ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-medium" : "text-[#4f4b40] dark:text-[#A89F91]"
+                        }`}>
                           Record spoken notes, upload an audio file, or sync a live meeting call.
                         </p>
                       </button>
@@ -658,15 +658,15 @@ export default function DecisionDetailPage({
 
                       {/* Active Panel 3: Voice & Call Sync */}
                       {(ingestionTab === "voice" || ingestionTab === "meeting") && (
-                        <div className="space-y-4 animate-in fade-in duration-150 font-courier">
+                        <div className="space-y-4 animate-in fade-in duration-150 font-sans">
                           <div className="flex items-center gap-2 border-b border-[#cfc7b2] dark:border-[#38332C] pb-3">
                             <button
                               type="button"
                               onClick={() => setIngestionTab("voice")}
-                              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer transition-colors ${
+                              className={`px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors ${
                                 ingestionTab === "voice"
-                                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
+                                  ? "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-2xs"
+                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
                               }`}
                             >
                               🎙️ Voice Memo & Audio Upload
@@ -674,10 +674,10 @@ export default function DecisionDetailPage({
                             <button
                               type="button"
                               onClick={() => setIngestionTab("meeting")}
-                              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer transition-colors ${
+                              className={`px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors ${
                                 ingestionTab === "meeting"
-                                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
+                                  ? "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-2xs"
+                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
                               }`}
                             >
                               📹 Live Call & Anonymous Scribe
