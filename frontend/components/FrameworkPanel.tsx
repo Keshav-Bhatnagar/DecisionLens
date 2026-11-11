@@ -467,77 +467,71 @@ export default function FrameworkPanel({
       {/* THE EXECUTIVE GAUNTLET VERDICT (The Single Source of Truth)              */}
       {/* ========================================================================= */}
       {analysis && canonicalWinner && (
-        <div className="rounded-2xl border border-amber-300/80 bg-paper-sidebar p-6 sm:p-7 space-y-6 shadow-2xs">
+        <div className="rounded-2xl border border-border bg-paper-surface p-6 sm:p-7 space-y-6 shadow-sm">
           
           {/* Winner Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border">
             <div className="flex items-start gap-3.5">
-              <span className="p-3 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0 shadow-2xs mt-0.5">
-                <Award className="w-6 h-6 text-emerald-700" />
+              <span className="p-2.5 rounded-xl bg-paper-sidebar text-ink border border-border shrink-0 mt-0.5">
+                <Award className="w-5 h-5 text-ink" />
               </span>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-accent">
-                    The Gauntlet Winner (Rank #1)
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-ink-secondary">
+                    Dominant Recommendation
                   </span>
-                  <span
-                    className={`text-[9px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                      canonicalWinner.status === "READY"
-                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                        : "bg-amber-100 text-amber-900 border border-amber-300"
-                    }`}
-                  >
-                    {canonicalWinner.status === "READY" ? "Ready for Execution" : "Conditional on Due Diligence"}
+                  <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full border border-border bg-paper-sidebar text-ink">
+                    {canonicalWinner.status === "READY" ? "Ready for Execution" : "Due Diligence Required"}
                   </span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-serif font-bold text-ink tracking-tight">
                   {canonicalWinner.name}
                 </h3>
-                <p className="text-xs text-ink-secondary font-light">
+                <p className="text-sm text-ink-secondary leading-relaxed font-sans">
                   Option {canonicalWinner.name} emerged as the dominant strategic choice across multi-criteria scoring and empirical citations.
                 </p>
               </div>
             </div>
 
-            <div className="text-left sm:text-right bg-paper-surface p-4 rounded-xl border border-border shrink-0 shadow-2xs">
+            <div className="text-left sm:text-right bg-paper-sidebar p-4 rounded-xl border border-border shrink-0">
               <span className="font-mono text-3xl font-extrabold text-ink block leading-none">
                 {canonicalWinner.score.toFixed(2)}<span className="text-xs text-ink-secondary font-normal"> / 10</span>
               </span>
-              <span className="text-[10px] font-mono text-emerald-800 font-bold uppercase tracking-wider mt-1 block">
+              <span className="text-xs font-mono text-ink-secondary font-medium uppercase tracking-wider mt-1.5 block">
                 {canonicalWinner.margin !== null && canonicalWinner.margin > 0
                   ? `+${canonicalWinner.margin.toFixed(2)} pts over runner-up`
-                  : "Convergence Rank #1"}
+                  : "Rank #1 Choice"}
               </span>
             </div>
           </div>
 
-          {/* The Tension & Resolution (The 2 things an executive must know) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {/* The Tension & Resolution */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* The Adversarial Trap Caught */}
-            <div className="p-4 sm:p-5 rounded-xl bg-paper-surface border border-rose-200/80 space-y-2 shadow-2xs">
-              <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-rose-900 uppercase tracking-wider">
-                <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>The One Fatal Trap Caught by Red-Teaming:</span>
+            <div className="p-4 sm:p-5 rounded-xl bg-paper-sidebar border border-border space-y-2">
+              <div className="flex items-center gap-2 font-mono text-xs font-bold text-ink uppercase tracking-wider">
+                <ShieldAlert className="w-4 h-4 text-ink-secondary shrink-0" />
+                <span>Primary Risk Identified:</span>
               </div>
-              <p className="text-xs text-ink leading-relaxed font-sans">
+              <p className="text-sm text-ink leading-relaxed font-sans">
                 {adversarialFriction}
               </p>
-              <div className="pt-2 border-t border-border/60 text-[11px] text-ink-secondary font-mono">
-                Flagged by: <strong>Adversarial Red-Team (Six Hats Black Hat)</strong>
+              <div className="pt-2 border-t border-border/60 text-xs text-ink-secondary font-mono">
+                Flagged by: <strong>Adversarial Red-Team Analysis</strong>
               </div>
             </div>
 
             {/* The Clear Resolution & Protection */}
-            <div className="p-4 sm:p-5 rounded-xl bg-paper-surface border border-emerald-200/80 space-y-2 shadow-2xs">
-              <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-emerald-900 uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>The Exact Condition to Proceed Safely:</span>
+            <div className="p-4 sm:p-5 rounded-xl bg-paper-sidebar border border-border space-y-2">
+              <div className="flex items-center gap-2 font-mono text-xs font-bold text-ink uppercase tracking-wider">
+                <ShieldCheck className="w-4 h-4 text-ink-secondary shrink-0" />
+                <span>Safe Execution Condition:</span>
               </div>
-              <p className="text-xs text-ink leading-relaxed font-sans">
+              <p className="text-sm text-ink leading-relaxed font-sans">
                 {operationalCondition}
               </p>
-              <div className="pt-2 border-t border-border/60 text-[11px] text-ink-secondary font-mono">
-                Mandated in: <strong>Executive Decision Memo & ADR</strong>
+              <div className="pt-2 border-t border-border/60 text-xs text-ink-secondary font-mono">
+                Mandated in: <strong>Executive Decision Memo &amp; ADR</strong>
               </div>
             </div>
           </div>
@@ -555,7 +549,7 @@ export default function FrameworkPanel({
               <h4 className="text-sm font-serif font-bold text-ink">
                 Candidate Options Comparative Leaderboard
               </h4>
-              <p className="text-[11px] text-ink-secondary">
+              <p className="text-xs text-ink-secondary">
                 Deterministic scores based on weighted business and technical criteria.
               </p>
             </div>
@@ -580,15 +574,15 @@ export default function FrameworkPanel({
                   key={res.option_id}
                   className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition ${
                     isWinner
-                      ? "bg-emerald-500/5 border-emerald-300/80 shadow-2xs"
+                      ? "bg-paper-surface border-border shadow-xs ring-1 ring-border"
                       : "bg-paper-sidebar border-border"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className={`w-6 h-6 rounded-full font-mono font-bold text-[11px] flex items-center justify-center shrink-0 ${
+                      className={`w-6 h-6 rounded-full font-mono font-bold text-xs flex items-center justify-center shrink-0 ${
                         isWinner
-                          ? "bg-emerald-700 text-paper-surface"
+                          ? "bg-ink text-paper-surface"
                           : "bg-paper-surface text-ink-secondary border border-border"
                       }`}
                     >
@@ -598,7 +592,7 @@ export default function FrameworkPanel({
                       <span className="font-semibold text-ink text-sm block">
                         {res.option_name}
                       </span>
-                      <span className="text-[11px] text-ink-secondary font-mono">
+                      <span className="text-xs text-ink-secondary font-mono">
                         {isWinner ? "Dominant Choice across all criteria" : `Rank #${res.rank} Alternative`}
                       </span>
                     </div>
@@ -609,7 +603,7 @@ export default function FrameworkPanel({
                       <span className="font-mono text-base font-extrabold text-ink block">
                         {res.weighted_score.toFixed(2)} / 10
                       </span>
-                      <span className="text-[10px] text-ink-secondary font-mono">
+                      <span className="text-xs text-ink-secondary font-mono">
                         Weighted Score
                       </span>
                     </div>
@@ -715,9 +709,9 @@ export default function FrameworkPanel({
               className="flex items-center gap-2 text-left text-xs font-mono font-bold text-ink hover:text-accent transition cursor-pointer"
             >
               <span>{showUnderlyingModels ? "▼" : "▶"}</span>
-              <span>Inspect Underlying Models & Raw Crash Tests (Optional Audit Deep-Dive)</span>
+              <span>Inspect Underlying Models &amp; Raw Crash Tests (Optional Audit Deep-Dive)</span>
             </button>
-            <span className="text-[10px] font-mono text-ink-secondary">
+            <span className="text-xs font-mono text-ink-secondary">
               5 Background Models Evaluated
             </span>
           </div>
@@ -859,13 +853,13 @@ export default function FrameworkPanel({
       {analysis && canonicalWinner && (
         <div className="pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-0.5">
-            <div className="flex items-center gap-2 text-xs font-mono text-emerald-800">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="flex items-center gap-2 text-xs font-mono text-ink">
+              <CheckCircle2 className="w-4 h-4 text-ink-secondary shrink-0" />
               <span>
-                <strong>Gauntlet Complete.</strong> Unified verdict grounded with zero conflicting confusion.
+                <strong>Evaluation Complete.</strong> Strategic choice synthesized with empirical validation.
               </span>
             </div>
-            <p className="text-[11px] text-ink-secondary pl-6">
+            <p className="text-xs text-ink-secondary pl-6">
               Option {canonicalWinner.name} is ready for executive decision memo formulation.
             </p>
           </div>
@@ -877,7 +871,7 @@ export default function FrameworkPanel({
                 onClick={onAdvanceToNextStage}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-ink text-paper-surface hover:opacity-90 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
               >
-                <span>Advance to Decision Synthesis & ADR</span>
+                <span>Advance to Decision Synthesis &amp; ADR</span>
                 <ArrowRight className="w-3.5 h-3.5 text-accent" />
               </button>
             )}

@@ -69,15 +69,15 @@ export default function WorkflowStepper({
           id: "ingestion",
           number: "1",
           label: "Audio & Notes",
-          shortDesc: "Call, Audio & Notes",
+          shortDesc: "Audio & Docs",
           icon: <Mic className="w-3.5 h-3.5" />,
           isCompleted: isTranscriptReviewed || hasTranscript,
         },
         {
           id: "structuring",
           number: "2",
-          label: "Discussion Points",
-          shortDesc: "Facts & Statements",
+          label: "Discussion",
+          shortDesc: "Key Points",
           icon: <Users className="w-3.5 h-3.5" />,
           isCompleted: isPointsReviewed,
         },
@@ -85,7 +85,7 @@ export default function WorkflowStepper({
           id: "gaps",
           number: "3",
           label: "Action Items",
-          shortDesc: "Owners & Missing Info",
+          shortDesc: "Owners & Risks",
           icon: <Search className="w-3.5 h-3.5" />,
           isCompleted: hasGaps,
         },
@@ -93,15 +93,15 @@ export default function WorkflowStepper({
           id: "frameworks",
           number: "4",
           label: "Alignment",
-          shortDesc: "Trade-offs & Matrices",
+          shortDesc: "Trade-offs",
           icon: <Grid className="w-3.5 h-3.5" />,
           isCompleted: hasFrameworks,
         },
         {
           id: "synthesis",
           number: "5",
-          label: "Minutes & Memo",
-          shortDesc: "Executive Summary",
+          label: "Summary",
+          shortDesc: "Minutes & Memo",
           icon: <Compass className="w-3.5 h-3.5" />,
           isCompleted: hasSynthesis,
         },
@@ -110,8 +110,8 @@ export default function WorkflowStepper({
         {
           id: "ingestion",
           number: "1",
-          label: "Input & Audio",
-          shortDesc: "PRD, Audio & Docs",
+          label: "Input",
+          shortDesc: "Docs & Audio",
           icon: <FileText className="w-3.5 h-3.5" />,
           isCompleted: isTranscriptReviewed || hasTranscript,
         },
@@ -119,31 +119,31 @@ export default function WorkflowStepper({
           id: "structuring",
           number: "2",
           label: "Structuring",
-          shortDesc: "Facts & Biases",
+          shortDesc: "Key Points",
           icon: <Brain className="w-3.5 h-3.5" />,
           isCompleted: isPointsReviewed,
         },
         {
           id: "gaps",
           number: "3",
-          label: "Unknowns & Gaps",
-          shortDesc: "Blindspots & Web Research",
+          label: "Gaps & Risks",
+          shortDesc: "Deep Dive",
           icon: <Search className="w-3.5 h-3.5" />,
           isCompleted: hasGaps,
         },
         {
           id: "frameworks",
           number: "4",
-          label: "Trade-off Matrix",
-          shortDesc: "MAUT & 5 Frameworks",
+          label: "Trade-offs",
+          shortDesc: "Evaluation",
           icon: <Grid className="w-3.5 h-3.5" />,
           isCompleted: hasFrameworks,
         },
         {
           id: "synthesis",
           number: "5",
-          label: "ADR Recommendation",
-          shortDesc: "Roadmap & Brief",
+          label: "Synthesis & ADR",
+          shortDesc: "Executive Memo",
           icon: <Compass className="w-3.5 h-3.5" />,
           isCompleted: hasSynthesis,
         },
@@ -172,9 +172,9 @@ export default function WorkflowStepper({
   }, [stages, onSelectStage]);
 
   return (
-    <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm p-2 sm:p-2.5 border border-[#cfc7b2] dark:border-[#38332C] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-2.5 font-courier text-[#1d1d1b] dark:text-[#F0EAE1]">
+    <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-xl p-2 sm:p-2.5 border border-[#cfc7b2] dark:border-[#38332C] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-2.5 font-sans text-[#1d1d1b] dark:text-[#F0EAE1]">
       {/* 5-Step Segmented Rail */}
-      <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-[#E5DEC9] dark:bg-[#181614] p-1 rounded-sm border border-[#cfc7b2] dark:border-[#38332C]">
+      <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-[#E5DEC9] dark:bg-[#181614] p-1.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C]">
         {stages.map((stage) => {
           const isActive = currentStage === stage.id;
           return (
@@ -182,35 +182,35 @@ export default function WorkflowStepper({
               key={stage.id}
               type="button"
               onClick={() => onSelectStage(stage.id)}
-              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-sm text-left transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-left transition cursor-pointer ${
                 isActive
-                  ? "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] font-bold shadow-xs border border-[#cfc7b2] dark:border-[#38332C]"
+                  ? "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold shadow-xs border border-[#cfc7b2] dark:border-[#38332C]"
                   : stage.isCompleted
                   ? "text-[#1d1d1b] dark:text-[#F0EAE1] hover:text-[#2B4C8C] dark:hover:text-[#D4AA50] hover:bg-[#cfc7b2]/40"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30"
               }`}
             >
               <span
-                className={`w-5 h-5 rounded-sm flex items-center justify-center text-[10px] font-mono font-bold shrink-0 transition ${
+                className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-mono font-bold shrink-0 transition ${
                   isActive
                     ? "bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614]"
                     : stage.isCompleted
-                    ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
+                    ? "bg-[#EDE7D6] dark:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
                     : "bg-[#cfc7b2] dark:bg-[#38332C] text-[#4f4b40] dark:text-[#A89F91]"
                 }`}
               >
                 {stage.isCompleted ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#1d1d1b] dark:text-[#D4AA50]" />
                 ) : (
                   stage.number
                 )}
               </span>
 
-              <div className="truncate">
-                <span className="text-xs truncate block leading-tight font-bold">
+              <div className="truncate min-w-0">
+                <span className="text-xs truncate block leading-tight font-semibold">
                   {stage.label}
                 </span>
-                <span className="text-[9px] text-[#4f4b40] dark:text-[#A89F91] truncate block font-normal hidden lg:block">
+                <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] truncate block font-normal hidden lg:block">
                   {stage.shortDesc}
                 </span>
               </div>
@@ -225,7 +225,7 @@ export default function WorkflowStepper({
           <button
             type="button"
             onClick={onOpenAutoPilot}
-            className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-sm font-bold bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] uppercase tracking-wider font-courier shadow-xs transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg font-semibold bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] tracking-wide shadow-xs transition cursor-pointer"
             title="Auto-run full pipeline: Structuring → Gaps → Frameworks → Synthesis"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#D4AA50] dark:text-[#181614]" />
@@ -236,7 +236,7 @@ export default function WorkflowStepper({
         <button
           type="button"
           onClick={onToggleViewMode}
-          className="text-xs px-3 py-1.5 rounded-sm border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] font-bold uppercase tracking-wider font-courier transition cursor-pointer"
+          className="text-xs px-3 py-1.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] font-semibold tracking-wide transition cursor-pointer"
           title="Toggle between single stage focus or full view"
         >
           {viewMode === "step" ? "Step Mode" : "All Steps"}
@@ -245,7 +245,7 @@ export default function WorkflowStepper({
         <button
           type="button"
           onClick={onOpenExportModal}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-sm font-bold bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] uppercase tracking-wider font-courier shadow-xs transition cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] tracking-wide shadow-xs transition cursor-pointer"
         >
           <Share2 className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
           <span>{isMeeting ? "Export Minutes" : "Export Brief"}</span>

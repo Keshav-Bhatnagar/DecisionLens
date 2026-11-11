@@ -65,6 +65,10 @@ class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserUpdateProfile(BaseModel):
+    display_name: Optional[str] = Field(None, min_length=1, max_length=150, description="User display name")
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

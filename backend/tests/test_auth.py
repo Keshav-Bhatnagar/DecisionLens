@@ -292,3 +292,26 @@ def test_oauth_authenticate_missing_credentials(client: TestClient):
     assert res.status_code == 400
     assert "missing oauth credentials" in res.json()["detail"].lower()
 
+
+def test_update_profile_display_name(client: TestClient, registered_user: dict):
+    """Verify user can update their display name / username via PATCH /api/auth/me."""
+    headers = {"Authorization": f"Bearer {registered_user['token']}"}
+    payload = {"display_name": "Tamanna"}
+    res = client.patch("/api/auth/me", headers=headers, json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["display_name"] == "Tamanna"
+
+    # Verify persistent retrieval
+    me_res = client.get("/api/auth/me", headers=headers)
+    assert me_res.status_code == 200
+    assert me_res.json()["display_name"] == "Tamanna"
+
+
+def test_update_profile_unauthorized(client: TestClient):
+    """Verify unauthorized PATCH /api/auth/me returns 401."""
+    payload = {"display_name": "Hacker"}
+    res = client.patch("/api/auth/me", json=payload)
+    assert res.status_code == 401
+
+

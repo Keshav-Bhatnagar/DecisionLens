@@ -219,6 +219,13 @@ export async function getMe(): Promise<User | null> {
   }
 }
 
+export async function updateProfile(data: { display_name?: string }): Promise<User> {
+  return fetchApi<User>("/api/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function changePassword(
   current_password: string,
   new_password: string

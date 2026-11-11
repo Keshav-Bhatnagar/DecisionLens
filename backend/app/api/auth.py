@@ -13,6 +13,7 @@ from app.schemas import (
     UserRegister,
     UserLogin,
     UserResponse,
+    UserUpdateProfile,
     TokenResponse,
     UserChangePassword,
     OAuthLoginRequest,
@@ -93,6 +94,26 @@ def login(body: UserLogin, db: Session = Depends(get_db)):
 )
 def get_me(current_user: User = Depends(get_current_user)):
     """Return the profile of the currently authenticated user."""
+    return UserResponse.model_validate(current_user)
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    summary="Update current user profile",
+)
+def update_me(
+    body: UserUpdateProfile,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update current user profile fields such as display_name."""
+    if body.display_name is not None:
+        clean_name = body.display_name.strip()
+        if clean_name:
+            current_user.display_name = clean_name
+    db.commit()
+    db.refresh(current_user)
     return UserResponse.model_validate(current_user)
 
 
