@@ -38,13 +38,48 @@ type FaultLineName = (typeof FAULT_LINE_NAMES)[number];
 // Default fault line levels (0 = OPEN, 1 = STARTED, 2 = EXAMINED)
 function getDecisionFaultLines(d: Decision): Record<FaultLineName, number> {
   const stored = (d.fault_lines || {}) as Record<string, number>;
+  const isDecided = d.status === "decided";
+
+  // Check actual cognitive artifacts for dynamic fallback
+  const hasRawInput = Boolean(
+    d.raw_input?.trim() ||
+    d.transcript?.trim() ||
+    (d.problem_statement && d.problem_statement.trim().length > 0)
+  );
+  const hasPoints = Boolean(d.points && Object.keys(d.points).length > 0);
+  const hasGaps = Boolean(d.gaps && Object.keys(d.gaps).length > 0);
+  const hasAnalysis = Boolean(d.analysis && Object.keys(d.analysis).length > 0);
+  const hasRecommendation = Boolean(
+    d.recommendation && Object.keys(d.recommendation).length > 0
+  );
+
+  const getLvl = (name: FaultLineName, dynamicLvl: number): number => {
+    // If user explicitly scored this fault line > 0 via radar, honor it
+    if (typeof stored[name] === "number" && stored[name] > 0) {
+      return stored[name];
+    }
+    // If decided, all 6 fault lines are fully examined
+    if (isDecided) {
+      return 2;
+    }
+    return dynamicLvl;
+  };
+
+  // Compute dynamic levels based on actual workflow progression
+  const assumptionsLvl = (hasAnalysis || d.points_reviewed) ? 2 : hasPoints ? 1 : 0;
+  const evidenceLvl = (hasPoints && hasRawInput) ? 2 : hasRawInput ? 1 : 0;
+  const blindSpotsLvl = (hasAnalysis || hasRecommendation) ? 2 : hasGaps ? 1 : 0;
+  const biasLvl = (hasRecommendation || hasAnalysis) ? 2 : d.status === "evaluating" ? 1 : 0;
+  const tradeOffsLvl = (hasRecommendation || hasAnalysis) ? 2 : d.status === "evaluating" ? 1 : 0;
+  const alternativesLvl = (hasRecommendation || hasAnalysis) ? 2 : d.status === "evaluating" ? 1 : 0;
+
   return {
-    Assumptions: typeof stored["Assumptions"] === "number" ? stored["Assumptions"] : 0,
-    Evidence: typeof stored["Evidence"] === "number" ? stored["Evidence"] : 0,
-    "Blind spots": typeof stored["Blind spots"] === "number" ? stored["Blind spots"] : 0,
-    Bias: typeof stored["Bias"] === "number" ? stored["Bias"] : 0,
-    "Trade-offs": typeof stored["Trade-offs"] === "number" ? stored["Trade-offs"] : 0,
-    Alternatives: typeof stored["Alternatives"] === "number" ? stored["Alternatives"] : 0,
+    Assumptions: getLvl("Assumptions", assumptionsLvl),
+    Evidence: getLvl("Evidence", evidenceLvl),
+    "Blind spots": getLvl("Blind spots", blindSpotsLvl),
+    Bias: getLvl("Bias", biasLvl),
+    "Trade-offs": getLvl("Trade-offs", tradeOffsLvl),
+    Alternatives: getLvl("Alternatives", alternativesLvl),
   };
 }
 
@@ -270,6 +305,8 @@ function SixSegmentBar({
   levels: Record<FaultLineName, number>;
 }) {
   const examined = countExamined(levels);
+  const isFullyExamined = examined === 6;
+
   return (
     <div className="flex items-center gap-1.5" title="Fault lines progress">
       <div className="flex items-center gap-1">
@@ -279,18 +316,24 @@ function SixSegmentBar({
             <span
               key={name}
               title={`${name}: ${lvl === 2 ? "EXAMINED" : lvl === 1 ? "STARTED" : "OPEN"}`}
-              className={`inline-block w-[26px] h-[8px] rounded-none shrink-0 ${
+              className={`inline-block w-[26px] h-[8px] rounded-xs shrink-0 transition-all ${
                 lvl === 2
-                  ? "bg-[#2B4C8C] dark:bg-[#D4AA50] border border-[#2B4C8C] dark:border-[#D4AA50]"
+                  ? isFullyExamined
+                    ? "bg-[#1B4332] dark:bg-[#52b788] border border-[#1B4332] dark:border-[#52b788]"
+                    : "bg-[#1d1d1b] dark:bg-[#D4AA50] border border-[#1d1d1b] dark:border-[#D4AA50]"
                   : lvl === 1
-                  ? "bg-[linear-gradient(to_right,#2B4C8C_50%,transparent_50%)] dark:bg-[linear-gradient(to_right,#D4AA50_50%,transparent_50%)] border border-[#2B4C8C] dark:border-[#D4AA50]"
+                  ? "bg-[linear-gradient(to_right,#7a4e10_50%,transparent_50%)] dark:bg-[linear-gradient(to_right,#D4AA50_50%,transparent_50%)] border border-[#7a4e10] dark:border-[#D4AA50]"
                   : "bg-transparent border border-[#cfc7b2] dark:border-[#524B40]"
               }`}
             />
           );
         })}
       </div>
-      <span className="font-courier text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] ml-1">
+      <span className={`font-courier text-xs font-bold uppercase tracking-wider ml-1 ${
+        isFullyExamined
+          ? "text-[#1B4332] dark:text-[#52b788]"
+          : "text-[#4f4b40] dark:text-[#A89F91]"
+      }`}>
         {examined}/6
       </span>
     </div>
@@ -472,10 +515,19 @@ export default function FolderDetailPage({
     if (!selectedDecision) return;
     const isCurrentlyDecided = selectedDecision.status === "decided";
     const nextStatus = isCurrentlyDecided ? "evaluating" : "decided";
+    const nextFaultLines = nextStatus === "decided" ? {
+      Assumptions: 2,
+      Evidence: 2,
+      "Blind spots": 2,
+      Bias: 2,
+      "Trade-offs": 2,
+      Alternatives: 2,
+    } : selectedDecision.fault_lines;
 
     const updated: Decision = {
       ...selectedDecision,
       status: nextStatus,
+      fault_lines: nextFaultLines,
     };
 
     setDecisions((prev) => prev.map((d) => (d.id === selectedDecision.id ? updated : d)));
@@ -483,6 +535,7 @@ export default function FolderDetailPage({
     try {
       await updateDecision(selectedDecision.id, {
         status: nextStatus,
+        fault_lines: nextFaultLines,
       });
     } catch {
       setDecisions((prev) => prev.map((d) => (d.id === selectedDecision.id ? selectedDecision : d)));

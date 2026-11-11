@@ -1959,6 +1959,14 @@ def run_decision_synthesis(
     decision.recommendation = rec_dict
     decision.roadmap = synthesis.roadmap.model_dump()
     decision.status = "decided"
+    decision.fault_lines = {
+        "Assumptions": 2,
+        "Evidence": 2,
+        "Blind spots": 2,
+        "Bias": 2,
+        "Trade-offs": 2,
+        "Alternatives": 2,
+    }
 
     db.commit()
     db.refresh(decision)

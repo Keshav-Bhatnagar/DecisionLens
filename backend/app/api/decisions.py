@@ -180,6 +180,15 @@ def update_decision(
         decision.record_type = body.record_type
     if body.status is not None:
         decision.status = body.status
+        if body.status == "decided" and not body.fault_lines and (not decision.fault_lines or not any(decision.fault_lines.values())):
+            decision.fault_lines = {
+                "Assumptions": 2,
+                "Evidence": 2,
+                "Blind spots": 2,
+                "Bias": 2,
+                "Trade-offs": 2,
+                "Alternatives": 2,
+            }
     if body.language is not None:
         decision.language = body.language
     if body.raw_input is not None:
