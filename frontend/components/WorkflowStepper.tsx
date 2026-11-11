@@ -142,9 +142,9 @@ export default function WorkflowStepper({
         {
           id: "synthesis",
           number: "5",
-          label: "Synthesis & ADR",
-          shortDesc: "Executive Memo",
-          icon: <Compass className="w-3.5 h-3.5" />,
+          label: "Synthesis",
+          shortDesc: "Executive ADR",
+          icon: <Compass className="w-4 h-4" />,
           isCompleted: hasSynthesis,
         },
       ];
@@ -172,9 +172,9 @@ export default function WorkflowStepper({
   }, [stages, onSelectStage]);
 
   return (
-    <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-xl p-2 sm:p-2.5 border border-[#cfc7b2] dark:border-[#38332C] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-2.5 font-sans text-[#1d1d1b] dark:text-[#F0EAE1]">
+    <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-2xl p-2.5 sm:p-3 border border-[#cfc7b2] dark:border-[#38332C] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 font-sans text-[#1d1d1b] dark:text-[#F0EAE1]">
       {/* 5-Step Segmented Rail */}
-      <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-[#E5DEC9] dark:bg-[#181614] p-1.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C]">
+      <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 bg-[#E5DEC9] dark:bg-[#181614] p-1.5 rounded-xl border border-[#cfc7b2] dark:border-[#38332C]">
         {stages.map((stage) => {
           const isActive = currentStage === stage.id;
           return (
@@ -182,7 +182,7 @@ export default function WorkflowStepper({
               key={stage.id}
               type="button"
               onClick={() => onSelectStage(stage.id)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md text-left transition cursor-pointer ${
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition cursor-pointer ${
                 isActive
                   ? "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold shadow-xs border border-[#cfc7b2] dark:border-[#38332C]"
                   : stage.isCompleted
@@ -191,7 +191,7 @@ export default function WorkflowStepper({
               }`}
             >
               <span
-                className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-mono font-bold shrink-0 transition ${
+                className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-mono font-bold shrink-0 transition ${
                   isActive
                     ? "bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614]"
                     : stage.isCompleted
@@ -200,17 +200,17 @@ export default function WorkflowStepper({
                 }`}
               >
                 {stage.isCompleted ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#1d1d1b] dark:text-[#D4AA50]" />
+                  <CheckCircle2 className="w-4 h-4 text-[#1d1d1b] dark:text-[#D4AA50]" />
                 ) : (
                   stage.number
                 )}
               </span>
 
               <div className="truncate min-w-0">
-                <span className="font-newsreader text-[14px] sm:text-[15px] truncate block leading-tight font-semibold">
+                <span className="font-newsreader text-[15px] sm:text-[16px] truncate block leading-tight font-bold">
                   {stage.label}
                 </span>
-                <span className="text-[12px] text-[#4f4b40] dark:text-[#A89F91] truncate block font-sans font-normal hidden lg:block">
+                <span className="text-[12px] sm:text-[13px] text-[#4f4b40] dark:text-[#A89F91] truncate block font-sans font-medium hidden lg:block mt-0.5">
                   {stage.shortDesc}
                 </span>
               </div>
@@ -225,10 +225,10 @@ export default function WorkflowStepper({
           <button
             type="button"
             onClick={onOpenAutoPilot}
-            className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg font-semibold bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] tracking-wide shadow-xs transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-[13px] px-4 py-2.5 rounded-xl font-semibold bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] tracking-wide shadow-xs transition cursor-pointer"
             title="Auto-run full pipeline: Structuring → Gaps → Frameworks → Synthesis"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#D4AA50] dark:text-[#181614]" />
+            <Sparkles className="w-4 h-4 text-[#D4AA50] dark:text-[#181614]" />
             <span>Auto-Pilot</span>
           </button>
         )}
@@ -236,7 +236,7 @@ export default function WorkflowStepper({
         <button
           type="button"
           onClick={onToggleViewMode}
-          className="text-xs px-3 py-1.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] font-semibold tracking-wide transition cursor-pointer"
+          className="text-[13px] px-4 py-2.5 rounded-xl border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] font-semibold tracking-wide transition cursor-pointer shadow-2xs"
           title="Toggle between single stage focus or full view"
         >
           {viewMode === "step" ? "Step Mode" : "All Steps"}
@@ -245,9 +245,9 @@ export default function WorkflowStepper({
         <button
           type="button"
           onClick={onOpenExportModal}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] tracking-wide shadow-xs transition cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-[13px] px-4 py-2.5 rounded-xl font-semibold bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] tracking-wide shadow-2xs transition cursor-pointer"
         >
-          <Share2 className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+          <Share2 className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
           <span>{isMeeting ? "Export Minutes" : "Export Brief"}</span>
         </button>
       </div>

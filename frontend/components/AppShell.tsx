@@ -189,7 +189,7 @@ export default function AppShell({
       {/* Main Layout Area - shifts with sidebar width (240px desktop) */}
       <div
         className={`flex-1 flex flex-col transition-all duration-200 ease-in-out ${
-          collapsed ? "lg:pl-16" : "lg:pl-[240px]"
+          collapsed ? "lg:pl-16" : "lg:pl-[260px]"
         }`}
       >
         {/* Calm Contextual Topbar: Breadcrumbs + User Info + Aperture Theme Shutter */}
@@ -200,43 +200,43 @@ export default function AppShell({
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden w-8 h-8 flex items-center justify-center text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] active:bg-[#cfc7b2]/60 rounded-[4px] transition-colors shrink-0 shadow-2xs"
+              className="lg:hidden w-8 h-8 flex items-center justify-center text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] active:bg-[#cfc7b2]/60 rounded-lg transition-colors shrink-0 shadow-2xs"
               aria-label="Open navigation sidebar"
             >
               <Menu className="w-4 h-4" />
             </button>
 
             {/* Breadcrumb Path: Breadcrumb only (Workspaces / Overview) */}
-            <nav className="flex items-center gap-1.5 text-[13px] font-courier text-[#4f4b40] dark:text-[#A89F91] overflow-hidden truncate">
+            <nav className="flex items-center gap-2 text-[14px] sm:text-[15px] font-sans text-[#4f4b40] dark:text-[#A89F91] overflow-hidden truncate">
               <Link
                 href="/dashboard"
-                className="hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors shrink-0"
+                className="hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors shrink-0 font-medium"
               >
                 Workspaces
               </Link>
 
               {breadcrumbs && breadcrumbs.length > 0 ? (
                 breadcrumbs.map((crumb, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 shrink-0 max-w-[240px] truncate">
-                    <ChevronRight className="w-3.5 h-3.5 text-[#7B8491] shrink-0" />
+                  <div key={idx} className="flex items-center gap-2 shrink-0 max-w-[280px] truncate">
+                    <ChevronRight className="w-4 h-4 text-[#7B8491] shrink-0" />
                     {crumb.href ? (
                       <Link
                         href={crumb.href}
-                        className="hover:text-[#2B4C8C] dark:hover:text-[#D4AA50] truncate transition-colors text-[#1d1d1b] dark:text-[#F0EAE1]"
+                        className="hover:text-[#2B4C8C] dark:hover:text-[#D4AA50] truncate transition-colors text-[#1d1d1b] dark:text-[#F0EAE1] font-medium"
                       >
                         {crumb.label}
                       </Link>
                     ) : (
-                      <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-bold truncate">
+                      <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold truncate">
                         {crumb.label}
                       </span>
                     )}
                   </div>
                 ))
               ) : (
-                <div className="flex items-center gap-1.5">
-                  <ChevronRight className="w-3.5 h-3.5 text-[#7B8491] shrink-0" />
-                  <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-bold">Overview</span>
+                <div className="flex items-center gap-2">
+                  <ChevronRight className="w-4 h-4 text-[#7B8491] shrink-0" />
+                  <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold">Overview</span>
                 </div>
               )}
             </nav>

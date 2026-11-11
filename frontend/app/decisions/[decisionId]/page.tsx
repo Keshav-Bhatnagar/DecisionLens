@@ -321,11 +321,11 @@ export default function DecisionDetailPage({
           {/* Main Working Canvas (Center Focus) */}
           <div className="flex-1 min-w-0 w-full space-y-5">
             {/* Clean Studio Header Strip */}
-            <div className="pt-1 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] space-y-1.5">
+            <div className="pt-1 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] space-y-2">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-[2px] bg-[#7a4e10] dark:bg-[#D4AA50]" />
-                  <span className="font-courier text-xs font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#D4AA50]">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-[2.5px] rounded-full bg-[#7a4e10] dark:bg-[#D4AA50]" />
+                  <span className="font-mono text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
                     {folder?.name ? `${folder.name} / ` : ""}#{sequenceDisplay} • {recordType === "meeting" ? "MEETING DELIBERATION" : "DECISION DELIBERATION"}
                   </span>
                 </div>
@@ -334,9 +334,9 @@ export default function DecisionDetailPage({
                 <button
                   type="button"
                   onClick={() => setInspectorOpen((prev) => !prev)}
-                  className="xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-courier font-bold uppercase tracking-wider rounded-none border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1]"
+                  className="xl:hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1]"
                 >
-                  <Layers className="w-3 h-3" />
+                  <Layers className="w-3.5 h-3.5" />
                   <span>{inspectorOpen ? "Hide Details" : "Details"}</span>
                 </button>
               </div>
@@ -349,12 +349,12 @@ export default function DecisionDetailPage({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter decision title..."
                 aria-label="Decision Title"
-                className="w-full font-newsreader text-[28px] sm:text-[36px] font-normal leading-tight tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1] bg-transparent border-0 border-b border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
+                className="w-full font-newsreader text-[32px] sm:text-[42px] font-medium leading-tight tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1] bg-transparent border-0 border-b border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-1 transition-colors outline-none"
               />
 
               {/* Core Dilemma Secondary Inline Editable Line */}
-              <div className="flex items-center gap-2.5 pt-1">
-                <span className="font-mono text-xs uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
+              <div className="flex items-center gap-3 pt-1">
+                <span className="font-mono text-[13px] uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
                   Core Dilemma:
                 </span>
                 <input
@@ -362,7 +362,7 @@ export default function DecisionDetailPage({
                   value={problemStatement}
                   onChange={(e) => setProblemStatement(e.target.value)}
                   placeholder="Refine specific technical dilemma or architectural tension..."
-                  className="flex-1 font-newsreader text-base sm:text-[17px] text-[#4f4b40] dark:text-[#C5BDB0] italic bg-transparent border-0 border-b border-dashed border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
+                  className="flex-1 font-newsreader text-[17px] sm:text-[19px] text-[#4f4b40] dark:text-[#C5BDB0] italic bg-transparent border-0 border-b border-dashed border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
                 />
               </div>
             </div>
