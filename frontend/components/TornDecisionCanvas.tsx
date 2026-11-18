@@ -305,7 +305,7 @@ export default function TornDecisionCanvas({
       480
     );
 
-    cxA.fillStyle = "#2B4C8C";
+    cxA.fillStyle = "#443a30";
     cxA.font = "italic 38px 'Newsreader', Georgia, serif";
     cxA.fillText("Decided. No further questions.", 140, 680);
 
@@ -340,7 +340,7 @@ export default function TornDecisionCanvas({
     cxB.font = "italic 38px 'Newsreader', Georgia, serif";
     cxB.fillText("Decided. No further questions.", 140, 680);
 
-    cxB.strokeStyle = "#2B4C8C";
+    cxB.strokeStyle = "#443a30";
     cxB.lineWidth = 4;
     cxB.beginPath();
     cxB.moveTo(135, 668);
@@ -382,7 +382,7 @@ export default function TornDecisionCanvas({
       const cy = rowCenters[s.row];
 
       // Draw label
-      cxL.fillStyle = "#2B4C8C";
+      cxL.fillStyle = "#443a30";
       cxL.font = "bold 24px 'Courier Prime', Courier, monospace";
       cxL.textAlign = "center";
       cxL.fillText(s.tag, cx, cy - 36);
@@ -1112,14 +1112,14 @@ export default function TornDecisionCanvas({
           <div className="relative z-20 pt-8 sm:pt-10 px-6 sm:px-12 text-center pointer-events-none max-w-2xl mx-auto">
             <span
               className={`text-[11px] font-courier tracking-[0.2em] uppercase font-bold block mb-1 ${
-                isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
               }`}
             >
               DECONSTRUCTION
             </span>
             <h2
               className={`font-newsreader text-2xl sm:text-4xl font-normal transition-all duration-500 ${
-                isDark ? "text-[#F0EAE1]" : "text-[#161E33]"
+                isDark ? "text-[#F0EAE1]" : "text-[#26211b]"
               }`}
             >
               {isTorn
@@ -1128,7 +1128,7 @@ export default function TornDecisionCanvas({
             </h2>
             <p
               className={`text-xs font-courier mt-1 max-w-md mx-auto ${
-                isDark ? "text-[#A89F91]" : "text-[#5A6275]"
+                isDark ? "text-[#A89F91]" : "text-[#7a7264]"
               }`}
             >
               {!isTorn
@@ -1170,7 +1170,7 @@ export default function TornDecisionCanvas({
                 className={`relative w-full max-w-lg p-6 sm:p-8 shadow-2xl font-courier space-y-4 animate-in zoom-in-95 duration-200 border-2 border-l-4 ${
                   isDark
                     ? "bg-[#221F1C] border-[#38332C] border-l-[#D4AA50] text-[#F0EAE1] shadow-black/40"
-                    : "bg-[#FCFBF8] border-[#D9D2C3] border-l-[#b08a3c] text-[#161E33] shadow-[#161E33]/10"
+                    : "bg-[#FCFBF8] border-[#D9D2C3] border-l-[#b08a3c] text-[#26211b] shadow-[#26211b]/10"
                 }`}
                 onClick={(e) => e.stopPropagation()}
                 style={{
@@ -1185,7 +1185,7 @@ export default function TornDecisionCanvas({
                 >
                   <span
                     className={`text-xs font-bold uppercase tracking-wider ${
-                      isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                      isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
                     }`}
                   >
                     {selectedShard.tag}
@@ -1196,7 +1196,7 @@ export default function TornDecisionCanvas({
                     className={`text-xs font-bold px-2.5 py-1 border transition cursor-pointer ${
                       isDark
                         ? "border-[#38332C] bg-[#181614] text-[#F0EAE1] hover:bg-[#F0EAE1] hover:text-[#181614]"
-                        : "border-[#D9D2C3] bg-[#EFEADF] text-[#161E33] hover:bg-[#161E33] hover:text-[#FCFBF8]"
+                        : "border-[#D9D2C3] bg-[#EFEADF] text-[#26211b] hover:bg-[#26211b] hover:text-[#FCFBF8]"
                     }`}
                     title="Press ESC to close"
                   >
@@ -1208,7 +1208,7 @@ export default function TornDecisionCanvas({
                   {/* Shard Title */}
                   <h3
                     className={`font-newsreader text-2xl sm:text-3xl font-normal ${
-                      isDark ? "text-[#F0EAE1]" : "text-[#161E33]"
+                      isDark ? "text-[#F0EAE1]" : "text-[#26211b]"
                     }`}
                   >
                     {selectedShard.name}
@@ -1217,7 +1217,7 @@ export default function TornDecisionCanvas({
                   {/* Challenging Question Quote */}
                   <p
                     className={`text-base sm:text-lg font-normal italic font-newsreader leading-snug ${
-                      isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                      isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
                     }`}
                   >
                     “{selectedShard.question}”
@@ -1238,7 +1238,7 @@ export default function TornDecisionCanvas({
                     </span>
                     <ul
                       className={`text-xs space-y-2 list-disc pl-4 ${
-                        isDark ? "text-[#F0EAE1]" : "text-[#161E33]"
+                        isDark ? "text-[#F0EAE1]" : "text-[#26211b]"
                       }`}
                     >
                       {selectedShard.bullets.map((b, idx) => (
@@ -1257,7 +1257,7 @@ export default function TornDecisionCanvas({
                       className={`w-full py-3 px-4 text-xs font-bold uppercase tracking-wider transition shadow-sm cursor-pointer border ${
                         isDark
                           ? "bg-[#F0EAE1] text-[#181614] hover:bg-white border-[#F0EAE1]"
-                          : "bg-[#161E33] text-[#F5F1E8] hover:bg-[#232C47] border-[#161E33]"
+                          : "bg-[#26211b] text-[#F5F1E8] hover:bg-[#2e2822] border-[#26211b]"
                       }`}
                     >
                       Challenge this in DecisionLens →
@@ -1271,7 +1271,7 @@ export default function TornDecisionCanvas({
           {/* Bottom Interactive HUD */}
           <div
             className={`relative z-20 pb-8 px-6 sm:px-12 flex items-center justify-between text-xs font-courier ${
-              isDark ? "text-[#A89F91]" : "text-[#5A6275]"
+              isDark ? "text-[#A89F91]" : "text-[#7a7264]"
             }`}
           >
             <div>
@@ -1286,7 +1286,7 @@ export default function TornDecisionCanvas({
                   className={`px-3 py-1.5 border font-bold tracking-wider uppercase text-xs transition cursor-pointer ${
                     isDark
                       ? "bg-[#221F1C] border-[#38332C] text-[#F0EAE1] hover:bg-[#F0EAE1] hover:text-[#181614]"
-                      : "bg-[#EFEADF] border-[#161E33] text-[#161E33] hover:bg-[#161E33] hover:text-[#F5F1E8]"
+                      : "bg-[#EFEADF] border-[#26211b] text-[#26211b] hover:bg-[#26211b] hover:text-[#F5F1E8]"
                   }`}
                 >
                   Challenge It ↓
@@ -1310,21 +1310,21 @@ export default function TornDecisionCanvas({
           <div className="text-center space-y-2">
             <span
               className={`text-xs font-courier tracking-[0.2em] uppercase font-bold block ${
-                isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
               }`}
             >
               DECONSTRUCTION
             </span>
             <h2
               className={`font-newsreader text-3xl sm:text-4xl font-normal ${
-                isDark ? "text-[#F0EAE1]" : "text-[#161E33]"
+                isDark ? "text-[#F0EAE1]" : "text-[#26211b]"
               }`}
             >
               Six fault lines. Pick a shard.
             </h2>
             <p
               className={`text-xs sm:text-sm max-w-md mx-auto ${
-                isDark ? "text-[#A89F91]" : "text-[#5A6275]"
+                isDark ? "text-[#A89F91]" : "text-[#7a7264]"
               }`}
             >
               Every final decision conceals six critical fault lines. Tap any torn paper shard below to inspect its hidden premise.
@@ -1343,8 +1343,8 @@ export default function TornDecisionCanvas({
                       ? "bg-[#221F1C] border-[#38332C] text-[#F0EAE1]"
                       : "bg-[#181614] border-[#38332C] text-[#F0EAE1]"
                     : idx % 2 === 0
-                    ? "bg-[#EFEADF] border-[#161E33] text-[#161E33]"
-                    : "bg-[#F5F1E8] border-[#161E33] text-[#161E33]"
+                    ? "bg-[#EFEADF] border-[#26211b] text-[#26211b]"
+                    : "bg-[#F5F1E8] border-[#26211b] text-[#26211b]"
                 }`}
                 style={{
                   clipPath:
@@ -1355,19 +1355,19 @@ export default function TornDecisionCanvas({
               >
                 <div
                   className={`flex items-center justify-between pb-2 border-b ${
-                    isDark ? "border-current/20" : "border-[#161E33]/20"
+                    isDark ? "border-current/20" : "border-[#26211b]/20"
                   }`}
                 >
                   <span
                     className={`text-[11px] font-bold ${
-                      isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                      isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
                     }`}
                   >
                     {s.tag}
                   </span>
                   <span
                     className={`text-[10px] uppercase ${
-                      isDark ? "text-[#A89F91]" : "text-[#5A6275]"
+                      isDark ? "text-[#A89F91]" : "text-[#7a7264]"
                     }`}
                   >
                     FAULT #{idx + 1}
@@ -1380,14 +1380,14 @@ export default function TornDecisionCanvas({
                   </h3>
                   <p
                     className={`text-xs italic ${
-                      isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                      isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
                     }`}
                   >
                     “{s.question}”
                   </p>
                   <p
                     className={`text-[11px] pt-1 line-clamp-2 ${
-                      isDark ? "text-[#A89F91]" : "text-[#5A6275]"
+                      isDark ? "text-[#A89F91]" : "text-[#7a7264]"
                     }`}
                   >
                     {s.bullets[0]}
@@ -1401,7 +1401,7 @@ export default function TornDecisionCanvas({
           {selectedShard && (
             <div
               className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-xs ${
-                isDark ? "bg-[#181614]/80" : "bg-[#161E33]/35"
+                isDark ? "bg-[#181614]/80" : "bg-[#26211b]/35"
               }`}
               onClick={() => setSelectedShard(null)}
             >
@@ -1409,7 +1409,7 @@ export default function TornDecisionCanvas({
                 className={`w-full max-w-lg border-2 border-l-4 p-6 shadow-2xl space-y-4 ${
                   isDark
                     ? "bg-[#221F1C] border-[#38332C] border-l-[#D4AA50] text-[#F0EAE1]"
-                    : "bg-[#FCFBF8] border-[#D9D2C3] border-l-[#b08a3c] text-[#161E33]"
+                    : "bg-[#FCFBF8] border-[#D9D2C3] border-l-[#b08a3c] text-[#26211b]"
                 }`}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -1420,7 +1420,7 @@ export default function TornDecisionCanvas({
                 >
                   <span
                     className={`text-xs font-bold uppercase ${
-                      isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                      isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
                     }`}
                   >
                     {selectedShard.tag}
@@ -1431,7 +1431,7 @@ export default function TornDecisionCanvas({
                     className={`text-xs font-bold px-2 py-0.5 border ${
                       isDark
                         ? "border-[#38332C] bg-[#181614] text-[#F0EAE1]"
-                        : "border-[#D9D2C3] bg-[#EFEADF] text-[#161E33]"
+                        : "border-[#D9D2C3] bg-[#EFEADF] text-[#26211b]"
                     }`}
                   >
                     CLOSE [×]
@@ -1443,7 +1443,7 @@ export default function TornDecisionCanvas({
                 </h3>
                 <p
                   className={`text-xs font-bold italic ${
-                    isDark ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                    isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
                   }`}
                 >
                   “{selectedShard.question}”
@@ -1461,7 +1461,7 @@ export default function TornDecisionCanvas({
                   className={`w-full py-3 text-xs font-bold uppercase tracking-wider ${
                     isDark
                       ? "bg-[#F0EAE1] text-[#181614]"
-                      : "bg-[#161E33] text-[#F5F1E8]"
+                      : "bg-[#26211b] text-[#F5F1E8]"
                   }`}
                 >
                   Challenge this in DecisionLens →

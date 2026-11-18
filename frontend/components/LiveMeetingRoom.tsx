@@ -587,7 +587,7 @@ export default function LiveMeetingRoom({
                 ? "E.g. We have strict Q3 data-residency compliance in Mumbai..."
                 : "Add technical note or trade-off (Press Ctrl+Enter to submit)..."
             }
-            className="w-full bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-3 text-xs text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors resize-none font-newsreader text-sm"
+            className="w-full bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-3 text-xs text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors resize-none font-newsreader text-sm"
           />
         </div>
 
@@ -820,7 +820,7 @@ export default function LiveMeetingRoom({
                     value={customMeetingUrl}
                     onChange={(e) => setCustomMeetingUrl(e.target.value)}
                     placeholder="https://meet.google.com/abc-defg-hij or Zoom link"
-                    className="flex-1 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] rounded-none px-3.5 py-2 text-xs focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
+                    className="flex-1 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] rounded-none px-3.5 py-2 text-xs focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
                   />
                   {customMeetingUrl && (
                     <a

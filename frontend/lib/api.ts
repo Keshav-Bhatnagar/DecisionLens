@@ -1575,6 +1575,66 @@ export interface RagStatusResponse {
   has_indexed_documents: boolean;
   chunk_count: number;
   storage_engine: string;
+  document_count?: number;
+  embedding_model?: string | null;
+  semantic?: boolean;
+  stale_chunks?: number;
+}
+
+export interface RagCitation {
+  index: number;
+  chunk_id: string;
+  document_name: string;
+  attachment_id?: number | null;
+  content: string;
+  score: number;
+}
+
+export interface RagAskResponse {
+  decision_id: number;
+  question: string;
+  answer: string;
+  covered: boolean;
+  citations: RagCitation[];
+  documents_used: number;
+  documents_indexed: number;
+  engine: string;
+  embedding_model?: string | null;
+  semantic: boolean;
+}
+
+export interface RagReindexResponse {
+  decisions_reindexed: number;
+  chunk_count: number;
+  embedding_model?: string | null;
+  semantic: boolean;
+  failed_decision_ids: number[];
+}
+
+/** Ask a question; the answer is built only from this decision's uploaded documents, with numbered citations. */
+export async function askDecisionDocuments(
+  decisionId: number,
+  question: string,
+  topK: number = 5
+): Promise<RagAskResponse> {
+  return fetchApi<RagAskResponse>(`/api/decisions/${decisionId}/rag/ask`, {
+    method: "POST",
+    body: JSON.stringify({ question, top_k: topK }),
+  });
+}
+
+/** Rebuild the document index for one decision. */
+export async function reindexDecisionRag(decisionId: number): Promise<RagReindexResponse> {
+  return fetchApi<RagReindexResponse>(`/api/decisions/${decisionId}/rag/reindex`, {
+    method: "POST",
+  });
+}
+
+/** Rebuild the document index for all of the signed-in user's decisions (run once after enabling embeddings). */
+export async function reindexAllRag(): Promise<RagReindexResponse> {
+  return fetchApi<RagReindexResponse>(`/api/rag/reindex`, {
+    method: "POST",
+  });
 }
 
 export async function queryDecisionRag(

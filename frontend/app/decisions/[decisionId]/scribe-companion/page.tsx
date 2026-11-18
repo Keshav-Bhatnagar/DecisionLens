@@ -258,7 +258,7 @@ export default function ScribeCompanionPage({
                 ? "Type unsaid bottleneck or technical risk (Ctrl+Enter to send)..."
                 : "Type objection, criteria or constraint (Ctrl+Enter to send)..."
             }
-            className="w-full bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-3 text-xs text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none resize-none font-newsreader text-sm leading-relaxed"
+            className="w-full bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-3 text-xs text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none resize-none font-newsreader text-sm leading-relaxed"
           />
 
           <div className="flex items-center justify-between">

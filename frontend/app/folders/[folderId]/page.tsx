@@ -225,7 +225,7 @@ function HexagonRadar({
         {/* Blue polygon radar shape */}
         <polygon
           points={polygonPoints}
-          className="fill-[#2B4C8C]/22 dark:fill-[#D4AA50]/25 stroke-[#2B4C8C] dark:stroke-[#D4AA50]"
+          className="fill-[#443a30]/22 dark:fill-[#D4AA50]/25 stroke-[#443a30] dark:stroke-[#D4AA50]"
           strokeWidth="2.4"
           strokeLinejoin="round"
         />
@@ -241,7 +241,7 @@ function HexagonRadar({
               cx={x}
               cy={y}
               r="3.5"
-              className="fill-[#2B4C8C] dark:fill-[#D4AA50]"
+              className="fill-[#443a30] dark:fill-[#D4AA50]"
             />
           );
         })}
@@ -281,9 +281,9 @@ function SixSegmentBar({
               title={`${name}: ${lvl === 2 ? "EXAMINED" : lvl === 1 ? "STARTED" : "OPEN"}`}
               className={`inline-block w-[26px] h-[8px] rounded-none shrink-0 ${
                 lvl === 2
-                  ? "bg-[#2B4C8C] dark:bg-[#D4AA50] border border-[#2B4C8C] dark:border-[#D4AA50]"
+                  ? "bg-[#443a30] dark:bg-[#D4AA50] border border-[#443a30] dark:border-[#D4AA50]"
                   : lvl === 1
-                  ? "bg-[linear-gradient(to_right,#2B4C8C_50%,transparent_50%)] dark:bg-[linear-gradient(to_right,#D4AA50_50%,transparent_50%)] border border-[#2B4C8C] dark:border-[#D4AA50]"
+                  ? "bg-[linear-gradient(to_right,#443a30_50%,transparent_50%)] dark:bg-[linear-gradient(to_right,#D4AA50_50%,transparent_50%)] border border-[#443a30] dark:border-[#D4AA50]"
                   : "bg-transparent border border-[#cfc7b2] dark:border-[#524B40]"
               }`}
             />
@@ -619,7 +619,7 @@ export default function FolderDetailPage({
                       {folder.description}
                     </p>
                   ) : (
-                    <p className="font-newsreader italic text-[17px] sm:text-[19px] text-[#7B8491] dark:text-[#8E867B] leading-relaxed max-w-3xl">
+                    <p className="font-newsreader italic text-[17px] sm:text-[19px] text-[#97907e] dark:text-[#8E867B] leading-relaxed max-w-3xl">
                       No description for this workspace.
                     </p>
                   )}
@@ -637,7 +637,7 @@ export default function FolderDetailPage({
                   <button
                     type="button"
                     onClick={handleOpenCreateModal}
-                    className="px-5 py-3 bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold font-courier uppercase tracking-wider rounded-none transition-colors flex items-center gap-2"
+                    className="px-5 py-3 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold font-courier uppercase tracking-wider rounded-none transition-colors flex items-center gap-2"
                     title="Start challenging a new decision (Shortcut: N)"
                   >
                     <span>＋</span>
@@ -648,7 +648,7 @@ export default function FolderDetailPage({
                     type="button"
                     onClick={handleDeleteFolder}
                     title="Delete workspace"
-                    className="p-3 text-[#7B8491] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
+                    className="p-3 text-[#97907e] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -717,20 +717,20 @@ export default function FolderDetailPage({
               {/* Right: Search input & INDEX / BOARD toggle */}
               <div className="flex items-center gap-3 self-end md:self-auto">
                 <div className="relative w-48 sm:w-56">
-                  <Search className="w-3.5 h-3.5 text-[#7B8491] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Search className="w-3.5 h-3.5 text-[#97907e] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="SEARCH"
                     aria-label="Search decisions by title"
-                    className="w-full pl-8 pr-7 py-1.5 text-xs font-courier uppercase tracking-wider bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
+                    className="w-full pl-8 pr-7 py-1.5 text-xs font-courier uppercase tracking-wider bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                       aria-label="Clear search"
                     >
                       <X className="w-3 h-3" />
@@ -805,7 +805,7 @@ export default function FolderDetailPage({
                               <span
                                 className={`font-courier text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-none ${
                                   isDecided
-                                    ? "text-[#1B4332] dark:text-[#52b788] bg-[#E4EFE7] dark:bg-[#142d22]"
+                                    ? "text-[#4f4b40] dark:text-[#b08a3c] bg-[#E4EFE7] dark:bg-[#142d22]"
                                     : isEvidence
                                     ? "text-[#8F2D2D] dark:text-[#E57373] border border-[#8F2D2D] dark:border-[#E57373] bg-transparent"
                                     : "text-[#7a4e10] dark:text-[#D4AA50] border border-[#7a4e10] dark:border-[#D4AA50] bg-transparent"
@@ -818,7 +818,7 @@ export default function FolderDetailPage({
                                   : "UNDER SCRUTINY"}
                               </span>
 
-                              <span className="font-courier text-xs text-[#7B8491] uppercase tracking-wider">
+                              <span className="font-courier text-xs text-[#97907e] uppercase tracking-wider">
                                 {new Date(decision.created_at).toLocaleDateString("en-US", {
                                   month: "short",
                                   day: "numeric",
@@ -828,7 +828,7 @@ export default function FolderDetailPage({
                             </div>
 
                             {/* Row 2: Title in Serif */}
-                            <h2 className="font-newsreader text-[24px] sm:text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] transition-colors truncate">
+                            <h2 className="font-newsreader text-[24px] sm:text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] transition-colors truncate">
                               {decision.title}
                             </h2>
 
@@ -864,9 +864,9 @@ export default function FolderDetailPage({
                         <Link
                           key={d.id}
                           href={`/decisions/${d.id}`}
-                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#7a4e10] dark:border-l-[#D4AA50] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#2B4C8C] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
+                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#7a4e10] dark:border-l-[#D4AA50] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#443a30] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
                         >
-                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
+                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
@@ -894,9 +894,9 @@ export default function FolderDetailPage({
                         <Link
                           key={d.id}
                           href={`/decisions/${d.id}`}
-                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#8F2D2D] dark:border-l-[#E57373] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#2B4C8C] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
+                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#8F2D2D] dark:border-l-[#E57373] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#443a30] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
                         >
-                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
+                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
@@ -912,10 +912,10 @@ export default function FolderDetailPage({
                   {/* Column 3: Decided */}
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-[#cfc7b2] dark:border-[#38332C]">
-                      <span className="font-courier text-xs font-bold uppercase tracking-wider text-[#1B4332] dark:text-[#52b788]">
+                      <span className="font-courier text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#b08a3c]">
                         DECIDED
                       </span>
-                      <span className="font-courier text-xs font-bold text-[#1B4332] dark:text-[#52b788]">
+                      <span className="font-courier text-xs font-bold text-[#4f4b40] dark:text-[#b08a3c]">
                         {boardColumns.decided.length}
                       </span>
                     </div>
@@ -924,13 +924,13 @@ export default function FolderDetailPage({
                         <Link
                           key={d.id}
                           href={`/decisions/${d.id}`}
-                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#1B4332] dark:border-l-[#52b788] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#2B4C8C] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
+                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#4f4b40] dark:border-l-[#b08a3c] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#443a30] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
                         >
-                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
+                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
-                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[11px] font-courier font-bold text-[#1B4332] dark:text-[#52b788] uppercase tracking-wider">
+                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[11px] font-courier font-bold text-[#4f4b40] dark:text-[#b08a3c] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                           </div>
@@ -966,7 +966,7 @@ export default function FolderDetailPage({
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition p-1 rounded-none"
+                    className="text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition p-1 rounded-none"
                     aria-label="Close dialog"
                   >
                     <X className="w-4 h-4" />
@@ -992,9 +992,9 @@ export default function FolderDetailPage({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. Should we migrate our production infrastructure to the cloud?"
-                      className="w-full px-3 py-2 text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
+                      className="w-full px-3 py-2 text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
                     />
-                    <p className="mt-1.5 text-[11px] font-courier text-[#7B8491] dark:text-[#A89F91]">
+                    <p className="mt-1.5 text-[11px] font-courier text-[#97907e] dark:text-[#A89F91]">
                       Sets your core problem statement and frames deliberation.
                     </p>
                   </div>
@@ -1010,7 +1010,7 @@ export default function FolderDetailPage({
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-5 py-2.5 font-courier text-xs font-bold uppercase tracking-wider rounded-none transition-colors flex items-center gap-1.5 disabled:opacity-50 bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64]"
+                      className="px-5 py-2.5 font-courier text-xs font-bold uppercase tracking-wider rounded-none transition-colors flex items-center gap-1.5 disabled:opacity-50 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64]"
                     >
                       {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                       <span>{isSubmitting ? "INITIALIZING..." : "START DELIBERATION →"}</span>

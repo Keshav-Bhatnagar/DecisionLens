@@ -419,7 +419,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
                         value={driveUrl}
                         onChange={(e) => setDriveUrl(e.target.value)}
                         placeholder="https://docs.google.com/document/d/..."
-                        className="w-full pl-9 pr-3 py-2 text-xs font-courier bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
+                        className="w-full pl-9 pr-3 py-2 text-xs font-courier bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
                       />
                     </div>
                     <button

@@ -162,7 +162,7 @@ export default function EditorialLandingPage() {
       className={`min-h-screen font-courier antialiased transition-colors duration-300 ${
         theme === "dark"
           ? "dark bg-[#181614] text-[#F0EAE1] selection:bg-[#D4AA50] selection:text-[#181614]"
-          : "bg-[#F4F0E6] text-[#1d1d1b] selection:bg-[#2B4C8C] selection:text-[#F4F0E6]"
+          : "bg-[#F4F0E6] text-[#1d1d1b] selection:bg-[#443a30] selection:text-[#F4F0E6]"
       }`}
     >
       {/* ==================================================
@@ -173,7 +173,7 @@ export default function EditorialLandingPage() {
         className={`fixed top-0 left-0 right-0 h-[58px] z-40 px-6 lg:px-16 flex items-center justify-between transition-all duration-300 bg-transparent backdrop-blur-md border-b ${
           theme === "dark"
             ? "border-[#38332C] text-[#F0EAE1]"
-            : "border-[#172033]/15 text-[#172033]"
+            : "border-[#242019]/15 text-[#242019]"
         }`}
       >
         {/* Left Brand Identity: Antique Magnifying Lens Logo + Sleek Serif Wordmark */}
@@ -184,7 +184,7 @@ export default function EditorialLandingPage() {
           {loadingUser ? (
             <span
               className={`text-[11px] tracking-[0.08em] ${
-                theme === "dark" ? "text-[#A89F91]" : "text-[#7B8491]"
+                theme === "dark" ? "text-[#A89F91]" : "text-[#97907e]"
               }`}
             >
               VERIFYING...
@@ -196,7 +196,7 @@ export default function EditorialLandingPage() {
                 className={`text-[11px] font-bold tracking-[0.08em] px-3.5 py-1.5 border transition-colors ${
                   theme === "dark"
                     ? "border-[#D4AA50] bg-[#D4AA50] text-[#181614] hover:bg-[#E5BE64] hover:text-[#181614]"
-                    : "border-[#172033] bg-[#172033] text-[#F5F1E8] hover:bg-transparent hover:text-[#172033]"
+                    : "border-[#242019] bg-[#242019] text-[#F5F1E8] hover:bg-transparent hover:text-[#242019]"
                 }`}
                 title="Open active reasoning dashboard & workspaces"
               >
@@ -210,7 +210,7 @@ export default function EditorialLandingPage() {
                 className={`text-[11px] font-bold tracking-[0.08em] px-2.5 py-1 transition-colors ${
                   theme === "dark"
                     ? "text-[#A89F91] hover:text-[#D4AA50]"
-                    : "text-[#596474] hover:text-[#315C8A]"
+                    : "text-[#596474] hover:text-[#6e655a]"
                 }`}
               >
                 SIGN IN
@@ -220,7 +220,7 @@ export default function EditorialLandingPage() {
                 className={`text-[11px] font-bold tracking-[0.08em] px-3.5 py-1.5 border transition-colors ${
                   theme === "dark"
                     ? "border-[#D4AA50] bg-[#D4AA50] text-[#181614] hover:bg-[#E5BE64] hover:text-[#181614]"
-                    : "border-[#172033] bg-[#172033] text-[#F5F1E8] hover:bg-transparent hover:text-[#172033]"
+                    : "border-[#242019] bg-[#242019] text-[#F5F1E8] hover:bg-transparent hover:text-[#242019]"
                 }`}
               >
                 CHALLENGE A DECISION
@@ -229,26 +229,26 @@ export default function EditorialLandingPage() {
           )}
 
           {/* Optical Aperture Shutter Dial (f/1.4 Lux <-> f/16 Nox) */}
-          <div className="pl-2 sm:pl-3 border-l border-[#172033]/15 dark:border-[#38332C] flex items-center">
+          <div className="pl-2 sm:pl-3 border-l border-[#242019]/15 dark:border-[#38332C] flex items-center">
             <ApertureToggle theme={theme} onToggle={toggleTheme} />
           </div>
 
           {/* Extreme Right: User Account Profile Avatar & Badge */}
           {user && (
-            <div className="pl-2 sm:pl-3 border-l border-[#172033]/15 dark:border-[#38332C] flex items-center">
+            <div className="pl-2 sm:pl-3 border-l border-[#242019]/15 dark:border-[#38332C] flex items-center">
               <Link
                 href="/profile"
                 className="group flex items-center gap-2 hover:opacity-85 transition-opacity"
                 title={`Signed in as ${user.display_name || user.email} (View Profile)`}
               >
-                <div className="w-7 h-7 rounded-full bg-[#161E33] dark:bg-[#D4AA50] text-[#F5F1E8] dark:text-[#181614] font-bold text-xs flex items-center justify-center uppercase shadow-2xs group-hover:scale-105 transition-transform">
+                <div className="w-7 h-7 rounded-full bg-[#26211b] dark:bg-[#D4AA50] text-[#F5F1E8] dark:text-[#181614] font-bold text-xs flex items-center justify-center uppercase shadow-2xs group-hover:scale-105 transition-transform">
                   {(user.display_name || user.email)[0]}
                 </div>
                 <span
                   className={`hidden sm:inline text-[11px] tracking-[0.08em] font-semibold transition-colors ${
                     theme === "dark"
                       ? "text-[#F0EAE1] group-hover:text-[#D4AA50]"
-                      : "text-[#161E33] group-hover:text-[#2F5D8F]"
+                      : "text-[#26211b] group-hover:text-[#6e655a]"
                   }`}
                 >
                   {user.display_name || user.email.split("@")[0]}
@@ -265,20 +265,20 @@ export default function EditorialLandingPage() {
           className={`pt-[58px] border-b px-6 py-2 text-[11px] tracking-[0.08em] flex items-center justify-between transition-colors duration-300 ${
             theme === "dark"
               ? "bg-[#221F1C] border-[#38332C] text-[#A89F91]"
-              : "bg-[#E9E3D7] border-[#172033]/15 text-[#596474]"
+              : "bg-[#E9E3D7] border-[#242019]/15 text-[#596474]"
           }`}
         >
           <div className="flex items-center gap-2">
             <span
               className={`w-1.5 h-1.5 ${
-                theme === "dark" ? "bg-[#D4AA50]" : "bg-[#315C8A]"
+                theme === "dark" ? "bg-[#D4AA50]" : "bg-[#6e655a]"
               }`}
             />
             <span>
               AUTHENTICATED DOSSIER WORKSPACE:{" "}
               <strong
                 className={
-                  theme === "dark" ? "text-[#F0EAE1]" : "text-[#172033]"
+                  theme === "dark" ? "text-[#F0EAE1]" : "text-[#242019]"
                 }
               >
                 {user.email}
@@ -298,7 +298,7 @@ export default function EditorialLandingPage() {
         } pb-16 sm:pb-24 px-6 sm:px-12 lg:px-20 border-b overflow-hidden transition-colors duration-300 ${
           theme === "dark"
             ? "bg-[#221F1C] border-[#38332C]"
-            : "bg-[#E9E3D7] border-[#172033]/15"
+            : "bg-[#E9E3D7] border-[#242019]/15"
         }`}
       >
         <div className="max-w-4xl mx-auto relative z-10">
@@ -306,19 +306,19 @@ export default function EditorialLandingPage() {
           <div className="flex items-center gap-3 mb-6">
             <span
               className={`text-[11px] font-courier tracking-[0.1em] font-bold ${
-                theme === "dark" ? "text-[#D4AA50]" : "text-[#315C8A]"
+                theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
               }`}
             >
               DECISION INTELLIGENCE / 01
             </span>
             <span
               className={`w-6 h-[1px] ${
-                theme === "dark" ? "bg-[#D4AA50]/40" : "bg-[#315C8A]/40"
+                theme === "dark" ? "bg-[#D4AA50]/40" : "bg-[#6e655a]/40"
               }`}
             />
             <span
               className={`text-[11px] font-courier tracking-[0.08em] ${
-                theme === "dark" ? "text-[#A89F91]" : "text-[#7B8491]"
+                theme === "dark" ? "text-[#A89F91]" : "text-[#97907e]"
               }`}
             >
               REASONING SCRUTINY ENGINE
@@ -328,13 +328,13 @@ export default function EditorialLandingPage() {
           {/* Headline */}
           <h1
             className={`font-newsreader text-4xl sm:text-6xl lg:text-7xl font-normal tracking-[-0.02em] leading-[1.08] mb-6 ${
-              theme === "dark" ? "text-[#F0EAE1]" : "text-[#172033]"
+              theme === "dark" ? "text-[#F0EAE1]" : "text-[#242019]"
             }`}
           >
             Don&apos;t just make the decision.{" "}
             <span
               className={`italic font-normal block sm:inline ${
-                theme === "dark" ? "text-[#D4AA50]" : "text-[#315C8A]"
+                theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
               }`}
             >
               Challenge it.
@@ -358,7 +358,7 @@ export default function EditorialLandingPage() {
               className={`px-6 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase font-bold transition-colors text-center inline-block ${
                 theme === "dark"
                   ? "border-[#D4AA50] bg-[#D4AA50] text-[#181614] hover:bg-[#E5BE64] hover:text-[#181614]"
-                  : "border-[#172033] bg-[#172033] text-[#F5F1E8] hover:bg-transparent hover:text-[#172033]"
+                  : "border-[#242019] bg-[#242019] text-[#F5F1E8] hover:bg-transparent hover:text-[#242019]"
               }`}
             >
               Challenge a Decision →
@@ -368,7 +368,7 @@ export default function EditorialLandingPage() {
               className={`px-6 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase transition-colors text-center ${
                 theme === "dark"
                   ? "border-[#38332C] bg-transparent text-[#F0EAE1] hover:border-[#D4AA50]"
-                  : "border-[#172033]/30 bg-transparent text-[#172033] hover:border-[#172033]"
+                  : "border-[#242019]/30 bg-transparent text-[#242019] hover:border-[#242019]"
               }`}
             >
               See How It Works ↓
@@ -380,20 +380,20 @@ export default function EditorialLandingPage() {
             className={`pt-6 border-t grid grid-cols-2 sm:grid-cols-6 gap-2 text-[10px] font-courier tracking-[0.08em] ${
               theme === "dark"
                 ? "border-[#38332C] text-[#A89F91]"
-                : "border-[#172033]/15 text-[#596474]"
+                : "border-[#242019]/15 text-[#596474]"
             }`}
           >
             <div className="flex items-center gap-1.5">
               <span
                 className={`font-bold ${
-                  theme === "dark" ? "text-[#D4AA50]" : "text-[#315C8A]"
+                  theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
                 }`}
               >
                 01
               </span>
               <span
                 className={`font-bold ${
-                  theme === "dark" ? "text-[#F0EAE1]" : "text-[#172033]"
+                  theme === "dark" ? "text-[#F0EAE1]" : "text-[#242019]"
                 }`}
               >
                 DECISION
@@ -402,7 +402,7 @@ export default function EditorialLandingPage() {
             <div className="flex items-center gap-1.5">
               <span
                 className={
-                  theme === "dark" ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                  theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
                 }
               >
                 →
@@ -412,7 +412,7 @@ export default function EditorialLandingPage() {
             <div className="flex items-center gap-1.5">
               <span
                 className={
-                  theme === "dark" ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                  theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
                 }
               >
                 →
@@ -422,7 +422,7 @@ export default function EditorialLandingPage() {
             <div className="flex items-center gap-1.5">
               <span
                 className={
-                  theme === "dark" ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                  theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
                 }
               >
                 →
@@ -432,7 +432,7 @@ export default function EditorialLandingPage() {
             <div className="flex items-center gap-1.5">
               <span
                 className={
-                  theme === "dark" ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                  theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
                 }
               >
                 →
@@ -442,7 +442,7 @@ export default function EditorialLandingPage() {
             <div className="flex items-center gap-1.5">
               <span
                 className={
-                  theme === "dark" ? "text-[#D4AA50]" : "text-[#2F5D8F]"
+                  theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
                 }
               >
                 →
@@ -459,13 +459,25 @@ export default function EditorialLandingPage() {
             transform: `translateY(${Math.min(scrollY * 0.08, 30)}px) scale(${1 + Math.min(scrollY * 0.0003, 0.05)})`,
           }}
         >
-          <p
-            className={`font-newsreader font-bold text-[22vw] leading-none tracking-tighter text-center whitespace-nowrap ${
-              theme === "dark" ? "text-[#F0EAE1]" : "text-[#161E33]"
-            }`}
+          <svg
+            viewBox="0 0 1000 150"
+            className="block w-full h-auto"
+            preserveAspectRatio="xMidYMax meet"
+            aria-hidden="true"
           >
-            DECISION
-          </p>
+            <text
+              x="500"
+              y="148"
+              textAnchor="middle"
+              textLength="990"
+              lengthAdjust="spacingAndGlyphs"
+              className="font-newsreader font-bold"
+              fontSize="150"
+              style={{ fill: theme === "dark" ? "#F0EAE1" : "#26211b" }}
+            >
+              DECISION
+            </text>
+          </svg>
         </div>
       </section>
 
@@ -508,7 +520,7 @@ export default function EditorialLandingPage() {
           <div className="mb-8">
             <span
               className={`text-xs font-courier tracking-[0.14em] uppercase font-bold block mb-2 ${
-                theme === "dark" ? "text-[#D4AA50]" : "text-[#2B4C8C]"
+                theme === "dark" ? "text-[#D4AA50]" : "text-[#443a30]"
               }`}
             >
               CASES IN ACTION
@@ -530,7 +542,7 @@ export default function EditorialLandingPage() {
                 className={`text-[11px] font-bold tracking-wider uppercase px-2.5 py-1 rounded border font-courier ${
                   theme === "dark"
                     ? "bg-[#221F1C] text-[#D4AA50] border-[#38332C]"
-                    : "bg-[#EDE7D6] text-[#2B4C8C] border-[#cfc7b2]"
+                    : "bg-[#EDE7D6] text-[#443a30] border-[#cfc7b2]"
                 }`}
               >
                 {currentCase.category}
@@ -653,7 +665,7 @@ export default function EditorialLandingPage() {
                   className={`p-4 border text-xs sm:text-sm space-y-1.5 ${
                     theme === "dark"
                       ? "bg-[#181614]/80 border-[#38332C] text-[#D4AA50]"
-                      : "bg-[#F4F0E6] border-[#cfc7b2] text-[#2B4C8C]"
+                      : "bg-[#F4F0E6] border-[#cfc7b2] text-[#443a30]"
                   }`}
                   style={{ transform: "translateZ(12px)" }}
                 >
@@ -708,7 +720,7 @@ export default function EditorialLandingPage() {
         >
           <span
             className={`text-xs tracking-[0.14em] uppercase font-bold block ${
-              theme === "dark" ? "text-[#D4AA50]" : "text-[#2B4C8C]"
+              theme === "dark" ? "text-[#D4AA50]" : "text-[#443a30]"
             }`}
           >
             EPISTEMIC RIGOR
@@ -724,7 +736,7 @@ export default function EditorialLandingPage() {
 
           <p
             className={`font-newsreader text-3xl sm:text-5xl italic font-normal ${
-              theme === "dark" ? "text-[#D4AA50]" : "text-[#2B4C8C]"
+              theme === "dark" ? "text-[#D4AA50]" : "text-[#443a30]"
             }`}
           >
             It makes the reasoning harder to ignore.
@@ -748,19 +760,19 @@ export default function EditorialLandingPage() {
         className={`py-16 sm:py-24 px-6 sm:px-12 lg:px-20 relative overflow-hidden transition-colors duration-300 ${
           theme === "dark"
             ? "bg-[#181614] text-[#F0EAE1]"
-            : "bg-[#F5F1E8] text-[#172033]"
+            : "bg-[#F5F1E8] text-[#242019]"
         }`}
       >
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           <h2
             className={`font-newsreader text-3xl sm:text-5xl font-normal leading-[1.1] ${
-              theme === "dark" ? "text-[#F0EAE1]" : "text-[#172033]"
+              theme === "dark" ? "text-[#F0EAE1]" : "text-[#242019]"
             }`}
           >
             Before you commit,{" "}
             <span
               className={`italic block sm:inline ${
-                theme === "dark" ? "text-[#D4AA50]" : "text-[#315C8A]"
+                theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
               }`}
             >
               challenge the decision.
@@ -781,7 +793,7 @@ export default function EditorialLandingPage() {
               className={`w-full sm:w-auto px-7 py-3.5 border font-courier text-xs tracking-[0.08em] uppercase font-bold transition-colors text-center inline-block ${
                 theme === "dark"
                   ? "border-[#D4AA50] bg-[#D4AA50] text-[#181614] hover:bg-[#E5BE64] hover:text-[#181614]"
-                  : "border-[#172033] bg-[#172033] text-[#F5F1E8] hover:bg-transparent hover:text-[#172033]"
+                  : "border-[#242019] bg-[#242019] text-[#F5F1E8] hover:bg-transparent hover:text-[#242019]"
               }`}
             >
               Challenge a Decision →
@@ -791,7 +803,7 @@ export default function EditorialLandingPage() {
               className={`w-full sm:w-auto px-7 py-3.5 border bg-transparent font-courier text-xs tracking-[0.08em] uppercase transition-colors ${
                 theme === "dark"
                   ? "border-[#38332C] text-[#F0EAE1] hover:border-[#D4AA50]"
-                  : "border-[#172033]/30 text-[#172033] hover:border-[#172033]"
+                  : "border-[#242019]/30 text-[#242019] hover:border-[#242019]"
               }`}
             >
               Explore the Method
@@ -803,7 +815,7 @@ export default function EditorialLandingPage() {
             className={`pt-14 border-t flex flex-col sm:flex-row items-center justify-between text-[11px] font-courier gap-4 ${
               theme === "dark"
                 ? "border-[#38332C] text-[#A89F91]"
-                : "border-[#172033]/15 text-[#7B8491]"
+                : "border-[#242019]/15 text-[#97907e]"
             }`}
           >
             <div className="text-[10px] font-courier tracking-[0.12em] uppercase opacity-65">
@@ -816,7 +828,7 @@ export default function EditorialLandingPage() {
                 className={`transition-colors ${
                   theme === "dark"
                     ? "hover:text-[#F0EAE1]"
-                    : "hover:text-[#172033]"
+                    : "hover:text-[#242019]"
                 }`}
               >
                 Softly Room
@@ -824,7 +836,7 @@ export default function EditorialLandingPage() {
               <Link
                 href="/dashboard"
                 className={`font-bold hover:underline ${
-                  theme === "dark" ? "text-[#D4AA50]" : "text-[#315C8A]"
+                  theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
                 }`}
               >
                 DASHBOARD →

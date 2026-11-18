@@ -375,7 +375,7 @@ export default function TranscriptEditor({
             if (reviewed) setReviewed(false);
           }}
           placeholder="Recorded audio transcript will appear here. You can also write or paste conversation transcripts directly..."
-          className="w-full text-sm font-newsreader text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
+          className="w-full text-sm font-newsreader text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
         />
       </div>
 

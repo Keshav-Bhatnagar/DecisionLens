@@ -77,7 +77,7 @@ export default function WorkspaceMembersPill({
 
         {/* Text Label & Status Dot */}
         <div className="flex items-center gap-1.5 text-[12px] font-courier font-bold uppercase tracking-[0.08em] text-[#1d1d1b] dark:text-[#F0EAE1]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#1B4332] dark:bg-[#52b788]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#4f4b40] dark:bg-[#b08a3c]" />
           <span>
             {members.length > 0 ? `${members.length} ALLOWED` : "ADD MEMBERS"}
           </span>

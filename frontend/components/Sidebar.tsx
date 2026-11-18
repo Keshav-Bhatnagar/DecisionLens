@@ -290,7 +290,7 @@ export default function Sidebar({
                 setNewDecisionTitle(`Decision ${count + 1}`);
                 setShowNewDecisionModal(true);
               }}
-              className="w-10 h-10 rounded-sm bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none shadow-xs mx-auto"
+              className="w-10 h-10 rounded-sm bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs mx-auto"
               title="New Decision"
             >
               <Plus className="w-4 h-4" />
@@ -304,7 +304,7 @@ export default function Sidebar({
                 setShowNewDecisionModal(true);
                 closeMobile();
               }}
-              className="w-full py-2.5 px-3 rounded-sm bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] font-bold text-[12px] uppercase tracking-wider flex items-center justify-center gap-2 transition-colors focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none shadow-xs"
+              className="w-full py-2.5 px-3 rounded-sm bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] font-bold text-[12px] uppercase tracking-wider flex items-center justify-center gap-2 transition-colors focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs"
               title="Challenge a new decision"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -379,7 +379,7 @@ export default function Sidebar({
                     setShowNewFolderModal(true);
                     closeMobile();
                   }}
-                  className="p-1 rounded-[2px] text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 transition-colors"
+                  className="p-1 rounded-[2px] text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 transition-colors"
                   title="New workspace"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -390,7 +390,7 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => setShowNewFolderModal(true)}
-                  className="p-1 rounded-[4px] text-[#7B8491] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                  className="p-1 rounded-[4px] text-[#97907e] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                   title="Workspaces"
                 >
                   <FolderIcon className="w-4 h-4" />
@@ -401,7 +401,7 @@ export default function Sidebar({
             {isExpanded && (
               <div className="space-y-0.5">
                 {folders.length === 0 ? (
-                  <p className="text-[12px] font-courier text-[#7B8491] px-2.5 py-1">
+                  <p className="text-[12px] font-courier text-[#97907e] px-2.5 py-1">
                     No workspaces yet
                   </p>
                 ) : (
@@ -426,8 +426,8 @@ export default function Sidebar({
                               viewBox="0 0 24 24"
                               className={`w-4 h-4 shrink-0 fill-none stroke-[1.7] ${
                                 isActive
-                                  ? "stroke-[#2B4C8C] dark:stroke-[#93b3ee]"
-                                  : "stroke-[#7B8491]"
+                                  ? "stroke-[#443a30] dark:stroke-[#d9c69a]"
+                                  : "stroke-[#97907e]"
                               }`}
                             >
                               <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -445,7 +445,7 @@ export default function Sidebar({
                         {isActive && (
                           <div className="ml-3 pl-2.5 border-l border-[#cfc7b2] dark:border-[#38332C] space-y-0.5 my-1 font-courier">
                             {folderDecisions.length === 0 ? (
-                              <p className="text-[11px] font-courier text-[#7B8491] py-1 px-1">
+                              <p className="text-[11px] font-courier text-[#97907e] py-1 px-1">
                                 No records yet
                               </p>
                             ) : (
@@ -466,7 +466,7 @@ export default function Sidebar({
                                   >
                                     <div className="flex items-center gap-1.5 truncate min-w-0">
                                       {isMeeting ? (
-                                        <Video className="w-3.5 h-3.5 text-[#2B4C8C] dark:text-[#93b3ee] shrink-0" />
+                                        <Video className="w-3.5 h-3.5 text-[#443a30] dark:text-[#d9c69a] shrink-0" />
                                       ) : (
                                         <Compass className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
                                       )}
@@ -478,7 +478,7 @@ export default function Sidebar({
                                           ? "bg-emerald-500"
                                           : d.status === "evaluating"
                                           ? "bg-amber-500"
-                                          : "bg-[#7B8491]"
+                                          : "bg-[#97907e]"
                                       }`}
                                       title={`Status: ${d.status}`}
                                     />
@@ -535,7 +535,7 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={handleLogout}
-                className="p-1 px-2 text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40 rounded-sm transition-colors flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider"
+                className="p-1 px-2 text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40 rounded-sm transition-colors flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider"
                 title="Sign out"
               >
                 <LogOut className="w-3 h-3" />
@@ -546,7 +546,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex justify-center p-1.5 text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+              className="w-full flex justify-center p-1.5 text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
               title="Sign out"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -567,7 +567,7 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => setShowNewFolderModal(false)}
-                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
+                  className="text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -590,7 +590,7 @@ export default function Sidebar({
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="e.g. Strategic Growth, Product Strategy"
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                 </div>
 
@@ -601,7 +601,7 @@ export default function Sidebar({
                   <select
                     value={newFolderDomain}
                     onChange={(e) => setNewFolderDomain(e.target.value)}
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors cursor-pointer"
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors cursor-pointer"
                   >
                     <option value="AUTO">⚡ Auto-Detect from Content (Recommended)</option>
                     <option value="SOFTWARE">💻 Software Engineering & Cloud Infrastructure</option>
@@ -614,7 +614,7 @@ export default function Sidebar({
                     <option value="EDUCATION">🎓 Education & Academic Research</option>
                     <option value="PERSONAL">🌱 Personal Life & Habit Changes</option>
                   </select>
-                  <p className="text-[11px] text-[#7B8491] dark:text-[#A89F91] mt-1 font-courier">
+                  <p className="text-[11px] text-[#97907e] dark:text-[#A89F91] mt-1 font-courier">
                     Pre-calibrates evaluation criteria and prevents technical jargon ambiguity across deliberations.
                   </p>
                 </div>
@@ -628,7 +628,7 @@ export default function Sidebar({
                     value={newFolderDesc}
                     onChange={(e) => setNewFolderDesc(e.target.value)}
                     placeholder="Context or domain notes..."
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                 </div>
 
@@ -671,7 +671,7 @@ export default function Sidebar({
                 <button
                   type="button"
                   onClick={() => setShowNewDecisionModal(false)}
-                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
+                  className="text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -691,7 +691,7 @@ export default function Sidebar({
                   <select
                     value={newDecisionFolderId}
                     onChange={(e) => setNewDecisionFolderId(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   >
                     {folders.map((f) => (
                       <option key={f.id} value={f.id}>
@@ -714,7 +714,7 @@ export default function Sidebar({
                     value={newDecisionTitle}
                     onChange={(e) => setNewDecisionTitle(e.target.value)}
                     placeholder="e.g. Choose between Kubernetes vs Cloud Run for multi-region scale"
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#2B4C8C] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#2B4C8C]/25 focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                 </div>
 

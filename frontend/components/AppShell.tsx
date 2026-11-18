@@ -157,11 +157,11 @@ export default function AppShell({
               {breadcrumbs && breadcrumbs.length > 0 ? (
                 breadcrumbs.map((crumb, idx) => (
                   <div key={idx} className="flex items-center gap-1.5 shrink-0 max-w-[240px] truncate">
-                    <ChevronRight className="w-3.5 h-3.5 text-[#7B8491] shrink-0" />
+                    <ChevronRight className="w-3.5 h-3.5 text-[#97907e] shrink-0" />
                     {crumb.href ? (
                       <Link
                         href={crumb.href}
-                        className="hover:text-[#2B4C8C] dark:hover:text-[#D4AA50] truncate transition-colors text-[#1d1d1b] dark:text-[#F0EAE1]"
+                        className="hover:text-[#443a30] dark:hover:text-[#D4AA50] truncate transition-colors text-[#1d1d1b] dark:text-[#F0EAE1]"
                       >
                         {crumb.label}
                       </Link>
@@ -174,7 +174,7 @@ export default function AppShell({
                 ))
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <ChevronRight className="w-3.5 h-3.5 text-[#7B8491] shrink-0" />
+                  <ChevronRight className="w-3.5 h-3.5 text-[#97907e] shrink-0" />
                   <span className="text-[#1d1d1b] dark:text-[#F0EAE1] font-bold">Overview</span>
                 </div>
               )}
@@ -224,7 +224,7 @@ export default function AppShell({
             ) : (
               <Link
                 href="/auth"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-white bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-[4px] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-white bg-[#26211b] hover:bg-[#2e2822] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-[4px] transition-colors"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Sign in</span>

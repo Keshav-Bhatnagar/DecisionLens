@@ -27,6 +27,7 @@ import {
   FileCheck2,
   AlertTriangle,
   Zap,
+  BookOpen,
 } from "lucide-react";
 import {
   detectGaps,
@@ -867,6 +868,16 @@ export default function GapResolutionPanel({
                         </>
                       )}
                     </span>
+
+                    {gap.derived_from?.includes("domain_guideline") && (
+                      <span
+                        title="Flagged with help from the expert guide for this kind of decision"
+                        className="text-[11px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded bg-[#F3E7CC] text-[#7a4e10] border border-[#D9C08A] dark:bg-[#D4AA50]/15 dark:text-[#D4AA50] dark:border-[#D4AA50]/40"
+                      >
+                        <BookOpen className="w-3 h-3" />
+                        From domain guide
+                      </span>
+                    )}
                   </div>
 
                   {gap.affected_options && gap.affected_options.length > 0 && (

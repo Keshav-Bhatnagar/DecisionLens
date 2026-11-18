@@ -139,13 +139,13 @@ export default function OutcomeTrackingCard({
     <div className="mt-8 pt-8 border-t border-[#D9D2C3]">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-[#5A6275] block mb-1">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-[#7a7264] block mb-1">
             Stage 6 • Closed-Loop Accountability
           </span>
-          <h3 className="text-lg font-serif font-bold text-[#161E33]">
+          <h3 className="text-lg font-serif font-bold text-[#26211b]">
             Real-World Follow-Up & Outcome Tracking
           </h3>
-          <p className="text-xs text-[#5A6275]">
+          <p className="text-xs text-[#7a7264]">
             Close the decision loop. Measure whether the implemented recommendation delivered expected value and train folder memory.
           </p>
         </div>
@@ -155,7 +155,7 @@ export default function OutcomeTrackingCard({
             setError(null);
             setIsModalOpen(true);
           }}
-          className="px-3.5 py-1.5 bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] text-xs font-bold uppercase tracking-wider rounded-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+          className="px-3.5 py-1.5 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] text-xs font-bold uppercase tracking-wider rounded-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
         >
           <span>★</span>
           <span>{latest ? "Log Follow-Up Check-in" : "Log Decision Outcome"}</span>
@@ -184,10 +184,10 @@ export default function OutcomeTrackingCard({
                   </span>
                 ))}
               </div>
-              <span className="text-xs font-bold text-[#161E33]">
+              <span className="text-xs font-bold text-[#26211b]">
                 {latest.utility_rating}/5 Utility Rating
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#EFEADF] text-[#5A6275]">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#EFEADF] text-[#7a7264]">
                 {latest.days_since_decision} Days Post-Decision
               </span>
             </div>
@@ -207,35 +207,35 @@ export default function OutcomeTrackingCard({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-xs">
             <div>
-              <span className="text-[10px] font-mono uppercase text-[#5A6275] block mb-0.5">
+              <span className="text-[10px] font-mono uppercase text-[#7a7264] block mb-0.5">
                 Adopted Choice
               </span>
-              <p className="font-semibold text-[#161E33]">{latest.chosen_option}</p>
+              <p className="font-semibold text-[#26211b]">{latest.chosen_option}</p>
             </div>
 
             {latest.what_worked_well && (
               <div>
-                <span className="text-[10px] font-mono uppercase text-[#5A6275] block mb-0.5">
+                <span className="text-[10px] font-mono uppercase text-[#7a7264] block mb-0.5">
                   What Succeeded
                 </span>
-                <p className="text-[#161E33] leading-relaxed">{latest.what_worked_well}</p>
+                <p className="text-[#26211b] leading-relaxed">{latest.what_worked_well}</p>
               </div>
             )}
           </div>
 
           {latest.lessons_learned && (
             <div className="mt-3 p-3 bg-[#EFEADF] rounded border border-[#D9D2C3] text-xs">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6275] block mb-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#7a7264] block mb-1">
                 Lessons Learned (Injected into Folder Memory)
               </span>
-              <p className="text-[#161E33] italic">&ldquo;{latest.lessons_learned}&rdquo;</p>
+              <p className="text-[#26211b] italic">&ldquo;{latest.lessons_learned}&rdquo;</p>
             </div>
           )}
 
 
           {latest.unexpected_challenges && latest.unexpected_challenges.length > 0 && (
             <div className="mt-3">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#5A6275] block mb-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#7a7264] block mb-1">
                 Production Challenges Encountered
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -251,7 +251,7 @@ export default function OutcomeTrackingCard({
             </div>
           )}
 
-          <div className="mt-4 pt-3 border-t border-[#D9D2C3] flex items-center justify-between text-[10px] text-[#5A6275]">
+          <div className="mt-4 pt-3 border-t border-[#D9D2C3] flex items-center justify-between text-[10px] text-[#7a7264]">
             <span>
               Recorded on {new Date(latest.created_at).toLocaleDateString()}
             </span>
@@ -266,13 +266,13 @@ export default function OutcomeTrackingCard({
       ) : (
         /* Empty Prompt Banner */
         <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-6 text-center">
-          <div className="w-8 h-8 rounded-full bg-[#EFEADF] text-[#2F5D8F] flex items-center justify-center mx-auto mb-2 text-sm font-bold">
+          <div className="w-8 h-8 rounded-full bg-[#EFEADF] text-[#6e655a] flex items-center justify-center mx-auto mb-2 text-sm font-bold">
             ★
           </div>
-          <h4 className="text-sm font-bold text-[#161E33] mb-1">
+          <h4 className="text-sm font-bold text-[#26211b] mb-1">
             No Real-World Outcome Recorded Yet
           </h4>
-          <p className="text-xs text-[#5A6275] max-w-md mx-auto mb-3">
+          <p className="text-xs text-[#7a7264] max-w-md mx-auto mb-3">
             Did you follow the recommendation? Check in at 30, 60, or 90 days to log whether this decision solved the problem, stay accountable, and help your team learn from past results.
           </p>
           <button
@@ -290,16 +290,16 @@ export default function OutcomeTrackingCard({
           <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-sm shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 text-[#1d1d1b] dark:text-[#F0EAE1]">
             <div className="flex items-center justify-between pb-3 border-b border-[#D9D2C3] mb-4">
               <div>
-                <h3 className="text-base font-serif font-bold text-[#161E33]">
+                <h3 className="text-base font-serif font-bold text-[#26211b]">
                   Post-Decision Outcome Review
                 </h3>
-                <span className="text-[10px] text-[#5A6275]">
+                <span className="text-[10px] text-[#7a7264]">
                   Evaluate decision effectiveness and log organizational lessons.
                 </span>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-[#5A6275] hover:text-[#161E33] text-lg font-bold"
+                className="text-[#7a7264] hover:text-[#26211b] text-lg font-bold"
               >
                 ×
               </button>
@@ -314,7 +314,7 @@ export default function OutcomeTrackingCard({
             <form onSubmit={handleSubmitOutcome} className="space-y-4 text-xs font-sans">
               {/* 1. Implementation Status */}
               <div>
-                <label className="block font-semibold text-[#161E33] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] mb-1 font-mono uppercase text-[11px]">
                   1. Implementation Status
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -330,8 +330,8 @@ export default function OutcomeTrackingCard({
                       onClick={() => setStatus(s.id)}
                       className={`p-2.5 rounded text-left border transition-all cursor-pointer ${
                         status === s.id
-                          ? "bg-[#2F5D8F] dark:bg-[#D4AA50] text-[#FCFBF8] dark:text-[#181614] border-[#2F5D8F] dark:border-[#D4AA50] font-bold shadow-xs"
-                          : "bg-[#EFEADF] dark:bg-[#1C1917] text-[#161E33] dark:text-[#F0EAE1] border-[#D9D2C3] dark:border-[#38332C] hover:border-[#2F5D8F] dark:hover:border-[#D4AA50]"
+                          ? "bg-[#6e655a] dark:bg-[#D4AA50] text-[#FCFBF8] dark:text-[#181614] border-[#6e655a] dark:border-[#D4AA50] font-bold shadow-xs"
+                          : "bg-[#EFEADF] dark:bg-[#1C1917] text-[#26211b] dark:text-[#F0EAE1] border-[#D9D2C3] dark:border-[#38332C] hover:border-[#6e655a] dark:hover:border-[#D4AA50]"
                       }`}
                     >
                       <span className="block text-xs">{s.label}</span>
@@ -347,7 +347,7 @@ export default function OutcomeTrackingCard({
                     <span className="font-mono text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">
                       Confirmed Production Path
                     </span>
-                    <span className="font-semibold text-[#161E33] dark:text-[#F0EAE1]">{canonicalWinner || "Recommended Architecture"}</span>
+                    <span className="font-semibold text-[#26211b] dark:text-[#F0EAE1]">{canonicalWinner || "Recommended Architecture"}</span>
                   </div>
                   <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold">
                     Standard Mandate
@@ -363,7 +363,7 @@ export default function OutcomeTrackingCard({
                     value={chosenOption}
                     onChange={(e) => setChosenOption(e.target.value)}
                     placeholder="e.g., Microservices (Kafka/Go) or Managed In-Memory Redis"
-                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-amber-300 dark:border-amber-700 rounded text-[#161E33] dark:text-[#F0EAE1] focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-amber-300 dark:border-amber-700 rounded text-[#26211b] dark:text-[#F0EAE1] focus:outline-hidden focus:ring-1 focus:ring-amber-500"
                     required
                   />
                   <p className="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
@@ -380,14 +380,14 @@ export default function OutcomeTrackingCard({
                     value={chosenOption}
                     onChange={(e) => setChosenOption(e.target.value)}
                     placeholder="e.g., Priority shifted to compliance audit; cloud budget frozen"
-                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-stone-300 dark:border-stone-700 rounded text-[#161E33] dark:text-[#F0EAE1]"
+                    className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-stone-300 dark:border-stone-700 rounded text-[#26211b] dark:text-[#F0EAE1]"
                   />
                 </div>
               )}
 
               {/* 3. Audit Horizon Chips (Replaces clunky dropdown) */}
               <div>
-                <label className="block font-semibold text-[#161E33] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
                   2. Review Horizon Milestone
                 </label>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -404,8 +404,8 @@ export default function OutcomeTrackingCard({
                       onClick={() => setDaysElapsed(h.days)}
                       className={`px-2.5 py-1 text-xs rounded border transition cursor-pointer font-mono font-medium ${
                         daysElapsed === h.days
-                          ? "bg-[#161E33] dark:bg-[#D4AA50] text-[#FCFBF8] dark:text-[#181614] border-[#161E33] dark:border-[#D4AA50] shadow-xs"
-                          : "bg-[#EFEADF] dark:bg-[#1C1917] text-[#161E33] dark:text-[#F0EAE1] border-[#D9D2C3] dark:border-[#38332C] hover:border-[#161E33] dark:hover:border-[#D4AA50]"
+                          ? "bg-[#26211b] dark:bg-[#D4AA50] text-[#FCFBF8] dark:text-[#181614] border-[#26211b] dark:border-[#D4AA50] shadow-xs"
+                          : "bg-[#EFEADF] dark:bg-[#1C1917] text-[#26211b] dark:text-[#F0EAE1] border-[#D9D2C3] dark:border-[#38332C] hover:border-[#26211b] dark:hover:border-[#D4AA50]"
                       }`}
                     >
                       {h.label}
@@ -416,7 +416,7 @@ export default function OutcomeTrackingCard({
 
               {/* 4. Executive Outcome Health & Verdict (Replaces consumer stars) */}
               <div>
-                <label className="block font-semibold text-[#161E33] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
                   3. Executive Decision Health Verdict
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -433,14 +433,14 @@ export default function OutcomeTrackingCard({
                       className={`p-2 rounded text-left border transition cursor-pointer ${
                         utilityRating === v.rating
                           ? "bg-amber-50 dark:bg-amber-950/50 border-amber-600 dark:border-[#D4AA50] ring-1 ring-amber-600 dark:ring-[#D4AA50] text-amber-950 dark:text-amber-200 font-bold"
-                          : "bg-[#EFEADF] dark:bg-[#1C1917] text-[#161E33] dark:text-[#F0EAE1] border-[#D9D2C3] dark:border-[#38332C] hover:border-amber-400 dark:hover:border-[#D4AA50]"
+                          : "bg-[#EFEADF] dark:bg-[#1C1917] text-[#26211b] dark:text-[#F0EAE1] border-[#D9D2C3] dark:border-[#38332C] hover:border-amber-400 dark:hover:border-[#D4AA50]"
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs">{v.label}</span>
-                        <span className="text-[10px] font-mono text-[#5A6275] dark:text-[#A89F91]">{v.rating}/5</span>
+                        <span className="text-[10px] font-mono text-[#7a7264] dark:text-[#A89F91]">{v.rating}/5</span>
                       </div>
-                      <span className="text-[10px] text-[#5A6275] dark:text-[#A89F91] block font-normal mt-0.5 leading-tight">
+                      <span className="text-[10px] text-[#7a7264] dark:text-[#A89F91] block font-normal mt-0.5 leading-tight">
                         {v.desc}
                       </span>
                     </button>
@@ -450,7 +450,7 @@ export default function OutcomeTrackingCard({
 
               {/* 5. Target Variance Verification (1-Click Toggles) */}
               <div>
-                <label className="block font-semibold text-[#161E33] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
                   4. Production Target Verification
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -497,7 +497,7 @@ export default function OutcomeTrackingCard({
 
               {/* 6. Consolidated Retrospective Field (Replaces 2 repetitive essays) */}
               <div>
-                <label className="block font-semibold text-[#161E33] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
                   5. Retrospective Learnings (Stored in Folder Memory)
                 </label>
                 <textarea
@@ -505,13 +505,13 @@ export default function OutcomeTrackingCard({
                   value={lessonsLearned}
                   onChange={(e) => setLessonsLearned(e.target.value)}
                   placeholder="Summarize production results: What succeeded? Did PgBouncer hold connection load? Any runbook surprises or tuning tips that subsequent decisions in this workspace must remember?"
-                  className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-[#D9D2C3] dark:border-[#38332C] rounded text-[#161E33] dark:text-[#F0EAE1] leading-relaxed text-xs focus:ring-1 focus:ring-[#2F5D8F] dark:focus:ring-[#D4AA50] focus:outline-hidden"
+                  className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-[#D9D2C3] dark:border-[#38332C] rounded text-[#26211b] dark:text-[#F0EAE1] leading-relaxed text-xs focus:ring-1 focus:ring-[#6e655a] dark:focus:ring-[#D4AA50] focus:outline-hidden"
                 />
               </div>
 
               {/* 7. Unforeseen Challenges (Optional Tags) */}
               <div>
-                <label className="block font-semibold text-[#161E33] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
                   6. Production Obstacles & Outages (Optional Tags)
                 </label>
                 <div className="flex gap-2 mb-2">
@@ -526,12 +526,12 @@ export default function OutcomeTrackingCard({
                       }
                     }}
                     placeholder="Add an unexpected incident/pitfall and press Enter..."
-                    className="flex-1 px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-[#D9D2C3] dark:border-[#38332C] rounded text-[#161E33] dark:text-[#F0EAE1]"
+                    className="flex-1 px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-[#D9D2C3] dark:border-[#38332C] rounded text-[#26211b] dark:text-[#F0EAE1]"
                   />
                   <button
                     type="button"
                     onClick={handleAddChallenge}
-                    className="px-3 py-1 bg-[#EFEADF] dark:bg-[#1C1917] border border-[#D9D2C3] dark:border-[#38332C] rounded hover:bg-[#D9D2C3] dark:hover:bg-[#2C2824] text-[#161E33] dark:text-[#F0EAE1] font-bold cursor-pointer"
+                    className="px-3 py-1 bg-[#EFEADF] dark:bg-[#1C1917] border border-[#D9D2C3] dark:border-[#38332C] rounded hover:bg-[#D9D2C3] dark:hover:bg-[#2C2824] text-[#26211b] dark:text-[#F0EAE1] font-bold cursor-pointer"
                   >
                     Add
                   </button>
@@ -563,14 +563,14 @@ export default function OutcomeTrackingCard({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3 py-1.5 text-[#5A6275] hover:text-[#161E33] cursor-pointer"
+                  className="px-3 py-1.5 text-[#7a7264] hover:text-[#26211b] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-1.5 bg-[#2F5D8F] hover:bg-[#254b73] text-[#FCFBF8] font-bold rounded transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                  className="px-4 py-1.5 bg-[#6e655a] hover:bg-[#254b73] text-[#FCFBF8] font-bold rounded transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   {submitting ? "Saving Outcome..." : "Save Outcome Review"}
                 </button>

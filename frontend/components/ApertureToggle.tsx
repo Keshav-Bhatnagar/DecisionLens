@@ -19,7 +19,7 @@ export default function ApertureToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`group relative flex items-center justify-center p-1.5 rounded-full transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#2B4C8C] ${
+      className={`group relative flex items-center justify-center p-1.5 rounded-full transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#443a30] ${
         isDark ? "hover:bg-white/5" : "hover:bg-black/5"
       } ${className}`}
       title={

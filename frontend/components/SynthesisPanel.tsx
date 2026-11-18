@@ -1472,7 +1472,7 @@ jobs:
               </button>
             </div>
 
-            <span className="hidden lg:inline text-[11px] text-[#7B8491] dark:text-[#A89F91] italic font-newsreader">
+            <span className="hidden lg:inline text-[11px] text-[#97907e] dark:text-[#A89F91] italic font-newsreader">
               {activeTab === "memo" && "Executive verdict, stakeholder alignment, and pre-commitment gates."}
               {activeTab === "roadmap" && "30-60-90 day milestone delivery plan and operational ownership."}
               {activeTab === "audit" && "Evidentiary claims, stress-tested assumptions, risks, and counterarguments."}

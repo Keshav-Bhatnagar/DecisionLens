@@ -186,7 +186,7 @@ export default function WorkflowStepper({
                 isActive
                   ? "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] font-bold shadow-xs border border-[#cfc7b2] dark:border-[#38332C]"
                   : stage.isCompleted
-                  ? "text-[#1d1d1b] dark:text-[#F0EAE1] hover:text-[#2B4C8C] dark:hover:text-[#D4AA50] hover:bg-[#cfc7b2]/40"
+                  ? "text-[#1d1d1b] dark:text-[#F0EAE1] hover:text-[#443a30] dark:hover:text-[#D4AA50] hover:bg-[#cfc7b2]/40"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30"
               }`}
             >

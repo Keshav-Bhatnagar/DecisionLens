@@ -407,7 +407,7 @@ export default function DecisionDetailPage({
                       <div className="flex items-center justify-between">
                         <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
                           Supporting Evidence & Context{" "}
-                          <span className="font-courier text-xs text-[#7B8491] dark:text-[#A89F91] uppercase tracking-wider">
+                          <span className="font-courier text-xs text-[#97907e] dark:text-[#A89F91] uppercase tracking-wider">
                             (Optional)
                           </span>
                         </h2>
@@ -541,7 +541,7 @@ export default function DecisionDetailPage({
                                 ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
                                 : "Add initial notes, key stakeholders, technical constraints, budget limits, or known deadlines..."
                             }
-                            className="w-full text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
+                            className="w-full text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
                           />
                         </div>
                       )}
@@ -613,7 +613,7 @@ export default function DecisionDetailPage({
                                           type="button"
                                           onClick={() => handleDeleteAttachment(att.id)}
                                           title="Delete document"
-                                          className="p-1.5 text-[#7B8491] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
+                                          className="p-1.5 text-[#97907e] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
                                         >
                                           <Trash2 className="w-4 h-4" />
                                         </button>
@@ -629,7 +629,7 @@ export default function DecisionDetailPage({
                                           <button
                                             type="button"
                                             onClick={() => handleCopyText(att.extracted_text, att.id)}
-                                            className="inline-flex items-center gap-1 text-[#2B4C8C] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline"
+                                            className="inline-flex items-center gap-1 text-[#443a30] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline"
                                           >
                                             {copiedId === att.id ? (
                                               <>
@@ -851,7 +851,7 @@ export default function DecisionDetailPage({
                   <button
                     type="button"
                     onClick={() => setShowExportModal(true)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#1B4332] hover:bg-[#143225] dark:bg-[#52b788] dark:text-[#181614] rounded-none border border-[#1B4332] dark:border-[#52b788] transition-colors cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#4f4b40] hover:bg-[#38342b] dark:bg-[#b08a3c] dark:text-[#181614] rounded-none border border-[#4f4b40] dark:border-[#b08a3c] transition-colors cursor-pointer"
                   >
                     <Share2 className="w-4 h-4" />
                     <span>Export Executive Brief</span>

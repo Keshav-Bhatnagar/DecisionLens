@@ -9,11 +9,11 @@
   --bg-page: #F5F1E8;
   --bg-surface: #FCFBF8;
   --bg-sidebar: #EFEADF;
-  --ink: #161E33;
-  --ink-secondary: #5A6275;
-  --ink-tertiary: #8B909C;
-  --accent: #2F5D8F;
-  --accent-hover: #264B74;
+  --ink: #26211B;
+  --ink-secondary: #6E655A;
+  --ink-tertiary: #97907E;
+  --accent: #8F6E2A;
+  --accent-hover: #75581F;
   --border: #D9D2C3;
   --radius-sm: 2px;
   --radius-md: 4px;
@@ -21,17 +21,17 @@
   /* Aliases for compatibility */
   --page-bg: #F5F1E8;
   --surface: #FCFBF8;
-  --text-primary: #161E33;
-  --text-secondary: #5A6275;
-  --text-tertiary: #8B909C;
+  --text-primary: #26211B;
+  --text-secondary: #6E655A;
+  --text-tertiary: #97907E;
   --border-subtle: #D9D2C3;
 
   --background: #F5F1E8;
-  --foreground: #161E33;
+  --foreground: #26211B;
   --card: #FCFBF8;
-  --card-foreground: #161E33;
-  --ring: #2F5D8F;
-  --primary: #161E33;
+  --card-foreground: #26211B;
+  --ring: #8F6E2A;
+  --primary: #26211B;
   --primary-foreground: #FFFFFF;
 }
 
@@ -147,8 +147,46 @@ body {
   animation: fadeIn 250ms ease-out forwards;
 }
 
+/* Ask-your-documents: answer reveal + loading shimmer */
+@keyframes dlRise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dl-rise {
+  animation: dlRise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes dlShimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.dl-shimmer {
+  background: linear-gradient(90deg, #ece2cc 0%, #f8f1e0 45%, #e2cf9f 50%, #f8f1e0 55%, #ece2cc 100%);
+  background-size: 200% 100%;
+  animation: dlShimmer 1.6s linear infinite;
+}
+
+.dark .dl-shimmer {
+  background: linear-gradient(90deg, #2a2620 0%, #38332c 45%, #5a4a2a 50%, #38332c 55%, #2a2620 100%);
+  background-size: 200% 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-fadeIn {
+  .animate-fadeIn,
+  .dl-rise,
+  .dl-shimmer {
     animation: none;
   }
 }
