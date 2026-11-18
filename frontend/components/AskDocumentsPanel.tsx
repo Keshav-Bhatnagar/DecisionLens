@@ -33,7 +33,7 @@ function CitationChip({
       type="button"
       onClick={onClick}
       aria-label={`Show source ${n}`}
-      className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 mx-[1px] align-[1px] text-[9px] font-bold font-mono rounded-[3px] border transition-all duration-150 active:scale-90 ${
+      className={`inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 mx-[1px] align-[1px] text-[15px] font-bold font-mono rounded-[3px] border transition-all duration-150 active:scale-90 ${
         active
           ? "bg-[#7a4e10] text-[#FBF8F1] border-[#7a4e10] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50]"
           : "bg-[#F3E7CC] text-[#7a4e10] border-[#D9C08A] hover:bg-[#EBD9B0] dark:bg-[#D4AA50]/15 dark:text-[#D4AA50] dark:border-[#D4AA50]/40"
@@ -56,7 +56,7 @@ function AnswerText({
 }) {
   const parts = text.split(/(\[\d{1,2}\])/g);
   return (
-    <p className="text-[12px] leading-[1.6] text-[#24211D] dark:text-[#E8E2D2]">
+    <p className="text-[14px] leading-[1.6] text-[#24211D] dark:text-[#E8E2D2]">
       {parts.map((part, i) => {
         const m = part.match(/^\[(\d{1,2})\]$/);
         if (m) {
@@ -73,7 +73,7 @@ function SourcePassage({ citation, onClose }: { citation: RagCitation; onClose: 
   return (
     <div className="mt-2 border border-[#D9C08A] dark:border-[#D4AA50]/30 bg-[#FFFDF8] dark:bg-[#181614] dl-rise">
       <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-[#EADFC6] dark:border-[#38332C]">
-        <span className="flex items-center gap-1 min-w-0 text-[10px] font-bold text-[#443a30] dark:text-[#E8E2D2]">
+        <span className="flex items-center gap-1 min-w-0 text-[14px] font-bold text-[#443a30] dark:text-[#E8E2D2]">
           <span className="font-mono text-[#7a4e10] dark:text-[#D4AA50]">[{citation.index}]</span>
           <FileText className="w-3 h-3 shrink-0 text-[#97907e]" />
           <span className="truncate">{citation.document_name}</span>
@@ -92,7 +92,7 @@ function SourcePassage({ citation, onClose }: { citation: RagCitation; onClose: 
 function ThinkingShimmer() {
   return (
     <div className="p-2.5 bg-[#FBF6EA] dark:bg-[#1E1B17] border border-[#E4D6B6] dark:border-[#38332C] space-y-1.5" aria-live="polite">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+      <div className="flex items-center gap-1.5 text-[14px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
         <Sparkles className="w-3 h-3 animate-pulse" />
         Reading your documents
       </div>
@@ -170,7 +170,7 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
   return (
     <div className="space-y-2 pt-1">
       {/* Status line */}
-      <div className="flex items-center justify-between gap-2 text-[10px] text-[#97907e]">
+      <div className="flex items-center justify-between gap-2 text-[14px] text-[#97907e]">
         <span className="truncate">
           {status
             ? `${docCount} ${docCount === 1 ? "file" : "files"} indexed · ${status.semantic ? "search by meaning" : "word matching"}`
@@ -224,7 +224,7 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
               key={s}
               type="button"
               onClick={() => void ask(s)}
-              className="px-1.5 py-0.5 text-[10px] text-[#4f4b40] dark:text-[#A89F91] bg-[#F4F0E6] dark:bg-[#1E1B17] border border-[#E2D9C4] dark:border-[#38332C] hover:border-[#7a4e10] hover:text-[#7a4e10] dark:hover:border-[#D4AA50] dark:hover:text-[#D4AA50] transition-colors active:scale-95"
+              className="px-1.5 py-0.5 text-[14px] text-[#4f4b40] dark:text-[#A89F91] bg-[#F4F0E6] dark:bg-[#1E1B17] border border-[#E2D9C4] dark:border-[#38332C] hover:border-[#7a4e10] hover:text-[#7a4e10] dark:hover:border-[#D4AA50] dark:hover:text-[#D4AA50] transition-colors active:scale-95"
             >
               {s}
             </button>
@@ -235,7 +235,7 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
       {asking && <ThinkingShimmer />}
 
       {error && !asking && (
-        <div className="p-2 text-[11px] border border-red-300 bg-red-50 text-red-700 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400">
+        <div className="p-2 text-[15px] border border-red-300 bg-red-50 text-red-700 dark:bg-red-950/30 dark:border-red-900 dark:text-red-400">
           {error}
         </div>
       )}
@@ -245,7 +245,7 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
         <div className="relative p-2.5 bg-[#FBF6EA] dark:bg-[#1E1B17] border border-[#E4D6B6] dark:border-[#38332C] shadow-[0_1px_0_#fff_inset,0_6px_16px_-12px_rgba(68,58,48,0.45)] dl-rise">
           <span className="absolute left-0 top-2.5 bottom-2.5 w-[2px] bg-[#C9A55A] dark:bg-[#D4AA50]" />
           <div className="flex items-start justify-between gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+            <span className="text-[14px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
               {result.covered ? "Answer" : "Not in your documents"}
             </span>
             <button
@@ -279,7 +279,7 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
               <button
                 type="button"
                 onClick={() => setShowSources((v) => !v)}
-                className="w-full flex items-center justify-between text-[10px] text-[#97907e] hover:text-[#443a30] dark:hover:text-[#E8E2D2]"
+                className="w-full flex items-center justify-between text-[14px] text-[#97907e] hover:text-[#443a30] dark:hover:text-[#E8E2D2]"
               >
                 <span className="flex items-center gap-1">
                   <Quote className="w-2.5 h-2.5 text-[#7a4e10] dark:text-[#D4AA50]" />

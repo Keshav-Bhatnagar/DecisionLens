@@ -253,7 +253,7 @@ function HexagonRadar({
             x={lbl.x}
             y={lbl.y}
             textAnchor={lbl.anchor}
-            className="font-courier text-[12px] font-bold fill-[#4f4b40] dark:fill-[#A89F91] tracking-[0.08em]"
+            className="font-courier text-[14px] font-bold fill-[#4f4b40] dark:fill-[#A89F91] tracking-[0.08em]"
           >
             {lbl.text}
           </text>
@@ -803,7 +803,7 @@ export default function FolderDetailPage({
                             {/* Row 1: Status badge + date */}
                             <div className="flex items-center gap-2.5">
                               <span
-                                className={`font-courier text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-none ${
+                                className={`font-courier text-[15px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-none ${
                                   isDecided
                                     ? "text-[#4f4b40] dark:text-[#b08a3c] bg-[#E4EFE7] dark:bg-[#142d22]"
                                     : isEvidence
@@ -870,7 +870,7 @@ export default function FolderDetailPage({
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
-                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[11px] font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                           </div>
@@ -900,7 +900,7 @@ export default function FolderDetailPage({
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
-                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[11px] font-courier font-bold text-[#8F2D2D] dark:text-[#E57373] uppercase tracking-wider">
+                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#8F2D2D] dark:text-[#E57373] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                           </div>
@@ -930,7 +930,7 @@ export default function FolderDetailPage({
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
-                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[11px] font-courier font-bold text-[#4f4b40] dark:text-[#b08a3c] uppercase tracking-wider">
+                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#4f4b40] dark:text-[#b08a3c] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                           </div>
@@ -980,7 +980,7 @@ export default function FolderDetailPage({
                   </div>
                 )}
 
-                <form onSubmit={handleCreateDecision} className="space-y-4 font-courier text-xs sm:text-[13px]">
+                <form onSubmit={handleCreateDecision} className="space-y-4 font-courier text-xs sm:text-[15px]">
                   <div>
                     <label className="block text-xs font-bold text-[#1d1d1b] dark:text-[#F0EAE1] font-courier uppercase tracking-wider mb-1.5">
                       Decision Question or Dilemma <span className="text-red-500">*</span>
@@ -994,7 +994,7 @@ export default function FolderDetailPage({
                       placeholder="e.g. Should we migrate our production infrastructure to the cloud?"
                       className="w-full px-3 py-2 text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
                     />
-                    <p className="mt-1.5 text-[11px] font-courier text-[#97907e] dark:text-[#A89F91]">
+                    <p className="mt-1.5 text-[15px] font-courier text-[#97907e] dark:text-[#A89F91]">
                       Sets your core problem statement and frames deliberation.
                     </p>
                   </div>

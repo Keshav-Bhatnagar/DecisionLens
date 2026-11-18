@@ -465,15 +465,15 @@ export default function Portfolio3DCanvas({
       <canvas ref={canvasRef} className="w-full h-full block" />
 
       {/* Floating 3D Navigation Controls Pill */}
-      <div className="absolute bottom-3 left-3 pointer-events-none flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--bg-surface)]/80 backdrop-blur-xs border border-[var(--border)] text-[11px] text-[var(--ink-secondary)] shadow-xs">
+      <div className="absolute bottom-3 left-3 pointer-events-none flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--bg-surface)]/80 backdrop-blur-xs border border-[var(--border)] text-[15px] text-[var(--ink-secondary)] shadow-xs">
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-ping" />
-        <span className="font-mono uppercase tracking-wider text-[10px]">
+        <span className="font-mono uppercase tracking-wider text-[14px]">
           {isInteracting ? "Orbiting Space" : "Drag to Orbit • Scroll to Zoom"}
         </span>
       </div>
 
       {/* Legend Indicator */}
-      <div className="absolute top-3 right-3 pointer-events-none flex items-center gap-3 px-3 py-1.5 rounded-xl bg-[var(--bg-surface)]/80 backdrop-blur-xs border border-[var(--border)] text-[11px] text-[var(--ink-secondary)] shadow-xs">
+      <div className="absolute top-3 right-3 pointer-events-none flex items-center gap-3 px-3 py-1.5 rounded-xl bg-[var(--bg-surface)]/80 backdrop-blur-xs border border-[var(--border)] text-[15px] text-[var(--ink-secondary)] shadow-xs">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs" />
           <span>Decided</span>
@@ -495,11 +495,11 @@ export default function Portfolio3DCanvas({
           style={{ left: `${tooltipPos.x}px`, top: `${tooltipPos.y - 12}px` }}
         >
           <div className="flex items-center justify-between gap-2 mb-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--ink-secondary)]">
+            <span className="text-[14px] font-mono uppercase tracking-wider text-[var(--ink-secondary)]">
               {hoveredDecision.domain || "STRATEGY"} &bull; #{hoveredDecision.id}
             </span>
             <span
-              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+              className={`text-[15px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
                 hoveredDecision.status === "decided"
                   ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
                   : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
@@ -514,12 +514,12 @@ export default function Portfolio3DCanvas({
           </h4>
 
           {hoveredDecision.problem_statement && (
-            <p className="text-[11px] text-[var(--ink-secondary)] line-clamp-2 mt-1">
+            <p className="text-[15px] text-[var(--ink-secondary)] line-clamp-2 mt-1">
               {hoveredDecision.problem_statement}
             </p>
           )}
 
-          <div className="pt-2 mt-2 border-t border-[var(--border)] flex items-center justify-between text-[10px] text-[var(--accent)] font-bold">
+          <div className="pt-2 mt-2 border-t border-[var(--border)] flex items-center justify-between text-[14px] text-[var(--accent)] font-bold">
             <span>Click to inspect &rarr;</span>
           </div>
         </div>

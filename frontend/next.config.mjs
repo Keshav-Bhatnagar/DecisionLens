@@ -15,13 +15,9 @@ if (typeof nextEnv?.loadEnvConfig === "function") {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  turbopack: {
-    root: __dirname,
-  },
   httpAgentOptions: {
     keepAlive: true,
   },
-  devIndicators: false,
   experimental: {
     proxyTimeout: 120000,
   },

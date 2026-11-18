@@ -347,7 +347,7 @@ export default function AuthPage() {
 
             <div className="relative flex items-center justify-center my-4">
               <div className="border-t border-border w-full" />
-              <span className="bg-paper-surface px-3 text-[10px] font-mono font-semibold text-ink-tertiary uppercase tracking-wider absolute">
+              <span className="bg-paper-surface px-3 text-[14px] font-mono font-semibold text-ink-tertiary uppercase tracking-wider absolute">
                 or sign in with password
               </span>
             </div>
@@ -392,7 +392,7 @@ export default function AuthPage() {
                     Password
                   </label>
                   {mode === "signin" && (
-                    <span className="text-[11px] text-ink-tertiary">
+                    <span className="text-[15px] text-ink-tertiary">
                       Encrypted session
                     </span>
                   )}
@@ -420,11 +420,11 @@ export default function AuthPage() {
 
               {/* Password complexity checklist (during signup) */}
               {mode === "signup" && (
-                <div className="p-3 bg-paper-sidebar border border-border rounded-md text-[11px] space-y-1.5">
-                  <span className="font-semibold text-ink block text-[10px] uppercase font-mono tracking-wider">
+                <div className="p-3 bg-paper-sidebar border border-border rounded-md text-[15px] space-y-1.5">
+                  <span className="font-semibold text-ink block text-[14px] uppercase font-mono tracking-wider">
                     Password Criteria
                   </span>
-                  <div className="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
+                  <div className="grid grid-cols-2 gap-1.5 font-mono text-[14px]">
                     <span className={`flex items-center gap-1.5 ${passwordChecks.minLength ? "text-emerald-700 font-semibold" : "text-ink-tertiary"}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${passwordChecks.minLength ? "bg-emerald-600" : "bg-border"}`} />
                       8+ characters
@@ -500,7 +500,7 @@ export default function AuthPage() {
                   <h3 className="text-sm font-serif font-bold text-ink">
                     Sandbox: {activeOAuthProvider.toUpperCase()} Sign-In
                   </h3>
-                  <span className="text-[10px] text-ink-tertiary font-mono">
+                  <span className="text-[14px] text-ink-tertiary font-mono">
                     Local Dev Simulation Mode
                   </span>
                 </div>
@@ -531,7 +531,7 @@ export default function AuthPage() {
                       <div className="text-xs font-semibold text-ink group-hover:text-accent">
                         Alex Lead (Google Workspace)
                       </div>
-                      <div className="text-[10px] font-mono text-ink-secondary">alex.lead@google.com</div>
+                      <div className="text-[14px] font-mono text-ink-secondary">alex.lead@google.com</div>
                     </div>
                     <ArrowRight className="w-3.5 h-3.5 text-ink-tertiary group-hover:text-accent transition" />
                   </button>
@@ -545,7 +545,7 @@ export default function AuthPage() {
                       <div className="text-xs font-semibold text-ink group-hover:text-accent">
                         Sarah Director (Corporate Domain)
                       </div>
-                      <div className="text-[10px] font-mono text-ink-secondary">sarah.director@enterprise.com</div>
+                      <div className="text-[14px] font-mono text-ink-secondary">sarah.director@enterprise.com</div>
                     </div>
                     <ArrowRight className="w-3.5 h-3.5 text-ink-tertiary group-hover:text-accent transition" />
                   </button>
@@ -555,7 +555,7 @@ export default function AuthPage() {
 
             {/* Custom OAuth Account Input */}
             <div className="pt-3 border-t border-border space-y-2">
-              <span className="text-[10px] font-mono font-semibold text-ink-tertiary uppercase tracking-wider block">
+              <span className="text-[14px] font-mono font-semibold text-ink-tertiary uppercase tracking-wider block">
                 Or authenticate custom address
               </span>
               <div className="flex gap-2">

@@ -43,7 +43,7 @@ export default function BrandLogo({
           >
             DecisionLens<span className="text-[#b4874b] dark:text-[#FBBF24]">.</span>
           </span>
-          <span className="text-[8px] font-mono font-semibold uppercase tracking-widest text-[#9E7D47] dark:text-[#D4AA50] mt-0.5">
+          <span className="text-[11px] font-mono font-semibold uppercase tracking-widest text-[#9E7D47] dark:text-[#D4AA50] mt-0.5">
             Executive Cognitive
           </span>
         </div>

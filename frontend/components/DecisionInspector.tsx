@@ -132,11 +132,11 @@ export default function DecisionInspector({
         {/* 2. Primary Actions Group */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+            <span className="text-[15px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
               Executive Actions
             </span>
             {savedSuccess && (
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+              <span className="text-[15px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Saved
               </span>
             )}
@@ -203,7 +203,7 @@ export default function DecisionInspector({
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+          <div className="flex items-center justify-between text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
             <span>{rigorData.label}</span>
             <span>Step {currentStage === "ingestion" ? "1" : currentStage === "structuring" ? "2" : currentStage === "gaps" ? "3" : currentStage === "frameworks" ? "4" : "5"} of 5</span>
           </div>
@@ -211,13 +211,13 @@ export default function DecisionInspector({
 
         {/* 4. Metadata Attributes Group */}
         <div className="space-y-3 pt-1 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70">
-          <span className="text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+          <span className="text-[15px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
             Dossier Properties
           </span>
 
           {/* Status Field */}
           <div className="space-y-1">
-            <label className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
+            <label className="text-[15px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
               Deliberation Status
             </label>
             <select
@@ -234,7 +234,7 @@ export default function DecisionInspector({
 
           {/* Record Type Field */}
           <div className="space-y-1">
-            <label className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
+            <label className="text-[15px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
               Record Modality
             </label>
             <div className="grid grid-cols-2 gap-1.5">
@@ -269,7 +269,7 @@ export default function DecisionInspector({
           {/* Workspace Parent Link */}
           {folder && (
             <div className="space-y-1">
-              <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
+              <span className="text-[15px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
                 Parent Workspace
               </span>
               <Link
@@ -283,7 +283,7 @@ export default function DecisionInspector({
           )}
 
           {/* Creation Date & ID */}
-          <div className="flex items-center justify-between text-[11px] text-[#97907e] pt-1">
+          <div className="flex items-center justify-between text-[15px] text-[#97907e] pt-1">
             <span>RECORD ID #{decision.id}</span>
             <span>CREATED {createdFormatted}</span>
           </div>
@@ -293,10 +293,10 @@ export default function DecisionInspector({
         <div className="space-y-2 pt-1 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+              <span className="text-[15px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
                 RAG Grounding ({attachments.length})
               </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[15px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                 <Database className="w-2.5 h-2.5" />
                 {ragStatus?.semantic ? "semantic" : "index"} {ragChunkCount !== null ? `(${ragChunkCount} chunks)` : ""}
               </span>
@@ -308,7 +308,7 @@ export default function DecisionInspector({
                   onSelectStage("ingestion");
                   onSelectIngestionTab("docs");
                 }}
-                className="text-[11px] font-bold text-[#443a30] dark:text-[#D4AA50] hover:underline"
+                className="text-[15px] font-bold text-[#443a30] dark:text-[#D4AA50] hover:underline"
               >
                 + Attach
               </button>
@@ -316,7 +316,7 @@ export default function DecisionInspector({
           </div>
 
           {attachments.length === 0 ? (
-            <div className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#97907e]">
+            <div className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[15px] text-[#97907e]">
               0 reference documents attached. Upload RFCs, specs or benchmarks to ground AI checks.
             </div>
           ) : (
@@ -329,9 +329,9 @@ export default function DecisionInspector({
                   >
                     <div className="flex items-center gap-1.5 truncate min-w-0">
                       <Paperclip className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
-                      <span className="truncate text-[11px] font-bold">{att.original_name}</span>
+                      <span className="truncate text-[15px] font-bold">{att.original_name}</span>
                     </div>
-                    <span className="text-[10px] text-[#97907e] shrink-0 ml-1">
+                    <span className="text-[14px] text-[#97907e] shrink-0 ml-1">
                       {(att.file_size / 1024).toFixed(0)} KB
                     </span>
                   </div>
@@ -349,8 +349,8 @@ export default function DecisionInspector({
         </div>
 
         {/* 6. Hotkey Quick Reference */}
-        <div className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#4f4b40] dark:text-[#A89F91] space-y-1">
-          <div className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[10px]">
+        <div className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[15px] text-[#4f4b40] dark:text-[#A89F91] space-y-1">
+          <div className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[14px]">
             Navigation Shortcuts
           </div>
           <div className="flex items-center justify-between">

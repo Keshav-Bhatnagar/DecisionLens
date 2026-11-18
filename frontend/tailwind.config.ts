@@ -38,6 +38,20 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontSize: {
+        // Bump every size up ~2px so the UI is comfortably readable
+        "2xs": ["11px", { lineHeight: "16px" }],
+        xs:   ["13px", { lineHeight: "18px" }],
+        sm:   ["15px", { lineHeight: "22px" }],
+        base: ["16px", { lineHeight: "24px" }],
+        lg:   ["18px", { lineHeight: "28px" }],
+        xl:   ["20px", { lineHeight: "30px" }],
+        "2xl": ["22px", { lineHeight: "32px" }],
+        "3xl": ["26px", { lineHeight: "36px" }],
+        "4xl": ["32px", { lineHeight: "40px" }],
+        "5xl": ["40px", { lineHeight: "1" }],
+        "6xl": ["48px", { lineHeight: "1" }],
+      },
       colors: {
         brand: {
           50: "#f4f0e6",

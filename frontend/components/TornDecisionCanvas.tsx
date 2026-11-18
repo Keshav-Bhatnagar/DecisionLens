@@ -1111,7 +1111,7 @@ export default function TornDecisionCanvas({
           {/* Section Dynamic Headline: Positioned with generous vertical margin */}
           <div className="relative z-20 pt-8 sm:pt-10 px-6 sm:px-12 text-center pointer-events-none max-w-2xl mx-auto">
             <span
-              className={`text-[11px] font-courier tracking-[0.2em] uppercase font-bold block mb-1 ${
+              className={`text-[15px] font-courier tracking-[0.2em] uppercase font-bold block mb-1 ${
                 isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
               }`}
             >
@@ -1230,7 +1230,7 @@ export default function TornDecisionCanvas({
                     }`}
                   >
                     <span
-                      className={`text-[11px] font-bold uppercase block tracking-wider ${
+                      className={`text-[15px] font-bold uppercase block tracking-wider ${
                         isDark ? "text-[#D4AA50]" : "text-[#b08a3c]"
                       }`}
                     >
@@ -1359,14 +1359,14 @@ export default function TornDecisionCanvas({
                   }`}
                 >
                   <span
-                    className={`text-[11px] font-bold ${
+                    className={`text-[15px] font-bold ${
                       isDark ? "text-[#D4AA50]" : "text-[#6e655a]"
                     }`}
                   >
                     {s.tag}
                   </span>
                   <span
-                    className={`text-[10px] uppercase ${
+                    className={`text-[14px] uppercase ${
                       isDark ? "text-[#A89F91]" : "text-[#7a7264]"
                     }`}
                   >
@@ -1386,7 +1386,7 @@ export default function TornDecisionCanvas({
                     “{s.question}”
                   </p>
                   <p
-                    className={`text-[11px] pt-1 line-clamp-2 ${
+                    className={`text-[15px] pt-1 line-clamp-2 ${
                       isDark ? "text-[#A89F91]" : "text-[#7a7264]"
                     }`}
                   >

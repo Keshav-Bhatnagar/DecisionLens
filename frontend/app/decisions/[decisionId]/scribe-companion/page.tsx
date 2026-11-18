@@ -143,7 +143,7 @@ export default function ScribeCompanionPage({
             type="button"
             onClick={handleGenerateTakeaways}
             disabled={isGeneratingTakeaways}
-            className="px-2 py-0.5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] text-[#7a4e10] dark:text-[#D4AA50] text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 transition-colors cursor-pointer"
+            className="px-2 py-0.5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] text-[#7a4e10] dark:text-[#D4AA50] text-[14px] font-bold uppercase tracking-wider inline-flex items-center gap-1 transition-colors cursor-pointer"
           >
             {isGeneratingTakeaways ? (
               <Loader2 className="w-2.5 h-2.5 animate-spin" />
@@ -156,10 +156,10 @@ export default function ScribeCompanionPage({
 
         {/* Category Selector */}
         <div className="space-y-1">
-          <span className="text-[10px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider block">
+          <span className="text-[14px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider block">
             Category:
           </span>
-          <div className="grid grid-cols-4 gap-1 text-[11px] font-bold uppercase tracking-wider">
+          <div className="grid grid-cols-4 gap-1 text-[15px] font-bold uppercase tracking-wider">
             {(["risk", "constraint", "alternative", "criteria"] as const).map((cat) => (
               <button
                 key={cat}
@@ -179,7 +179,7 @@ export default function ScribeCompanionPage({
 
         {/* Authority Role Selector */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[10px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[14px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider">
             <span>Role:</span>
             <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold">
               [{authorRole}]
@@ -195,7 +195,7 @@ export default function ScribeCompanionPage({
                   setAuthorRole(r);
                   setIsAddingCustomRole(false);
                 }}
-                className={`px-2 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider border transition-colors cursor-pointer ${
+                className={`px-2 py-0.5 rounded-none text-[14px] font-bold uppercase tracking-wider border transition-colors cursor-pointer ${
                   authorRole === r && !isAddingCustomRole
                     ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50]"
                     : "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9]"
@@ -207,7 +207,7 @@ export default function ScribeCompanionPage({
             <button
               type="button"
               onClick={() => setIsAddingCustomRole((prev) => !prev)}
-              className={`px-2 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+              className={`px-2 py-0.5 rounded-none text-[14px] font-bold uppercase tracking-wider border transition-colors cursor-pointer inline-flex items-center gap-1 ${
                 isAddingCustomRole
                   ? "bg-[#7a4e10] text-white border-[#7a4e10]"
                   : "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border-[#cfc7b2] dark:border-[#38332C]"
@@ -234,7 +234,7 @@ export default function ScribeCompanionPage({
                 type="button"
                 onClick={handleApplyCustomRole}
                 disabled={!customRoleText.trim()}
-                className="px-2 py-1 bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] text-[10px] font-bold uppercase disabled:opacity-40"
+                className="px-2 py-1 bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] text-[14px] font-bold uppercase disabled:opacity-40"
               >
                 Set
               </button>
@@ -269,7 +269,7 @@ export default function ScribeCompanionPage({
                 onChange={(e) => setIsAnonymous(e.target.checked)}
                 className="accent-[#7a4e10] dark:accent-[#D4AA50] cursor-pointer"
               />
-              <span className="text-[11px]">Anonymous</span>
+              <span className="text-[15px]">Anonymous</span>
             </label>
 
             <button
@@ -296,16 +296,16 @@ export default function ScribeCompanionPage({
         {/* Live Caveats Feed in companion */}
         {notesList.length > 0 && (
           <div className="pt-3 border-t border-[#cfc7b2] dark:border-[#38332C] space-y-2">
-            <span className="text-[10px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider block">
+            <span className="text-[14px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider block">
               Dispatched Caveats ({notesList.length})
             </span>
             <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
               {notesList.map((n) => (
                 <div
                   key={n.id}
-                  className="p-2 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] space-y-0.5"
+                  className="p-2 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[15px] space-y-0.5"
                 >
-                  <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center justify-between text-[14px]">
                     <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase">
                       [{n.category}]
                     </span>
@@ -323,7 +323,7 @@ export default function ScribeCompanionPage({
         )}
       </div>
 
-      <div className="pt-4 text-center border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 text-[10px] text-[#4f4b40] dark:text-[#A89F91]">
+      <div className="pt-4 text-center border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 text-[14px] text-[#4f4b40] dark:text-[#A89F91]">
         Synced live with DecisionLens main deliberation canvas.
       </div>
 

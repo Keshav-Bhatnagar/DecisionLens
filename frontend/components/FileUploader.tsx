@@ -297,7 +297,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-1 font-courier text-[11px] font-bold">
+          <div className="flex items-center gap-2 pt-1 font-courier text-[15px] font-bold">
             <span className="px-2 py-0.5 bg-[#E5DEC9] dark:bg-[#2C2723] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]">
               .PDF
             </span>
@@ -336,7 +336,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
           <span>Import from Google Drive</span>
         </button>
 
-        <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+        <span className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
           Upload local document or ingest directly from Google Drive / Docs
         </span>
       </div>
@@ -351,7 +351,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
           <p className="text-[#1d1d1b] dark:text-[#F0EAE1]">
             {error}
           </p>
-          <p className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+          <p className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
             Tip: Open this document in Google Drive $\rightarrow$ &quot;Open with Google Docs&quot;, then import using the Google Drive button above.
           </p>
         </div>
@@ -381,7 +381,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C]">
                 <div>
-                  <span className="text-[10px] font-courier font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
+                  <span className="text-[14px] font-courier font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
                     Document Corpus Ingestion
                   </span>
                   <h3 className="font-newsreader text-xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
@@ -407,7 +407,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
               {/* Option A: Paste Google Docs / Drive Link */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-courier font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
+                  <label className="block text-[15px] font-courier font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
                     Paste Google Docs or Drive Public Link
                   </label>
                   <form onSubmit={handleDriveUrlSubmit} className="flex gap-2">
@@ -437,7 +437,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
                       )}
                     </button>
                   </form>
-                  <p className="text-[11px] font-courier text-[#4f4b40] dark:text-[#A89F91] mt-1.5">
+                  <p className="text-[15px] font-courier text-[#4f4b40] dark:text-[#A89F91] mt-1.5">
                     Supports Google Docs, Sheets, and shared Google Drive files.
                   </p>
                 </div>
@@ -445,14 +445,14 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
                 {/* Divider */}
                 <div className="relative flex items-center justify-center my-3">
                   <div className="border-t border-[#cfc7b2] dark:border-[#38332C] w-full" />
-                  <span className="bg-[#F4F0E6] dark:bg-[#181614] px-3 font-courier text-[10px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+                  <span className="bg-[#F4F0E6] dark:bg-[#181614] px-3 font-courier text-[14px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
                     Or Use Cloud Picker
                   </span>
                 </div>
 
                 {/* Option B: Interactive Google Drive Picker */}
                 <div className="space-y-2">
-                  <label className="block text-[11px] font-courier font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  <label className="block text-[15px] font-courier font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
                     Interactive Drive Selector
                   </label>
                   <button
@@ -464,7 +464,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
                     <ExternalLink className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
                     <span>Choose File from My Google Drive</span>
                   </button>
-                  <p className="text-[11px] font-courier text-[#4f4b40] dark:text-[#A89F91] text-center">
+                  <p className="text-[15px] font-courier text-[#4f4b40] dark:text-[#A89F91] text-center">
                     Launches Google&apos;s authenticated picker to ingest files directly into the decision index.
                   </p>
                 </div>

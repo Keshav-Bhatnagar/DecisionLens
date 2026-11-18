@@ -191,7 +191,7 @@ export default function WorkflowStepper({
               }`}
             >
               <span
-                className={`w-5 h-5 rounded-sm flex items-center justify-center text-[10px] font-mono font-bold shrink-0 transition ${
+                className={`w-5 h-5 rounded-sm flex items-center justify-center text-[14px] font-mono font-bold shrink-0 transition ${
                   isActive
                     ? "bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614]"
                     : stage.isCompleted
@@ -210,7 +210,7 @@ export default function WorkflowStepper({
                 <span className="text-xs truncate block leading-tight font-bold">
                   {stage.label}
                 </span>
-                <span className="text-[9px] text-[#4f4b40] dark:text-[#A89F91] truncate block font-normal hidden lg:block">
+                <span className="text-[15px] text-[#4f4b40] dark:text-[#A89F91] truncate block font-normal hidden lg:block">
                   {stage.shortDesc}
                 </span>
               </div>

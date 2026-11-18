@@ -183,7 +183,7 @@ export default function EditorialLandingPage() {
         <div className="flex items-center space-x-2.5 sm:space-x-3">
           {loadingUser ? (
             <span
-              className={`text-[11px] tracking-[0.08em] ${
+              className={`text-[15px] tracking-[0.08em] ${
                 theme === "dark" ? "text-[#A89F91]" : "text-[#97907e]"
               }`}
             >
@@ -193,7 +193,7 @@ export default function EditorialLandingPage() {
             <div className="flex items-center">
               <Link
                 href="/dashboard"
-                className={`text-[11px] font-bold tracking-[0.08em] px-3.5 py-1.5 border transition-colors ${
+                className={`text-[15px] font-bold tracking-[0.08em] px-3.5 py-1.5 border transition-colors ${
                   theme === "dark"
                     ? "border-[#D4AA50] bg-[#D4AA50] text-[#181614] hover:bg-[#E5BE64] hover:text-[#181614]"
                     : "border-[#242019] bg-[#242019] text-[#F5F1E8] hover:bg-transparent hover:text-[#242019]"
@@ -207,7 +207,7 @@ export default function EditorialLandingPage() {
             <div className="flex items-center space-x-2 sm:space-x-2.5">
               <Link
                 href="/auth"
-                className={`text-[11px] font-bold tracking-[0.08em] px-2.5 py-1 transition-colors ${
+                className={`text-[15px] font-bold tracking-[0.08em] px-2.5 py-1 transition-colors ${
                   theme === "dark"
                     ? "text-[#A89F91] hover:text-[#D4AA50]"
                     : "text-[#596474] hover:text-[#6e655a]"
@@ -217,7 +217,7 @@ export default function EditorialLandingPage() {
               </Link>
               <Link
                 href="/auth?redirect=/dashboard?action=new"
-                className={`text-[11px] font-bold tracking-[0.08em] px-3.5 py-1.5 border transition-colors ${
+                className={`text-[15px] font-bold tracking-[0.08em] px-3.5 py-1.5 border transition-colors ${
                   theme === "dark"
                     ? "border-[#D4AA50] bg-[#D4AA50] text-[#181614] hover:bg-[#E5BE64] hover:text-[#181614]"
                     : "border-[#242019] bg-[#242019] text-[#F5F1E8] hover:bg-transparent hover:text-[#242019]"
@@ -245,7 +245,7 @@ export default function EditorialLandingPage() {
                   {(user.display_name || user.email)[0]}
                 </div>
                 <span
-                  className={`hidden sm:inline text-[11px] tracking-[0.08em] font-semibold transition-colors ${
+                  className={`hidden sm:inline text-[15px] tracking-[0.08em] font-semibold transition-colors ${
                     theme === "dark"
                       ? "text-[#F0EAE1] group-hover:text-[#D4AA50]"
                       : "text-[#26211b] group-hover:text-[#6e655a]"
@@ -262,7 +262,7 @@ export default function EditorialLandingPage() {
       {/* Authenticated User Status Bar */}
       {user && (
         <div
-          className={`pt-[58px] border-b px-6 py-2 text-[11px] tracking-[0.08em] flex items-center justify-between transition-colors duration-300 ${
+          className={`pt-[58px] border-b px-6 py-2 text-[15px] tracking-[0.08em] flex items-center justify-between transition-colors duration-300 ${
             theme === "dark"
               ? "bg-[#221F1C] border-[#38332C] text-[#A89F91]"
               : "bg-[#E9E3D7] border-[#242019]/15 text-[#596474]"
@@ -305,7 +305,7 @@ export default function EditorialLandingPage() {
           {/* Kicker */}
           <div className="flex items-center gap-3 mb-6">
             <span
-              className={`text-[11px] font-courier tracking-[0.1em] font-bold ${
+              className={`text-[15px] font-courier tracking-[0.1em] font-bold ${
                 theme === "dark" ? "text-[#D4AA50]" : "text-[#6e655a]"
               }`}
             >
@@ -317,7 +317,7 @@ export default function EditorialLandingPage() {
               }`}
             />
             <span
-              className={`text-[11px] font-courier tracking-[0.08em] ${
+              className={`text-[15px] font-courier tracking-[0.08em] ${
                 theme === "dark" ? "text-[#A89F91]" : "text-[#97907e]"
               }`}
             >
@@ -377,7 +377,7 @@ export default function EditorialLandingPage() {
 
           {/* Process Index Strip */}
           <div
-            className={`pt-6 border-t grid grid-cols-2 sm:grid-cols-6 gap-2 text-[10px] font-courier tracking-[0.08em] ${
+            className={`pt-6 border-t grid grid-cols-2 sm:grid-cols-6 gap-2 text-[14px] font-courier tracking-[0.08em] ${
               theme === "dark"
                 ? "border-[#38332C] text-[#A89F91]"
                 : "border-[#242019]/15 text-[#596474]"
@@ -539,7 +539,7 @@ export default function EditorialLandingPage() {
             <div className="lg:col-span-5 space-y-6">
               {/* Category Pill */}
               <span
-                className={`text-[11px] font-bold tracking-wider uppercase px-2.5 py-1 rounded border font-courier ${
+                className={`text-[15px] font-bold tracking-wider uppercase px-2.5 py-1 rounded border font-courier ${
                   theme === "dark"
                     ? "bg-[#221F1C] text-[#D4AA50] border-[#38332C]"
                     : "bg-[#EDE7D6] text-[#443a30] border-[#cfc7b2]"
@@ -669,7 +669,7 @@ export default function EditorialLandingPage() {
                   }`}
                   style={{ transform: "translateZ(12px)" }}
                 >
-                  <span className="font-bold text-[11px] uppercase tracking-wider block opacity-90">
+                  <span className="font-bold text-[15px] uppercase tracking-wider block opacity-90">
                     THE CHALLENGING QUESTION:
                   </span>
                   <p className="italic font-newsreader text-base sm:text-lg leading-snug">
@@ -678,7 +678,7 @@ export default function EditorialLandingPage() {
                 </div>
 
                 {/* Footer Note */}
-                <div className="text-[11px] opacity-75 pt-2 flex items-center justify-between">
+                <div className="text-[15px] opacity-75 pt-2 flex items-center justify-between">
                   <span>Audited via DecisionLens Cognitive Structuring</span>
                   <span>Fault Category: {currentCase.category.split(" ")[0]}</span>
                 </div>
@@ -812,13 +812,13 @@ export default function EditorialLandingPage() {
 
           {/* Minimal Footer */}
           <div
-            className={`pt-14 border-t flex flex-col sm:flex-row items-center justify-between text-[11px] font-courier gap-4 ${
+            className={`pt-14 border-t flex flex-col sm:flex-row items-center justify-between text-[15px] font-courier gap-4 ${
               theme === "dark"
                 ? "border-[#38332C] text-[#A89F91]"
                 : "border-[#242019]/15 text-[#97907e]"
             }`}
           >
-            <div className="text-[10px] font-courier tracking-[0.12em] uppercase opacity-65">
+            <div className="text-[14px] font-courier tracking-[0.12em] uppercase opacity-65">
               <span>EPISTEMIC REASONING & DECISION SCRUTINY ARCHIVE</span>
             </div>
 

@@ -293,12 +293,12 @@ export default function TranscriptEditor({
                 <span className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] block">
                   Participant Authority & Role Mapping
                 </span>
-                <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+                <span className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
                   Weights objections & constraints by domain authority (e.g. Security vs. DevOps)
                 </span>
               </div>
             </div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6] dark:bg-[#221F1C] px-2.5 py-0.5 border border-[#cfc7b2] dark:border-[#38332C]">
+            <span className="text-[15px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6] dark:bg-[#221F1C] px-2.5 py-0.5 border border-[#cfc7b2] dark:border-[#38332C]">
               {detectedSpeakers.length} Speakers Detected
             </span>
           </div>
@@ -313,7 +313,7 @@ export default function TranscriptEditor({
                   <span className="text-xs font-bold text-[#1d1d1b] dark:text-[#F0EAE1] truncate" title={name}>
                     {name}
                   </span>
-                  <span className="text-[10px] text-[#4f4b40] dark:text-[#A89F91] bg-[#F4F0E6] dark:bg-[#181614] font-bold uppercase px-2 py-0.5 border border-[#cfc7b2] dark:border-[#38332C]">
+                  <span className="text-[14px] text-[#4f4b40] dark:text-[#A89F91] bg-[#F4F0E6] dark:bg-[#181614] font-bold uppercase px-2 py-0.5 border border-[#cfc7b2] dark:border-[#38332C]">
                     {count} {count === 1 ? "turn" : "turns"}
                   </span>
                 </div>

@@ -498,7 +498,7 @@ export default function LiveMeetingRoom({
             <Lock className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
             Silent Stakeholder Scribe
           </span>
-          <p className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+          <p className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
             Drop objections, risks, or tech constraints without seniority bias.
           </p>
         </div>
@@ -509,7 +509,7 @@ export default function LiveMeetingRoom({
             type="button"
             onClick={togglePictureInPicture}
             title="Keep this scribe floating on top of Google Meet, Zoom, or your call without switching windows"
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[15px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer shrink-0"
           >
             <Pin className="w-3 h-3 rotate-45 text-[#7a4e10] dark:text-[#D4AA50]" />
             <span>{pipContainer ? "Dock Scribe" : "Float on Call"}</span>
@@ -520,7 +520,7 @@ export default function LiveMeetingRoom({
       <div className="space-y-3">
         {/* Category Pills */}
         <div className="space-y-1">
-          <span className="text-[10px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider block">
+          <span className="text-[14px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider block">
             Category:
           </span>
           <div className="grid grid-cols-4 gap-1.5 text-xs font-bold uppercase tracking-wider">
@@ -543,7 +543,7 @@ export default function LiveMeetingRoom({
 
         {/* Extensible Role System (Presets + Custom Title Input) */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[10px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[14px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider">
             <span>Authority Role:</span>
             <span className="text-[#7a4e10] dark:text-[#D4AA50] font-bold">
               [{authorRole}]
@@ -560,7 +560,7 @@ export default function LiveMeetingRoom({
                   setAuthorRole(r);
                   setIsAddingCustomRole(false);
                 }}
-                className={`px-2 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider border transition-colors cursor-pointer ${
+                className={`px-2 py-0.5 rounded-none text-[14px] font-bold uppercase tracking-wider border transition-colors cursor-pointer ${
                   authorRole === r && !isAddingCustomRole
                     ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50]"
                     : "bg-[#EDE7D6] dark:bg-[#221F1C] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9]"
@@ -573,7 +573,7 @@ export default function LiveMeetingRoom({
             <button
               type="button"
               onClick={() => setIsAddingCustomRole((prev) => !prev)}
-              className={`px-2 py-0.5 rounded-none text-[10px] font-bold uppercase tracking-wider border transition-colors cursor-pointer inline-flex items-center gap-1 ${
+              className={`px-2 py-0.5 rounded-none text-[14px] font-bold uppercase tracking-wider border transition-colors cursor-pointer inline-flex items-center gap-1 ${
                 isAddingCustomRole
                   ? "bg-[#7a4e10] text-white border-[#7a4e10]"
                   : "bg-[#EDE7D6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border-[#cfc7b2] dark:border-[#38332C]"
@@ -601,7 +601,7 @@ export default function LiveMeetingRoom({
                 type="button"
                 onClick={handleApplyCustomRole}
                 disabled={!customRoleText.trim()}
-                className="px-3 py-1 bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] text-[10px] font-bold uppercase tracking-wider disabled:opacity-40"
+                className="px-3 py-1 bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] text-[14px] font-bold uppercase tracking-wider disabled:opacity-40"
               >
                 Set
               </button>
@@ -657,7 +657,7 @@ export default function LiveMeetingRoom({
       {/* Submitted Notes Feed */}
       {notesList.length > 0 && (
         <div className="pt-3 border-t border-[#cfc7b2] dark:border-[#38332C] space-y-2">
-          <div className="flex items-center justify-between text-[10px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[14px] text-[#4f4b40] dark:text-[#A89F91] font-bold uppercase tracking-wider">
             <span>Submitted Caveats ({notesList.length})</span>
             {isFloating && <span className="text-emerald-600 font-bold">● Live Synced</span>}
           </div>
@@ -667,7 +667,7 @@ export default function LiveMeetingRoom({
                 key={n.id}
                 className="p-2.5 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs space-y-1"
               >
-                <div className="flex items-center justify-between text-[10px]">
+                <div className="flex items-center justify-between text-[14px]">
                   <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
                     [{n.category}]
                   </span>
@@ -675,7 +675,7 @@ export default function LiveMeetingRoom({
                     {n.author} • {n.timestamp}
                   </span>
                 </div>
-                <p className="text-[#1d1d1b] dark:text-[#F0EAE1] text-[11px] leading-snug">
+                <p className="text-[#1d1d1b] dark:text-[#F0EAE1] text-[15px] leading-snug">
                   {n.content}
                 </p>
               </div>
@@ -781,7 +781,7 @@ export default function LiveMeetingRoom({
                       href={jitsiUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase inline-flex items-center gap-1 hover:underline"
+                      className="text-[15px] text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase inline-flex items-center gap-1 hover:underline"
                     >
                       <Maximize2 className="w-3 h-3" />
                       <span>Dedicated Tab</span>
@@ -789,7 +789,7 @@ export default function LiveMeetingRoom({
                     <button
                       type="button"
                       onClick={() => setIsJitsiLaunched(false)}
-                      className="text-[11px] text-rose-700 dark:text-rose-400 font-bold uppercase hover:underline cursor-pointer"
+                      className="text-[15px] text-rose-700 dark:text-rose-400 font-bold uppercase hover:underline cursor-pointer"
                     >
                       Close Chamber
                     </button>
@@ -849,7 +849,7 @@ export default function LiveMeetingRoom({
                     <Video className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
                     Connect Active Google Meet or Zoom Call
                   </span>
-                  <p className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
+                  <p className="text-[15px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
                     Paste meeting URL to launch, or use <strong>Float Scribe on Call</strong> to keep your private caveat scratchpad floating over your call window!
                   </p>
                 </div>
@@ -884,7 +884,7 @@ export default function LiveMeetingRoom({
                         <span className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] block">
                           Tab Audio Sync
                         </span>
-                        <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+                        <span className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
                           {isCapturingAudio
                             ? `Recording dialogue: ${formatTimer(captureDuration)}`
                             : "Captures call audio directly without meeting bot invites"}
@@ -921,7 +921,7 @@ export default function LiveMeetingRoom({
 
                   {/* Live Speech Preview Header & Scrubber */}
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] flex items-center gap-1.5">
+                    <span className="text-[14px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] flex items-center gap-1.5">
                       <Sparkles className="w-3 h-3" />
                       Live Technical Speech Feed
                     </span>
@@ -930,7 +930,7 @@ export default function LiveMeetingRoom({
                         type="button"
                         onClick={handleScrubLiveTangents}
                         disabled={isScrubbingTangents}
-                        className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] rounded-none hover:opacity-90 inline-flex items-center gap-1 cursor-pointer transition-opacity"
+                        className="px-2 py-0.5 text-[14px] font-bold uppercase tracking-wider bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] rounded-none hover:opacity-90 inline-flex items-center gap-1 cursor-pointer transition-opacity"
                         title="Auto-scrub lunch orders, sports chatter, and off-topic tangents"
                       >
                         {isScrubbingTangents ? (
@@ -944,7 +944,7 @@ export default function LiveMeetingRoom({
                   </div>
 
                   {distractionAudit && (
-                    <div className="px-2.5 py-1 bg-emerald-950/10 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border border-emerald-400 dark:border-emerald-800 text-[10px] flex items-center justify-between font-mono">
+                    <div className="px-2.5 py-1 bg-emerald-950/10 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border border-emerald-400 dark:border-emerald-800 text-[14px] flex items-center justify-between font-mono">
                       <span>✓ {distractionAudit.count} off-topic tangent(s) scrubbed</span>
                       <span className="font-bold">{distractionAudit.ratio}% Technical Signal</span>
                     </div>
@@ -953,7 +953,7 @@ export default function LiveMeetingRoom({
                   {/* Live Speech Preview */}
                   <div className="p-3 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs min-h-[60px] max-h-[120px] overflow-y-auto">
                     {liveCapturedText ? (
-                      <p className="text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed font-mono text-[11px]">
+                      <p className="text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed font-mono text-[15px]">
                         {liveCapturedText}
                         {liveInterimText && <span className="opacity-60 italic"> {liveInterimText}</span>}
                       </p>
@@ -983,7 +983,7 @@ export default function LiveMeetingRoom({
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
                   Scribe Floating Always-on-Top Over Your Call
                 </h4>
-                <p className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+                <p className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
                   Your private feedback scratchpad is floating directly on top of your Google Meet or Zoom window.
                 </p>
               </div>

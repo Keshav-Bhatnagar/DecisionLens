@@ -139,7 +139,7 @@ export default function OutcomeTrackingCard({
     <div className="mt-8 pt-8 border-t border-[#D9D2C3]">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-[#7a7264] block mb-1">
+          <span className="text-[14px] font-mono uppercase tracking-widest text-[#7a7264] block mb-1">
             Stage 6 • Closed-Loop Accountability
           </span>
           <h3 className="text-lg font-serif font-bold text-[#26211b]">
@@ -187,13 +187,13 @@ export default function OutcomeTrackingCard({
               <span className="text-xs font-bold text-[#26211b]">
                 {latest.utility_rating}/5 Utility Rating
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#EFEADF] text-[#7a7264]">
+              <span className="text-[14px] font-mono px-2 py-0.5 rounded bg-[#EFEADF] text-[#7a7264]">
                 {latest.days_since_decision} Days Post-Decision
               </span>
             </div>
 
             <span
-              className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border font-medium ${
+              className={`text-[14px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border font-medium ${
                 latest.implementation_status === "implemented_as_recommended"
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                   : latest.implementation_status === "pivoted_to_alternative"
@@ -207,7 +207,7 @@ export default function OutcomeTrackingCard({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-xs">
             <div>
-              <span className="text-[10px] font-mono uppercase text-[#7a7264] block mb-0.5">
+              <span className="text-[14px] font-mono uppercase text-[#7a7264] block mb-0.5">
                 Adopted Choice
               </span>
               <p className="font-semibold text-[#26211b]">{latest.chosen_option}</p>
@@ -215,7 +215,7 @@ export default function OutcomeTrackingCard({
 
             {latest.what_worked_well && (
               <div>
-                <span className="text-[10px] font-mono uppercase text-[#7a7264] block mb-0.5">
+                <span className="text-[14px] font-mono uppercase text-[#7a7264] block mb-0.5">
                   What Succeeded
                 </span>
                 <p className="text-[#26211b] leading-relaxed">{latest.what_worked_well}</p>
@@ -225,7 +225,7 @@ export default function OutcomeTrackingCard({
 
           {latest.lessons_learned && (
             <div className="mt-3 p-3 bg-[#EFEADF] rounded border border-[#D9D2C3] text-xs">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#7a7264] block mb-1">
+              <span className="text-[14px] font-mono uppercase tracking-wider text-[#7a7264] block mb-1">
                 Lessons Learned (Injected into Folder Memory)
               </span>
               <p className="text-[#26211b] italic">&ldquo;{latest.lessons_learned}&rdquo;</p>
@@ -235,14 +235,14 @@ export default function OutcomeTrackingCard({
 
           {latest.unexpected_challenges && latest.unexpected_challenges.length > 0 && (
             <div className="mt-3">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#7a7264] block mb-1">
+              <span className="text-[14px] font-mono uppercase tracking-wider text-[#7a7264] block mb-1">
                 Production Challenges Encountered
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {latest.unexpected_challenges.map((c, i) => (
                   <span
                     key={i}
-                    className="text-[10px] px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded"
+                    className="text-[14px] px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded"
                   >
                     ⚠ {c}
                   </span>
@@ -251,7 +251,7 @@ export default function OutcomeTrackingCard({
             </div>
           )}
 
-          <div className="mt-4 pt-3 border-t border-[#D9D2C3] flex items-center justify-between text-[10px] text-[#7a7264]">
+          <div className="mt-4 pt-3 border-t border-[#D9D2C3] flex items-center justify-between text-[14px] text-[#7a7264]">
             <span>
               Recorded on {new Date(latest.created_at).toLocaleDateString()}
             </span>
@@ -293,7 +293,7 @@ export default function OutcomeTrackingCard({
                 <h3 className="text-base font-serif font-bold text-[#26211b]">
                   Post-Decision Outcome Review
                 </h3>
-                <span className="text-[10px] text-[#7a7264]">
+                <span className="text-[14px] text-[#7a7264]">
                   Evaluate decision effectiveness and log organizational lessons.
                 </span>
               </div>
@@ -314,7 +314,7 @@ export default function OutcomeTrackingCard({
             <form onSubmit={handleSubmitOutcome} className="space-y-4 text-xs font-sans">
               {/* 1. Implementation Status */}
               <div>
-                <label className="block font-semibold text-[#26211b] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] mb-1 font-mono uppercase text-[15px]">
                   1. Implementation Status
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -344,18 +344,18 @@ export default function OutcomeTrackingCard({
               {status === "implemented_as_recommended" ? (
                 <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between">
                   <div>
-                    <span className="font-mono text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">
+                    <span className="font-mono text-[14px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">
                       Confirmed Production Path
                     </span>
                     <span className="font-semibold text-[#26211b] dark:text-[#F0EAE1]">{canonicalWinner || "Recommended Architecture"}</span>
                   </div>
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold">
+                  <span className="text-[15px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold">
                     Standard Mandate
                   </span>
                 </div>
               ) : status === "pivoted_to_alternative" ? (
                 <div className="p-3 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded space-y-1.5">
-                  <label className="block font-semibold text-amber-900 dark:text-amber-200 font-mono text-[10px] uppercase">
+                  <label className="block font-semibold text-amber-900 dark:text-amber-200 font-mono text-[14px] uppercase">
                     Pivoted Alternative Deployed
                   </label>
                   <input
@@ -366,13 +366,13 @@ export default function OutcomeTrackingCard({
                     className="w-full px-2.5 py-1.5 bg-[#FCFBF8] dark:bg-[#181614] border border-amber-300 dark:border-amber-700 rounded text-[#26211b] dark:text-[#F0EAE1] focus:outline-hidden focus:ring-1 focus:ring-amber-500"
                     required
                   />
-                  <p className="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
+                  <p className="text-[14px] text-amber-700 dark:text-amber-400 font-mono">
                     Specify the alternate architecture or vendor adopted by leadership.
                   </p>
                 </div>
               ) : (
                 <div className="p-3 bg-stone-100 dark:bg-stone-900/60 border border-stone-300 dark:border-stone-700 rounded space-y-1.5">
-                  <label className="block font-semibold text-stone-800 dark:text-stone-200 font-mono text-[10px] uppercase">
+                  <label className="block font-semibold text-stone-800 dark:text-stone-200 font-mono text-[14px] uppercase">
                     Delay or Cancellation Rationale
                   </label>
                   <input
@@ -387,7 +387,7 @@ export default function OutcomeTrackingCard({
 
               {/* 3. Audit Horizon Chips (Replaces clunky dropdown) */}
               <div>
-                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[15px]">
                   2. Review Horizon Milestone
                 </label>
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -416,7 +416,7 @@ export default function OutcomeTrackingCard({
 
               {/* 4. Executive Outcome Health & Verdict (Replaces consumer stars) */}
               <div>
-                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[15px]">
                   3. Executive Decision Health Verdict
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -438,9 +438,9 @@ export default function OutcomeTrackingCard({
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs">{v.label}</span>
-                        <span className="text-[10px] font-mono text-[#7a7264] dark:text-[#A89F91]">{v.rating}/5</span>
+                        <span className="text-[14px] font-mono text-[#7a7264] dark:text-[#A89F91]">{v.rating}/5</span>
                       </div>
-                      <span className="text-[10px] text-[#7a7264] dark:text-[#A89F91] block font-normal mt-0.5 leading-tight">
+                      <span className="text-[14px] text-[#7a7264] dark:text-[#A89F91] block font-normal mt-0.5 leading-tight">
                         {v.desc}
                       </span>
                     </button>
@@ -450,7 +450,7 @@ export default function OutcomeTrackingCard({
 
               {/* 5. Target Variance Verification (1-Click Toggles) */}
               <div>
-                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[15px]">
                   4. Production Target Verification
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -464,7 +464,7 @@ export default function OutcomeTrackingCard({
                     }`}
                   >
                     <span className="text-xs block">{targetMetrics.slaMet ? "✓ Latency SLA Met" : "✕ Latency SLA Missed"}</span>
-                    <span className="text-[9px] font-mono opacity-80">sub-50ms p99 Target</span>
+                    <span className="text-[15px] font-mono opacity-80">sub-50ms p99 Target</span>
                   </button>
 
                   <button
@@ -477,7 +477,7 @@ export default function OutcomeTrackingCard({
                     }`}
                   >
                     <span className="text-xs block">{targetMetrics.budgetHeld ? "✓ Cloud Budget Held" : "✕ Budget Overrun"}</span>
-                    <span className="text-[9px] font-mono opacity-80">Zero Infra Surprise</span>
+                    <span className="text-[15px] font-mono opacity-80">Zero Infra Surprise</span>
                   </button>
 
                   <button
@@ -490,14 +490,14 @@ export default function OutcomeTrackingCard({
                     }`}
                   >
                     <span className="text-xs block">{targetMetrics.sreLoadManageable ? "✓ SRE Load Safe" : "✕ High SRE Fatigue"}</span>
-                    <span className="text-[9px] font-mono opacity-80">3-Person SRE Team</span>
+                    <span className="text-[15px] font-mono opacity-80">3-Person SRE Team</span>
                   </button>
                 </div>
               </div>
 
               {/* 6. Consolidated Retrospective Field (Replaces 2 repetitive essays) */}
               <div>
-                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[15px]">
                   5. Retrospective Learnings (Stored in Folder Memory)
                 </label>
                 <textarea
@@ -511,7 +511,7 @@ export default function OutcomeTrackingCard({
 
               {/* 7. Unforeseen Challenges (Optional Tags) */}
               <div>
-                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-[#26211b] dark:text-[#F0EAE1] mb-1 font-mono uppercase text-[15px]">
                   6. Production Obstacles & Outages (Optional Tags)
                 </label>
                 <div className="flex gap-2 mb-2">
@@ -542,7 +542,7 @@ export default function OutcomeTrackingCard({
                     {challenges.map((c, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[10px]"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[14px]"
                       >
                         <span>{c}</span>
                         <button

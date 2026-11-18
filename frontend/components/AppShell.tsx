@@ -146,7 +146,7 @@ export default function AppShell({
             </button>
 
             {/* Breadcrumb Path: Breadcrumb only (Workspaces / Overview) */}
-            <nav className="flex items-center gap-1.5 text-[13px] font-courier text-[#4f4b40] dark:text-[#A89F91] overflow-hidden truncate">
+            <nav className="flex items-center gap-1.5 text-[15px] font-courier text-[#4f4b40] dark:text-[#A89F91] overflow-hidden truncate">
               <Link
                 href="/dashboard"
                 className="hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors shrink-0"
@@ -224,7 +224,7 @@ export default function AppShell({
             ) : (
               <Link
                 href="/auth"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium text-white bg-[#26211b] hover:bg-[#2e2822] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-[4px] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[15px] font-medium text-white bg-[#26211b] hover:bg-[#2e2822] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-[4px] transition-colors"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Sign in</span>

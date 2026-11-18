@@ -136,49 +136,49 @@ export default function PortfolioPage() {
         {/* 4 Quiet Strategic Vital Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-[var(--bg-surface)] rounded-2xl p-4 sm:p-5 border border-[var(--border)] shadow-2xs transition-colors">
-            <span className="text-[11px] text-[var(--ink-secondary)] font-medium uppercase tracking-wider block mb-1">
+            <span className="text-[15px] text-[var(--ink-secondary)] font-medium uppercase tracking-wider block mb-1">
               Total Deliberations
             </span>
             <span className="text-2xl sm:text-3xl font-serif font-bold text-[var(--ink)] tabular-nums">
               {decisions.length}
             </span>
-            <span className="text-[10px] text-[var(--ink-secondary)] block mt-0.5">
+            <span className="text-[14px] text-[var(--ink-secondary)] block mt-0.5">
               Across {folders.length} workspaces
             </span>
           </div>
 
           <div className="bg-[var(--bg-surface)] rounded-2xl p-4 sm:p-5 border border-[var(--border)] shadow-2xs transition-colors">
-            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block mb-1">
+            <span className="text-[15px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider block mb-1">
               Consensus Mandates
             </span>
             <span className="text-2xl sm:text-3xl font-serif font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
               {decidedCount}
             </span>
-            <span className="text-[10px] text-[var(--ink-secondary)] block mt-0.5">
+            <span className="text-[14px] text-[var(--ink-secondary)] block mt-0.5">
               Executed &amp; locked
             </span>
           </div>
 
           <div className="bg-[var(--bg-surface)] rounded-2xl p-4 sm:p-5 border border-[var(--border)] shadow-2xs transition-colors">
-            <span className="text-[11px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider block mb-1">
+            <span className="text-[15px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider block mb-1">
               Under Gauntlet Scrutiny
             </span>
             <span className="text-2xl sm:text-3xl font-serif font-bold text-blue-600 dark:text-blue-400 tabular-nums">
               {evaluatingCount}
             </span>
-            <span className="text-[10px] text-[var(--ink-secondary)] block mt-0.5">
+            <span className="text-[14px] text-[var(--ink-secondary)] block mt-0.5">
               Multi-criteria stress testing
             </span>
           </div>
 
           <div className="bg-[var(--bg-surface)] rounded-2xl p-4 sm:p-5 border border-[var(--border)] shadow-2xs transition-colors">
-            <span className="text-[11px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider block mb-1">
+            <span className="text-[15px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider block mb-1">
               Early Stage Drafts
             </span>
             <span className="text-2xl sm:text-3xl font-serif font-bold text-amber-600 dark:text-amber-400 tabular-nums">
               {draftCount}
             </span>
-            <span className="text-[10px] text-[var(--ink-secondary)] block mt-0.5">
+            <span className="text-[14px] text-[var(--ink-secondary)] block mt-0.5">
               Forming problem statement
             </span>
           </div>
@@ -187,7 +187,7 @@ export default function PortfolioPage() {
         {/* Filter Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] text-xs">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] text-[var(--ink-secondary)] font-medium px-2 flex items-center gap-1">
+            <span className="text-[15px] text-[var(--ink-secondary)] font-medium px-2 flex items-center gap-1">
               <Filter className="w-3 h-3" /> Domain:
             </span>
             {domainsList.map((d) => (
@@ -207,7 +207,7 @@ export default function PortfolioPage() {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-[var(--ink-secondary)] font-medium px-2">
+            <span className="text-[15px] text-[var(--ink-secondary)] font-medium px-2">
               Status:
             </span>
             {[
@@ -276,11 +276,11 @@ export default function PortfolioPage() {
               <div className="absolute top-4 right-4 max-w-sm w-full z-40 bg-[var(--bg-surface)] text-[var(--ink)] border border-[var(--border)] shadow-2xl rounded-2xl p-5 animate-fadeIn backdrop-blur-md">
                 <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-mono uppercase text-[var(--ink-secondary)]">
+                    <span className="text-[14px] font-mono uppercase text-[var(--ink-secondary)]">
                       Decision #{selectedDecision.id}
                     </span>
                     <span
-                      className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                      className={`text-[15px] font-bold uppercase px-2 py-0.5 rounded-full ${
                         selectedDecision.status === "decided"
                           ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
                           : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
@@ -310,9 +310,9 @@ export default function PortfolioPage() {
                   )}
 
                   {selectedDecision.domain && (
-                    <div className="flex items-center gap-2 text-[11px] text-[var(--ink-secondary)]">
+                    <div className="flex items-center gap-2 text-[15px] text-[var(--ink-secondary)]">
                       <span className="font-semibold text-[var(--ink)]">Domain:</span>
-                      <span className="px-2 py-0.5 rounded bg-[var(--bg-page)] border border-[var(--border)] font-mono text-[10px]">
+                      <span className="px-2 py-0.5 rounded bg-[var(--bg-page)] border border-[var(--border)] font-mono text-[14px]">
                         {selectedDecision.domain}
                       </span>
                     </div>
@@ -320,7 +320,7 @@ export default function PortfolioPage() {
                 </div>
 
                 <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
-                  <span className="text-[10px] text-[var(--ink-secondary)]">
+                  <span className="text-[14px] text-[var(--ink-secondary)]">
                     Created {new Date(selectedDecision.created_at).toLocaleDateString()}
                   </span>
                   <Link
@@ -348,11 +348,11 @@ export default function PortfolioPage() {
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-mono text-[var(--ink-secondary)] uppercase">
+                      <span className="text-[14px] font-mono text-[var(--ink-secondary)] uppercase">
                         {dec.domain || "GENERAL"} &bull; #{dec.id}
                       </span>
                       <span
-                        className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                        className={`text-[15px] font-bold uppercase px-2 py-0.5 rounded-full ${
                           isDecided
                             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                             : isEvaluating
@@ -375,7 +375,7 @@ export default function PortfolioPage() {
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--ink-secondary)]">
+                  <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between text-[15px] text-[var(--ink-secondary)]">
                     <span>{new Date(dec.created_at).toLocaleDateString()}</span>
                     <span className="text-[var(--accent)] font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition">
                       View Memos &rarr;

@@ -381,7 +381,7 @@ export default function AudioRecorder({
                   : "border-[#cfc7b2] dark:border-[#38332C] text-[#4f4b40] dark:text-[#A89F91] hover:bg-[#EDE7D6]/50"
               }`}
             >
-              <span className="font-mono text-[11px] px-1 py-0.2 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]">
+              <span className="font-mono text-[15px] px-1 py-0.2 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]">
                 EN
               </span>
               <span>English (en)</span>
@@ -395,7 +395,7 @@ export default function AudioRecorder({
                   : "border-[#cfc7b2] dark:border-[#38332C] text-[#4f4b40] dark:text-[#A89F91] hover:bg-[#EDE7D6]/50"
               }`}
             >
-              <span className="font-mono text-[11px] px-1 py-0.2 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]">
+              <span className="font-mono text-[15px] px-1 py-0.2 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]">
                 HI
               </span>
               <span>Hindi (hi)</span>
@@ -420,7 +420,7 @@ export default function AudioRecorder({
               <span className="font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] block">
                 FFmpeg Normalization & High-Pass Filter
               </span>
-              <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+              <span className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
                 EBU R128 volume leveling + 200Hz rumble reduction.
               </span>
             </div>
@@ -595,7 +595,7 @@ export default function AudioRecorder({
                     setAudioUrl(null);
                   }
                 }}
-                className="text-rose-700 dark:text-rose-400 hover:underline font-bold uppercase ml-2 text-[11px]"
+                className="text-rose-700 dark:text-rose-400 hover:underline font-bold uppercase ml-2 text-[15px]"
               >
                 Clear
               </button>
@@ -639,7 +639,7 @@ export default function AudioRecorder({
               >
                 {copiedTranscript ? "Copied!" : "Copy"}
               </button>
-              <span className="text-[11px] font-bold uppercase px-2 py-0.5 bg-[#E5DEC9] dark:bg-[#2C2723] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
+              <span className="text-[15px] font-bold uppercase px-2 py-0.5 bg-[#E5DEC9] dark:bg-[#2C2723] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
                 Synced to Editor
               </span>
             </div>

@@ -96,7 +96,7 @@ export default function DecisionLensLogo({
           <span className="text-2xl font-serif font-bold tracking-tight text-ink block leading-none">
             DecisionLens
           </span>
-          <span className="text-[10px] font-mono font-semibold uppercase tracking-widest text-accent block mt-1">
+          <span className="text-[14px] font-mono font-semibold uppercase tracking-widest text-accent block mt-1">
             Executive Cognitive Intelligence
           </span>
         </div>

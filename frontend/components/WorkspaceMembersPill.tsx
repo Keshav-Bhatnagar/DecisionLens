@@ -61,7 +61,7 @@ export default function WorkspaceMembersPill({
             return (
               <div
                 key={m.id || idx}
-                className="w-5 h-5 rounded-full border border-[#cfc7b2] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center justify-center font-courier text-[10px] font-bold shrink-0"
+                className="w-5 h-5 rounded-full border border-[#cfc7b2] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center justify-center font-courier text-[14px] font-bold shrink-0"
                 title={`${m.display_name || m.email} (${m.authority_role})`}
               >
                 {initial}
@@ -69,14 +69,14 @@ export default function WorkspaceMembersPill({
             );
           })}
           {remainingCount > 0 && (
-            <div className="w-5 h-5 rounded-full border border-[#cfc7b2] dark:border-[#38332C] bg-[#DFD7C0] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91] flex items-center justify-center font-courier text-[9px] font-bold shrink-0">
+            <div className="w-5 h-5 rounded-full border border-[#cfc7b2] dark:border-[#38332C] bg-[#DFD7C0] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91] flex items-center justify-center font-courier text-[15px] font-bold shrink-0">
               +{remainingCount}
             </div>
           )}
         </div>
 
         {/* Text Label & Status Dot */}
-        <div className="flex items-center gap-1.5 text-[12px] font-courier font-bold uppercase tracking-[0.08em] text-[#1d1d1b] dark:text-[#F0EAE1]">
+        <div className="flex items-center gap-1.5 text-[14px] font-courier font-bold uppercase tracking-[0.08em] text-[#1d1d1b] dark:text-[#F0EAE1]">
           <span className="w-1.5 h-1.5 rounded-full bg-[#4f4b40] dark:bg-[#b08a3c]" />
           <span>
             {members.length > 0 ? `${members.length} ALLOWED` : "ADD MEMBERS"}

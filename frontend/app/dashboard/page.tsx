@@ -251,7 +251,7 @@ export default function DashboardPage() {
                 <div className="font-newsreader text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight">
                   {activeFoldersCount}
                 </div>
-                <div className="text-[11px] font-courier font-bold uppercase tracking-[0.1em] text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+                <div className="text-[15px] font-courier font-bold uppercase tracking-[0.1em] text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
                   Workspaces
                 </div>
               </div>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                 <div className="font-newsreader text-[32px] font-normal text-[#443a30] dark:text-[#D4AA50] leading-tight">
                   {activeDecisionsCount}
                 </div>
-                <div className="text-[11px] font-courier font-bold uppercase tracking-[0.1em] text-[#443a30] dark:text-[#D4AA50] mt-0.5">
+                <div className="text-[15px] font-courier font-bold uppercase tracking-[0.1em] text-[#443a30] dark:text-[#D4AA50] mt-0.5">
                   Total Decisions
                 </div>
               </div>
@@ -269,7 +269,7 @@ export default function DashboardPage() {
                 <div className="font-newsreader text-[32px] font-normal text-[#7a4e10] dark:text-[#e5a93c] leading-tight">
                   {underScrutinyCount}
                 </div>
-                <div className="text-[11px] font-courier font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#e5a93c] mt-0.5">
+                <div className="text-[15px] font-courier font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#e5a93c] mt-0.5">
                   Under Scrutiny
                 </div>
               </div>
@@ -278,7 +278,7 @@ export default function DashboardPage() {
                 <div className="font-newsreader text-[32px] font-normal text-[#4f4b40] dark:text-[#b08a3c] leading-tight">
                   {decidedCount}
                 </div>
-                <div className="text-[11px] font-courier font-bold uppercase tracking-[0.1em] text-[#4f4b40] dark:text-[#b08a3c] mt-0.5">
+                <div className="text-[15px] font-courier font-bold uppercase tracking-[0.1em] text-[#4f4b40] dark:text-[#b08a3c] mt-0.5">
                   Decided
                 </div>
               </div>
@@ -297,7 +297,7 @@ export default function DashboardPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search workspaces by name or description..."
-                    className="w-full pl-9 pr-8 py-2 text-[13px] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
+                    className="w-full pl-9 pr-8 py-2 text-[15px] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                   {searchQuery && (
                     <button
@@ -317,7 +317,7 @@ export default function DashboardPage() {
 
               {/* Workspaces Grid */}
               {filteredFolders.length === 0 ? (
-                <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-8 text-center text-[#4f4b40] dark:text-[#A89F91] text-[13px] font-courier">
+                <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-8 text-center text-[#4f4b40] dark:text-[#A89F91] text-[15px] font-courier">
                   No workspaces match your search query &quot;{searchQuery}&quot;.
                 </div>
               ) : (
@@ -337,19 +337,19 @@ export default function DashboardPage() {
                             <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] transition-colors leading-tight">
                               {f.name}
                             </h2>
-                            <span className="font-courier text-[10px] uppercase tracking-[0.1em] font-bold px-2 py-0.5 rounded-sm bg-[#cfc7b2]/50 dark:bg-[#38332C]/60 text-[#7a4e10] dark:text-[#D4AA50] shrink-0 border border-[#cfc7b2] dark:border-[#38332C]">
+                            <span className="font-courier text-[14px] uppercase tracking-[0.1em] font-bold px-2 py-0.5 rounded-sm bg-[#cfc7b2]/50 dark:bg-[#38332C]/60 text-[#7a4e10] dark:text-[#D4AA50] shrink-0 border border-[#cfc7b2] dark:border-[#38332C]">
                               {count} {count === 1 ? "DECISION" : "DECISIONS"}
                             </span>
                           </div>
 
-                          <p className="text-[13px] font-courier text-[#4f4b40] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
+                          <p className="text-[15px] font-courier text-[#4f4b40] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
                             {f.description || "Workspace for strategic decisions."}
                           </p>
 
                           {/* Preview of decisions inside this workspace */}
                           {workspaceDecisions.length > 0 ? (
                             <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 space-y-1.5">
-                              <span className="text-[10px] font-courier font-bold uppercase tracking-[0.08em] text-[#4f4b40] dark:text-[#A89F91] block">
+                              <span className="text-[14px] font-courier font-bold uppercase tracking-[0.08em] text-[#4f4b40] dark:text-[#A89F91] block">
                                 Recent decisions:
                               </span>
                               {workspaceDecisions.slice(0, 3).map((d) => (
@@ -365,7 +365,7 @@ export default function DashboardPage() {
                                 >
                                   <span className="truncate pr-2 group-hover/item:underline">• {d.title}</span>
                                   <span
-                                    className={`text-[9px] uppercase px-1.5 py-0.2 rounded-xs font-bold shrink-0 ${
+                                    className={`text-[15px] uppercase px-1.5 py-0.2 rounded-xs font-bold shrink-0 ${
                                       d.status === "decided"
                                         ? "text-emerald-700 dark:text-emerald-400 bg-emerald-100/60 dark:bg-emerald-950/40"
                                         : "text-[#7a4e10] dark:text-[#D4AA50]"
@@ -376,19 +376,19 @@ export default function DashboardPage() {
                                 </div>
                               ))}
                               {workspaceDecisions.length > 3 && (
-                                <span className="text-[10px] font-courier text-[#97907e] block pt-0.5">
+                                <span className="text-[14px] font-courier text-[#97907e] block pt-0.5">
                                   + {workspaceDecisions.length - 3} more
                                 </span>
                               )}
                             </div>
                           ) : (
-                            <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 text-[11px] font-courier text-[#97907e] italic">
+                            <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 text-[15px] font-courier text-[#97907e] italic">
                               No decisions recorded yet
                             </div>
                           )}
                         </div>
 
-                        <div className="pt-4 mt-4 border-t border-[#cfc7b2] dark:border-[#38332C] text-[12px] font-courier text-[#443a30] dark:text-[#D4AA50] font-bold flex items-center justify-between">
+                        <div className="pt-4 mt-4 border-t border-[#cfc7b2] dark:border-[#38332C] text-[14px] font-courier text-[#443a30] dark:text-[#D4AA50] font-bold flex items-center justify-between">
                           <span>Open workspace</span>
                           <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                         </div>
@@ -444,9 +444,9 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <form onSubmit={handleCreateFolder} className="space-y-4 font-courier text-xs sm:text-[13px]">
+              <form onSubmit={handleCreateFolder} className="space-y-4 font-courier text-xs sm:text-[15px]">
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     Workspace name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -455,18 +455,18 @@ export default function DashboardPage() {
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="e.g. Infrastructure, Leadership, Product Strategy"
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     Decision Domain / Focus
                   </label>
                   <select
                     value={newFolderDomain}
                     onChange={(e) => setNewFolderDomain(e.target.value)}
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors cursor-pointer"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors cursor-pointer"
                   >
                     <option value="AUTO">⚡ Auto-Detect from Content (Recommended)</option>
                     <option value="SOFTWARE">💻 Software Engineering & Cloud Infrastructure</option>
@@ -479,13 +479,13 @@ export default function DashboardPage() {
                     <option value="EDUCATION">🎓 Education & Academic Research</option>
                     <option value="PERSONAL">🌱 Personal Life & Habit Changes</option>
                   </select>
-                  <p className="text-[11px] text-[#97907e] dark:text-[#A89F91] mt-1 font-courier">
+                  <p className="text-[15px] text-[#97907e] dark:text-[#A89F91] mt-1 font-courier">
                     Pre-calibrates evaluation criteria and prevents technical jargon ambiguity across deliberations.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     Description (optional)
                   </label>
                   <textarea
@@ -493,7 +493,7 @@ export default function DashboardPage() {
                     value={newFolderDesc}
                     onChange={(e) => setNewFolderDesc(e.target.value)}
                     placeholder="Brief description (optional)..."
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                 </div>
 
@@ -501,14 +501,14 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => setShowCreateFolderModal(false)}
-                    className="px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
+                    className="px-3.5 py-1.5 text-[14px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={folderSubmitting}
-                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[12px] font-bold font-courier uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50"
+                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[14px] font-bold font-courier uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50"
                   >
                     {folderSubmitting ? "Creating..." : "Create workspace"}
                   </button>
@@ -526,7 +526,7 @@ export default function DashboardPage() {
             <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
               <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
                 <div>
-                  <span className="font-courier text-[10px] tracking-[0.14em] font-bold text-[#443a30] dark:text-[#D4AA50] uppercase block">
+                  <span className="font-courier text-[14px] tracking-[0.14em] font-bold text-[#443a30] dark:text-[#D4AA50] uppercase block">
                     NEW DECISION SCRUTINY
                   </span>
                   <h3 className="font-newsreader text-[22px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
@@ -548,15 +548,15 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <form onSubmit={handleChallengeDecision} className="space-y-4 font-courier text-xs sm:text-[13px]">
+              <form onSubmit={handleChallengeDecision} className="space-y-4 font-courier text-xs sm:text-[15px]">
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     Select Target Workspace <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={challengeFolderId}
                     onChange={(e) => setChallengeFolderId(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors font-courier"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors font-courier"
                   >
                     {folders.map((f) => (
                       <option key={f.id} value={f.id}>
@@ -570,7 +570,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     What decision are you weighing? <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -580,7 +580,7 @@ export default function DashboardPage() {
                     value={challengeTitle}
                     onChange={(e) => setChallengeTitle(e.target.value)}
                     placeholder="e.g. Choose between Kubernetes vs Cloud Run for multi-region scale"
-                    className="w-full px-3 py-2 text-[13px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors font-courier"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors font-courier"
                   />
                 </div>
 
@@ -588,14 +588,14 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => setShowChallengeModal(false)}
-                    className="px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
+                    className="px-3.5 py-1.5 text-[14px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={challengeSubmitting}
-                    className="px-5 py-2.5 text-[12px] font-bold uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50 font-courier bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64]"
+                    className="px-5 py-2.5 text-[14px] font-bold uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50 font-courier bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64]"
                   >
                     {challengeSubmitting ? "Starting Scrutiny..." : "Challenge Decision →"}
                   </button>

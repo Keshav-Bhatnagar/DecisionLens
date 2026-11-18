@@ -277,7 +277,7 @@ export default function ProfilePage() {
       ) : (
         <div className="font-sans space-y-8 py-4 pb-24">
           {/* Executive Sub-Header / Breadcrumb Label */}
-          <div className="flex items-center justify-between text-[11px] tracking-wider uppercase font-mono text-[var(--ink-secondary)] border-b border-[var(--border)] pb-2.5">
+          <div className="flex items-center justify-between text-[15px] tracking-wider uppercase font-mono text-[var(--ink-secondary)] border-b border-[var(--border)] pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Executive Folio &bull; Tenant Workspace {shortUid}</span>
@@ -359,13 +359,13 @@ export default function ProfilePage() {
                     <h1 className="text-2xl sm:text-3xl font-newsreader font-bold text-[var(--ink)] tracking-tight">
                       {currentUser.display_name || currentUser.email.split("@")[0]}
                     </h1>
-                    <span className="font-mono text-[10px] tracking-wider uppercase px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)]">
+                    <span className="font-mono text-[14px] tracking-wider uppercase px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)]">
                       {shortUid}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-3 text-xs text-[var(--ink-secondary)] flex-wrap">
-                    <span className="font-mono text-[11px] text-[var(--ink)]">
+                    <span className="font-mono text-[15px] text-[var(--ink)]">
                       {currentUser.email}
                     </span>
 
@@ -373,7 +373,7 @@ export default function ProfilePage() {
 
                     {/* Google Workspace Verification Pill */}
                     {currentUser.oauth_provider === "google" ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[11px] font-medium text-blue-700 dark:text-blue-300">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[15px] font-medium text-blue-700 dark:text-blue-300">
                         <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
                           <path
                             fill="#4285F4"
@@ -395,14 +395,14 @@ export default function ProfilePage() {
                         <span>Google Workspace Verified</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--bg-page)] border border-[var(--border)] text-[11px] font-medium text-[var(--ink)]">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--bg-page)] border border-[var(--border)] text-[15px] font-medium text-[var(--ink)]">
                         <Key className="w-3 h-3 text-[var(--accent)]" />
                         <span>Executive Passkey Authentication</span>
                       </span>
                     )}
 
                     <span>&bull;</span>
-                    <span className="text-[11px]">Member since {joinedDate}</span>
+                    <span className="text-[15px]">Member since {joinedDate}</span>
                   </div>
                 </div>
               </div>
@@ -452,11 +452,11 @@ export default function ProfilePage() {
             {/* 2. DELIBERATION VITALITY & COGNITIVE CADENCE HUD (Generative Radial Visualization) */}
             <div className="pt-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] uppercase font-mono tracking-wider text-[var(--ink-secondary)] flex items-center gap-1.5">
+                <span className="text-[14px] uppercase font-mono tracking-wider text-[var(--ink-secondary)] flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
                   Portfolio Cadence &amp; Epistemic Throughput
                 </span>
-                <span className="text-[11px] font-mono text-[var(--ink-secondary)]">
+                <span className="text-[15px] font-mono text-[var(--ink-secondary)]">
                   {decidedCount} of {decisions.length} Decisions Locked
                 </span>
               </div>
@@ -497,12 +497,12 @@ export default function ProfilePage() {
                       <span className="text-xl font-bold font-newsreader text-[var(--ink)] tabular-nums">
                         {consensusRate}%
                       </span>
-                      <span className="text-[8px] font-mono uppercase tracking-wider text-[var(--ink-secondary)]">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--ink-secondary)]">
                         Consensus
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] text-[var(--ink-secondary)] font-medium mt-1">
+                  <span className="text-[14px] text-[var(--ink-secondary)] font-medium mt-1">
                     Locking Velocity
                   </span>
                 </div>
@@ -512,7 +512,7 @@ export default function ProfilePage() {
                   {/* Card A: Active Workspaces */}
                   <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition flex flex-col justify-between">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                      <span className="text-[15px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
                         Workspaces
                       </span>
                       <FolderIcon className="w-4 h-4 text-[var(--accent)]" />
@@ -522,7 +522,7 @@ export default function ProfilePage() {
                         {folders.length}
                       </span>
                     </div>
-                    <span className="text-[10px] text-[var(--ink-secondary)] truncate">
+                    <span className="text-[14px] text-[var(--ink-secondary)] truncate">
                       {folders.length > 0 ? `Active: ${folders[0].name}` : "Zero workspaces"}
                     </span>
                   </div>
@@ -530,7 +530,7 @@ export default function ProfilePage() {
                   {/* Card B: Deliberations In Flight */}
                   <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-amber-500/40 transition flex flex-col justify-between">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                      <span className="text-[15px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
                         Evaluating
                       </span>
                       <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
@@ -540,7 +540,7 @@ export default function ProfilePage() {
                         {evaluatingCount}
                       </span>
                     </div>
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium truncate">
+                    <span className="text-[14px] text-amber-600 dark:text-amber-400 font-medium truncate">
                       {evaluatingCount > 0 ? "Under active Gauntlet" : "All deliberations locked"}
                     </span>
                   </div>
@@ -548,7 +548,7 @@ export default function ProfilePage() {
                   {/* Card C: Consensus Mandates Locked */}
                   <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-emerald-500/40 transition flex flex-col justify-between">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                      <span className="text-[15px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
                         Mandates Sealed
                       </span>
                       <CheckCircle className="w-4 h-4 text-emerald-500" />
@@ -558,7 +558,7 @@ export default function ProfilePage() {
                         {decidedCount}
                       </span>
                     </div>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium truncate">
+                    <span className="text-[14px] text-emerald-600 dark:text-emerald-400 font-medium truncate">
                       Boardroom ADRs generated
                     </span>
                   </div>
@@ -597,7 +597,7 @@ export default function ProfilePage() {
                     <Volume2 className="w-3.5 h-3.5 text-[var(--accent)]" />
                     Speech Transcription Target
                   </span>
-                  <span className="text-[10px] font-mono text-[var(--accent)] font-semibold">
+                  <span className="text-[14px] font-mono text-[var(--accent)] font-semibold">
                     WHISPER-PRO
                   </span>
                 </div>
@@ -618,7 +618,7 @@ export default function ProfilePage() {
                     >
                       <div>
                         <span className="block font-medium">English (en)</span>
-                        <span className="text-[10px] font-normal text-[var(--ink-secondary)]">Global Enterprise</span>
+                        <span className="text-[14px] font-normal text-[var(--ink-secondary)]">Global Enterprise</span>
                       </div>
                       {defaultLanguage === "en" && <Check className="w-3.5 h-3.5 text-[var(--accent)]" />}
                     </button>
@@ -634,7 +634,7 @@ export default function ProfilePage() {
                     >
                       <div>
                         <span className="block font-medium">Hindi (hi / Hinglish)</span>
-                        <span className="text-[10px] font-normal text-[var(--ink-secondary)]">Indian Context &amp; Slang</span>
+                        <span className="text-[14px] font-normal text-[var(--ink-secondary)]">Indian Context &amp; Slang</span>
                       </div>
                       {defaultLanguage === "hi" && <Check className="w-3.5 h-3.5 text-[var(--accent)]" />}
                     </button>
@@ -648,7 +648,7 @@ export default function ProfilePage() {
                       <span className="text-xs font-semibold text-[var(--ink)] block">
                         Acoustic Noise Gate &amp; Rumble Filter
                       </span>
-                      <p className="text-[11px] text-[var(--ink-secondary)]">
+                      <p className="text-[15px] text-[var(--ink-secondary)]">
                         Filters HVAC rumble, keystroke clatter, and balances voice loudness.
                       </p>
                     </div>
@@ -683,7 +683,7 @@ export default function ProfilePage() {
                         />
                       ))}
                     </div>
-                    <span className="text-[10px] font-mono text-[var(--ink-secondary)]">
+                    <span className="text-[14px] font-mono text-[var(--ink-secondary)]">
                       {audioEnhancement ? "DSP Filter Armed" : "Bypass Mode"}
                     </span>
                   </div>
@@ -698,7 +698,7 @@ export default function ProfilePage() {
                       <Scale className="w-3.5 h-3.5 text-[var(--accent)]" />
                       Default Deliberation Mode
                     </span>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span className="text-[14px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                       AUTONOMOUS
                     </span>
                   </div>
@@ -725,7 +725,7 @@ export default function ProfilePage() {
                             Deep Epistemic Gauntlet (Recommended)
                           </span>
                         </div>
-                        <p className="text-[11px] text-[var(--ink-secondary)] leading-relaxed">
+                        <p className="text-[15px] text-[var(--ink-secondary)] leading-relaxed">
                           Full 13-Shark stress test: token COGS, unit economics, zero-hallucination verification, and boardroom ADR.
                         </p>
                       </div>
@@ -758,7 +758,7 @@ export default function ProfilePage() {
                             Express Strategic Pilot
                           </span>
                         </div>
-                        <p className="text-[11px] text-[var(--ink-secondary)] leading-relaxed">
+                        <p className="text-[15px] text-[var(--ink-secondary)] leading-relaxed">
                           High velocity mode: fast multi-criteria ranking and instant summary for quick operational pivots.
                         </p>
                       </div>
@@ -805,19 +805,19 @@ export default function ProfilePage() {
                     className="py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--bg-page)]/60 -mx-3 px-3 rounded-xl transition group"
                   >
                     <div className="min-w-0 flex items-center gap-3.5">
-                      <span className="font-mono text-[11px] text-[var(--ink-secondary)] shrink-0 w-8">
+                      <span className="font-mono text-[15px] text-[var(--ink-secondary)] shrink-0 w-8">
                         #{d.id}
                       </span>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition truncate">
                           {d.title}
                         </p>
-                        <div className="flex items-center gap-2 text-[11px] text-[var(--ink-secondary)] mt-0.5">
+                        <div className="flex items-center gap-2 text-[15px] text-[var(--ink-secondary)] mt-0.5">
                           <span>{new Date(d.created_at).toLocaleDateString()}</span>
                           {d.domain && (
                             <>
                               <span>&bull;</span>
-                              <span className="uppercase font-mono text-[10px] text-[var(--ink-secondary)]">
+                              <span className="uppercase font-mono text-[14px] text-[var(--ink-secondary)]">
                                 {d.domain}
                               </span>
                             </>
@@ -828,7 +828,7 @@ export default function ProfilePage() {
 
                     <div className="flex items-center gap-3 shrink-0">
                       <span
-                        className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                        className={`text-[14px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
                           d.status === "decided"
                             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                             : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
@@ -878,44 +878,44 @@ export default function ProfilePage() {
                     Enterprise Sovereign Enclave &bull; Indian DPDP Act 2023 Compliant
                   </span>
                 </div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 self-start sm:self-auto">
+                <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 self-start sm:self-auto">
                   CISO &amp; Banking Grade
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
+                  <span className="text-[14px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
                     Data Residency &amp; Storage
                   </span>
                   <p className="text-xs font-semibold text-[var(--ink)]">
                     India Primary (AWS ap-south-1)
                   </p>
-                  <p className="text-[11px] text-[var(--ink-secondary)] leading-tight">
+                  <p className="text-[15px] text-[var(--ink-secondary)] leading-tight">
                     Audio &amp; decision memory stored exclusively within Indian borders under DPDP 2023 statutory mandates.
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
+                  <span className="text-[14px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
                     Zero-Training Warranty
                   </span>
                   <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     100% Zero-Model Retention
                   </p>
-                  <p className="text-[11px] text-[var(--ink-secondary)] leading-tight">
+                  <p className="text-[15px] text-[var(--ink-secondary)] leading-tight">
                     Strict B2B API terms ensure confidential audio and ADR memos are never retained or used to train public LLMs.
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
+                  <span className="text-[14px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
                     Liability &amp; IP Protection
                   </span>
                   <p className="text-xs font-semibold text-[var(--ink)]">
                     12-Mo Fee Super-Cap
                   </p>
-                  <p className="text-[11px] text-[var(--ink-secondary)] leading-tight">
+                  <p className="text-[15px] text-[var(--ink-secondary)] leading-tight">
                     Standard enterprise MSA with 12-month trailing liability cap and mutual waiver of consequential damages.
                   </p>
                 </div>

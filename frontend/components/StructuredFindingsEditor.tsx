@@ -532,7 +532,7 @@ export default function StructuredFindingsEditor({
             Context Sources: <strong className="font-bold text-[#26211b] dark:text-[#F0EAE1]">{sourceSummary}</strong>
           </span>
           {sourceSummary.includes("Folder Memory") && (
-            <span className="font-mono text-[11px] text-[#7a4e10] dark:text-[#D4AA50]">
+            <span className="font-mono text-[15px] text-[#7a4e10] dark:text-[#D4AA50]">
               [Linked to Prior Folder Decisions]
             </span>
           )}
@@ -571,37 +571,37 @@ export default function StructuredFindingsEditor({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
             <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
-              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+              <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Problem Statement
               </span>
               <p className="text-xs sm:text-sm text-[#26211b] dark:text-[#F0EAE1] line-clamp-2">
                 {problemStatement ? problemStatement : "Pending framing in Stage 1"}
               </p>
-              <span className="text-[11px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
+              <span className="text-[15px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
                 {problemStatement ? `${problemStatement.split(/\s+/).length} words framed` : "0 words"}
               </span>
             </div>
 
             <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
-              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+              <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Meeting Scribe &amp; Audio
               </span>
               <p className="text-xs sm:text-sm text-[#26211b] dark:text-[#F0EAE1]">
                 {wordCount > 0 ? `${wordCount} words transcribed` : "No voice recording uploaded"}
               </p>
-              <span className="text-[11px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
+              <span className="text-[15px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
                 {wordCount > 0 ? "IIT Madras / IndicReady" : "Optional input"}
               </span>
             </div>
 
             <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
-              <span className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+              <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Document Dossier
               </span>
               <p className="text-xs sm:text-sm text-[#26211b] dark:text-[#F0EAE1]">
                 {attachmentCount > 0 ? `${attachmentCount} attachment(s) parsed` : "No attachments parsed"}
               </p>
-              <span className="text-[11px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
+              <span className="text-[15px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
                 PDF, DOCX, TXT Evidence
               </span>
             </div>
@@ -645,7 +645,7 @@ export default function StructuredFindingsEditor({
                       {s.number}
                     </span>
                     <span
-                      className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                      className={`text-[15px] font-mono font-bold px-2 py-0.5 rounded-md ${
                         isActive
                           ? "bg-[#26211b] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]"
                           : "bg-[#D9D2C3]/70 dark:bg-[#2C2722] text-[#7a7264] dark:text-[#A89F91]"
@@ -657,7 +657,7 @@ export default function StructuredFindingsEditor({
                   <div className="text-xs sm:text-sm font-bold text-[#26211b] dark:text-[#F0EAE1] truncate mt-1.5">
                     {s.title}
                   </div>
-                  <div className="text-[11px] text-[#7a7264] dark:text-[#A89F91] truncate mt-0.5">
+                  <div className="text-[15px] text-[#7a7264] dark:text-[#A89F91] truncate mt-0.5">
                     {s.subtitle}
                   </div>
                 </button>
@@ -732,7 +732,7 @@ export default function StructuredFindingsEditor({
                   />
 
                   <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#26211b] dark:text-[#F0EAE1]">
-                    <span className="font-bold font-mono text-[10px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                    <span className="font-bold font-mono text-[14px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                       Stage 4 &amp; 5 Pipeline Destination
                     </span>
                     <span>
@@ -763,7 +763,7 @@ export default function StructuredFindingsEditor({
 
                   <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg flex items-center justify-between gap-3 text-xs text-[#26211b] dark:text-[#F0EAE1]">
                     <div>
-                      <span className="font-bold font-mono text-[10px] text-[#6e655a] dark:text-[#93B4D7] uppercase tracking-wider block">
+                      <span className="font-bold font-mono text-[14px] text-[#6e655a] dark:text-[#93B4D7] uppercase tracking-wider block">
                         Stage 3 Pipeline Destination
                       </span>
                       <span>
@@ -802,7 +802,7 @@ export default function StructuredFindingsEditor({
                   />
 
                   <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#26211b] dark:text-[#F0EAE1]">
-                    <span className="font-bold font-mono text-[10px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                    <span className="font-bold font-mono text-[14px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                       Stage 4 Pipeline Destination
                     </span>
                     <span>
@@ -831,7 +831,7 @@ export default function StructuredFindingsEditor({
                   />
 
                   <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#26211b] dark:text-[#F0EAE1]">
-                    <span className="font-bold font-mono text-[10px] text-[#7a7264] dark:text-[#A89F91] uppercase tracking-wider block">
+                    <span className="font-bold font-mono text-[14px] text-[#7a7264] dark:text-[#A89F91] uppercase tracking-wider block">
                       Stage 5 Pipeline Destination
                     </span>
                     <span>
@@ -845,7 +845,7 @@ export default function StructuredFindingsEditor({
             {/* Bottom Actions */}
             <div className="pt-4 border-t border-[#D9D2C3]/60 dark:border-[#38332C] flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-xs text-[#7a7264] dark:text-[#A89F91]">
-                Use <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#26211b] dark:text-[#F0EAE1]">←</kbd> and <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#26211b] dark:text-[#F0EAE1]">→</kbd> to rotate points. Press <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#26211b] dark:text-[#F0EAE1]">Shift + ← / →</kbd> to switch categories.
+                Use <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[15px] font-mono text-[#26211b] dark:text-[#F0EAE1]">←</kbd> and <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[15px] font-mono text-[#26211b] dark:text-[#F0EAE1]">→</kbd> to rotate points. Press <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[15px] font-mono text-[#26211b] dark:text-[#F0EAE1]">Shift + ← / →</kbd> to switch categories.
               </div>
 
               <div className="flex items-center gap-2.5 w-full sm:w-auto">

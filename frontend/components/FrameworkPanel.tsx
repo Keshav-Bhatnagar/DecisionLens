@@ -388,7 +388,7 @@ export default function FrameworkPanel({
           <div className="flex items-center gap-2.5">
             <DecisionLensIcon size={32} />
             <div>
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-widest text-accent block leading-none">
+              <span className="text-[14px] font-mono font-semibold uppercase tracking-widest text-accent block leading-none">
                 STAGE 04 / DECISION GAUNTLET & ENSEMBLE
               </span>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-ink tracking-tight mt-1">
@@ -477,11 +477,11 @@ export default function FrameworkPanel({
               </span>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-accent">
+                  <span className="text-[14px] font-mono font-bold uppercase tracking-widest text-accent">
                     The Gauntlet Winner (Rank #1)
                   </span>
                   <span
-                    className={`text-[9px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                    className={`text-[15px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                       canonicalWinner.status === "READY"
                         ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
                         : "bg-amber-100 text-amber-900 border border-amber-300"
@@ -503,7 +503,7 @@ export default function FrameworkPanel({
               <span className="font-mono text-3xl font-extrabold text-ink block leading-none">
                 {canonicalWinner.score.toFixed(2)}<span className="text-xs text-ink-secondary font-normal"> / 10</span>
               </span>
-              <span className="text-[10px] font-mono text-emerald-800 font-bold uppercase tracking-wider mt-1 block">
+              <span className="text-[14px] font-mono text-emerald-800 font-bold uppercase tracking-wider mt-1 block">
                 {canonicalWinner.margin !== null && canonicalWinner.margin > 0
                   ? `+${canonicalWinner.margin.toFixed(2)} pts over runner-up`
                   : "Convergence Rank #1"}
@@ -515,28 +515,28 @@ export default function FrameworkPanel({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             {/* The Adversarial Trap Caught */}
             <div className="p-4 sm:p-5 rounded-xl bg-paper-surface border border-rose-200/80 space-y-2 shadow-2xs">
-              <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-rose-900 uppercase tracking-wider">
+              <div className="flex items-center gap-2 font-mono text-[14px] font-bold text-rose-900 uppercase tracking-wider">
                 <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
                 <span>The One Fatal Trap Caught by Red-Teaming:</span>
               </div>
               <p className="text-xs text-ink leading-relaxed font-sans">
                 {adversarialFriction}
               </p>
-              <div className="pt-2 border-t border-border/60 text-[11px] text-ink-secondary font-mono">
+              <div className="pt-2 border-t border-border/60 text-[15px] text-ink-secondary font-mono">
                 Flagged by: <strong>Adversarial Red-Team (Six Hats Black Hat)</strong>
               </div>
             </div>
 
             {/* The Clear Resolution & Protection */}
             <div className="p-4 sm:p-5 rounded-xl bg-paper-surface border border-emerald-200/80 space-y-2 shadow-2xs">
-              <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-emerald-900 uppercase tracking-wider">
+              <div className="flex items-center gap-2 font-mono text-[14px] font-bold text-emerald-900 uppercase tracking-wider">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>The Exact Condition to Proceed Safely:</span>
               </div>
               <p className="text-xs text-ink leading-relaxed font-sans">
                 {operationalCondition}
               </p>
-              <div className="pt-2 border-t border-border/60 text-[11px] text-ink-secondary font-mono">
+              <div className="pt-2 border-t border-border/60 text-[15px] text-ink-secondary font-mono">
                 Mandated in: <strong>Executive Decision Memo & ADR</strong>
               </div>
             </div>
@@ -555,7 +555,7 @@ export default function FrameworkPanel({
               <h4 className="text-sm font-serif font-bold text-ink">
                 Candidate Options Comparative Leaderboard
               </h4>
-              <p className="text-[11px] text-ink-secondary">
+              <p className="text-[15px] text-ink-secondary">
                 Deterministic scores based on weighted business and technical criteria.
               </p>
             </div>
@@ -586,7 +586,7 @@ export default function FrameworkPanel({
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className={`w-6 h-6 rounded-full font-mono font-bold text-[11px] flex items-center justify-center shrink-0 ${
+                      className={`w-6 h-6 rounded-full font-mono font-bold text-[15px] flex items-center justify-center shrink-0 ${
                         isWinner
                           ? "bg-emerald-700 text-paper-surface"
                           : "bg-paper-surface text-ink-secondary border border-border"
@@ -598,7 +598,7 @@ export default function FrameworkPanel({
                       <span className="font-semibold text-ink text-sm block">
                         {res.option_name}
                       </span>
-                      <span className="text-[11px] text-ink-secondary font-mono">
+                      <span className="text-[15px] text-ink-secondary font-mono">
                         {isWinner ? "Dominant Choice across all criteria" : `Rank #${res.rank} Alternative`}
                       </span>
                     </div>
@@ -609,7 +609,7 @@ export default function FrameworkPanel({
                       <span className="font-mono text-base font-extrabold text-ink block">
                         {res.weighted_score.toFixed(2)} / 10
                       </span>
-                      <span className="text-[10px] text-ink-secondary font-mono">
+                      <span className="text-[14px] text-ink-secondary font-mono">
                         Weighted Score
                       </span>
                     </div>
@@ -717,7 +717,7 @@ export default function FrameworkPanel({
               <span>{showUnderlyingModels ? "▼" : "▶"}</span>
               <span>Inspect Underlying Models & Raw Crash Tests (Optional Audit Deep-Dive)</span>
             </button>
-            <span className="text-[10px] font-mono text-ink-secondary">
+            <span className="text-[14px] font-mono text-ink-secondary">
               5 Background Models Evaluated
             </span>
           </div>
@@ -762,7 +762,7 @@ export default function FrameworkPanel({
                         />
                         <h5 className="font-serif font-bold text-ink">{hat.name}</h5>
                       </div>
-                      <p className="text-[11px] text-ink-secondary italic">{hat.focus}</p>
+                      <p className="text-[15px] text-ink-secondary italic">{hat.focus}</p>
                       <ul className="space-y-1 text-ink">
                         {hat.points.map((pt, i) => (
                           <li key={i} className="flex items-start gap-1 leading-snug">
@@ -780,7 +780,7 @@ export default function FrameworkPanel({
               {activeAuditTab === "swot" && analysis.swot && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                   <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2">
-                    <span className="font-mono font-bold text-emerald-900 block uppercase text-[10px]">Strengths</span>
+                    <span className="font-mono font-bold text-emerald-900 block uppercase text-[14px]">Strengths</span>
                     <ul className="space-y-1 text-ink">
                       {analysis.swot.strengths.map((s) => (
                         <li key={s.id}>• {s.text}</li>
@@ -788,7 +788,7 @@ export default function FrameworkPanel({
                     </ul>
                   </div>
                   <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2">
-                    <span className="font-mono font-bold text-rose-900 block uppercase text-[10px]">Weaknesses</span>
+                    <span className="font-mono font-bold text-rose-900 block uppercase text-[14px]">Weaknesses</span>
                     <ul className="space-y-1 text-ink">
                       {analysis.swot.weaknesses.map((w) => (
                         <li key={w.id}>• {w.text}</li>
@@ -796,7 +796,7 @@ export default function FrameworkPanel({
                     </ul>
                   </div>
                   <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2">
-                    <span className="font-mono font-bold text-sky-900 block uppercase text-[10px]">Opportunities</span>
+                    <span className="font-mono font-bold text-sky-900 block uppercase text-[14px]">Opportunities</span>
                     <ul className="space-y-1 text-ink">
                       {analysis.swot.opportunities.map((o) => (
                         <li key={o.id}>• {o.text}</li>
@@ -804,7 +804,7 @@ export default function FrameworkPanel({
                     </ul>
                   </div>
                   <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2">
-                    <span className="font-mono font-bold text-amber-900 block uppercase text-[10px]">Threats</span>
+                    <span className="font-mono font-bold text-amber-900 block uppercase text-[14px]">Threats</span>
                     <ul className="space-y-1 text-ink">
                       {analysis.swot.threats.map((t) => (
                         <li key={t.id}>• {t.text}</li>
@@ -819,7 +819,7 @@ export default function FrameworkPanel({
                 <div className="space-y-2 text-xs">
                   {analysis.five_whys.steps.map((step) => (
                     <div key={step.step_number} className="p-3 bg-paper-surface rounded-lg border border-border flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-ink text-paper-surface font-mono font-bold text-[10px] flex items-center justify-center shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-ink text-paper-surface font-mono font-bold text-[14px] flex items-center justify-center shrink-0">
                         {step.step_number}
                       </span>
                       <div>
@@ -835,7 +835,7 @@ export default function FrameworkPanel({
               {activeAuditTab === "decision_tree" && analysis.decision_tree && (
                 <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2 text-xs">
                   <span className="font-mono font-bold text-ink block">{analysis.decision_tree.root_question}</span>
-                  <p className="text-ink-secondary text-[11px]">{analysis.decision_tree.probabilities_note}</p>
+                  <p className="text-ink-secondary text-[15px]">{analysis.decision_tree.probabilities_note}</p>
                 </div>
               )}
 
@@ -865,7 +865,7 @@ export default function FrameworkPanel({
                 <strong>Gauntlet Complete.</strong> Unified verdict grounded with zero conflicting confusion.
               </span>
             </div>
-            <p className="text-[11px] text-ink-secondary pl-6">
+            <p className="text-[15px] text-ink-secondary pl-6">
               Option {canonicalWinner.name} is ready for executive decision memo formulation.
             </p>
           </div>

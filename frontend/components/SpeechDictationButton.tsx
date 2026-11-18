@@ -118,7 +118,7 @@ export default function SpeechDictationButton({
       type="button"
       onClick={toggleListening}
       title={isListening ? "Listening... Click to stop" : title}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-courier font-bold uppercase tracking-wider rounded-none transition-colors focus:outline-none cursor-pointer ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[14px] font-courier font-bold uppercase tracking-wider rounded-none transition-colors focus:outline-none cursor-pointer ${
         isListening
           ? "bg-rose-900/10 text-rose-700 dark:text-rose-400 border border-rose-500 animate-pulse shadow-2xs"
           : "text-[#1d1d1b] dark:text-[#F0EAE1] hover:text-[#7a4e10] dark:hover:text-[#D4AA50] bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] shadow-2xs"

@@ -354,7 +354,7 @@ export default function DecisionDetailPage({
 
               {/* Core Dilemma Secondary Inline Editable Line */}
               <div className="flex items-center gap-2 pt-0.5">
-                <span className="font-courier text-[11px] uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
+                <span className="font-courier text-[15px] uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
                   Core Dilemma:
                 </span>
                 <input
@@ -436,7 +436,7 @@ export default function DecisionDetailPage({
                           </span>
                           {description.trim() ? (
                             <span
-                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
                                 ingestionTab === "context"
                                   ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
                                   : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
@@ -446,7 +446,7 @@ export default function DecisionDetailPage({
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-[11px] opacity-75 leading-snug">
+                        <p className="text-[15px] opacity-75 leading-snug">
                           Add stakeholders, deadlines, budget limits, or known constraints.
                         </p>
                       </button>
@@ -468,7 +468,7 @@ export default function DecisionDetailPage({
                           </span>
                           {attachments.length > 0 ? (
                             <span
-                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
                                 ingestionTab === "docs"
                                   ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
                                   : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
@@ -478,7 +478,7 @@ export default function DecisionDetailPage({
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-[11px] opacity-75 leading-snug">
+                        <p className="text-[15px] opacity-75 leading-snug">
                           Upload architectural diagrams, PRDs, RFCs, or benchmark data.
                         </p>
                       </button>
@@ -500,7 +500,7 @@ export default function DecisionDetailPage({
                           </span>
                           {Boolean(decision.transcript) ? (
                             <span
-                              className={`text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
                                 ingestionTab === "voice" || ingestionTab === "meeting"
                                   ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
                                   : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
@@ -510,7 +510,7 @@ export default function DecisionDetailPage({
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-[11px] opacity-75 leading-snug">
+                        <p className="text-[15px] opacity-75 leading-snug">
                           Record spoken notes, upload an audio file, or sync a live meeting call.
                         </p>
                       </button>

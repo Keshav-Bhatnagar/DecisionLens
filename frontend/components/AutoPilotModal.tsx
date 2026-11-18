@@ -231,7 +231,7 @@ export default function AutoPilotModal({
                   <h3 className="text-sm font-bold tracking-tight text-[#26211b]">
                     Auto-Pilot Decision Dossier Run
                   </h3>
-                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#26211b]/10 text-[#26211b] font-bold">
+                  <span className="text-[14px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#26211b]/10 text-[#26211b] font-bold">
                     Sequential Orchestration
                   </span>
                 </div>
@@ -303,7 +303,7 @@ export default function AutoPilotModal({
                           <ShieldAlert className="w-4 h-4" />
                         </div>
                       ) : (
-                        <div className="w-6 h-6 rounded-md bg-[#D9D2C3] text-[#7a7264] flex items-center justify-center text-[10px] font-mono font-bold">
+                        <div className="w-6 h-6 rounded-md bg-[#D9D2C3] text-[#7a7264] flex items-center justify-center text-[14px] font-mono font-bold">
                           {step.num}
                         </div>
                       )}
@@ -315,7 +315,7 @@ export default function AutoPilotModal({
                         <span className="text-xs font-bold text-[#26211b] flex items-center gap-1.5">
                           <span>{step.title}</span>
                         </span>
-                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#F5F1E8] border border-[#D9D2C3] text-[#7a7264]">
+                        <span className="text-[14px] font-mono uppercase px-2 py-0.5 rounded bg-[#F5F1E8] border border-[#D9D2C3] text-[#7a7264]">
                           {step.status === "completed"
                             ? "DONE"
                             : step.status === "running"
@@ -325,12 +325,12 @@ export default function AutoPilotModal({
                             : "PENDING"}
                         </span>
                       </div>
-                      <p className="text-[11px] text-[#7a7264] mt-0.5 truncate">
+                      <p className="text-[15px] text-[#7a7264] mt-0.5 truncate">
                         {step.subtitle}
                       </p>
                       {step.detailMsg && (
                         <p
-                          className={`text-[11px] font-mono mt-1 ${
+                          className={`text-[15px] font-mono mt-1 ${
                             step.status === "error"
                               ? "text-red-700 font-semibold"
                               : "text-emerald-700"
@@ -348,10 +348,10 @@ export default function AutoPilotModal({
             {/* Real-time Execution Logs */}
             {logs.length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-[11px] font-mono uppercase tracking-wider text-[#7a7264] font-semibold">
+                <span className="text-[15px] font-mono uppercase tracking-wider text-[#7a7264] font-semibold">
                   Execution Telemetry:
                 </span>
-                <div className="bg-[#26211b] text-[#FCFBF8] p-3.5 rounded-xl font-mono text-[11px] max-h-36 overflow-y-auto space-y-1 select-text">
+                <div className="bg-[#26211b] text-[#FCFBF8] p-3.5 rounded-xl font-mono text-[15px] max-h-36 overflow-y-auto space-y-1 select-text">
                   {logs.map((log, i) => (
                     <div key={i} className="leading-relaxed opacity-90">
                       {log}
@@ -376,7 +376,7 @@ export default function AutoPilotModal({
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                   <div>
                     <p className="font-bold">Autonomous Dossier Synthesis Complete!</p>
-                    <p className="text-emerald-700 text-[11px]">
+                    <p className="text-emerald-700 text-[15px]">
                       All cognitive layers, framework trade-offs, and ADR recommendations are ready.
                     </p>
                   </div>

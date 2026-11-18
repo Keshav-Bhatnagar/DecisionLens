@@ -827,7 +827,7 @@ jobs:
         {!viewingSnapshot && (showPriorities || (!displaySynthesis && priorities.length > 0)) && (
           <div className="pt-3 border-t border-border space-y-2 animate-in fade-in">
             <div className="flex items-center justify-between">
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-muted font-bold">
+              <label className="block text-[15px] font-mono uppercase tracking-wider text-muted font-bold">
                 Executive Prioritization Directives (Calibrates Synthesis Weighting):
               </label>
               <button
@@ -913,7 +913,7 @@ jobs:
               <h4 className="font-bold text-sm">
                 Viewing Immutable Snapshot Version {viewingSnapshot.version}
               </h4>
-              <p className="text-[11px] opacity-90 font-mono">
+              <p className="text-[15px] opacity-90 font-mono">
                 Preserved on {new Date(viewingSnapshot.created_at).toLocaleString()} with verified criteria & evidence.
               </p>
             </div>
@@ -957,11 +957,11 @@ jobs:
             {/* Top Meta Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-md text-[11px] font-mono uppercase bg-paper-sidebar text-ink border border-border font-bold">
+                <span className="px-2.5 py-0.5 rounded-md text-[15px] font-mono uppercase bg-paper-sidebar text-ink border border-border font-bold">
                   {displaySynthesis.domain} DOMAIN
                 </span>
                 <span
-                  className={`px-2.5 py-0.5 rounded-md text-[11px] font-mono uppercase font-bold border ${
+                  className={`px-2.5 py-0.5 rounded-md text-[15px] font-mono uppercase font-bold border ${
                     isConditional
                       ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700"
                       : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
@@ -1008,7 +1008,7 @@ jobs:
                     Executive ROI &amp; Sunk-Cost Shield
                   </span>
                   {isCalibrated && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40 font-bold animate-pulse">
+                    <span className="text-[14px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40 font-bold animate-pulse">
                       Live Calibrated
                     </span>
                   )}
@@ -1017,7 +1017,7 @@ jobs:
                   <button
                     type="button"
                     onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[15px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
                       isCalibratorOpen || isCalibrated
                         ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
                         : "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200"
@@ -1027,7 +1027,7 @@ jobs:
                     <Sliders className="w-3 h-3" />
                     <span>{isCalibratorOpen ? "Hide Calibrator" : "Calibrate FinOps Assumptions"}</span>
                   </button>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                     Procurement ROI: Verified 10x+
                   </span>
                 </div>
@@ -1044,7 +1044,7 @@ jobs:
                           FinOps Baseline Calibrator
                         </h4>
                       </div>
-                      <p className="text-[11px] text-muted font-sans mt-0.5">
+                      <p className="text-[15px] text-muted font-sans mt-0.5">
                         Fine-tune capital risk assumptions according to your actual squad size, market salary rates, and cloud scale.
                       </p>
                     </div>
@@ -1052,7 +1052,7 @@ jobs:
                       <button
                         type="button"
                         onClick={handleResetCalibrator}
-                        className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-muted hover:text-ink px-2 py-1 rounded border border-border hover:bg-paper-sidebar transition-colors cursor-pointer self-start sm:self-auto"
+                        className="inline-flex items-center gap-1 text-[15px] font-mono font-semibold text-muted hover:text-ink px-2 py-1 rounded border border-border hover:bg-paper-sidebar transition-colors cursor-pointer self-start sm:self-auto"
                       >
                         <RotateCcw className="w-3 h-3" />
                         <span>Reset to AI Baseline</span>
@@ -1081,13 +1081,13 @@ jobs:
                         onChange={(e) => setCustomTeamSize(parseInt(e.target.value, 10))}
                         className="w-full h-1.5 bg-border rounded-lg appearance-none cursor-pointer accent-accent"
                       />
-                      <div className="flex justify-between text-[10px] font-mono text-muted">
+                      <div className="flex justify-between text-[14px] font-mono text-muted">
                         <span>2 (Lean Pod)</span>
                         <span className={customTeamSize === 5 ? "font-bold text-accent" : ""}>5 (AI Base)</span>
                         <span>12 (Squad)</span>
                         <span>25 (Org)</span>
                       </div>
-                      <p className="text-[10px] text-muted">
+                      <p className="text-[14px] text-muted">
                         Scales developer payroll, platform SRE toil, and transition burn.
                       </p>
                     </div>
@@ -1099,7 +1099,7 @@ jobs:
                           <Globe className="w-3.5 h-3.5 text-accent" />
                           <span>Market Rate Card</span>
                         </span>
-                        <span className="text-[10px] text-muted font-bold">
+                        <span className="text-[14px] text-muted font-bold">
                           {GEO_RATES[selectedGeoRate].multiplier}x
                         </span>
                       </div>
@@ -1115,12 +1115,12 @@ jobs:
                                 : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
                             }`}
                           >
-                            <div className="text-[11px] leading-tight truncate">{GEO_RATES[geoKey].label}</div>
-                            <div className="text-[9px] font-mono opacity-80 truncate">{GEO_RATES[geoKey].rateStr}</div>
+                            <div className="text-[15px] leading-tight truncate">{GEO_RATES[geoKey].label}</div>
+                            <div className="text-[15px] font-mono opacity-80 truncate">{GEO_RATES[geoKey].rateStr}</div>
                           </button>
                         ))}
                       </div>
-                      <p className="text-[10px] text-muted">
+                      <p className="text-[14px] text-muted">
                         Adjusts compensation rates across international engineering hubs.
                       </p>
                     </div>
@@ -1132,7 +1132,7 @@ jobs:
                           <Server className="w-3.5 h-3.5 text-accent" />
                           <span>Cloud Scale Tier</span>
                         </span>
-                        <span className="text-[10px] text-muted font-bold">
+                        <span className="text-[14px] text-muted font-bold">
                           {SCALE_TIERS[selectedScaleTier].multiplier}x
                         </span>
                       </div>
@@ -1148,19 +1148,19 @@ jobs:
                                 : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
                             }`}
                           >
-                            <span className="text-[11px]">{SCALE_TIERS[tierKey].label}</span>
-                            <span className="text-[9px] font-mono opacity-80">{SCALE_TIERS[tierKey].desc}</span>
+                            <span className="text-[15px]">{SCALE_TIERS[tierKey].label}</span>
+                            <span className="text-[15px] font-mono opacity-80">{SCALE_TIERS[tierKey].desc}</span>
                           </button>
                         ))}
                       </div>
-                      <p className="text-[10px] text-muted">
+                      <p className="text-[14px] text-muted">
                         Scales multi-AZ node commitments, ingress egress, and managed broker floors.
                       </p>
                     </div>
                   </div>
 
                   {/* Summary Footer */}
-                  <div className="pt-2 border-t border-border/60 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-muted">
+                  <div className="pt-2 border-t border-border/60 flex flex-wrap items-center justify-between gap-2 text-[15px] font-mono text-muted">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-ink">Active Multipliers:</span>
                       <span>Headcount: {(customTeamSize / 5).toFixed(2)}x</span>
@@ -1182,11 +1182,11 @@ jobs:
                 {/* Metric 1: Capital at Risk Prevented */}
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
+                    <span className="text-[14px] font-mono uppercase text-muted font-bold block">
                       Capital at Risk Prevented
                     </span>
                     {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                         Calibrated
                       </span>
                     )}
@@ -1200,7 +1200,7 @@ jobs:
                         : "₹45 Lakh – ₹65 Lakh"
                     )}
                   </div>
-                  <p className="text-[11px] text-muted leading-tight">
+                  <p className="text-[15px] text-muted leading-tight">
                     {calibratedBlunderShield?.risk_reduction_rationale || displaySynthesis.blunder_shield?.risk_reduction_rationale || "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments."}
                   </p>
                 </div>
@@ -1208,11 +1208,11 @@ jobs:
                 {/* Metric 2: Sprint Velocity Saved */}
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
+                    <span className="text-[14px] font-mono uppercase text-muted font-bold block">
                       Engineering Velocity Saved
                     </span>
                     {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                         Calibrated
                       </span>
                     )}
@@ -1220,7 +1220,7 @@ jobs:
                   <div className="font-newsreader text-2xl font-bold text-ink">
                     {calibratedBlunderShield?.developer_sprints_saved || displaySynthesis.blunder_shield?.developer_sprints_saved || "6 Sprints (12 Wks)"}
                   </div>
-                  <p className="text-[11px] text-muted leading-tight">
+                  <p className="text-[15px] text-muted leading-tight">
                     {isCalibrated
                       ? `Calibrated for ${customTeamSize} engineers. Prevents dead-end prototyping sprints and on-call operational drag.`
                       : "Prevented dead-end prototype iterations and on-call operational drag before validation."}
@@ -1230,11 +1230,11 @@ jobs:
                 {/* Metric 3: Fatal Sunk-Cost Trap Neutralized */}
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase text-muted font-bold block">
+                    <span className="text-[14px] font-mono uppercase text-muted font-bold block">
                       Fatal Sunk-Cost Trap Blocked
                     </span>
                     {isCalibrated && (
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                         Mitigated
                       </span>
                     )}
@@ -1242,7 +1242,7 @@ jobs:
                   <div className="text-xs font-bold text-ink truncate">
                     {calibratedBlunderShield?.prevented_fatal_trap || displaySynthesis.blunder_shield?.prevented_fatal_trap || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity"}
                   </div>
-                  <p className="text-[11px] text-muted line-clamp-2 leading-tight">
+                  <p className="text-[15px] text-muted line-clamp-2 leading-tight">
                     {isCalibrated
                       ? `Deprioritized to eliminate ${SCALE_TIERS[selectedScaleTier].label} infrastructure tax and ${GEO_RATES[selectedGeoRate].label} hiring overhead.`
                       : (displaySynthesis.blunder_shield?.risk_reduction_rationale || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.why_not_recommended || "Deprioritized due to operational friction, high maintenance drag, and criteria misalignment.")}
@@ -1263,11 +1263,11 @@ jobs:
                       <span>
                         {showReceipt ? "Hide Itemized FinOps Receipt" : "Inspect Itemized Sunk-Cost Receipt (Munshi Audit Ledger)"}
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      <span className="text-[14px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
                         {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.receipt_id}
                       </span>
                       {isCalibrated && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">
+                        <span className="text-[15px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">
                           Custom Calibrated
                         </span>
                       )}
@@ -1277,7 +1277,7 @@ jobs:
 
                   {showReceipt && (
                     <div className="mt-3 p-4 rounded-lg bg-paper-surface border border-emerald-500/30 font-mono text-xs space-y-3 shadow-inner">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border/60 pb-2 text-[11px] text-muted">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border/60 pb-2 text-[15px] text-muted">
                         <div className="flex items-center gap-2 flex-wrap">
                           <div>
                             <span className="font-bold text-ink">ARCHETYPE:</span>{" "}
@@ -1286,20 +1286,20 @@ jobs:
                             </span>
                           </div>
                           {isCalibrated && (
-                            <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">
+                            <span className="text-[14px] text-emerald-700 dark:text-emerald-300 font-bold">
                               [{customTeamSize} Devs • {GEO_RATES[selectedGeoRate].label} • {SCALE_TIERS[selectedScaleTier].label}]
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px]">
+                        <div className="text-[14px]">
                           STANDARD: {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.audit_standard || "Munshi FinOps Matrix v2.1"}
                         </div>
                       </div>
 
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left text-[11px] divide-y divide-border/60">
+                        <table className="w-full text-left text-[15px] divide-y divide-border/60">
                           <thead>
-                            <tr className="text-[10px] uppercase text-muted font-bold">
+                            <tr className="text-[14px] uppercase text-muted font-bold">
                               <th className="py-1.5 pr-2">Cost Vector</th>
                               <th className="py-1.5 px-2">Category</th>
                               <th className="py-1.5 px-2">Unit / Basis</th>
@@ -1311,14 +1311,14 @@ jobs:
                               <tr key={idx} className="hover:bg-emerald-500/5 transition-colors">
                                 <td className="py-2 pr-2">
                                   <div className="font-bold text-ink">{item.item_name}</div>
-                                  <div className="text-[10px] text-muted font-sans line-clamp-1">{item.rationale}</div>
+                                  <div className="text-[14px] text-muted font-sans line-clamp-1">{item.rationale}</div>
                                 </td>
-                                <td className="py-2 px-2 text-[10px] text-muted whitespace-nowrap">
-                                  <span className="px-1.5 py-0.5 rounded bg-paper-surface border border-border text-[9px]">
+                                <td className="py-2 px-2 text-[14px] text-muted whitespace-nowrap">
+                                  <span className="px-1.5 py-0.5 rounded bg-paper-surface border border-border text-[15px]">
                                     {item.category}
                                   </span>
                                 </td>
-                                <td className="py-2 px-2 text-[10px] text-muted">{item.unit_basis}</td>
+                                <td className="py-2 px-2 text-[14px] text-muted">{item.unit_basis}</td>
                                 <td className="py-2 pl-2 text-right font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                                   {item.amount_inr}
                                 </td>
@@ -1327,7 +1327,7 @@ jobs:
                           </tbody>
                           <tfoot>
                             <tr className="border-t-2 border-emerald-500/40 font-bold">
-                              <td colSpan={3} className="py-2 text-ink uppercase text-[10px]">
+                              <td colSpan={3} className="py-2 text-ink uppercase text-[14px]">
                                 Total Capital at Risk Neutralized {isCalibrated ? "(Calibrated)" : ""}:
                               </td>
                               <td className="py-2 text-right font-bold text-sm text-emerald-700 dark:text-emerald-400">
@@ -1445,7 +1445,7 @@ jobs:
                 <Calendar className="w-3.5 h-3.5" />
                 <span>2. Execution Roadmap</span>
                 {displayRoadmap && (
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-none font-courier ${
+                  <span className={`text-[14px] px-1.5 py-0.2 rounded-none font-courier ${
                     activeTab === "roadmap" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
                   }`}>
                     {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)} tasks
@@ -1464,7 +1464,7 @@ jobs:
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>3. Trade-Offs & Epistemic Audit</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-none font-courier ${
+                <span className={`text-[14px] px-1.5 py-0.2 rounded-none font-courier ${
                   activeTab === "audit" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
                 }`}>
                   {displaySynthesis.alternatives_considered.length} alts
@@ -1472,7 +1472,7 @@ jobs:
               </button>
             </div>
 
-            <span className="hidden lg:inline text-[11px] text-[#97907e] dark:text-[#A89F91] italic font-newsreader">
+            <span className="hidden lg:inline text-[15px] text-[#97907e] dark:text-[#A89F91] italic font-newsreader">
               {activeTab === "memo" && "Executive verdict, stakeholder alignment, and pre-commitment gates."}
               {activeTab === "roadmap" && "30-60-90 day milestone delivery plan and operational ownership."}
               {activeTab === "audit" && "Evidentiary claims, stress-tested assumptions, risks, and counterarguments."}
@@ -1502,10 +1502,10 @@ jobs:
               {/* Architecture Lead */}
               <div className="p-4 rounded-xl bg-paper-sidebar border border-border space-y-2">
                 <div className="flex items-center justify-between border-b border-border pb-2">
-                  <span className="font-mono text-[11px] font-bold text-ink uppercase">
+                  <span className="font-mono text-[15px] font-bold text-ink uppercase">
                     Architecture & Tech
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[14px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
                     Resolved
                   </span>
                 </div>
@@ -1520,10 +1520,10 @@ jobs:
               {/* SRE / DevOps Lead */}
               <div className="p-4 rounded-xl bg-paper-sidebar border border-border space-y-2">
                 <div className="flex items-center justify-between border-b border-border pb-2">
-                  <span className="font-mono text-[11px] font-bold text-ink uppercase">
+                  <span className="font-mono text-[15px] font-bold text-ink uppercase">
                     DevOps & SRE
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[14px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
                     Protected
                   </span>
                 </div>
@@ -1538,10 +1538,10 @@ jobs:
               {/* Product Lead */}
               <div className="p-4 rounded-xl bg-paper-sidebar border border-border space-y-2">
                 <div className="flex items-center justify-between border-b border-border pb-2">
-                  <span className="font-mono text-[11px] font-bold text-ink uppercase">
+                  <span className="font-mono text-[15px] font-bold text-ink uppercase">
                     Product & Velocity
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[14px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
                     Accommodated
                   </span>
                 </div>
@@ -1617,11 +1617,11 @@ jobs:
                         {alt.name}
                       </h4>
                       {alt.is_recommended ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-accent text-paper-surface">
+                        <span className="px-2 py-0.5 rounded text-[14px] font-mono uppercase font-bold bg-accent text-paper-surface">
                           Selected
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-paper-sidebar text-muted border border-border">
+                        <span className="px-2 py-0.5 rounded text-[14px] font-mono uppercase bg-paper-sidebar text-muted border border-border">
                           Alternative
                         </span>
                       )}
@@ -1633,7 +1633,7 @@ jobs:
 
                     <div className="space-y-2">
                       <div>
-                        <span className="text-[10px] font-mono uppercase font-bold text-emerald-700 block mb-1">
+                        <span className="text-[14px] font-mono uppercase font-bold text-emerald-700 block mb-1">
                           Operational Advantages
                         </span>
                         <ul className="text-xs text-ink space-y-0.5">
@@ -1647,7 +1647,7 @@ jobs:
                       </div>
 
                       <div>
-                        <span className="text-[10px] font-mono uppercase font-bold text-rose-700 block mb-1">
+                        <span className="text-[14px] font-mono uppercase font-bold text-rose-700 block mb-1">
                           Downsides & Operational Drag
                         </span>
                         <ul className="text-xs text-ink space-y-0.5">
@@ -1664,7 +1664,7 @@ jobs:
 
                   <div className="pt-3 border-t border-border mt-3 space-y-1 text-xs">
                     {alt.why_not_recommended && (
-                      <p className="text-[11px] text-amber-900 bg-amber-50/60 p-2 rounded border border-amber-200/60">
+                      <p className="text-[15px] text-amber-900 bg-amber-50/60 p-2 rounded border border-amber-200/60">
                         <strong className="font-bold">Why Deprioritized:</strong> {alt.why_not_recommended}
                       </p>
                     )}
@@ -1684,7 +1684,7 @@ jobs:
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
                   SUPPORTING EVIDENCE RECEIPTS
                 </span>
-                <span className="text-[10px] font-mono text-muted uppercase">Verified</span>
+                <span className="text-[14px] font-mono text-muted uppercase">Verified</span>
               </div>
               <div className="space-y-2">
                 {displaySynthesis.supporting_evidence.map((ev, idx) => (
@@ -1692,14 +1692,14 @@ jobs:
                     <p className="text-ink font-medium leading-snug">
                       &ldquo;{ev.claim}&rdquo;
                     </p>
-                    <div className="flex items-center justify-between text-[11px] text-muted pt-1">
+                    <div className="flex items-center justify-between text-[15px] text-muted pt-1">
                       <span>{ev.source_title || "Empirical Benchmark"}</span>
                       {ev.source_url && (
                         <a
                           href={ev.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
+                          className="text-accent hover:underline flex items-center gap-1 font-mono text-[14px]"
                         >
                           <span>Clickable Receipt</span>
                           <ExternalLink className="w-2.5 h-2.5" />
@@ -1717,7 +1717,7 @@ jobs:
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
                   ASSUMPTIONS & SENSITIVITY STRESS TEST
                 </span>
-                <span className="text-[10px] font-mono text-muted uppercase">Pre-Mortem</span>
+                <span className="text-[14px] font-mono text-muted uppercase">Pre-Mortem</span>
               </div>
               <div className="space-y-2">
                 {displaySynthesis.assumptions.map((item, idx) => (
@@ -1725,7 +1725,7 @@ jobs:
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold text-ink leading-snug">{item.assumption}</span>
                       <span
-                        className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
+                        className={`text-[15px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
                           item.is_verified
                             ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
                             : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
@@ -1734,7 +1734,7 @@ jobs:
                         {item.is_verified ? "Verified" : "Unverified"}
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted leading-relaxed">
+                    <p className="text-[15px] text-muted leading-relaxed">
                       <strong className="text-ink">Failure Impact:</strong> {item.impact_if_false}
                     </p>
                   </div>
@@ -1748,7 +1748,7 @@ jobs:
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
                   CRITICAL RISKS & CONTINGENCY SAFEGUARDS
                 </span>
-                <span className="text-[10px] font-mono text-muted uppercase">Risk Governance</span>
+                <span className="text-[14px] font-mono text-muted uppercase">Risk Governance</span>
               </div>
               <div className="space-y-2">
                 {displaySynthesis.risks_and_mitigations.map((r, idx) => (
@@ -1756,7 +1756,7 @@ jobs:
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-ink leading-snug">{r.risk}</span>
                       <span
-                        className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
+                        className={`text-[15px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
                           r.severity === "high" || r.severity === "critical"
                             ? "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold"
                             : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
@@ -1765,11 +1765,11 @@ jobs:
                         {r.severity}
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted leading-relaxed">
+                    <p className="text-[15px] text-muted leading-relaxed">
                       <strong className="text-ink">Mitigation:</strong> {r.mitigation}
                     </p>
                     {r.contingency_plan && (
-                      <p className="text-[11px] text-accent font-medium leading-relaxed">
+                      <p className="text-[15px] text-accent font-medium leading-relaxed">
                         <strong>Contingency Runbook:</strong> {r.contingency_plan}
                       </p>
                     )}
@@ -1784,7 +1784,7 @@ jobs:
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
                   STEEL-MANNED OBJECTIONS & REBUTTALS
                 </span>
-                <span className="text-[10px] font-mono text-muted uppercase">Dialectics</span>
+                <span className="text-[14px] font-mono text-muted uppercase">Dialectics</span>
               </div>
               <div className="space-y-2">
                 {displaySynthesis.counterarguments.map((c, idx) => (
@@ -1792,7 +1792,7 @@ jobs:
                     <p className="font-newsreader italic text-ink font-semibold text-sm leading-snug">
                       &ldquo;{c.argument}&rdquo;
                     </p>
-                    <p className="text-[11px] text-muted leading-relaxed">
+                    <p className="text-[15px] text-muted leading-relaxed">
                       <strong className="text-ink not-italic">Strategic Rebuttal:</strong>{" "}
                       {c.rebuttal_or_concession}
                     </p>
@@ -1845,7 +1845,7 @@ jobs:
                     <span className="text-xs font-bold uppercase tracking-wider text-ink block">
                       Project Kickoff Anchor Date
                     </span>
-                    <span className="text-[11px] text-muted">
+                    <span className="text-[15px] text-muted">
                       Leadership dictates the start date. All phased delivery windows calculate dynamically.
                     </span>
                   </div>
@@ -1863,7 +1863,7 @@ jobs:
 
               {/* 2. VISUAL PHASED RUNWAY (GANTT-LITE HORIZONTAL TIMELINE BAR) */}
               <div className="space-y-2 font-courier">
-                <div className="flex items-center justify-between text-[11px] text-muted uppercase font-bold px-1">
+                <div className="flex items-center justify-between text-[15px] text-muted uppercase font-bold px-1">
                   <span>Phased Timeline Runway (Weeks 1 to 8)</span>
                   <span>Total Tasks: {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)}</span>
                 </div>
@@ -1883,13 +1883,13 @@ jobs:
                           <span className="font-bold text-ink truncate">
                             Phase {pIdx + 1}: {phase.timeline}
                           </span>
-                          <span className="text-[10px] font-mono text-accent font-bold">
+                          <span className="text-[14px] font-mono text-accent font-bold">
                             {pct}% Done
                           </span>
                         </div>
 
                         {/* Dynamically Projected Calendar Range */}
-                        <span className="text-[10px] font-mono text-muted block">
+                        <span className="text-[14px] font-mono text-muted block">
                           📅 {phaseDates?.range || phase.timeline}
                         </span>
 
@@ -1901,7 +1901,7 @@ jobs:
                           />
                         </div>
 
-                        <span className="text-[10px] text-muted block text-right font-mono">
+                        <span className="text-[14px] text-muted block text-right font-mono">
                           {completedCount}/{totalCount} tasks cleared
                         </span>
                       </div>
@@ -1912,7 +1912,7 @@ jobs:
 
               {/* 3. OWNER ROLE FILTER CHIPS */}
               <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-border font-courier text-xs">
-                <span className="text-muted text-[11px] uppercase font-bold mr-1 flex items-center gap-1">
+                <span className="text-muted text-[15px] uppercase font-bold mr-1 flex items-center gap-1">
                   <Filter className="w-3 h-3" /> Stakeholder Filter:
                 </span>
                 {["ALL", "Architecture", "SRE", "DevOps", "Product", "Executive"].map((role) => (
@@ -1920,7 +1920,7 @@ jobs:
                     key={role}
                     type="button"
                     onClick={() => setSelectedOwnerFilter(role)}
-                    className={`px-2.5 py-1 text-[11px] uppercase font-bold rounded-lg border transition cursor-pointer ${
+                    className={`px-2.5 py-1 text-[15px] uppercase font-bold rounded-lg border transition cursor-pointer ${
                       selectedOwnerFilter === role
                         ? "bg-ink text-paper-surface border-ink shadow-2xs"
                         : "bg-paper-surface text-muted border-border hover:text-ink"
@@ -1951,11 +1951,11 @@ jobs:
                       </div>
                       <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
                         {phaseDates && (
-                          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-paper-surface border border-border text-ink font-bold">
+                          <span className="text-[15px] font-mono px-2 py-0.5 rounded bg-paper-surface border border-border text-ink font-bold">
                             📅 {phaseDates.range}
                           </span>
                         )}
-                        <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-paper-surface border border-border text-accent font-bold">
+                        <span className="text-[15px] font-mono px-2 py-0.5 rounded bg-paper-surface border border-border text-accent font-bold">
                           {phase.timeline}
                         </span>
                       </div>
@@ -2000,11 +2000,11 @@ jobs:
                                 {task.title}
                               </h5>
                               {task.description && (
-                                <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
+                                <p className="text-[15px] text-muted mt-0.5 leading-relaxed">
                                   {task.description}
                                 </p>
                               )}
-                              <div className="flex items-center gap-2 text-[10px] font-mono text-muted mt-1.5 flex-wrap">
+                              <div className="flex items-center gap-2 text-[14px] font-mono text-muted mt-1.5 flex-wrap">
                                 <span className="bg-paper-sidebar px-1.5 py-0.5 rounded border border-border text-ink font-semibold">
                                   Owner: {task.owner_role}
                                 </span>
@@ -2195,7 +2195,7 @@ jobs:
 
             <div className="space-y-3 font-sans text-xs">
               <div>
-                <label className="block font-semibold text-ink mb-1.5 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-ink mb-1.5 font-mono uppercase text-[15px]">
                   Select Mandated Architecture / Strategy
                 </label>
                 <div className="space-y-2">
@@ -2218,7 +2218,7 @@ jobs:
                       />
                       <div className="min-w-0">
                         <span className="block text-ink font-bold text-xs">{alt.name}</span>
-                        <span className="text-[11px] text-muted block leading-snug">{alt.description}</span>
+                        <span className="text-[15px] text-muted block leading-snug">{alt.description}</span>
                       </div>
                     </label>
                   ))}
@@ -2226,7 +2226,7 @@ jobs:
               </div>
 
               <div>
-                <label className="block font-semibold text-ink mb-1.5 font-mono uppercase text-[11px]">
+                <label className="block font-semibold text-ink mb-1.5 font-mono uppercase text-[15px]">
                   Executive Rationale / Board Justification
                 </label>
                 <textarea
