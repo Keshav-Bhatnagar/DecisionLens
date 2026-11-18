@@ -12,7 +12,9 @@ import {
   Menu,
   ChevronRight,
   LogIn,
+  HelpCircle,
 } from "lucide-react";
+import UserGuideModal from "@/components/UserGuideModal";
 import {
   getMe,
   clearStoredToken,
@@ -50,6 +52,7 @@ export default function AppShell({
   // Sidebar States
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
 
   // User Session State
   const [user, setUser] = useState<User | null>(null);
@@ -183,6 +186,17 @@ export default function AppShell({
 
           {/* Right: Custom Page Actions + Workspace Members + User Avatar & Name + Aperture Toggle */}
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            {/* User Friendly "How It Works" Guide Button */}
+            <button
+              type="button"
+              onClick={() => setShowGuideModal(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm transition-colors cursor-pointer shadow-2xs"
+              title="How DecisionLens works and user guide"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+              <span className="hidden sm:inline">How It Works</span>
+            </button>
+
             {actions}
 
             {(activeFolderId || activeDecisionId) && (
@@ -238,6 +252,12 @@ export default function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Interactive User Guide Modal */}
+      <UserGuideModal
+        isOpen={showGuideModal}
+        onClose={() => setShowGuideModal(false)}
+      />
     </div>
   );
 }

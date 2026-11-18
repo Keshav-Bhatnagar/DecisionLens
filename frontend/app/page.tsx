@@ -347,8 +347,9 @@ export default function EditorialLandingPage() {
               theme === "dark" ? "text-[#A89F91]" : "text-[#596474]"
             }`}
           >
-            DecisionLens puts your decisions under scrutiny. Explore trade-offs, test assumptions,
-            uncover gaps, and see how your reasoning holds up from multiple perspectives — before you commit.
+            The Decision Intelligence Platform for Engineering Leaders & Technical Teams.
+            Automatically filter meeting banter, test assumptions against real cloud costs and hardware latency,
+            uncover blind spots with Technical Domain RAG, and generate verified Architecture Decision Records (ADRs) before you commit.
           </p>
 
           {/* Primary & Secondary CTAs */}
