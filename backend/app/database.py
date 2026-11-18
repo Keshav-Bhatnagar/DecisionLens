@@ -88,6 +88,59 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+def ensure_pgvector_schema() -> None:
+    """
+    Prepare Supabase/Postgres for semantic document search:
+    enables the pgvector extension and makes sure decision_document_chunks has
+    `embedding_model` and an `embedding vector(EMBEDDING_DIMENSIONS)` column.
+    If the dimension changed, the vector column is recreated; chunks are then
+    re-embedded automatically on the next search (or via POST /api/rag/reindex).
+    Each step runs in its own transaction so one failure never blocks startup.
+    """
+    if is_sqlite:
+        return
+    dim = int(settings.embedding_dimensions or 1536)
+
+    def _run(sql: str, label: str) -> bool:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(sql))
+            return True
+        except Exception as exc:
+            logger.warning(f"pgvector setup step '{label}' skipped: {exc}")
+            return False
+
+    _run("CREATE EXTENSION IF NOT EXISTS vector;", "enable pgvector extension")
+    _run(
+        "ALTER TABLE decision_document_chunks ADD COLUMN IF NOT EXISTS embedding_model VARCHAR(120);",
+        "add embedding_model column",
+    )
+
+    current_type = None
+    try:
+        with engine.connect() as conn:
+            current_type = conn.execute(
+                text(
+                    "SELECT format_type(a.atttypid, a.atttypmod) FROM pg_attribute a "
+                    "WHERE a.attrelid = 'decision_document_chunks'::regclass "
+                    "AND a.attname = 'embedding' AND NOT a.attisdropped"
+                )
+            ).scalar()
+    except Exception as exc:
+        logger.warning(f"Could not inspect embedding column: {exc}")
+        return
+
+    expected = f"vector({dim})"
+    if current_type == expected:
+        return
+    if current_type is not None:
+        logger.warning(f"Embedding column is {current_type}, expected {expected}. Recreating it; chunks will re-embed.")
+        _run("ALTER TABLE decision_document_chunks DROP COLUMN embedding;", "drop old embedding column")
+    if _run(f"ALTER TABLE decision_document_chunks ADD COLUMN embedding vector({dim});", "add embedding column"):
+        _run("UPDATE decision_document_chunks SET embedding_model = NULL;", "mark chunks for re-embedding")
+        logger.info(f"pgvector embedding column ready: {expected}")
+
+
 def init_db() -> None:
     """Create all database tables and ensure SQLite schema migrations with graceful fallback."""
     global engine, SessionLocal, is_sqlite
@@ -111,6 +164,7 @@ def init_db() -> None:
                 conn.commit()
         except Exception as exc:
             logger.debug(f"Postgres incremental column check skipped: {exc}")
+        ensure_pgvector_schema()
 
     if is_sqlite:
         try:
@@ -150,6 +204,11 @@ def init_db() -> None:
                 attach_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(attachments);")).fetchall()]
                 if "file_size" not in attach_cols:
                     conn.execute(text("ALTER TABLE attachments ADD COLUMN file_size INTEGER DEFAULT 0;"))
+
+                # Check RAG chunk columns
+                chunk_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(decision_document_chunks);")).fetchall()]
+                if chunk_cols and "embedding_model" not in chunk_cols:
+                    conn.execute(text("ALTER TABLE decision_document_chunks ADD COLUMN embedding_model VARCHAR(120);"))
 
                 conn.commit()
         except Exception:

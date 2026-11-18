@@ -25,6 +25,12 @@ services:
         generateValue: true
       - key: GEMINI_API_KEY
         sync: false
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+        sync: false
       - key: TAVILY_API_KEY
         sync: false
       - key: SERPER_API_KEY

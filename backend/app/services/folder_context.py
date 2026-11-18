@@ -46,18 +46,24 @@ def get_folder_precedents(
             query_text = f"{decision.title or ''} {decision.problem_statement or ''} {decision.description or ''}".strip()
             if query_text:
                 try:
-                    from app.services.rag.embeddings import get_embedding_engine
+                    from app.services.rag.embeddings import cosine, get_embedding_engine
                     engine = get_embedding_engine()
-                    query_vec = engine.encode(query_text)
 
-                    def compute_sim(rec: Decision) -> float:
-                        rec_text = f"{rec.title or ''} {rec.problem_statement or ''} {rec.description or ''}"
-                        if not rec_text.strip():
-                            return 0.0
-                        rec_vec = engine.encode(rec_text)
-                        return sum(q * d for q, d in zip(query_vec, rec_vec))
+                    rec_texts = [
+                        f"{rec.title or ''} {rec.problem_statement or ''} {rec.description or ''}".strip()
+                        for rec in records
+                    ]
+                    # One batched embedding call for the query and every past decision
+                    vectors, _model = engine.encode_batch_with_model([query_text] + [t or " " for t in rec_texts])
+                    query_vec, rec_vecs = vectors[0], vectors[1:]
 
-                    scored = [(compute_sim(r), r) for r in records]
+                    n = len(records)
+                    scored = []
+                    for i, (rec, text_, vec) in enumerate(zip(records, rec_texts, rec_vecs)):
+                        sim = cosine(query_vec, vec) if text_ else 0.0
+                        # Records are oldest -> newest; a light recency nudge breaks near-ties
+                        recency = i / (n - 1) if n > 1 else 1.0
+                        scored.append((0.85 * sim + 0.15 * recency, rec))
                     scored.sort(key=lambda item: item[0], reverse=True)
                     records = [item[1] for item in scored[:limit]]
                     records.sort(key=lambda r: (r.created_at or datetime.min, r.id or 0))

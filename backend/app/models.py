@@ -193,6 +193,9 @@ class DecisionDocumentChunk(Base):
     chunk_index: Mapped[int] = mapped_column(default=0, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     metadata_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Which embedding model produced the vector (e.g. "azure:text-embedding-3-small@1536").
+    # The pgvector `embedding vector(N)` column itself is managed in database.ensure_pgvector_schema().
+    embedding_model: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now
     )

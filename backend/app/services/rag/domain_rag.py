@@ -114,6 +114,29 @@ class DomainRAGService:
         return results
 
 
+    def guidelines_for_decision(
+        self,
+        decision: Any,
+        query_text: str,
+        top_k: int = 3,
+    ) -> Tuple[Optional[DomainType], List[Dict[str, Any]]]:
+        """
+        Pick the decision's domain (stored value first, classifier otherwise)
+        and return the most relevant expert guidelines for it.
+        """
+        stored = (getattr(decision, "domain", None) or "").strip().lower()
+        domain: Optional[DomainType] = None
+        if stored:
+            try:
+                domain = DomainType(stored)
+            except ValueError:
+                domain = None
+        if domain is None or domain == DomainType.GENERAL:
+            domain, results = self.retrieve_blind_spots_for_decision(query_text, top_k=top_k)
+            return domain, results
+        return domain, self.retrieve_domain_blind_spots(domain, query_text, top_k=top_k)
+
+
 _default_domain_rag_service: Optional[DomainRAGService] = None
 
 

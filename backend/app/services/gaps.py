@@ -693,6 +693,43 @@ def generate_universal_decision_gaps(
 generate_mock_gaps = generate_universal_decision_gaps
 
 
+def build_domain_reference_block(decision: Decision, raw_context: str, top_k: int = 3) -> str:
+    """
+    Retrieve a few expert guidelines for the decision's domain and format them as an
+    optional lens for the gap model. Never a checklist: the model must only raise a
+    gap from it when the decision's own context makes it relevant.
+    """
+    if not settings.rag_domain_gaps_enabled:
+        return ""
+    try:
+        from app.services.rag.domain_rag import get_domain_rag_service
+
+        query = f"{decision.title or ''}\n{raw_context[:2000]}"
+        domain, results = get_domain_rag_service().guidelines_for_decision(decision, query, top_k=top_k)
+    except Exception as exc:
+        logger.debug("Domain guideline retrieval skipped: %s", exc)
+        return ""
+    if not results:
+        return ""
+
+    domain_label = getattr(domain, "value", str(domain or "general")).replace("_", " ")
+    lines = []
+    for i, r in enumerate(results, start=1):
+        text = re.sub(r"\s+", " ", (r.get("content") or "")).strip()
+        if text:
+            lines.append(f"{i}. {text[:600]}")
+    if not lines:
+        return ""
+    return (
+        f"### OPTIONAL DOMAIN EXPERT REFERENCE ({domain_label})\n"
+        "These are things experienced practitioners in this field often check. They are an optional lens, "
+        "NOT a checklist. Only raise a gap from them if this specific decision's context makes it genuinely "
+        "relevant and it is not already answered. When a gap is inspired by this reference, include "
+        '"domain_guideline" in its derived_from list.\n'
+        + "\n".join(lines)
+    )
+
+
 def detect_decision_gaps(
     decision: Decision,
     db: Session,
@@ -756,6 +793,9 @@ def detect_decision_gaps(
 
             fenced_input = f"<UNTRUSTED_DECISION_CONTEXT>\n{raw_context}{points_summary}\n</UNTRUSTED_DECISION_CONTEXT>"
             user_prompt = f"Analyze information completeness and identify prioritized information gaps for the following decision:\n\n{fenced_input}"
+            domain_reference = build_domain_reference_block(decision, raw_context)
+            if domain_reference:
+                user_prompt = f"{user_prompt}\n\n{domain_reference}"
 
             content = None
             ai_origin = f"AI Engine: {provider.upper()} ({model})"

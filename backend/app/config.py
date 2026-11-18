@@ -50,6 +50,21 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = "2024-08-01-preview"
     azure_openai_deployment: str = "gpt-4o-mini"
 
+    # RAG: Semantic Embeddings (document search, gap grounding, folder memory)
+    # embedding_provider: auto (Azure, then OpenAI, then local), azure, openai, or local
+    embedding_provider: str = "auto"
+    # Azure deployment name of your embedding model, e.g. "text-embedding-3-small"
+    azure_openai_embedding_deployment: str = ""
+    # Optional: only set these if embeddings live on a different Azure resource
+    azure_openai_embedding_endpoint: str = ""
+    azure_openai_embedding_api_key: str = ""
+    azure_openai_embedding_api_version: str = ""
+    openai_embedding_model: str = "text-embedding-3-small"
+    # Vector size stored in pgvector. text-embedding-3 models support any size up to 1536 (small) / 3072 (large).
+    embedding_dimensions: int = 1536
+    # Ground Stage 3 gap detection in the curated domain knowledge guides
+    rag_domain_gaps_enabled: bool = True
+
     # Azure AI Speech (STT) Configuration
     azure_speech_key: str = ""
     azure_speech_region: str = ""
