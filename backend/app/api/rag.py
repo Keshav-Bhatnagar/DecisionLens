@@ -98,6 +98,7 @@ def ask_decision_documents(
         question=body.question,
         decision_title=decision.title or "",
         top_k=body.top_k,
+        domain=decision.domain,
     )
     return RagAskResponse(
         decision_id=decision_id,

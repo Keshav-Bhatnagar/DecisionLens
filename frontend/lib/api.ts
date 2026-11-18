@@ -436,6 +436,39 @@ export interface TranscriptionResponse {
   audio_id?: number | null;
   audio_recording?: AudioRecording | null;
   message?: string;
+  tangents_filtered_count?: number;
+  signal_ratio?: number;
+  removed_tangents?: Array<{ speaker: string; text: string; reason: string; index: number }>;
+}
+
+export interface TranscriptFilterResponse {
+  decision_id: number;
+  original_transcript: string;
+  filtered_transcript: string;
+  tangents_filtered_count: number;
+  signal_ratio: number;
+  removed_tangents: Array<{ speaker: string; text: string; reason: string; index: number }>;
+}
+
+export async function filterTranscriptTangents(
+  decisionId: number,
+  forceHeuristics: boolean = false
+): Promise<TranscriptFilterResponse> {
+  const token = getStoredToken();
+  const res = await fetch(
+    `${API_BASE_URL}/api/decisions/${decisionId}/transcription/filter-tangents?force_heuristics=${forceHeuristics}`,
+    {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to filter transcript tangents");
+  }
+  return res.json();
 }
 
 export async function uploadAudio(

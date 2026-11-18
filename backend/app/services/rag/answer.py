@@ -155,8 +155,10 @@ def answer_question(
     question: str,
     decision_title: str = "",
     top_k: int = 5,
+    domain: Optional[str] = None,
+    include_tech_standards: bool = True,
 ) -> Dict[str, Any]:
-    """Answer a question from a decision's documents with numbered citations."""
+    """Answer a question from a decision's documents with numbered citations, supplemented with technical engineering standards when relevant."""
     rag = get_document_rag_service()
     top_k = max(1, min(int(top_k or 5), 8))
     excerpts = rag.retrieve_relevant_excerpts(decision_id=decision_id, query=question, top_k=top_k)
@@ -165,6 +167,27 @@ def answer_question(
     if excerpts:
         best = excerpts[0].get("score", 0.0)
         excerpts = [e for e in excerpts if e.get("score", 0.0) >= best * 0.55] or excerpts[:1]
+
+    # Incorporate authoritative Technical Architecture & Cloud Standards when relevant
+    if include_tech_standards:
+        from app.services.rag.domain_rag import get_domain_rag_service
+        from app.services.rag.router import DomainType
+        domain_rag = get_domain_rag_service()
+        tech_hits = domain_rag.retrieve_domain_blind_spots(DomainType.SOFTWARE, question, top_k=2)
+        for h in tech_hits:
+            if h.get("score", 0.0) >= 0.28:
+                excerpts.append(
+                    {
+                        "id": str(h.get("id", "tech_std")),
+                        "content": h.get("content", ""),
+                        "score": float(h.get("score", 0.0)),
+                        "metadata": {
+                            "document_name": "Technical Architecture & Cloud Standards",
+                            "attachment_id": None,
+                            "domain": "software",
+                        },
+                    }
+                )
 
     status = rag.get_index_status(decision_id)
 

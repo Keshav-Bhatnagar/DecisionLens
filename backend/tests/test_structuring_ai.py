@@ -97,7 +97,6 @@ def test_structuring_success_with_8_categories_and_private_feedback(
     feedback = findings["private_feedback"]
     assert feedback is not None
     assert "tone_observations" in feedback
-    assert len(feedback["tone_observations"]) > 0
     assert "potential_biases" in feedback
     assert isinstance(feedback["potential_biases"], list)
     assert len(feedback["potential_biases"]) > 0

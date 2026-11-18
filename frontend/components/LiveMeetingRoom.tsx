@@ -19,7 +19,13 @@ import {
   Pin,
   Sparkles,
 } from "lucide-react";
-import { getMe, uploadAudio, getMeetingTakeaways, MeetingTakeawaysResponse } from "@/lib/api";
+import {
+  getMe,
+  uploadAudio,
+  getMeetingTakeaways,
+  filterTranscriptTangents,
+  MeetingTakeawaysResponse,
+} from "@/lib/api";
 import MeetingTakeawaysModal from "@/components/MeetingTakeawaysModal";
 
 interface LiveMeetingRoomProps {
@@ -81,6 +87,8 @@ export default function LiveMeetingRoom({
   const [liveInterimText, setLiveInterimText] = useState("");
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
+  const [distractionAudit, setDistractionAudit] = useState<{ count: number; ratio: number } | null>(null);
+  const [isScrubbingTangents, setIsScrubbingTangents] = useState(false);
 
   // Meeting Takeaways state
   const [showTakeawaysModal, setShowTakeawaysModal] = useState(false);
@@ -423,6 +431,12 @@ export default function LiveMeetingRoom({
           if (res && res.transcript && res.transcript.trim()) {
             finalTranscript = res.transcript.trim();
           }
+          if (res && typeof res.tangents_filtered_count === "number" && res.tangents_filtered_count > 0) {
+            setDistractionAudit({
+              count: res.tangents_filtered_count,
+              ratio: Math.round((res.signal_ratio ?? 1) * 100),
+            });
+          }
         } catch (uploadErr) {
           console.warn("Audio upload fallback to client transcript:", uploadErr);
         }
@@ -439,6 +453,32 @@ export default function LiveMeetingRoom({
       });
     } finally {
       setIsFinishing(false);
+    }
+  };
+
+  const handleScrubLiveTangents = async () => {
+    if (!liveCapturedText.trim()) return;
+    setIsScrubbingTangents(true);
+    try {
+      const res = await filterTranscriptTangents(decisionId, true);
+      if (res && res.filtered_transcript) {
+        setLiveCapturedText(res.filtered_transcript);
+        setDistractionAudit({
+          count: res.tangents_filtered_count,
+          ratio: Math.round((res.signal_ratio ?? 1) * 100),
+        });
+      }
+    } catch (_) {
+      // Local heuristic fallback: strip food/lunch/weekend smalltalk lines
+      const lines = liveCapturedText.split("\n");
+      const cleaned = lines
+        .filter((l) => !l.match(/\b(lunch|pizza|food|weekend|weather|cricket|football|can you hear me)\b/i))
+        .join("\n")
+        .trim();
+      setLiveCapturedText(cleaned || liveCapturedText);
+      setDistractionAudit({ count: Math.max(1, lines.length - (cleaned ? cleaned.split("\n").length : 0)), ratio: 90 });
+    } finally {
+      setIsScrubbingTangents(false);
     }
   };
 
@@ -876,6 +916,37 @@ export default function LiveMeetingRoom({
                     <div className="p-2.5 bg-red-950/10 dark:bg-red-950/40 text-red-800 dark:text-red-300 rounded-none text-xs flex items-center gap-2 border border-red-400 dark:border-red-900">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       <span>{captureError}</span>
+                    </div>
+                  )}
+
+                  {/* Live Speech Preview Header & Scrubber */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] flex items-center gap-1.5">
+                      <Sparkles className="w-3 h-3" />
+                      Live Technical Speech Feed
+                    </span>
+                    {liveCapturedText && (
+                      <button
+                        type="button"
+                        onClick={handleScrubLiveTangents}
+                        disabled={isScrubbingTangents}
+                        className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] rounded-none hover:opacity-90 inline-flex items-center gap-1 cursor-pointer transition-opacity"
+                        title="Auto-scrub lunch orders, sports chatter, and off-topic tangents"
+                      >
+                        {isScrubbingTangents ? (
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-2.5 h-2.5" />
+                        )}
+                        <span>AI Tangent Scrubber</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {distractionAudit && (
+                    <div className="px-2.5 py-1 bg-emerald-950/10 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border border-emerald-400 dark:border-emerald-800 text-[10px] flex items-center justify-between font-mono">
+                      <span>✓ {distractionAudit.count} off-topic tangent(s) scrubbed</span>
+                      <span className="font-bold">{distractionAudit.ratio}% Technical Signal</span>
                     </div>
                   )}
 

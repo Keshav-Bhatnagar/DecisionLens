@@ -255,6 +255,18 @@ class TranscriptionResponse(BaseModel):
     audio_id: Optional[int] = None
     audio_recording: Optional[AudioRecordingResponse] = None
     message: Optional[str] = None
+    tangents_filtered_count: int = 0
+    signal_ratio: float = 1.0
+    removed_tangents: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class TranscriptFilterResponse(BaseModel):
+    decision_id: int
+    original_transcript: str
+    filtered_transcript: str
+    tangents_filtered_count: int
+    signal_ratio: float
+    removed_tangents: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 # ==========================================

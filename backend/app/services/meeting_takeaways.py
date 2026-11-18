@@ -32,6 +32,17 @@ def generate_meeting_takeaways(
     active_agenda = (agenda or decision.problem_statement or decision.description or title).strip()
     active_notes = notes or []
 
+    # Scrub off-topic distractions and social chatter from transcript before synthesis
+    if active_transcript:
+        from app.services.meeting_filter import filter_meeting_distractions
+        filtered = filter_meeting_distractions(
+            transcript=active_transcript,
+            decision_title=title,
+            decision_context=active_agenda,
+            force_heuristics=force_mock,
+        )
+        active_transcript = filtered.cleaned_transcript
+
     # Check if notes are also in decision description or local format
     caveats: List[SilentRiskItem] = []
     for n in active_notes:
