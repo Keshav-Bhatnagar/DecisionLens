@@ -377,15 +377,95 @@ def run_ai_framework_evaluation(
 
 
 # ============================================================================
-# DOMAIN CLASSIFICATION & DOMAIN-GROUNDED DECISION STRUCTURES
+# ============================================================================
+# SEMANTIC DOMAIN PROFILES & AI DOMAIN CLASSIFIER (Zero Hardcoded Word Lists)
 # ============================================================================
 
-def detect_decision_domain(decision: Decision, context_text: str = "") -> str:
+DOMAIN_SEMANTIC_PROFILES: Dict[str, str] = {
+    DecisionDomain.PERSONAL.value: (
+        "Personal lifestyle decisions, travel, vacations, weekend trips, holiday journeys, "
+        "health, fitness routines, diet, habits, marriage, relationships, family matters, "
+        "parenting, hobbies, buying a personal vehicle, renting an apartment, home life, "
+        "work-life balance, leisure activities, wellness, and private individual dilemmas."
+    ),
+    DecisionDomain.SOFTWARE.value: (
+        "Software engineering, system architecture, choosing tech stacks, programming languages, "
+        "databases, cloud platforms, AWS, GCP, Azure, microservices vs monolith, Kubernetes, "
+        "APIs, DevOps pipelines, containerization, backend services, frontend frameworks, "
+        "code refactoring, caching, latency optimization, distributed systems, and technical migrations."
+    ),
+    DecisionDomain.REAL_ESTATE.value: (
+        "Real estate acquisition, buying property, land parcels, commercial plots, leasing, "
+        "tenant agreements, residential developments, zoning laws, property titles, encumbrance certificates, "
+        "FSI, joint venture land bank agreements, construction permits, and physical asset investments."
+    ),
+    DecisionDomain.FINANCE.value: (
+        "Financial investments, venture capital, angel funding, debt vs equity financing, "
+        "portfolio asset allocation, stock markets, hedge funds, dividend yields, treasury management, "
+        "valuations, cap tables, credit facilities, liquidity events, corporate working capital, and ROI/IRR."
+    ),
+    DecisionDomain.CAREER.value: (
+        "Career transitions, job offer comparisons, salary and compensation negotiation, "
+        "promotions, switching employers, resigning, notice periods, severance packages, "
+        "professional development, interviews, leadership roles, and workplace mobility."
+    ),
+    DecisionDomain.EDUCATION.value: (
+        "Higher education, university and college admissions, choosing a degree or major, "
+        "masters programs, PhD dissertations, academic curricula, tuition fees, scholarships, "
+        "campus selection, coursework, certifications, and educational paths."
+    ),
+    DecisionDomain.PRODUCT.value: (
+        "Digital product management, user experience UI/UX design, customer onboarding funnels, "
+        "feature roadmaps, user retention and churn reduction, minimum viable products MVP, "
+        "user personas, activation rates, conversion funnels, and product-market fit."
+    ),
+    DecisionDomain.OPERATIONS.value: (
+        "Operational efficiency, supply chain management, warehousing, inventory control, "
+        "logistics and freight, vendor procurement, supplier SLA contracts, manufacturing, "
+        "fulfillment centers, quality control, and business process optimization."
+    ),
+    DecisionDomain.BUSINESS.value: (
+        "Corporate business strategy, market expansion, mergers and acquisitions, "
+        "strategic partnerships, new market entry, revenue model innovation, competitive positioning, "
+        "pricing strategies, organizational restructuring, and enterprise commercial decisions."
+    ),
+}
+
+_DOMAIN_VECTORS_CACHE: Dict[str, List[float]] = {}
+_DOMAIN_ENGINE: Optional[Any] = None
+
+
+def _get_domain_embedding_engine():
+    global _DOMAIN_ENGINE
+    if _DOMAIN_ENGINE is None:
+        from app.services.rag.embeddings import EmbeddingEngine
+        _DOMAIN_ENGINE = EmbeddingEngine(dimension=256)
+    return _DOMAIN_ENGINE
+
+
+def _get_domain_vectors() -> Dict[str, List[float]]:
+    global _DOMAIN_VECTORS_CACHE
+    if not _DOMAIN_VECTORS_CACHE:
+        engine = _get_domain_embedding_engine()
+        for dom, profile in DOMAIN_SEMANTIC_PROFILES.items():
+            vec = engine.encode(profile)
+            _DOMAIN_VECTORS_CACHE[dom] = vec
+    return _DOMAIN_VECTORS_CACHE
+
+
+def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai: bool = True) -> str:
     """
     Intelligently classify the decision domain into one of the 9 canonical domains:
     REAL_ESTATE, FINANCE, CAREER, EDUCATION, BUSINESS, PRODUCT, SOFTWARE, OPERATIONS, PERSONAL.
-    Uses frequency-weighted semantic scoring giving highest priority to the decision's own
-    transcript, problem statement, title, and raw input over background folder context.
+
+    Epistemic Multi-Tier AI Semantic Architecture (Zero Hardcoded Exact-Word Lists):
+    - Tier 0: Folder explicit domain anchor override.
+    - Tier 1: Fast AI Semantic Intent Classifier (Gemini / Azure / OpenAI LLM).
+              Deeply understands nuances, intent, colloquialisms, and context.
+    - Tier 2: Dense Vector Semantic Similarity (EmbeddingEngine).
+              Encodes user query into high-dimensional semantic space and computes
+              cosine similarity against canonical domain semantic definition corpora.
+    - Tier 3: Instance attribute fallback with cached result on decision.
     """
     # 0. Check if folder has an explicit user-defined domain anchor
     if hasattr(decision, "folder") and decision.folder and getattr(decision.folder, "domain", None):
@@ -393,75 +473,83 @@ def detect_decision_domain(decision: Decision, context_text: str = "") -> str:
         if f_dom and f_dom not in ("AUTO", "BUSINESS", ""):
             return f_dom
 
-    title = (decision.title or "").lower()
-    prob = (decision.problem_statement or "").lower()
-    desc = (decision.description or "").lower()
-    raw = (decision.raw_input or "").lower()
-    transcript = (getattr(decision, "transcript", "") or "").lower()
-    ctx = (context_text or "").lower()
+    if hasattr(decision, "_detected_domain_cache") and decision._detected_domain_cache:
+        return decision._detected_domain_cache
 
-    primary_text = f"{title} {prob} {transcript} {raw} {desc}"
+    title = (decision.title or "").strip()
+    prob = (decision.problem_statement or "").strip()
+    desc = (decision.description or "").strip()
+    raw = (decision.raw_input or "").strip()
+    transcript = (getattr(decision, "transcript", "") or "").strip()
+    ctx = (context_text or "").strip()
 
-    domain_terms = {
-        DecisionDomain.SOFTWARE.value: [
-            "microservices", "monolith", "kubernetes", "cloud", "aws", "gcp", "azure",
-            "database", "postgres", "mongodb", "api", "devops", "ci/cd", "refactoring",
-            "codebase", "frontend", "backend", "docker", "latency", "tech stack", "software",
-            "kafka", "redis", "pgbouncer", "iops", "sre", "distributed tracing", "outage",
-            "p99", "cluster", "modular monolith", "architecture", "golang", "python",
-            "serverless", "node", "sql", "migration"
-        ],
-        DecisionDomain.REAL_ESTATE.value: [
-            "land", "property", "real estate", "acre", "acres", "plot", "sqft", "square feet",
-            "zoning", "fsi", "encumbrance", "buyout", "tenant", "lease", "landlord", "residential",
-            "commercial plot", "joint venture land bank", "outright purchase", "crore land",
-            "title deed", "feeder road", "land parcel", "construction", "real-estate", "rera"
-        ],
-        DecisionDomain.FINANCE.value: [
-            "portfolio", "equity", "venture capital", "debt", "bond", "dividend",
-            "hedge fund", "cap table", "valuation", "seed round", "series a", "series b",
-            "roi", "irr", "credit facility", "loan", "asset allocation", "liquidity event",
-            "treasury", "working capital"
-        ],
-        DecisionDomain.CAREER.value: [
-            "career", "job offer", "salary", "promotion", "resume", "resignation",
-            "notice period", "hiring", "compensation", "employer", "work-life balance",
-            "headcount", "role transition", "interview", "severance"
-        ],
-        DecisionDomain.EDUCATION.value: [
-            "university", "college", "degree", "tuition", "phd", "masters", "curriculum",
-            "school", "scholarship", "admissions", "campus", "academic", "coursework"
-        ],
-        DecisionDomain.PRODUCT.value: [
-            "product", "feature", "user retention", "onboarding", "churn", "ui/ux",
-            "user journey", "mvp", "persona", "activation rate", "freemium", "conversion rate"
-        ],
-        DecisionDomain.OPERATIONS.value: [
-            "supply chain", "warehouse", "logistics", "procurement", "inventory",
-            "supplier", "manufacturing", "fulfillment", "vendor negotiation", "sla", "freight"
-        ],
-        DecisionDomain.PERSONAL.value: [
-            "workout", "diet", "health", "fitness", "habit", "travel", "relocation",
-            "marriage", "lifestyle", "hobby", "trip", "vacation", "holiday", "tour",
-            "flight", "hotel", "resort", "leave", "journey", "outing", "personal",
-            "family", "parenting", "wedding", "buy car", "buy bike", "rent apartment",
-            "buy house", "personal finance", "leisure", "weekend", "go for trip", "go to trip"
-        ],
-    }
+    primary_text = f"{title}. {prob}. {raw}. {desc}. {transcript}".strip()
+    if not primary_text:
+        primary_text = ctx
 
-    scores = {}
-    for dom, terms in domain_terms.items():
-        score = 0
-        for term in terms:
-            pattern = re.compile(r"\b" + re.escape(term) + r"\b", re.IGNORECASE)
-            score += len(pattern.findall(primary_text)) * 3
-            score += len(pattern.findall(ctx)) * 1
-        scores[dom] = score
+    if not primary_text:
+        return DecisionDomain.BUSINESS.value
 
-    best_domain = max(scores, key=scores.get)
-    if scores[best_domain] >= 2:
-        return best_domain
+    # Tier 1: Hosted AI Semantic Intent Classifier (Fast LLM)
+    if allow_ai and settings.has_ai_key:
+        try:
+            client, model, provider = get_llm_client_and_model("frameworks")
+            if client is not None and model is not None:
+                system_prompt = (
+                    "You are an epistemic decision domain classifier for DecisionLens.\n"
+                    "Classify the input dilemma into EXACTLY one of these 9 canonical domains:\n"
+                    "- PERSONAL: Personal lifestyle, health, daily habits, fitness, hobbies, leisure, travel, family, marriage, personal relocation, relationships, private everyday choices.\n"
+                    "- SOFTWARE: Software engineering, tech stack, cloud architecture, databases, codebases, microservices, DevOps, APIs, system design, technical infrastructure.\n"
+                    "- PRODUCT: Digital product management, UI/UX, user retention, onboarding, MVP features, product-market fit, user flows.\n"
+                    "- REAL_ESTATE: Property purchase, land banking, residential or commercial real estate, tenancy, leasing, zoning, construction.\n"
+                    "- FINANCE: Capital investment, venture capital, equity, debt, portfolio allocation, valuations, loans, liquidity, corporate treasury.\n"
+                    "- CAREER: Job offers, salary negotiations, promotions, career transitions, employment contracts, resignation, workplace choices.\n"
+                    "- EDUCATION: Degree programs, college admissions, university selection, academic courses, tuition, scholarships, research fields.\n"
+                    "- OPERATIONS: Supply chain, logistics, manufacturing, vendor procurement, inventory, warehouse operations, fulfillment.\n"
+                    "- BUSINESS: Corporate strategy, partnerships, mergers & acquisitions, organizational expansion, market entry.\n\n"
+                    "Output JSON strictly as: {\"domain\": \"PERSONAL\" | \"SOFTWARE\" | \"PRODUCT\" | \"REAL_ESTATE\" | \"FINANCE\" | \"CAREER\" | \"EDUCATION\" | \"OPERATIONS\" | \"BUSINESS\", \"confidence\": 0.0-1.0}"
+                )
+                user_content = f"Title: {title}\nProblem: {prob}\nContext: {primary_text[:500]}"
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.0,
+                )
+                raw_json = response.choices[0].message.content
+                if raw_json:
+                    parsed = json.loads(raw_json)
+                    detected = (parsed.get("domain") or "").strip().upper()
+                    if detected in [d.value for d in DecisionDomain]:
+                        decision._detected_domain_cache = detected
+                        return detected
+        except Exception as exc:
+            logger.debug("AI domain classification fallback to dense semantic embeddings: %s", exc)
 
+    # Tier 2: Dense Vector Semantic Similarity (EmbeddingEngine)
+    try:
+        engine = _get_domain_embedding_engine()
+        query_vec = engine.encode(primary_text)
+        domain_vecs = _get_domain_vectors()
+
+        best_domain = DecisionDomain.BUSINESS.value
+        best_sim = -1.0
+        for dom, d_vec in domain_vecs.items():
+            sim = sum(q * d for q, d in zip(query_vec, d_vec))
+            if sim > best_sim:
+                best_sim = sim
+                best_domain = dom
+
+        if best_sim > 0.03:
+            decision._detected_domain_cache = best_domain
+            return best_domain
+    except Exception as exc:
+        logger.debug("Dense semantic embedding classification fallback: %s", exc)
+
+    # Tier 3: Check decision model's existing domain attribute
     if hasattr(decision, "domain") and decision.domain and decision.domain not in ("", "BUSINESS"):
         try:
             return DecisionDomain(decision.domain).value
