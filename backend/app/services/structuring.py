@@ -55,6 +55,35 @@ def assemble_decision_input_context(
         sections.append(f"### {rev_tag.upper()} VOICE TRANSCRIPT\n{decision.transcript.strip()}")
         sources.append(f"{rev_tag} Voice Transcript")
 
+    # Check for confidential participant inputs (Private Bot Chat)
+    if db is not None:
+        from sqlalchemy import select
+        from app.models import MeetingPrivateInput
+        p_stmt = (
+            select(MeetingPrivateInput)
+            .where(
+                MeetingPrivateInput.decision_id == decision.id,
+                MeetingPrivateInput.status == "active",
+            )
+            .order_by(MeetingPrivateInput.created_at.asc())
+        )
+        private_inputs = db.scalars(p_stmt).all()
+        if private_inputs:
+            private_sections = []
+            for p in private_inputs:
+                author_tag = "Anonymous" if p.is_anonymous else f"{p.author_name} ({p.author_role})"
+                private_sections.append(
+                    f"- [{p.category.upper()} | Role: {p.author_role} | From: {author_tag} | Impact: {p.impact_level.upper()}]\n  {p.message.strip()}"
+                )
+            sections.append(
+                "### CONFIDENTIAL PARTICIPANT INPUTS (PRIVATE BOT CHAT)\n"
+                "Crucial private facts, unspoken concerns, and unvoiced alternatives shared by meeting participants "
+                "directly with the DecisionLens bot. These inputs MUST be factored into the structured findings "
+                "(facts, assumptions, feelings, pros, cons, fault lines, and gaps) alongside the meeting transcript:\n"
+                + "\n\n".join(private_sections)
+            )
+            sources.append(f"{len(private_inputs)} Confidential Participant Input(s)")
+
     if decision.attachments:
         doc_sections = []
         for att in decision.attachments:

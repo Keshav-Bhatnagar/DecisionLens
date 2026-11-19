@@ -3,12 +3,11 @@
  */
 
 export const API_BASE_URL =
-
-  typeof window !== "undefined"
-
+  process.env.NEXT_PUBLIC_API_URL !== undefined && process.env.NEXT_PUBLIC_API_URL !== ""
+    ? process.env.NEXT_PUBLIC_API_URL.replace("localhost", "127.0.0.1")
+    : typeof window !== "undefined"
     ? ""
-
-    : process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    : (process.env.INTERNAL_API_URL || "http://127.0.0.1:8000").replace("localhost", "127.0.0.1");
 
 export interface HealthStatus {
   status: string;
@@ -106,17 +105,38 @@ export const TOKEN_KEY = "decisionlens_token";
 
 export function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  const local = localStorage.getItem(TOKEN_KEY);
+  if (local) return local;
+  // Fallback to cookie check
+  try {
+    const match = document.cookie.match(new RegExp(`(^|;\\s*)(${TOKEN_KEY}|access_token)=([^;]*)`));
+    return match ? decodeURIComponent(match[3]) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function setStoredToken(token: string): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(TOKEN_KEY, token);
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+    document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=2592000; SameSite=Lax`;
+    window.dispatchEvent(new Event("decisionlens_auth_change"));
+  } catch {
+    // Ignore storage errors in restrictive environments
+  }
 }
 
 export function clearStoredToken(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(TOKEN_KEY);
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
+    document.cookie = `access_token=; path=/; max-age=0; SameSite=Lax`;
+    window.dispatchEvent(new Event("decisionlens_auth_change"));
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 /**
@@ -152,7 +172,18 @@ export async function fetchApi<T>(
       try {
         const errorJson = await response.json();
         if (errorJson.detail) {
-          errorDetail = errorJson.detail;
+          if (typeof errorJson.detail === "string") {
+            errorDetail = errorJson.detail;
+          } else if (Array.isArray(errorJson.detail)) {
+            errorDetail = errorJson.detail
+              .map((item: any) => {
+                const msg = item.msg || item.message || JSON.stringify(item);
+                return msg.replace(/^Value error,\s*/i, "");
+              })
+              .join(" ");
+          } else {
+            errorDetail = JSON.stringify(errorJson.detail);
+          }
         }
       } catch {
         // Non-JSON response
@@ -1688,4 +1719,180 @@ export async function getDecisionRagStatus(
     method: "GET",
   });
 }
+
+// ==========================================
+// Google Meet Bot & Private Chat Types & API
+// ==========================================
+
+export interface GoogleMeetBotSession {
+  id: number;
+  decision_id: number;
+  meet_url: string;
+  bot_name: string;
+  status: "connecting" | "active" | "transcribing" | "completed" | "failed";
+  language: string;
+  recording_enabled: boolean;
+  distraction_filtering_enabled: boolean;
+  started_at: string;
+  ended_at?: string | null;
+  raw_transcript: string;
+  cleaned_transcript: string;
+  participant_count: number;
+  private_chat_token: string;
+  private_chat_url?: string | null;
+  private_message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PrivateChatMessage {
+  id: number;
+  decision_id: number;
+  session_id?: number | null;
+  author_name: string;
+  author_role: string;
+  is_anonymous: boolean;
+  category: "concern" | "fact" | "opinion" | "alternative" | "constraint";
+  message: string;
+  bot_response: string;
+  impact_level: "critical" | "high" | "medium" | "low";
+  status: string;
+  created_at: string;
+}
+
+export interface BotFinishAndAnalyzeResponse {
+  session: GoogleMeetBotSession;
+  transcript: string;
+  tangents_filtered_count: number;
+  signal_ratio: number;
+  private_inputs_count: number;
+  structured_findings?: any;
+  message: string;
+}
+
+export interface PublicBotInviteInfo {
+  session_id: number;
+  decision_id: number;
+  decision_title: string;
+  meet_url: string;
+  bot_name: string;
+  status: string;
+  token: string;
+}
+
+/** Dispatch DecisionLens Bot to join a Google Meet call */
+export async function joinGoogleMeetBot(
+  decisionId: number,
+  meetUrl: string,
+  botName: string = "DecisionLens Bot",
+  language: string = "en"
+): Promise<GoogleMeetBotSession> {
+  return fetchApi<GoogleMeetBotSession>(`/api/decisions/${decisionId}/bot/join-meet`, {
+    method: "POST",
+    body: JSON.stringify({
+      meet_url: meetUrl,
+      bot_name: botName,
+      language: language,
+    }),
+  });
+}
+
+/** Get all Google Meet bot sessions for a decision */
+export async function getBotSessions(decisionId: number): Promise<GoogleMeetBotSession[]> {
+  return fetchApi<GoogleMeetBotSession[]>(`/api/decisions/${decisionId}/bot/sessions`);
+}
+
+/** Get a specific bot session */
+export async function getBotSession(decisionId: number, sessionId: number): Promise<GoogleMeetBotSession> {
+  return fetchApi<GoogleMeetBotSession>(`/api/decisions/${decisionId}/bot/sessions/${sessionId}`);
+}
+
+/** Stream speech transcript chunk into the bot session */
+export async function sendBotSpeechStream(
+  decisionId: number,
+  sessionId: number,
+  text: string,
+  speaker: string = "Speaker",
+  timestamp?: string
+): Promise<GoogleMeetBotSession> {
+  return fetchApi<GoogleMeetBotSession>(`/api/decisions/${decisionId}/bot/sessions/${sessionId}/speech-stream`, {
+    method: "POST",
+    body: JSON.stringify({ text, speaker, timestamp }),
+  });
+}
+
+/** Send private message to the bot as an authenticated participant */
+export async function sendPrivateChatMessage(
+  decisionId: number,
+  sessionId: number,
+  message: string,
+  category: "concern" | "fact" | "opinion" | "alternative" | "constraint" = "concern",
+  authorRole: string = "Participant",
+  isAnonymous: boolean = true,
+  impactLevel: "critical" | "high" | "medium" | "low" = "high"
+): Promise<PrivateChatMessage> {
+  return fetchApi<PrivateChatMessage>(`/api/decisions/${decisionId}/bot/sessions/${sessionId}/private-chat`, {
+    method: "POST",
+    body: JSON.stringify({
+      message,
+      category,
+      author_role: authorRole,
+      is_anonymous: isAnonymous,
+      impact_level: impactLevel,
+    }),
+  });
+}
+
+/** Get private chat messages for a decision session */
+export async function getPrivateChatMessages(
+  decisionId: number,
+  sessionId: number
+): Promise<PrivateChatMessage[]> {
+  return fetchApi<PrivateChatMessage[]>(`/api/decisions/${decisionId}/bot/sessions/${sessionId}/private-chat`);
+}
+
+/** Finish Google Meet call, filter distractions, and execute DecisionLens analysis */
+export async function finishBotMeetingAndAnalyze(
+  decisionId: number,
+  sessionId: number
+): Promise<BotFinishAndAnalyzeResponse> {
+  return fetchApi<BotFinishAndAnalyzeResponse>(
+    `/api/decisions/${decisionId}/bot/sessions/${sessionId}/finish-and-analyze`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+/** Lookup public meeting context for invite link (token-based, no auth) */
+export async function getPublicBotInviteInfo(token: string): Promise<PublicBotInviteInfo> {
+  return fetchApi<PublicBotInviteInfo>(`/api/bot/invite/${token}`);
+}
+
+/** Send confidential message to bot using token (no auth required) */
+export async function sendPublicPrivateChatMessage(
+  token: string,
+  message: string,
+  category: "concern" | "fact" | "opinion" | "alternative" | "constraint" = "concern",
+  authorRole: string = "Participant",
+  isAnonymous: boolean = true,
+  authorName: string = "Anonymous"
+): Promise<PrivateChatMessage> {
+  return fetchApi<PrivateChatMessage>(`/api/bot/invite/${token}/chat`, {
+    method: "POST",
+    body: JSON.stringify({
+      message,
+      category,
+      author_role: authorRole,
+      is_anonymous: isAnonymous,
+      author_name: authorName,
+    }),
+  });
+}
+
+/** Get participant token-based chat history */
+export async function getPublicChatHistory(token: string): Promise<PrivateChatMessage[]> {
+  return fetchApi<PrivateChatMessage[]>(`/api/bot/invite/${token}/history`);
+}
+
 

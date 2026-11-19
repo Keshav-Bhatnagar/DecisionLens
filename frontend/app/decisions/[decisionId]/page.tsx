@@ -398,33 +398,6 @@ export default function DecisionDetailPage({
 
             {/* Dedicated Active Stage Viewport with Auto-Focus Anchor */}
             <div id="active-stage-viewport" className="scroll-mt-24 space-y-6">
-              {/* Dynamic Stage Purpose Guidance Banner */}
-              <div className="bg-[#EDE7D6]/80 dark:bg-[#221F1C]/80 border border-[#cfc7b2] dark:border-[#38332C] rounded-sm px-4 py-2.5 flex items-center justify-between text-xs font-courier">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider font-mono">
-                    {workflowStage === "ingestion" && "Stage 01: Capture Context"}
-                    {workflowStage === "structuring" && "Stage 02: Cognitive Structuring"}
-                    {workflowStage === "gaps" && "Stage 03: Unknowns & Domain RAG"}
-                    {workflowStage === "frameworks" && "Stage 04: Trade-off Matrix & Mental Models"}
-                    {workflowStage === "synthesis" && "Stage 05: Architecture Decision Record"}
-                  </span>
-                  <span className="text-[#6e655a] dark:text-[#A89F91] hidden sm:inline">•</span>
-                  <span className="text-[#4f4b40] dark:text-[#A89F91] hidden sm:inline">
-                    {workflowStage === "ingestion" && "Add background specs, upload PRD documents, or record a meeting (AI strips distracting banter)."}
-                    {workflowStage === "structuring" && "AI extracts verifiable facts, technical assumptions, and cognitive biases from your context."}
-                    {workflowStage === "gaps" && "Stress-test assumptions against real cloud costs and hardware latency, uncovering hidden risks."}
-                    {workflowStage === "frameworks" && "Multi-Attribute Utility Theory (MAUT) scores options across Latency, Cost, and Lock-in."}
-                    {workflowStage === "synthesis" && "Final verdict, executive memo, consensus roadmap, and 1-click export to PDF or Markdown."}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowExportModal(true)}
-                  className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:underline uppercase tracking-wider shrink-0 cursor-pointer ml-3"
-                >
-                  Export Brief →
-                </button>
-              </div>
               {/* STAGE 1: Supporting Evidence & Context (Zero Duplication) */}
               {(viewMode === "all" || workflowStage === "ingestion") && (
                 <div className="space-y-6 animate-in fade-in duration-200">

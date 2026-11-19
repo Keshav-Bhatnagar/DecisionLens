@@ -1,20 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 export default function SignupRedirect() {
-  const router = useRouter();
-
   useEffect(() => {
-    router.replace("/auth?mode=signup");
-  }, [router]);
+    window.location.replace("/auth?mode=signup");
+  }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
+    <div className="min-h-screen flex items-center justify-center bg-[#F5F1E8] text-[#6E655A] font-courier">
       <div className="flex items-center gap-3">
-        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm">Routing to registration...</span>
+        <div className="w-4 h-4 border-2 border-[#7a4e10] border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs uppercase tracking-wider font-bold">Opening DecisionLens Registration...</span>
       </div>
     </div>
   );

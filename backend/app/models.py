@@ -149,6 +149,12 @@ class Decision(Base):
     document_chunks: Mapped[List["DecisionDocumentChunk"]] = relationship(
         "DecisionDocumentChunk", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
     )
+    bot_sessions: Mapped[List["GoogleMeetBotSession"]] = relationship(
+        "GoogleMeetBotSession", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
+    )
+    private_inputs: Mapped[List["MeetingPrivateInput"]] = relationship(
+        "MeetingPrivateInput", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
+    )
 
     def __repr__(self) -> str:
         return f"<Decision id={self.id} title={self.title} folder_id={self.folder_id}>"
@@ -326,3 +332,80 @@ class DecisionOutcome(Base):
 
     def __repr__(self) -> str:
         return f"<DecisionOutcome id={self.id} decision_id={self.decision_id} rating={self.utility_rating}>"
+
+
+class GoogleMeetBotSession(Base):
+    __tablename__ = "google_meet_bot_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    decision_id: Mapped[int] = mapped_column(
+        ForeignKey("decisions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    meet_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    bot_name: Mapped[str] = mapped_column(String(100), default="DecisionLens Bot", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="active", nullable=False
+    )  # connecting, active, transcribing, completed, failed
+    language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+    recording_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    distraction_filtering_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    raw_transcript: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    cleaned_transcript: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    participant_count: Mapped[int] = mapped_column(default=1, nullable=False)
+    private_chat_token: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
+
+    decision: Mapped["Decision"] = relationship("Decision", back_populates="bot_sessions")
+    private_inputs: Mapped[List["MeetingPrivateInput"]] = relationship(
+        "MeetingPrivateInput", back_populates="bot_session"
+    )
+
+    def __repr__(self) -> str:
+        return f"<GoogleMeetBotSession id={self.id} meet_url={self.meet_url} status={self.status}>"
+
+
+class MeetingPrivateInput(Base):
+    __tablename__ = "meeting_private_inputs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    decision_id: Mapped[int] = mapped_column(
+        ForeignKey("decisions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    session_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("google_meet_bot_sessions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    author_name: Mapped[str] = mapped_column(String(100), default="Anonymous", nullable=False)
+    author_role: Mapped[str] = mapped_column(String(100), default="Participant", nullable=False)
+    is_anonymous: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    category: Mapped[str] = mapped_column(
+        String(50), default="concern", nullable=False
+    )  # concern, fact, opinion, alternative, constraint
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    bot_response: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    impact_level: Mapped[str] = mapped_column(
+        String(20), default="high", nullable=False
+    )  # critical, high, medium, low
+    status: Mapped[str] = mapped_column(
+        String(30), default="active", nullable=False
+    )  # active, addressed, archived
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+    decision: Mapped["Decision"] = relationship("Decision", back_populates="private_inputs")
+    bot_session: Mapped[Optional["GoogleMeetBotSession"]] = relationship(
+        "GoogleMeetBotSession", back_populates="private_inputs"
+    )
+
+    def __repr__(self) -> str:
+        return f"<MeetingPrivateInput id={self.id} category={self.category} author_role={self.author_role}>"

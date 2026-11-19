@@ -58,6 +58,7 @@ DecisionLens categorizes decision context into 8 distinct cognitive categories:
 - MANDATORY WHY_CLASSIFIED: Every single item in EVERY category MUST provide a specific `why_classified` field citing the exact metrics, statutes, fallacies, or operational limits found in that statement.
 - PRESERVE MODALITY: Never upgrade "we think X might work" into a proven fact. Preserve hedging words (might, could, likely, expect, estimate).
 - STRUCTURAL DECISION TRAPS: Identify structural fallacies (Sunk Cost Fallacy, Planning Fallacy, Capacity-Architecture Mismatch) in private feedback.
+- CONFIDENTIAL PARTICIPANT INPUTS (PRIVATE BOT CHAT): When input includes '### CONFIDENTIAL PARTICIPANT INPUTS (PRIVATE BOT CHAT)' or private bot chat disclosures, treat these as high-priority psychological safety inputs from participants who were hesitant to speak in the live meeting. Extract their private facts into FACTS, their unspoken concerns into CONS or ASSUMPTIONS, and explicitly identify CONTRADICTIONS between public meeting consensus and private disclosures.
 - EMPTY CATEGORIES ARE VALID: If there are no genuine contradictions or traps, return []. Never manufacture fake filler.
 </epistemic_standards>
 
@@ -566,6 +567,36 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
                 False,
             )
         ]
+
+        # Check for confidential participant inputs from private bot chat
+        if "confidential participant inputs" in text_lower or "private bot chat" in text_lower:
+            for line in raw_input.splitlines():
+                line_str = line.strip()
+                if line_str.startswith("- [") and ("]:" in line_str or "] " in line_str):
+                    content_part = line_str.split("]", 1)[-1].lstrip(": ").strip()
+                    if content_part:
+                        if "fact" in line_str.lower():
+                            raw_facts.append(
+                                (
+                                    f"Confidential fact raised in private chat: {content_part}",
+                                    content_part,
+                                    "direct_extraction",
+                                    "confirmed_fact",
+                                    0.96,
+                                    True,
+                                )
+                            )
+                        else:
+                            raw_cons.append(
+                                (
+                                    f"Confidential concern raised in private bot chat: {content_part}",
+                                    content_part,
+                                    "direct_extraction",
+                                    "inferred_risk",
+                                    0.92,
+                                    True,
+                                )
+                            )
 
         raw_mixed = [
             (
