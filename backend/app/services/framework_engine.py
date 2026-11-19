@@ -433,6 +433,7 @@ DOMAIN_SEMANTIC_PROFILES: Dict[str, str] = {
 
 _DOMAIN_VECTORS_CACHE: Dict[str, List[float]] = {}
 _DOMAIN_ENGINE: Optional[Any] = None
+_DOMAIN_QUERY_CACHE: Dict[str, str] = {}
 
 
 def _get_domain_embedding_engine():
@@ -459,19 +460,23 @@ def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai:
     REAL_ESTATE, FINANCE, CAREER, EDUCATION, BUSINESS, PRODUCT, SOFTWARE, OPERATIONS, PERSONAL.
 
     Epistemic Multi-Tier AI Semantic Architecture (Zero Hardcoded Exact-Word Lists):
-    - Tier 0: Folder explicit domain anchor override.
-    - Tier 1: Fast AI Semantic Intent Classifier (Gemini / Azure / OpenAI LLM).
-              Deeply understands nuances, intent, colloquialisms, and context.
-    - Tier 2: Dense Vector Semantic Similarity (EmbeddingEngine).
-              Encodes user query into high-dimensional semantic space and computes
-              cosine similarity against canonical domain semantic definition corpora.
-    - Tier 3: Instance attribute fallback with cached result on decision.
+    - Tier 0: Explicit domain anchor (from folder or decision.domain if already saved).
+    - Tier 1: Fast AI Semantic Intent Classifier (Gemini / Azure / OpenAI LLM) with strict 4s timeout.
+    - Tier 2: Dense Vector Semantic Similarity (EmbeddingEngine) executing in milliseconds.
+    - Memory caching to guarantee zero latency on repeated lookups.
     """
     # 0. Check if folder has an explicit user-defined domain anchor
     if hasattr(decision, "folder") and decision.folder and getattr(decision.folder, "domain", None):
         f_dom = decision.folder.domain
         if f_dom and f_dom not in ("AUTO", "BUSINESS", ""):
             return f_dom
+
+    # Check if decision already has an explicit valid domain stored
+    if hasattr(decision, "domain") and decision.domain and decision.domain not in ("", "AUTO", "BUSINESS"):
+        try:
+            return DecisionDomain(decision.domain).value
+        except ValueError:
+            pass
 
     if hasattr(decision, "_detected_domain_cache") and decision._detected_domain_cache:
         return decision._detected_domain_cache
@@ -483,6 +488,12 @@ def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai:
     transcript = (getattr(decision, "transcript", "") or "").strip()
     ctx = (context_text or "").strip()
 
+    cache_key = f"{title.lower()}|{prob.lower()}"
+    if cache_key in _DOMAIN_QUERY_CACHE:
+        detected = _DOMAIN_QUERY_CACHE[cache_key]
+        decision._detected_domain_cache = detected
+        return detected
+
     primary_text = f"{title}. {prob}. {raw}. {desc}. {transcript}".strip()
     if not primary_text:
         primary_text = ctx
@@ -490,7 +501,7 @@ def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai:
     if not primary_text:
         return DecisionDomain.BUSINESS.value
 
-    # Tier 1: Hosted AI Semantic Intent Classifier (Fast LLM)
+    # Tier 1: Hosted AI Semantic Intent Classifier (Fast LLM with 4s timeout)
     if allow_ai and settings.has_ai_key:
         try:
             client, model, provider = get_llm_client_and_model("frameworks")
@@ -518,12 +529,14 @@ def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai:
                     ],
                     response_format={"type": "json_object"},
                     temperature=0.0,
+                    timeout=4.0,
                 )
                 raw_json = response.choices[0].message.content
                 if raw_json:
                     parsed = json.loads(raw_json)
                     detected = (parsed.get("domain") or "").strip().upper()
                     if detected in [d.value for d in DecisionDomain]:
+                        _DOMAIN_QUERY_CACHE[cache_key] = detected
                         decision._detected_domain_cache = detected
                         return detected
         except Exception as exc:
@@ -544,6 +557,7 @@ def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai:
                 best_domain = dom
 
         if best_sim > 0.03:
+            _DOMAIN_QUERY_CACHE[cache_key] = best_domain
             decision._detected_domain_cache = best_domain
             return best_domain
     except Exception as exc:
