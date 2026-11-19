@@ -155,9 +155,9 @@ export async function fetchApi<T>(
     ...(options?.headers as Record<string, string>),
   };
 
-  // Add 15s timeout to prevent infinite UI freeze if backend is restarting
+  // Generous 120s timeout matching Next.js proxyTimeout for complex AI pipelines (Gemini, Web Search, PDF export)
   const controller = new AbortController();
-  const timeoutMs = options?.signal ? undefined : 15000;
+  const timeoutMs = options?.signal ? undefined : 120000;
   const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
   try {
