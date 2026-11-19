@@ -868,10 +868,10 @@ def generate_domain_grounded_roadmap(
             "Chief Operating Officer",
         ),
         "PERSONAL": (
-            "Decision Maker & Planner",
-            "Budget & Schedule Guardian",
-            "Participant & Coordinator",
-            "Lead Decision Maker",
+            "You",
+            "You",
+            "You",
+            "You",
         ),
         "EDUCATION": (
             "Academic Advisor & Counselor",

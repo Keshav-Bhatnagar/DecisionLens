@@ -501,21 +501,23 @@ export default function RoadmapVisualizer({
               ))}
             </div>
 
-            {/* Dynamic Role Filter Dropdown */}
-            <div className="flex items-center gap-1.5 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] px-2.5 py-1">
-              <Filter className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50]" />
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="bg-transparent text-xs text-[#1d1d1b] dark:text-[#F0EAE1] font-mono focus:outline-none cursor-pointer"
-              >
-                {availableRoles.map((role) => (
-                  <option key={role} value={role} className="bg-[#F4F0E6] dark:bg-[#1f1d1a] text-[#1d1d1b] dark:text-[#F0EAE1]">
-                    {role === "ALL" ? "All Roles" : role}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Dynamic Role Filter Dropdown (shown only when multiple organizational teams are present) */}
+            {!isDayBased && availableRoles.filter((r) => r.toLowerCase() !== "you" && r !== "ALL").length > 1 && (
+              <div className="flex items-center gap-1.5 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] px-2.5 py-1">
+                <Filter className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50]" />
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="bg-transparent text-xs text-[#1d1d1b] dark:text-[#F0EAE1] font-mono focus:outline-none cursor-pointer"
+                >
+                  {availableRoles.map((role) => (
+                    <option key={role} value={role} className="bg-[#F4F0E6] dark:bg-[#1f1d1a] text-[#1d1d1b] dark:text-[#F0EAE1]">
+                      {role === "ALL" ? "All Roles" : role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -662,9 +664,11 @@ export default function RoadmapVisualizer({
                                     Timeline: <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{getTaskTimelineDisplay(task.timeline, pIdx)}</strong>
                                   </span>
 
-                                  <span className="text-[#57534e] dark:text-[#A89F91]">
-                                    Owner: <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{task.owner_role}</strong>
-                                  </span>
+                                  {task.owner_role && task.owner_role.toLowerCase() !== "you" && !isDayBased && (
+                                    <span className="text-[#57534e] dark:text-[#A89F91]">
+                                      Owner: <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{task.owner_role}</strong>
+                                    </span>
+                                  )}
                                 </div>
 
                                 {/* Title */}
@@ -849,8 +853,12 @@ export default function RoadmapVisualizer({
                             {task.title}
                           </span>
                           <div className="flex items-center gap-2 text-[11px] font-mono text-[#57534e] mt-0.5">
-                            <span>Owner: {task.owner_role}</span>
-                            <span>•</span>
+                            {task.owner_role && task.owner_role.toLowerCase() !== "you" && !isDayBased && (
+                              <>
+                                <span>Owner: {task.owner_role}</span>
+                                <span>•</span>
+                              </>
+                            )}
                             <span>{getTaskTimelineDisplay(task.timeline, pIdx)}</span>
                           </div>
                         </div>
@@ -1025,10 +1033,17 @@ export default function RoadmapVisualizer({
 
               {/* Meta Grid */}
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 text-xs font-mono">
-                <div>
-                  <span className="text-[10px] uppercase text-[#78716c] block">Responsible Owner</span>
-                  <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{selectedTask.task.owner_role}</strong>
-                </div>
+                {!isDayBased && selectedTask.task.owner_role && selectedTask.task.owner_role.toLowerCase() !== "you" ? (
+                  <div>
+                    <span className="text-[10px] uppercase text-[#78716c] block">Responsible Owner</span>
+                    <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{selectedTask.task.owner_role}</strong>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="text-[10px] uppercase text-[#78716c] block">Execution Responsibility</span>
+                    <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">You (Individual Action)</strong>
+                  </div>
+                )}
                 <div>
                   <span className="text-[10px] uppercase text-[#78716c] block">Target Timeline</span>
                   <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{getTaskTimelineDisplay(selectedTask.task.timeline, 0)}</strong>
