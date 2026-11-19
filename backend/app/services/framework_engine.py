@@ -442,7 +442,10 @@ def detect_decision_domain(decision: Decision, context_text: str = "") -> str:
         ],
         DecisionDomain.PERSONAL.value: [
             "workout", "diet", "health", "fitness", "habit", "travel", "relocation",
-            "marriage", "lifestyle", "hobby"
+            "marriage", "lifestyle", "hobby", "trip", "vacation", "holiday", "tour",
+            "flight", "hotel", "resort", "leave", "journey", "outing", "personal",
+            "family", "parenting", "wedding", "buy car", "buy bike", "rent apartment",
+            "buy house", "personal finance", "leisure", "weekend", "go for trip", "go to trip"
         ],
     }
 

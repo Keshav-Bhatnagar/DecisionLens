@@ -782,3 +782,75 @@ def test_kubernetes_vs_serverless_microservices_receipt(
     assert any("Provisioned Concurrency & Cold-Start" in name for name in srv_items)
     assert any("CloudWatch Log Ingestion" in name for name in srv_items)
 
+
+def test_personal_lifestyle_domain_synthesis_free_from_tech_jargon(
+    client: TestClient, auth_headers: dict, test_user: User, test_folder: Folder, db_session: Session
+):
+    """
+    Verify that personal / non-technical queries like 'can i go for trip' are correctly
+    classified under PERSONAL domain, receive personal budget/planning shields,
+    generate lifestyle-appropriate roadmaps, and NEVER invent software engineering jargon.
+    """
+    from app.services.framework_engine import detect_decision_domain
+    from app.services.recommendation import compute_blunder_shield, generate_mock_synthesis
+
+    # 1. Domain Detection
+    trip_dec = Decision(
+        title="can i go for trip",
+        problem_statement="Deciding whether to take a vacation trip next weekend with friends.",
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+    )
+    detected = detect_decision_domain(trip_dec, context_text="can i go for trip vacation travel holiday")
+    assert detected == "PERSONAL"
+
+    # 2. Blunder Shield
+    shield = compute_blunder_shield(
+        domain="PERSONAL",
+        top_option_name="Go on Trip",
+        runner_up_name="Stay Home / Postpone",
+        decision_title="can i go for trip",
+        problem_statement="Deciding whether to take a vacation trip next weekend with friends.",
+        facts=["Budget limit is ₹50,000.", "Leave approval is pending."],
+        decision_id=701,
+    )
+    assert shield.receipt is not None
+    assert shield.receipt.decision_type == "PERSONAL_LIFESTYLE"
+    assert "₹25,000" in shield.capital_at_risk_saved
+    assert "Planning" in shield.developer_sprints_saved
+    assert "sprints" not in shield.developer_sprints_saved.lower()
+    shield_items = [i.item_name for i in shield.receipt.line_items]
+    assert any("Booking" in name or "Travel" in name for name in shield_items)
+    # Ensure zero software tech items in personal receipt
+    for name in shield_items:
+        assert "Kafka" not in name
+        assert "Kubernetes" not in name
+        assert "Cloud" not in name
+        assert "SRE" not in name
+
+    # 3. End-to-End Synthesis on Decision
+    trip_dec.domain = "PERSONAL"
+    db_session.add(trip_dec)
+    db_session.commit()
+    db_session.refresh(trip_dec)
+
+    synth = generate_mock_synthesis(trip_dec)
+    assert synth.domain == "PERSONAL"
+    assert "Primary Strategy" not in synth.headline
+    assert "Primary Strategy" not in synth.recommendation_text
+
+    # Verify roadmap contains personal/travel steps and ZERO software tech jargon
+    banned_tech_jargon = ["kafka", "kubernetes", "microservice", "pgbouncer", "canary routing", "p99 latency", "api contract"]
+    all_roadmap_text = " ".join(
+        f"{t.title} {t.description}" for p in synth.roadmap.phases for t in p.tasks
+    ).lower()
+    for jargon in banned_tech_jargon:
+        assert jargon not in all_roadmap_text, f"Found unexpected tech jargon '{jargon}' in personal trip roadmap!"
+
+    # Verify counterarguments are free from tech mock text
+    for ca in synth.counterarguments:
+        assert "kafka" not in ca.argument.lower()
+        assert "gmv outage" not in ca.rebuttal_or_concession.lower()
+        assert "go prototype" not in ca.rebuttal_or_concession.lower()
+
+

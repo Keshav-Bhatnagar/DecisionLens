@@ -420,6 +420,37 @@ def compute_blunder_shield(
         ]
         total_receipt = "₹44.00 Lakh"
 
+    elif domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+        archetype = "PERSONAL_LIFESTYLE"
+        capital = "₹25,000 – ₹75,000"
+        sprints = "3–5 Days Planning"
+        trap = f"Non-refundable booking lock-in, unvetted itinerary friction, or schedule conflict via {runner}"
+        rationale = f"Avoided non-cancellable reservations, unforeseen surge tariffs, and schedule disruption."
+        line_items = [
+            ReceiptLineItem(
+                item_name="Non-Refundable Booking & Cancellation Exposure",
+                category="Direct Travel / Booking Expense",
+                unit_basis="Hotel deposits, transit/flight cancellation penalty clauses",
+                amount_inr="₹18,500",
+                rationale="Avoided non-refundable upfront commitment prior to firm schedule clearance.",
+            ),
+            ReceiptLineItem(
+                item_name="Unplanned Transit & Itinerary Contingency Surge",
+                category="Contingency Budget",
+                unit_basis="Peak surge pricing, last-minute rebooking, and logistics overhead",
+                amount_inr="₹12,000",
+                rationale="Buffered against peak surge rates by locking flexible rates early.",
+            ),
+            ReceiptLineItem(
+                item_name="Schedule Conflict & Opportunity Cost",
+                category="Time & Opportunity Cost",
+                unit_basis="Work conflict, missed personal commitments, or rescheduled dates",
+                amount_inr="₹14,500",
+                rationale="Prevented clashes with critical work and personal deadlines.",
+            ),
+        ]
+        total_receipt = "₹45,000"
+
     elif domain_upper in ("SOFTWARE", "PRODUCT"):
         has_k8s = any(k in context_text for k in ["k8s", "kubernetes", "eks", "gke", "aks", "helm", "service mesh", "istio"])
         has_kafka = any(k in context_text for k in ["kafka", "msk", "event-driven", "event driven", "confluent", "rabbitmq", "pubsub"])
@@ -646,6 +677,18 @@ def generate_domain_grounded_roadmap(
             "Logistics Operations Director",
             "Chief Operating Officer",
         ),
+        "PERSONAL": (
+            "Decision Maker & Planner",
+            "Budget & Schedule Guardian",
+            "Participant & Coordinator",
+            "Lead Decision Maker",
+        ),
+        "EDUCATION": (
+            "Academic Advisor & Counselor",
+            "Admissions & Financial Aid Officer",
+            "Candidate & Student",
+            "Academic Advisory Committee",
+        ),
     }
     roles = role_map.get(domain_upper, role_map["BUSINESS"])
     legal_role, risk_role, ops_role, exec_role = roles
@@ -678,7 +721,22 @@ def generate_domain_grounded_roadmap(
                 )
             )
     else:
-        if domain_upper == "REAL_ESTATE":
+        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+            phase1_tasks.append(
+                RoadmapTask(
+                    task_id="task-p1-pers",
+                    title=f"Confirm Calendar Dates, Leave & Feasibility{title_context}",
+                    description=f"Verify participant schedules, workplace leave approvals, and baseline availability for {top_option_name}.",
+                    owner_role=legal_role,
+                    timeline="Days 1-3",
+                    dependencies=[],
+                    success_criteria="Approved calendar dates and aligned participant availability.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Guarantees schedule availability before locking non-refundable reservations.",
+                )
+            )
+        elif domain_upper == "REAL_ESTATE":
             phase1_tasks.append(
                 RoadmapTask(
                     task_id="task-p1-re",
@@ -772,20 +830,36 @@ def generate_domain_grounded_roadmap(
             )
         )
     else:
-        phase1_tasks.append(
-            RoadmapTask(
-                task_id="task-p1-eval",
-                title=f"Independent Valuation & Commercial Terms Audit{title_context}",
-                description="Audit pricing benchmarks, commercial structure, and comparative transaction history.",
-                owner_role=risk_role,
-                timeline="Week 2",
-                dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
-                success_criteria="Comparative valuation report validating financial viability.",
-                is_completed=False,
-                source_type="risk",
-                reason="Ensures commercial baseline aligns with empirical market metrics.",
+        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+            phase1_tasks.append(
+                RoadmapTask(
+                    task_id="task-p1-eval",
+                    title=f"Verify Budget Allocation & Booking Terms{title_context}",
+                    description="Confirm personal budget allowance, refundability conditions, and contingency reserves.",
+                    owner_role=risk_role,
+                    timeline="Week 2",
+                    dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
+                    success_criteria="Budget allocated and non-refundable deposit terms identified.",
+                    is_completed=False,
+                    source_type="risk",
+                    reason="Prevents financial overcommitment prior to finalizing schedule.",
+                )
             )
-        )
+        else:
+            phase1_tasks.append(
+                RoadmapTask(
+                    task_id="task-p1-eval",
+                    title=f"Independent Valuation & Commercial Terms Audit{title_context}",
+                    description="Audit pricing benchmarks, commercial structure, and comparative transaction history.",
+                    owner_role=risk_role,
+                    timeline="Week 2",
+                    dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
+                    success_criteria="Comparative valuation report validating financial viability.",
+                    is_completed=False,
+                    source_type="risk",
+                    reason="Ensures commercial baseline aligns with empirical market metrics.",
+                )
+            )
 
     # Phase 2: Core Execution, System Build & Milestone Rollout (Weeks 3-5)
     if domain_upper == "REAL_ESTATE":
@@ -944,6 +1018,85 @@ def generate_domain_grounded_roadmap(
                 is_completed=False,
                 source_type="decision_requirement",
                 reason="Guarantees sustained fiduciary accountability and ensures expected strategic ROI is captured.",
+            ),
+        ]
+    elif domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+        phase2_tasks: List[RoadmapTask] = [
+            RoadmapTask(
+                task_id="task-p2-terms",
+                title=f"Lock Core Bookings with Flexible Cancellation Policies for {top_option_name}",
+                description="Secure transit and accommodation reservations prioritizing free cancellation and price-drop protection.",
+                owner_role=legal_role,
+                timeline="Days 4-7",
+                dependencies=[t.task_id for t in phase1_tasks[:1]],
+                success_criteria="Core reservations confirmed with documented cancellation windows.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Protects against unexpected schedule shifts while guaranteeing room and seat availability.",
+            ),
+            RoadmapTask(
+                task_id="task-p2-exec",
+                title="Coordinate Day-by-Day Itinerary & Local Logistics",
+                description="Finalize daily activity routes, transit arrangements, essential permits, and packing checklist.",
+                owner_role=ops_role,
+                timeline="Week 2",
+                dependencies=["task-p2-terms"],
+                success_criteria="Actionable day-to-day itinerary shared with participants.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Ensures smooth logistics and prevents on-the-ground confusion.",
+            ),
+            RoadmapTask(
+                task_id="task-p2-canary",
+                title="Emergency Readiness & Contingency Setup",
+                description="Verify travel insurance coverage, emergency contact access, medical supplies, and contingency cash buffer.",
+                owner_role=risk_role,
+                timeline="Week 2",
+                dependencies=["task-p2-exec"],
+                success_criteria="Emergency kit, contacts, and policy documents readily accessible offline.",
+                is_completed=False,
+                source_type="risk",
+                reason="Mitigates travel disruptions, medical surprises, or transit cancellations.",
+            ),
+        ]
+
+        # Phase 3: Personal Execution & Wrap-up
+        phase3_tasks: List[RoadmapTask] = [
+            RoadmapTask(
+                task_id="task-p3-close",
+                title=f"Execute Itinerary & Track Travel Budget in Real-Time{title_context}",
+                description="Embark on trip, monitor daily spending against the allocated buffer, and adjust activities dynamically.",
+                owner_role=ops_role,
+                timeline="Travel Horizon",
+                dependencies=["task-p2-canary"],
+                success_criteria="Successful travel execution staying within allocated budget boundary.",
+                is_completed=False,
+                source_type="condition",
+                reason="Ensures seamless experience without unbudgeted spending spikes.",
+            ),
+            RoadmapTask(
+                task_id="task-p3-runbook",
+                title="Post-Trip Reconciliation & Return Handover",
+                description="Reconcile shared travel expenses among participants, settle payments, and smoothly resume daily commitments.",
+                owner_role=ops_role,
+                timeline="Post-Trip Week 1",
+                dependencies=["task-p3-close"],
+                success_criteria="All shared expenses reconciled and settled without discrepancies.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Ensures clean closure of commitments and peace of mind.",
+            ),
+            RoadmapTask(
+                task_id="task-p3-gov",
+                title="Personal Retrospective & Learnings",
+                description="Review trip value, lodging quality, and transit convenience to guide future travel planning.",
+                owner_role=exec_role,
+                timeline="Post-Trip Week 2",
+                dependencies=["task-p3-runbook"],
+                success_criteria="Key takeaways documented for future trip planning.",
+                is_completed=False,
+                source_type="decision_requirement",
+                reason="Builds personal decision wisdom and optimizes future leisure investments.",
             ),
         ]
     else:
@@ -1321,9 +1474,24 @@ def generate_mock_synthesis(
         canonical_winner_rank = top_res.get("rank", 1)
         decision_status = "CONDITIONAL" if critical_unknowns else "READY"
 
-    if not canonical_winner_name:
-        canonical_winner_name = "Primary Strategy"
-        canonical_winner_id = "OPT_001"
+    if not canonical_winner_name or canonical_winner_name.strip() in ("", "Primary Strategy"):
+        if decision and getattr(decision, "title", None):
+            t = decision.title.strip().rstrip("?").strip()
+            lower_t = t.lower()
+            for prefix in ("can i ", "should i ", "is it good to ", "shall i ", "could i ", "do i ", "how to "):
+                if lower_t.startswith(prefix):
+                    t = t[len(prefix):].strip()
+                    break
+            if t:
+                action_name = t[0].upper() + t[1:]
+                if not action_name.lower().startswith(("proceed", "take", "go", "buy", "choose", "adopt", "plan")):
+                    canonical_winner_name = f"Proceed with {action_name}"
+                else:
+                    canonical_winner_name = action_name
+        if not canonical_winner_name:
+            canonical_winner_name = "Primary Strategy"
+        if not canonical_winner_id:
+            canonical_winner_id = "OPT_001"
 
     top_option_name = canonical_winner_name
     top_option_id = canonical_winner_id
@@ -1332,7 +1500,16 @@ def generate_mock_synthesis(
     if matrix_results and len(matrix_results) >= 2:
         second_option_name = matrix_results[1].get("option_name", second_option_name)
 
-    domain = getattr(decision, "domain", None) or analysis.get("domain") or "BUSINESS"
+    domain = getattr(decision, "domain", None) or analysis.get("domain")
+    from app.services.framework_engine import detect_decision_domain
+    if not domain or domain == "BUSINESS":
+        ctx_for_domain = f"{getattr(decision, 'title', '')} {getattr(decision, 'problem_statement', '')} {getattr(decision, 'raw_input', '')}"
+        detected = detect_decision_domain(decision, context_text=ctx_for_domain)
+        if detected:
+            domain = detected
+    if not domain:
+        domain = "BUSINESS"
+    domain_upper = domain.upper()
 
     # Supporting evidence gathering
     supporting_evidence: List[SupportingEvidenceItem] = []
@@ -1397,28 +1574,29 @@ def generate_mock_synthesis(
     except Exception as exc:
         logger.warning(f"Failed to gather RAG document evidence in mock synthesis: {exc}")
 
-    # Gather Domain RAG standards
-    try:
-        from app.services.rag.domain_rag import get_domain_rag_service
-        domain_rag = get_domain_rag_service()
-        domain_rag.initialize_knowledge_bases()
-        query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
-        guidelines = domain_rag.retrieve_guidelines(query=query or "system design standards", top_k=2)
-        for g in guidelines:
-            domain_name = g.get("metadata", {}).get("domain", "System Design")
-            content = g.get("content", "").strip()
-            if content:
-                supporting_evidence.append(
-                    SupportingEvidenceItem(
-                        claim=(content[:180] + "...") if len(content) > 180 else content,
-                        source_title=f"Architectural Standard ({domain_name.upper()})",
-                        source_url=None,
-                        evidence_type="domain_standard",
-                        reliability="high",
+    # Gather Domain RAG standards (for technical/business decisions only)
+    if domain_upper in ("SOFTWARE", "PRODUCT", "TECH", "BUSINESS"):
+        try:
+            from app.services.rag.domain_rag import get_domain_rag_service
+            domain_rag = get_domain_rag_service()
+            domain_rag.initialize_knowledge_bases()
+            query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
+            guidelines = domain_rag.retrieve_guidelines(query=query or f"{domain.lower()} standards", top_k=2)
+            for g in guidelines:
+                domain_name = g.get("metadata", {}).get("domain", domain.title())
+                content = g.get("content", "").strip()
+                if content:
+                    supporting_evidence.append(
+                        SupportingEvidenceItem(
+                            claim=(content[:180] + "...") if len(content) > 180 else content,
+                            source_title=f"Best Practice Guide ({domain_name.upper()})",
+                            source_url=None,
+                            evidence_type="domain_standard",
+                            reliability="high",
+                        )
                     )
-                )
-    except Exception as exc:
-        logger.warning(f"Failed to gather Domain RAG evidence in mock synthesis: {exc}")
+        except Exception as exc:
+            logger.warning(f"Failed to gather Domain RAG evidence in mock synthesis: {exc}")
 
     if folder_precedents:
         for p in folder_precedents[:2]:
@@ -1445,20 +1623,35 @@ def generate_mock_synthesis(
     if is_conditional:
         decision_status = "CONDITIONAL"
         synthesis_type = "conditional_next_step"
-        headline = f"Strategic Execution Plan: '{top_option_name}' (Risk-Gated Pre-Commitment)"
-        rec_text = (
-            f"Following multi-criteria strategic evaluation of '{decision_title_str}', '{top_option_name}' "
-            f"emerges as the recommended strategic direction, achieving optimal alignment across primary decision criteria. "
-            f"However, because {len(critical_unknowns) or len(unresolved_gap_ids)} critical unknown(s) remain unresolved, "
-            f"execution must proceed under an explicit risk-gated framework: Phase 1 focuses strictly on targeted due diligence "
-            f"and clearance of precedent conditions before irrevocable capital or organizational commitment is finalized."
-            f"{continuity_note}"
-        )
-        conditional_triggers = critical_conditions or [
-            f"Condition A: Verify satisfactory resolution for {critical_unknowns[0] if critical_unknowns else 'critical gaps'} prior to irrevocable contract execution.",
-            f"Condition B: Ensure initial expenditure does not exceed agreed due-diligence budget contingency.",
-            f"Pivot Trigger: If validation metrics or due-diligence covenants fail, pivot to '{second_option_name}' (Rank #2).",
-        ]
+        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+            headline = f"Action Plan: '{top_option_name}' (Pending Key Checks)"
+            rec_text = (
+                f"Following evaluation of '{decision_title_str}', '{top_option_name}' "
+                f"emerges as the recommended direction. However, because {len(critical_unknowns) or len(unresolved_gap_ids)} "
+                f"key planning unknown(s) remain open (such as schedule alignment, budget buffer, or reservations), "
+                f"you should complete essential planning checks before making non-refundable commitments."
+                f"{continuity_note}"
+            )
+            conditional_triggers = critical_conditions or [
+                f"Condition A: Verify schedule availability and confirm calendar dates before booking.",
+                f"Condition B: Lock in refundable or free-cancellation options for transit and lodging.",
+                f"Fallback Trigger: If dates or budget exceed limits, consider '{second_option_name}' as a fallback alternative.",
+            ]
+        else:
+            headline = f"Strategic Execution Plan: '{top_option_name}' (Risk-Gated Pre-Commitment)"
+            rec_text = (
+                f"Following multi-criteria strategic evaluation of '{decision_title_str}', '{top_option_name}' "
+                f"emerges as the recommended strategic direction, achieving optimal alignment across primary decision criteria. "
+                f"However, because {len(critical_unknowns) or len(unresolved_gap_ids)} critical unknown(s) remain unresolved, "
+                f"execution must proceed under an explicit risk-gated framework: Phase 1 focuses strictly on targeted due diligence "
+                f"and clearance of precedent conditions before irrevocable capital or organizational commitment is finalized."
+                f"{continuity_note}"
+            )
+            conditional_triggers = critical_conditions or [
+                f"Condition A: Verify satisfactory resolution for {critical_unknowns[0] if critical_unknowns else 'critical gaps'} prior to irrevocable contract execution.",
+                f"Condition B: Ensure initial expenditure does not exceed agreed due-diligence budget contingency.",
+                f"Pivot Trigger: If validation metrics or due-diligence covenants fail, pivot to '{second_option_name}' (Rank #2).",
+            ]
         confidence_level = "medium"
         conf_rationale = (
             f"Assessment is CONDITIONAL due to {len(critical_unknowns) or len(unresolved_gap_ids)} "
@@ -1467,13 +1660,22 @@ def generate_mock_synthesis(
     else:
         decision_status = "READY"
         synthesis_type = "recommendation"
-        headline = f"Executive Mandate: Proceed with '{top_option_name}'"
-        rec_text = (
-            f"Following comprehensive evaluation across weighted criteria, '{top_option_name}' is confirmed as the "
-            f"optimal strategic path for '{decision_title_str}'. With foundational facts validated and all critical "
-            f"information gaps resolved, the leadership team should proceed directly to implementation under the attached phased roadmap."
-            f"{continuity_note}"
-        )
+        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+            headline = f"Recommendation: Proceed with '{top_option_name}'"
+            rec_text = (
+                f"Following evaluation across all criteria, '{top_option_name}' is confirmed as the "
+                f"optimal path for '{decision_title_str}'. With essential details and baseline assumptions verified, "
+                f"you can proceed directly to execution following the outlined checklist."
+                f"{continuity_note}"
+            )
+        else:
+            headline = f"Executive Mandate: Proceed with '{top_option_name}'"
+            rec_text = (
+                f"Following comprehensive evaluation across weighted criteria, '{top_option_name}' is confirmed as the "
+                f"optimal strategic path for '{decision_title_str}'. With foundational facts validated and all critical "
+                f"information gaps resolved, the leadership team should proceed directly to implementation under the attached phased roadmap."
+                f"{continuity_note}"
+            )
         conditional_triggers = []
         confidence_level = "high"
         conf_rationale = (
@@ -1534,24 +1736,48 @@ def generate_mock_synthesis(
             )
         )
 
-    risks_and_mitigations = [
-        RiskMitigationItem(
-            risk="Unbudgeted operational overhead or unanticipated regulatory friction during execution.",
-            severity="high" if is_conditional else "medium",
-            mitigation="Establish rigorous due diligence covenants and weekly milestone audit checkpoints with a 15% safety contingency.",
-            contingency_plan="Invoke contractual exit triggers or descope secondary commitments if primary covenants fail.",
-        ),
-    ]
-
-    counterarguments = [
-        CounterargumentItem(
-            argument=f"Adopting '{second_option_name}' would be faster and avoid internal operational complexity.",
-            rebuttal_or_concession=(
-                f"While '{second_option_name}' may offer initial simplicity, it compromises on critical value drivers. "
-                f"The chosen path ({top_option_name}) captures superior risk-adjusted alignment ({canonical_winner_score:.2f}/10)."
+    if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+        risks_and_mitigations = [
+            RiskMitigationItem(
+                risk="Unbudgeted travel expenses, surge tariffs, or non-refundable booking forfeiture.",
+                severity="high" if is_conditional else "medium",
+                mitigation="Select refundable bookings, set clear expense limits, and maintain a 20% contingency budget buffer.",
+                contingency_plan="Reschedule itinerary or adjust accommodation tier if unexpected cost spikes arise.",
             ),
-        ),
-    ]
+            RiskMitigationItem(
+                risk="Unexpected schedule conflicts, leave disapproval, or last-minute personal commitments.",
+                severity="medium",
+                mitigation="Lock in calendar leave approvals early and ensure cancellation deadlines are documented.",
+                contingency_plan="Pivot to flexible weekend dates or postpone without deposit forfeit.",
+            ),
+        ]
+        counterarguments = [
+            CounterargumentItem(
+                argument=f"Postponing or choosing '{second_option_name}' avoids spending money and preserves routine.",
+                rebuttal_or_concession=(
+                    f"While delaying saves immediate funds, proceeding with '{top_option_name}' provides essential rejuvenation "
+                    f"and avoids prolonged fatigue. Staged planning protects against financial or schedule risks."
+                ),
+            ),
+        ]
+    else:
+        risks_and_mitigations = [
+            RiskMitigationItem(
+                risk="Unbudgeted operational overhead or unanticipated regulatory friction during execution.",
+                severity="high" if is_conditional else "medium",
+                mitigation="Establish rigorous due diligence covenants and weekly milestone audit checkpoints with a 15% safety contingency.",
+                contingency_plan="Invoke contractual exit triggers or descope secondary commitments if primary covenants fail.",
+            ),
+        ]
+        counterarguments = [
+            CounterargumentItem(
+                argument=f"Adopting '{second_option_name}' would be faster and avoid internal operational complexity.",
+                rebuttal_or_concession=(
+                    f"While '{second_option_name}' may offer initial simplicity, it compromises on critical value drivers. "
+                    f"The chosen path ({top_option_name}) captures superior risk-adjusted alignment ({canonical_winner_score:.2f}/10)."
+                ),
+            ),
+        ]
 
     limitations = [
         "Grounded exclusively in provided inputs and verified research; external unstated factors were not fabricated."
@@ -1667,11 +1893,35 @@ def execute_hosted_synthesis(
         canonical_winner_score = top_res.get("weighted_score", 8.0)
         canonical_winner_rank = top_res.get("rank", 1)
 
-    if not canonical_winner_name:
-        canonical_winner_name = "Primary Strategy"
-        canonical_winner_id = "OPT_001"
+    if not canonical_winner_name or canonical_winner_name.strip() in ("", "Primary Strategy"):
+        if decision and getattr(decision, "title", None):
+            t = decision.title.strip().rstrip("?").strip()
+            lower_t = t.lower()
+            for prefix in ("can i ", "should i ", "is it good to ", "shall i ", "could i ", "do i ", "how to "):
+                if lower_t.startswith(prefix):
+                    t = t[len(prefix):].strip()
+                    break
+            if t:
+                action_name = t[0].upper() + t[1:]
+                if not action_name.lower().startswith(("proceed", "take", "go", "buy", "choose", "adopt", "plan")):
+                    canonical_winner_name = f"Proceed with {action_name}"
+                else:
+                    canonical_winner_name = action_name
+        if not canonical_winner_name:
+            canonical_winner_name = "Primary Strategy"
+        if not canonical_winner_id:
+            canonical_winner_id = "OPT_001"
 
-    domain = getattr(decision, "domain", None) or analysis.get("domain") or "BUSINESS"
+    domain = getattr(decision, "domain", None) or analysis.get("domain")
+    from app.services.framework_engine import detect_decision_domain
+    if not domain or domain == "BUSINESS":
+        ctx_for_domain = f"{getattr(decision, 'title', '')} {getattr(decision, 'problem_statement', '')} {getattr(decision, 'raw_input', '')}"
+        detected = detect_decision_domain(decision, context_text=ctx_for_domain)
+        if detected:
+            domain = detected
+    if not domain:
+        domain = "BUSINESS"
+    domain_upper = domain.upper()
 
     # Gather RAG document excerpts and domain standards
     doc_excerpts = []
@@ -1680,19 +1930,20 @@ def execute_hosted_synthesis(
         doc_rag = get_document_rag_service()
         if doc_rag.has_indexed_documents(decision.id):
             query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
-            doc_excerpts = doc_rag.retrieve_relevant_excerpts(decision.id, query=query or "architecture requirements", top_k=4)
+            doc_excerpts = doc_rag.retrieve_relevant_excerpts(decision.id, query=query or "decision requirements", top_k=4)
     except Exception as exc:
         logger.warning(f"Failed to gather RAG document excerpts for hosted synthesis: {exc}")
 
     domain_guidelines = []
-    try:
-        from app.services.rag.domain_rag import get_domain_rag_service
-        domain_rag = get_domain_rag_service()
-        domain_rag.initialize_knowledge_bases()
-        query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
-        domain_guidelines = domain_rag.retrieve_guidelines(query=query or "system design standards", top_k=2)
-    except Exception as exc:
-        logger.warning(f"Failed to gather domain guidelines for hosted synthesis: {exc}")
+    if domain_upper in ("SOFTWARE", "PRODUCT", "TECH", "BUSINESS"):
+        try:
+            from app.services.rag.domain_rag import get_domain_rag_service
+            domain_rag = get_domain_rag_service()
+            domain_rag.initialize_knowledge_bases()
+            query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
+            domain_guidelines = domain_rag.retrieve_guidelines(query=query or f"{domain.lower()} best practices", top_k=2)
+        except Exception as exc:
+            logger.warning(f"Failed to gather domain guidelines for hosted synthesis: {exc}")
 
     payload_context = {
         "title": decision.title,
@@ -1740,7 +1991,7 @@ def execute_hosted_synthesis(
         f"MANDATORY INSTRUCTIONS:\n"
         f"1. You MUST recommend '{canonical_winner_name}' (ID: {canonical_winner_id}, Score: {canonical_winner_score:.2f}/10, Rank #{canonical_winner_rank}). Do NOT substitute or alter the winner.\n"
         f"2. In 'alternatives_considered', mark '{canonical_winner_name}' as is_recommended=true and ALL others as is_recommended=false.\n"
-        f"3. Ground all roadmap tasks strictly in the domain '{domain}'. Do NOT use software development terminology (POC, technical lead, staging, traffic migration) unless domain is SOFTWARE.\n"
+        f"3. Ground all roadmap tasks and language strictly in the domain '{domain}'. If domain is 'PERSONAL' or 'LIFESTYLE', use everyday personal planning terms (itinerary, bookings, calendar dates, packing, travel budget, leave approvals) and NEVER use software development or enterprise corporate jargon (POC, SRE, microservices, staging, traffic migration, boardroom, fiduciary, capital allocation).\n"
         f"{continuity_instruction}"
         f"5. Output JSON strictly matching the DecisionSynthesis schema."
     )

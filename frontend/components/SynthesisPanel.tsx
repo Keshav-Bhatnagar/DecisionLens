@@ -380,6 +380,11 @@ export default function SynthesisPanel({
     (displaySynthesis?.canonical_result?.decision_status &&
       displaySynthesis.canonical_result.decision_status !== "READY");
 
+  const isPersonalDomain = useMemo(() => {
+    const d = (displaySynthesis?.domain || "").toUpperCase();
+    return d === "PERSONAL" || d === "LIFESTYLE" || d === "EDUCATION";
+  }, [displaySynthesis?.domain]);
+
   // FinOps Calibrator Multipliers & Logic
   type GeoKey = "INDIA" | "US" | "EUROPE" | "SEA";
   type ScaleKey = "STARTUP" | "GROWTH" | "ENTERPRISE";
@@ -1024,36 +1029,44 @@ jobs:
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                    Executive ROI &amp; Sunk-Cost Shield
+                    {isPersonalDomain ? "Financial Risk & Commitment Shield" : "Executive ROI & Sunk-Cost Shield"}
                   </span>
-                  {isCalibrated && (
+                  {isCalibrated && !isPersonalDomain && (
                     <span className="text-[14px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40 font-bold animate-pulse">
                       Live Calibrated
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
-                  <button
-                    type="button"
-                    onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[15px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
-                      isCalibratorOpen || isCalibrated
-                        ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
-                        : "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200"
-                    }`}
-                    title="Calibrate headcount, geography rate card, and cloud scale tier"
-                  >
-                    <Sliders className="w-3 h-3" />
-                    <span>{isCalibratorOpen ? "Hide Calibrator" : "Calibrate FinOps Assumptions"}</span>
-                  </button>
-                  <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                    Procurement ROI: Verified 10x+
-                  </span>
+                  {!isPersonalDomain ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[15px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
+                          isCalibratorOpen || isCalibrated
+                            ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
+                            : "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200"
+                        }`}
+                        title="Calibrate headcount, geography rate card, and cloud scale tier"
+                      >
+                        <Sliders className="w-3 h-3" />
+                        <span>{isCalibratorOpen ? "Hide Calibrator" : "Calibrate FinOps Assumptions"}</span>
+                      </button>
+                      <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        Procurement ROI: Verified 10x+
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      Personal Risk Shield: Verified
+                    </span>
+                  )}
                 </div>
               </div>
 
               {/* Collapsible FinOps Assumptions Calibrator Drawer */}
-              {isCalibratorOpen && (
+              {!isPersonalDomain && isCalibratorOpen && (
                 <div className="p-4 rounded-xl bg-paper-surface border border-emerald-500/30 space-y-4 animate-in fade-in duration-150">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 pb-3">
                     <div>
@@ -1202,9 +1215,9 @@ jobs:
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-mono uppercase text-muted font-bold block">
-                      Capital at Risk Prevented
+                      {isPersonalDomain ? "Financial Risk / Expense Avoided" : "Capital at Risk Prevented"}
                     </span>
-                    {isCalibrated && (
+                    {isCalibrated && !isPersonalDomain && (
                       <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                         Calibrated
                       </span>
@@ -1212,7 +1225,9 @@ jobs:
                   </div>
                   <div className="font-newsreader text-2xl font-bold text-emerald-700 dark:text-emerald-400">
                     {calibratedBlunderShield?.capital_at_risk_saved || displaySynthesis.blunder_shield?.capital_at_risk_saved || (
-                      displaySynthesis.domain === "REAL_ESTATE"
+                      isPersonalDomain
+                        ? "₹25,000 – ₹75,000"
+                        : displaySynthesis.domain === "REAL_ESTATE"
                         ? "₹1.50 Cr – ₹2.80 Cr"
                         : displaySynthesis.domain === "FINANCE"
                         ? "₹85 Lakh – ₹1.40 Cr"
@@ -1220,7 +1235,11 @@ jobs:
                     )}
                   </div>
                   <p className="text-[15px] text-muted leading-tight">
-                    {calibratedBlunderShield?.risk_reduction_rationale || displaySynthesis.blunder_shield?.risk_reduction_rationale || "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments."}
+                    {calibratedBlunderShield?.risk_reduction_rationale || displaySynthesis.blunder_shield?.risk_reduction_rationale || (
+                      isPersonalDomain
+                        ? "Avoided non-cancellable reservations, unforeseen surge tariffs, and schedule disruption."
+                        : "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments."
+                    )}
                   </p>
                 </div>
 
@@ -1228,19 +1247,23 @@ jobs:
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-mono uppercase text-muted font-bold block">
-                      Engineering Velocity Saved
+                      {isPersonalDomain ? "Planning & Preparation Horizon" : "Engineering Velocity Saved"}
                     </span>
-                    {isCalibrated && (
+                    {isCalibrated && !isPersonalDomain && (
                       <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                         Calibrated
                       </span>
                     )}
                   </div>
                   <div className="font-newsreader text-2xl font-bold text-ink">
-                    {calibratedBlunderShield?.developer_sprints_saved || displaySynthesis.blunder_shield?.developer_sprints_saved || "6 Sprints (12 Wks)"}
+                    {calibratedBlunderShield?.developer_sprints_saved || displaySynthesis.blunder_shield?.developer_sprints_saved || (
+                      isPersonalDomain ? "3–5 Days Planning" : "6 Sprints (12 Wks)"
+                    )}
                   </div>
                   <p className="text-[15px] text-muted leading-tight">
-                    {isCalibrated
+                    {isPersonalDomain
+                      ? "Structured calendar planning prevents last-minute scramble, itinerary clash, and booking overlaps."
+                      : isCalibrated
                       ? `Calibrated for ${customTeamSize} engineers. Prevents dead-end prototyping sprints and on-call operational drag.`
                       : "Prevented dead-end prototype iterations and on-call operational drag before validation."}
                   </p>
@@ -1250,19 +1273,23 @@ jobs:
                 <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-mono uppercase text-muted font-bold block">
-                      Fatal Sunk-Cost Trap Blocked
+                      {isPersonalDomain ? "Primary Risk Mitigated" : "Fatal Sunk-Cost Trap Blocked"}
                     </span>
-                    {isCalibrated && (
+                    {isCalibrated && !isPersonalDomain && (
                       <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                         Mitigated
                       </span>
                     )}
                   </div>
                   <div className="text-xs font-bold text-ink truncate">
-                    {calibratedBlunderShield?.prevented_fatal_trap || displaySynthesis.blunder_shield?.prevented_fatal_trap || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity"}
+                    {calibratedBlunderShield?.prevented_fatal_trap || displaySynthesis.blunder_shield?.prevented_fatal_trap || (
+                      isPersonalDomain ? "Non-Refundable Booking Lock-in" : (displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity")
+                    )}
                   </div>
                   <p className="text-[15px] text-muted line-clamp-2 leading-tight">
-                    {isCalibrated
+                    {isPersonalDomain
+                      ? (displaySynthesis.blunder_shield?.risk_reduction_rationale || "Prevented non-refundable upfront commitment prior to firm schedule clearance.")
+                      : isCalibrated
                       ? `Deprioritized to eliminate ${SCALE_TIERS[selectedScaleTier].label} infrastructure tax and ${GEO_RATES[selectedGeoRate].label} hiring overhead.`
                       : (displaySynthesis.blunder_shield?.risk_reduction_rationale || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.why_not_recommended || "Deprioritized due to operational friction, high maintenance drag, and criteria misalignment.")}
                   </p>
@@ -1280,12 +1307,16 @@ jobs:
                     <span className="flex items-center gap-1.5">
                       <Receipt className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       <span>
-                        {showReceipt ? "Hide Itemized FinOps Receipt" : "Inspect Itemized Sunk-Cost Receipt (Munshi Audit Ledger)"}
+                        {showReceipt
+                          ? "Hide Itemized Breakdown"
+                          : isPersonalDomain
+                          ? "Inspect Itemized Travel / Risk Ledger"
+                          : "Inspect Itemized Sunk-Cost Receipt (Munshi Audit Ledger)"}
                       </span>
                       <span className="text-[14px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
                         {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.receipt_id}
                       </span>
-                      {isCalibrated && (
+                      {isCalibrated && !isPersonalDomain && (
                         <span className="text-[15px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">
                           Custom Calibrated
                         </span>
@@ -1502,77 +1533,89 @@ jobs:
           {activeTab === "memo" && (
             <div className="space-y-6 animate-in fade-in duration-150">
               {/* ========================================================================= */}
-              {/* 3. STAKEHOLDER CONSENSUS & CONCESSION LEDGER                               */}
-          {/* ========================================================================= */}
-          <div className="bg-paper-surface border border-border rounded-2xl p-6 space-y-4 shadow-2xs">
-            <div>
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-accent" />
-                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                  STAKEHOLDER CONSENSUS & NEGOTIATED CONCESSIONS
-                </h3>
-              </div>
-              <p className="font-newsreader text-xl font-normal text-ink mt-0.5">
-                How the debate was resolved across Architecture, SRE, and Product
-              </p>
-            </div>
+              {/* 3. DYNAMIC OBJECTIONS & RESOLUTION LEDGER                                 */}
+              {/* ========================================================================= */}
+              {displaySynthesis.counterarguments && displaySynthesis.counterarguments.length > 0 ? (
+                <div className="bg-paper-surface border border-border rounded-none p-6 space-y-4 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border pb-2">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-accent" />
+                      <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
+                        KEY OBJECTIONS & NEGOTIATED RESOLUTIONS
+                      </h3>
+                    </div>
+                    <span className="font-mono text-[11px] text-muted uppercase">
+                      {displaySynthesis.counterarguments.length} Critical Perspective{displaySynthesis.counterarguments.length > 1 ? "s" : ""} Addressed
+                    </span>
+                  </div>
+                  <p className="font-newsreader text-xl font-normal text-ink">
+                    How competing priorities and critical counterarguments were resolved
+                  </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-sans text-xs">
-              {/* Architecture Lead */}
-              <div className="p-4 rounded-xl bg-paper-sidebar border border-border space-y-2">
-                <div className="flex items-center justify-between border-b border-border pb-2">
-                  <span className="font-mono text-[15px] font-bold text-ink uppercase">
-                    Architecture & Tech
-                  </span>
-                  <span className="text-[14px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
-                    Resolved
-                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-sans text-xs">
+                    {displaySynthesis.counterarguments.map((item, idx) => (
+                      <div key={idx} className="p-4 rounded-none bg-paper-sidebar border border-border space-y-2">
+                        <div className="flex items-center justify-between border-b border-border pb-2">
+                          <span className="font-mono text-[13px] font-bold text-ink uppercase">
+                            Objection #{idx + 1}
+                          </span>
+                          <span className="text-[12px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-none font-bold">
+                            Resolved
+                          </span>
+                        </div>
+                        <strong className="block font-semibold text-ink text-sm leading-snug">
+                          &ldquo;{item.argument}&rdquo;
+                        </strong>
+                        <p className="text-muted leading-relaxed">
+                          <strong className="text-ink font-mono text-[11px] uppercase block mb-0.5">Resolution / Safeguard:</strong>
+                          {item.rebuttal_or_concession}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <strong className="block font-semibold text-ink text-sm">
-                  Write Contention & IOPS Cap
-                </strong>
-                <p className="text-muted leading-relaxed">
-                  Identified that database connection starvation, not CPU, caused the ₹38L GMV outage. Offloaded 65% catalog queries to Redis with PgBouncer connection pooling.
-                </p>
-              </div>
+              ) : displaySynthesis.risks_and_mitigations && displaySynthesis.risks_and_mitigations.length > 0 ? (
+                <div className="bg-paper-surface border border-border rounded-none p-6 space-y-4 shadow-2xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border pb-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-accent" />
+                      <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
+                        KEY RISKS & PROACTIVE SAFEGUARDS
+                      </h3>
+                    </div>
+                    <span className="font-mono text-[11px] text-muted uppercase">
+                      {displaySynthesis.risks_and_mitigations.length} Vulnerabilit{displaySynthesis.risks_and_mitigations.length > 1 ? "ies" : "y"} Mitigated
+                    </span>
+                  </div>
+                  <p className="font-newsreader text-xl font-normal text-ink">
+                    Critical vulnerabilities identified and mitigated
+                  </p>
 
-              {/* SRE / DevOps Lead */}
-              <div className="p-4 rounded-xl bg-paper-sidebar border border-border space-y-2">
-                <div className="flex items-center justify-between border-b border-border pb-2">
-                  <span className="font-mono text-[15px] font-bold text-ink uppercase">
-                    DevOps & SRE
-                  </span>
-                  <span className="text-[14px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
-                    Protected
-                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-sans text-xs">
+                    {displaySynthesis.risks_and_mitigations.slice(0, 3).map((item, idx) => (
+                      <div key={idx} className="p-4 rounded-none bg-paper-sidebar border border-border space-y-2">
+                        <div className="flex items-center justify-between border-b border-border pb-2">
+                          <span className="font-mono text-[13px] font-bold text-ink uppercase">
+                            Risk Factor #{idx + 1}
+                          </span>
+                          <span className={`text-[12px] font-mono px-1.5 py-0.5 rounded-none font-bold uppercase ${
+                            item.severity === "high" ? "text-amber-800 bg-amber-500/10" : "text-emerald-700 bg-emerald-50"
+                          }`}>
+                            {item.severity}
+                          </span>
+                        </div>
+                        <strong className="block font-semibold text-ink text-sm leading-snug">
+                          {item.risk}
+                        </strong>
+                        <p className="text-muted leading-relaxed">
+                          <strong className="text-ink font-mono text-[11px] uppercase block mb-0.5">Proactive Mitigation:</strong>
+                          {item.mitigation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <strong className="block font-semibold text-ink text-sm">
-                  Veto on Distributed Kafka Toil
-                </strong>
-                <p className="text-muted leading-relaxed">
-                  Prevented 3-person SRE burnout 10 weeks before Big Billion Days. Saved ₹3.5L/mo ($4,200) AWS MSK bill and secured DPDP Act compliant immutable S3 audit logs.
-                </p>
-              </div>
-
-              {/* Product Lead */}
-              <div className="p-4 rounded-xl bg-paper-sidebar border border-border space-y-2">
-                <div className="flex items-center justify-between border-b border-border pb-2">
-                  <span className="font-mono text-[15px] font-bold text-ink uppercase">
-                    Product & Velocity
-                  </span>
-                  <span className="text-[14px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-bold">
-                    Accommodated
-                  </span>
-                </div>
-                <strong className="block font-semibold text-ink text-sm">
-                  Decoupled Domain Modules
-                </strong>
-                <p className="text-muted leading-relaxed">
-                  Conceded on the 3-week Go prototype sunk cost; gained cleanly decoupled domain slices inside the modular monolith for independent, fast checkout releases.
-                </p>
-              </div>
-            </div>
-          </div>
+              ) : null}
 
               {/* Quick Navigation Footer inside Tab 1 */}
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-paper-surface border border-border rounded-2xl">
