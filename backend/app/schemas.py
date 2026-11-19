@@ -1283,3 +1283,87 @@ class RagReindexResponse(BaseModel):
     semantic: bool = False
     failed_decision_ids: List[int] = []
 
+
+# ==========================================
+# Google Meet Bot & Private Chat Schemas
+# ==========================================
+
+class GoogleMeetJoinRequest(BaseModel):
+    meet_url: str = Field(..., description="Google Meet URL (e.g. https://meet.google.com/abc-defg-hij)")
+    bot_name: Optional[str] = Field("DecisionLens Bot", description="Name of the bot entering the meeting")
+    language: Optional[str] = Field("en", description="Spoken meeting language (en/hi)")
+    recording_enabled: Optional[bool] = Field(True, description="Enable recording / audio capture")
+    distraction_filtering: Optional[bool] = Field(True, description="Filter tangents and chit-chat")
+
+
+class GoogleMeetSpeechStreamRequest(BaseModel):
+    text: str = Field(..., description="Transcribed speech segment")
+    speaker: Optional[str] = Field("Speaker", description="Identified speaker name or role")
+    timestamp: Optional[str] = Field(None, description="Time marker (e.g. 10:14)")
+    is_final: Optional[bool] = Field(True, description="Whether this segment is final or interim")
+
+
+class PrivateChatMessageCreate(BaseModel):
+    message: str = Field(..., min_length=2, description="Private reason, concern, fact, or opinion")
+    author_name: Optional[str] = Field("Anonymous", description="Optional participant name")
+    author_role: Optional[str] = Field("Participant", description="Participant team role (e.g. DevOps, QA, Lead)")
+    is_anonymous: Optional[bool] = Field(True, description="If True, hides identity in downstream reports")
+    category: Optional[str] = Field("concern", description="concern, fact, opinion, alternative, constraint")
+    impact_level: Optional[str] = Field("high", description="critical, high, medium, low")
+
+
+class PrivateChatMessageResponse(BaseModel):
+    id: int
+    decision_id: int
+    session_id: Optional[int] = None
+    author_name: str
+    author_role: str
+    is_anonymous: bool
+    category: str
+    message: str
+    bot_response: str = ""
+    impact_level: str = "high"
+    status: str = "active"
+    created_at: datetime
+
+
+class GoogleMeetBotSessionResponse(BaseModel):
+    id: int
+    decision_id: int
+    meet_url: str
+    bot_name: str
+    status: str
+    language: str
+    recording_enabled: bool
+    distraction_filtering_enabled: bool
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    raw_transcript: str = ""
+    cleaned_transcript: str = ""
+    participant_count: int = 1
+    private_chat_token: str
+    private_chat_url: Optional[str] = None
+    private_message_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+
+class BotFinishAndAnalyzeResponse(BaseModel):
+    session: GoogleMeetBotSessionResponse
+    transcript: str
+    tangents_filtered_count: int = 0
+    signal_ratio: float = 1.0
+    private_inputs_count: int = 0
+    structured_findings: Optional[StructuredFindings] = None
+    message: str = "Meeting completed and structured analysis generated successfully."
+
+
+class PublicBotInviteInfo(BaseModel):
+    session_id: int
+    decision_id: int
+    decision_title: str
+    meet_url: str
+    bot_name: str
+    status: str
+    token: str
+

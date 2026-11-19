@@ -18,6 +18,7 @@ import {
   Minimize2,
   Pin,
   Sparkles,
+  Bot,
 } from "lucide-react";
 import {
   getMe,
@@ -27,6 +28,7 @@ import {
   MeetingTakeawaysResponse,
 } from "@/lib/api";
 import MeetingTakeawaysModal from "@/components/MeetingTakeawaysModal";
+import GoogleMeetBotPanel from "@/components/GoogleMeetBotPanel";
 
 interface LiveMeetingRoomProps {
   decisionId: number;
@@ -68,7 +70,7 @@ export default function LiveMeetingRoom({
   recordType = "decision",
 }: LiveMeetingRoomProps) {
   const [currentUser, setCurrentUser] = useState<{ name: string; email: string } | null>(null);
-  const [callProvider, setCallProvider] = useState<"custom" | "jitsi">("custom");
+  const [callProvider, setCallProvider] = useState<"google_meet_bot" | "custom" | "jitsi">("google_meet_bot");
   const [customMeetingUrl, setCustomMeetingUrl] = useState("");
   const [isJitsiLaunched, setIsJitsiLaunched] = useState(false);
   const [category, setCategory] = useState<"risk" | "constraint" | "alternative" | "criteria">("risk");
@@ -709,6 +711,18 @@ export default function LiveMeetingRoom({
           <div className="bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] flex text-xs font-bold uppercase tracking-wider rounded-none">
             <button
               type="button"
+              onClick={() => setCallProvider("google_meet_bot")}
+              className={`px-3 py-1.5 transition-colors cursor-pointer rounded-none flex items-center gap-1.5 ${
+                callProvider === "google_meet_bot"
+                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1]"
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+              Google Meet Bot
+            </button>
+            <button
+              type="button"
               onClick={() => setCallProvider("custom")}
               className={`px-3 py-1.5 transition-colors cursor-pointer rounded-none ${
                 callProvider === "custom"
@@ -716,7 +730,7 @@ export default function LiveMeetingRoom({
                   : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1]"
               }`}
             >
-              Google Meet / Zoom
+              Manual Link
             </button>
             <button
               type="button"
@@ -727,7 +741,7 @@ export default function LiveMeetingRoom({
                   : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1]"
               }`}
             >
-              In-App Video Room
+              In-App Room
             </button>
           </div>
 
@@ -763,8 +777,21 @@ export default function LiveMeetingRoom({
         </div>
       </div>
 
-      {/* Main Studio View: True Side-by-Side Cockpit (Left = Call, Right = Scribe) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 font-courier items-stretch">
+      {/* Main Studio View */}
+      {callProvider === "google_meet_bot" ? (
+        <GoogleMeetBotPanel
+          decisionId={decisionId}
+          decisionTitle={decisionTitle}
+          onAnalysisCompleted={(res) => {
+            onFinishMeeting({
+              notes: [],
+              criteriaWeights: { speed: 33, cost: 33, reliability: 34 },
+              transcript: res.transcript,
+            });
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 font-courier items-stretch">
         {/* Left Column: Call Connection, In-App Video or Google Meet Audio Sync (7 cols lg / 8 cols xl) */}
         <div className="lg:col-span-7 xl:col-span-7 space-y-4 flex flex-col justify-between">
           {callProvider === "jitsi" ? (
@@ -1000,6 +1027,7 @@ export default function LiveMeetingRoom({
           )}
         </div>
       </div>
+      )}
 
       {/* Picture-in-Picture Portal */}
       {pipContainer && createPortal(renderScribeContent(true), pipContainer)}

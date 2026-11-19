@@ -9,7 +9,9 @@ const config = {
     tailwindcss: {
       config: path.join(__dirname, "tailwind.config.ts"),
     },
-    autoprefixer: {},
+    autoprefixer: {
+      overrideBrowserslist: [">0.2%", "not dead"],
+    },
   },
 };
 

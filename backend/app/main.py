@@ -15,6 +15,7 @@ from app.api.analysis import router as analysis_router
 from app.api.roadmap import router as roadmap_router
 from app.api.outcomes import router as outcomes_router
 from app.api.rag import router as rag_router, bulk_router as rag_bulk_router
+from app.api.meeting_bot import router as meeting_bot_router
 
 
 # Lifespan context manager for application initialization and teardown
@@ -146,6 +147,7 @@ app.include_router(roadmap_router, prefix="/api")
 app.include_router(outcomes_router, prefix="/api")
 app.include_router(rag_router, prefix="/api")
 app.include_router(rag_bulk_router, prefix="/api")
+app.include_router(meeting_bot_router, prefix="/api")
 
 
 @app.get("/", tags=["General"])

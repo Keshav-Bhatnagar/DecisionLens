@@ -409,6 +409,9 @@ export default function StructuredFindingsEditor({
       if (index >= consList.length && index < consList.length + mixedPointsList.length) {
         return "Dual-Sided Trade-Off: Contains both a strategic benefit and an operational constraint. Must be balanced in Stage 4 Multi-Criteria Scoring.";
       }
+      if (t.includes("confidential") || t.includes("private") || t.includes("bot chat") || t.includes("unspoken")) {
+        return "Confidential Participant Input: Disclosed privately to DecisionLens Bot during call. Integrated into analysis with anonymity preserved.";
+      }
       if (t.includes("experience") || t.includes("zero") || t.includes("sre") || t.includes("toil") || t.includes("overhead")) {
         return "Execution & Toil Risk: Severe operational friction caused by team skill deficit and maintenance toil under tight timeline.";
       }

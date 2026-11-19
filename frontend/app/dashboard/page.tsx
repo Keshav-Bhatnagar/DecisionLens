@@ -23,13 +23,7 @@ import {
   ArrowRight,
   Folder as FolderIcon,
   Layers,
-  HelpCircle,
-  Sparkles,
-  Zap,
-  CheckCircle2,
-  BookOpen,
 } from "lucide-react";
-import UserGuideModal from "@/components/UserGuideModal";
 
 function ActionParamWatcher({
   onOpenNewFolder,
@@ -70,28 +64,6 @@ export default function DashboardPage() {
   // Modals
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
-  const [showGuideModal, setShowGuideModal] = useState(false);
-  const [guideBannerDismissed, setGuideBannerDismissed] = useState(false);
-
-  useEffect(() => {
-    try {
-      const dismissed = localStorage.getItem("dl_guide_banner_dismissed");
-      if (dismissed === "true") {
-        setGuideBannerDismissed(true);
-      }
-    } catch {
-      // Ignore
-    }
-  }, []);
-
-  const handleDismissGuideBanner = () => {
-    setGuideBannerDismissed(true);
-    try {
-      localStorage.setItem("dl_guide_banner_dismissed", "true");
-    } catch {
-      // Ignore
-    }
-  };
 
   // Forms
   const [newFolderName, setNewFolderName] = useState("");
@@ -256,102 +228,6 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="space-y-8 sm:space-y-10 font-courier text-[#1d1d1b] dark:text-[#F0EAE1]">
-          {/* USER-FRIENDLY WELCOME & SYSTEM EXPLAINER BANNER */}
-          {!guideBannerDismissed && (
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border-l-4 border-l-[#7a4e10] dark:border-l-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-6 sm:p-7 relative transition-colors shadow-xs">
-              <button
-                type="button"
-                onClick={handleDismissGuideBanner}
-                className="absolute top-4 right-4 p-1.5 text-[#6e655a] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C] rounded-sm transition-colors"
-                title="Dismiss overview"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="max-w-3xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase tracking-wider bg-[#7a4e10]/15 text-[#7a4e10] dark:bg-[#D4AA50]/20 dark:text-[#D4AA50]">
-                    Quick Start & User Guide
-                  </span>
-                  <span className="text-xs font-mono text-[#6e655a] dark:text-[#A89F91]">
-                    What is this website and how does it work?
-                  </span>
-                </div>
-
-                <h2 className="font-newsreader text-2xl sm:text-3xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mb-2">
-                  DecisionLens turns complex technical debates into evidence-backed Architecture Decisions.
-                </h2>
-                <p className="text-sm text-[#4f4b40] dark:text-[#A89F91] leading-relaxed mb-6 max-w-2xl">
-                  Instead of losing decisions in messy Slack threads or endless meetings, DecisionLens guides tech leaders through a 4-step decision intelligence process:
-                </p>
-
-                {/* 4 Interactive Process Steps */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                  <div className="p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-1">
-                    <div className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
-                      Step 1 • Workspace
-                    </div>
-                    <div className="font-bold text-xs">Create a Project</div>
-                    <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91] leading-snug">
-                      Group technical decisions by system, team, or domain (e.g. Infrastructure, Payments).
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-1">
-                    <div className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
-                      Step 2 • Add Context
-                    </div>
-                    <div className="font-bold text-xs">Docs & Meetings</div>
-                    <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91] leading-snug">
-                      Upload architecture specs, or start an audio call with <strong>AI Tangent Scrubbing</strong> to strip banter.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-1">
-                    <div className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
-                      Step 3 • Technical RAG
-                    </div>
-                    <div className="font-bold text-xs">Gaps & Formulas</div>
-                    <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91] leading-snug">
-                      AI grounds choices in real cloud prices, hardware latency numbers, and flags missing evidence.
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-1">
-                    <div className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
-                      Step 4 • Recommendation
-                    </div>
-                    <div className="font-bold text-xs">ADR & Matrix</div>
-                    <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91] leading-snug">
-                      Export executive-ready trade-off matrices, risks, and consensus roadmap to PDF or Markdown.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowGuideModal(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold uppercase tracking-wider font-mono rounded-sm transition-colors shadow-2xs cursor-pointer"
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    <span>Open Interactive Guide</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateFolderModal(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-transparent hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-bold uppercase tracking-wider font-mono rounded-sm transition-colors cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Create Your First Workspace</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* HEADER: Workspaces */}
           <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4 transition-colors">
             <h1 className="font-newsreader text-[32px] sm:text-[38px] font-normal tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
@@ -729,12 +605,6 @@ export default function DashboardPage() {
           </div>
         </ModalPortal>
       )}
-
-      {/* User Guide Modal */}
-      <UserGuideModal
-        isOpen={showGuideModal}
-        onClose={() => setShowGuideModal(false)}
-      />
     </AppShell>
   );
 }
