@@ -20,6 +20,7 @@ from app.database import get_db
 from app.models import AudioRecording, Decision, User
 from app.schemas import (
     AudioRecordingResponse,
+    TranscriptFilterResponse,
     TranscriptUpdate,
     TranscriptionResponse,
 )
@@ -29,6 +30,7 @@ from app.services.audio import (
     process_and_store_audio,
     transcribe_audio_file,
 )
+from app.services.meeting_filter import filter_meeting_distractions
 
 logger = logging.getLogger("decisionlens.api.transcription")
 
@@ -124,6 +126,15 @@ async def upload_and_transcribe_audio(
     else:
         transcript_text = clean_text
 
+    # Filter out off-topic meeting chatter and distractions
+    filter_res = filter_meeting_distractions(
+        transcript=transcript_text,
+        decision_title=decision.title or "",
+        decision_context=decision.problem_statement or decision.description or "",
+        force_heuristics=force_mock,
+    )
+    final_transcript = filter_res.cleaned_transcript
+
     # Record audio recording metadata in database
     audio_rec = AudioRecording(
         owner_id=current_user.id,
@@ -140,12 +151,12 @@ async def upload_and_transcribe_audio(
     db.add(audio_rec)
 
     # Update decision transcript fields
-    decision.transcript = transcript_text
+    decision.transcript = final_transcript
     decision.language = norm_lang
     decision.transcript_reviewed = False
 
     # Incorporate into decision raw_input for downstream modules
-    transcript_header = f"\n\n[Voice Recording Transcript ({norm_lang.upper()})]\n{transcript_text}"
+    transcript_header = f"\n\n[Voice Recording Transcript ({norm_lang.upper()})]\n{final_transcript}"
     if decision.raw_input:
         decision.raw_input += transcript_header
     else:
@@ -163,6 +174,9 @@ async def upload_and_transcribe_audio(
         audio_id=audio_rec.id,
         audio_recording=AudioRecordingResponse.model_validate(audio_rec),
         message="Audio transcribed successfully",
+        tangents_filtered_count=len(filter_res.removed_tangents),
+        signal_ratio=filter_res.signal_ratio,
+        removed_tangents=filter_res.removed_tangents,
     )
 
 
@@ -379,3 +393,54 @@ def stream_audio_file(
 
     media_type = "audio/wav" if target_path.suffix == ".wav" else audio_rec.media_type
     return FileResponse(path=str(target_path), media_type=media_type, filename=target_path.name)
+
+
+@router.post(
+    "/filter-tangents",
+    response_model=TranscriptFilterResponse,
+    summary="Filter off-topic meeting chatter and social tangents from the current decision transcript",
+)
+def filter_transcript_tangents(
+    decision_id: int,
+    force_heuristics: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Examines the decision's active transcript, detects off-topic distractions
+    (social chatter, food orders, weekend chat, irrelevant tangents),
+    and filters them out while preserving high-signal technical debate.
+    """
+    decision = db.get(Decision, decision_id)
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+
+    raw_transcript = (decision.transcript or "").strip()
+    if not raw_transcript:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Decision does not have a transcript to filter. Please record or upload a transcript first.",
+        )
+
+    filter_res = filter_meeting_distractions(
+        transcript=raw_transcript,
+        decision_title=decision.title or "",
+        decision_context=decision.problem_statement or decision.description or "",
+        force_heuristics=force_heuristics,
+    )
+
+    # Persist the cleaned transcript
+    decision.transcript = filter_res.cleaned_transcript
+    db.commit()
+    db.refresh(decision)
+
+    return TranscriptFilterResponse(
+        decision_id=decision.id,
+        original_transcript=raw_transcript,
+        filtered_transcript=filter_res.cleaned_transcript,
+        tangents_filtered_count=len(filter_res.removed_tangents),
+        signal_ratio=filter_res.signal_ratio,
+        removed_tangents=filter_res.removed_tangents,
+    )

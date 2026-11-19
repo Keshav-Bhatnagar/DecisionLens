@@ -259,6 +259,18 @@ class TranscriptionResponse(BaseModel):
     audio_id: Optional[int] = None
     audio_recording: Optional[AudioRecordingResponse] = None
     message: Optional[str] = None
+    tangents_filtered_count: int = 0
+    signal_ratio: float = 1.0
+    removed_tangents: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class TranscriptFilterResponse(BaseModel):
+    decision_id: int
+    original_transcript: str
+    filtered_transcript: str
+    tangents_filtered_count: int
+    signal_ratio: float
+    removed_tangents: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 # ==========================================
@@ -1239,4 +1251,43 @@ class RagStatusResponse(BaseModel):
     has_indexed_documents: bool
     chunk_count: int
     storage_engine: str = "supabase_pgvector"
+    document_count: int = 0
+    embedding_model: Optional[str] = None
+    semantic: bool = False
+    stale_chunks: int = 0
+
+
+class RagAskRequest(BaseModel):
+    question: str = Field(..., min_length=2, max_length=1000)
+    top_k: int = Field(5, ge=1, le=8)
+
+
+class RagCitation(BaseModel):
+    index: int
+    chunk_id: str
+    document_name: str = "Attached document"
+    attachment_id: Optional[int] = None
+    content: str
+    score: float = 0.0
+
+
+class RagAskResponse(BaseModel):
+    decision_id: int
+    question: str
+    answer: str
+    covered: bool
+    citations: List[RagCitation] = []
+    documents_used: int = 0
+    documents_indexed: int = 0
+    engine: str = "none"
+    embedding_model: Optional[str] = None
+    semantic: bool = False
+
+
+class RagReindexResponse(BaseModel):
+    decisions_reindexed: int
+    chunk_count: int
+    embedding_model: Optional[str] = None
+    semantic: bool = False
+    failed_decision_ids: List[int] = []
 

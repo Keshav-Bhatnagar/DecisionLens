@@ -14,8 +14,9 @@ from app.api.gaps import router as gaps_router
 from app.api.analysis import router as analysis_router
 from app.api.roadmap import router as roadmap_router
 from app.api.outcomes import router as outcomes_router
-from app.api.rag import router as rag_router
+from app.api.rag import router as rag_router, bulk_router as rag_bulk_router
 from app.api.meeting_ws import router as meeting_ws_router
+from app.api.webhooks import router as webhooks_router
 
 
 # Lifespan context manager for application initialization and teardown
@@ -146,7 +147,9 @@ app.include_router(analysis_router, prefix="/api")
 app.include_router(roadmap_router, prefix="/api")
 app.include_router(outcomes_router, prefix="/api")
 app.include_router(rag_router, prefix="/api")
+app.include_router(rag_bulk_router, prefix="/api")
 app.include_router(meeting_ws_router)
+app.include_router(webhooks_router, prefix="/api")
 
 
 @app.get("/", tags=["General"])

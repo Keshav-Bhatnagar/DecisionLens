@@ -32,9 +32,10 @@ DOMAIN_KEYWORDS = {
     DomainType.SOFTWARE: [
         "database", "architecture", "aws", "gcp", "azure", "cloud", "docker",
         "kubernetes", "microservices", "monolith", "latency", "scale", "scalability",
-        "nosql", "sql", "postgres", "mongodb", "dynamodb", "redis", "kafka",
+        "nosql", "sql", "postgres", "postgresql", "mongodb", "dynamodb", "redis", "kafka",
         "api", "backend", "frontend", "serverless", "lambda", "framework",
-        "refactor", "tech stack", "uptime", "sla", "devops", "ci/cd"
+        "refactor", "tech stack", "uptime", "sla", "devops", "ci/cd", "pgbouncer",
+        "pooling", "cluster", "sharding", "iops", "throughput", "sre"
     ],
     DomainType.REAL_ESTATE: [
         "land", "property", "real estate", "acre", "acres", "plot", "sqft", "square feet",

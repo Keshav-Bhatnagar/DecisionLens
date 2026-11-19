@@ -6,33 +6,33 @@
 
 :root {
   /* Signature Printed Dossier (Light / Cream Parchment) */
-  --bg-page: #F4F0E6;
-  --bg-surface: #EDE7D6;
-  --bg-sidebar: #E5DEC9;
-  --ink: #1d1d1b;
-  --ink-secondary: #4f4b40;
-  --ink-tertiary: #7B8491;
-  --accent: #7a4e10;
-  --accent-hover: #5d3b0c;
-  --border: #cfc7b2;
+  --bg-page: #F5F1E8;
+  --bg-surface: #FCFBF8;
+  --bg-sidebar: #EFEADF;
+  --ink: #26211B;
+  --ink-secondary: #6E655A;
+  --ink-tertiary: #97907E;
+  --accent: #8F6E2A;
+  --accent-hover: #75581F;
+  --border: #D9D2C3;
   --radius-sm: 2px;
   --radius-md: 4px;
 
   /* Aliases for compatibility */
-  --page-bg: #F4F0E6;
-  --surface: #EDE7D6;
-  --text-primary: #1d1d1b;
-  --text-secondary: #4f4b40;
-  --text-tertiary: #7B8491;
-  --border-subtle: #cfc7b2;
+  --page-bg: #F5F1E8;
+  --surface: #FCFBF8;
+  --text-primary: #26211B;
+  --text-secondary: #6E655A;
+  --text-tertiary: #97907E;
+  --border-subtle: #D9D2C3;
 
-  --background: #F4F0E6;
-  --foreground: #1d1d1b;
-  --card: #EDE7D6;
-  --card-foreground: #1d1d1b;
-  --ring: #7a4e10;
-  --primary: #1d1d1b;
-  --primary-foreground: #F4F0E6;
+  --background: #F5F1E8;
+  --foreground: #26211B;
+  --card: #FCFBF8;
+  --card-foreground: #26211B;
+  --ring: #8F6E2A;
+  --primary: #26211B;
+  --primary-foreground: #FFFFFF;
 }
 
 .dark {
@@ -63,15 +63,28 @@
   --primary-foreground: #181614;
 }
 
+html {
+  font-size: 16px; /* Explicit base — prevents browser/OS variance */
+}
+
 body {
   color: var(--ink);
   background-color: var(--bg-page);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 1rem; /* 16px */
+  line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
+
+/* Minimum readable size floor — lifted sizes after bulk migration */
+.text-\[11px\] { font-size: 13px !important; }
+.text-\[12px\] { font-size: 14px !important; }
+.text-\[13px\] { font-size: 14px !important; }
+.text-\[14px\] { font-size: 15px !important; }
+.text-\[15px\] { font-size: 16px !important; }
 
 /* Glass panel compatibility */
 .glass-panel,
@@ -132,27 +145,6 @@ body {
   font-family: 'Courier Prime', Courier, monospace;
 }
 
-/* Executive Architectural Dot Grid & Ambient Vignette Pattern */
-.bg-executive-grid {
-  background-color: #F4F0E6;
-  background-image: 
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(122, 78, 16, 0.045) 0%, transparent 70%),
-    radial-gradient(rgba(122, 78, 16, 0.13) 1px, transparent 1px);
-  background-size: 100% 100%, 28px 28px;
-  background-position: center top, 0 0;
-}
-
-.dark .bg-executive-grid,
-[data-theme="dark"].bg-executive-grid,
-.dark.bg-executive-grid {
-  background-color: #181614;
-  background-image: 
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(212, 170, 80, 0.055) 0%, transparent 70%),
-    radial-gradient(rgba(212, 170, 80, 0.13) 1px, transparent 1px);
-  background-size: 100% 100%, 28px 28px;
-  background-position: center top, 0 0;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -168,8 +160,69 @@ body {
   animation: fadeIn 250ms ease-out forwards;
 }
 
+/* Ask-your-documents: answer reveal + loading shimmer */
+@keyframes dlRise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dl-rise {
+  animation: dlRise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes dlShimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.dl-shimmer {
+  background: linear-gradient(90deg, #ece2cc 0%, #f8f1e0 45%, #e2cf9f 50%, #f8f1e0 55%, #ece2cc 100%);
+  background-size: 200% 100%;
+  animation: dlShimmer 1.6s linear infinite;
+}
+
+.dark .dl-shimmer {
+  background: linear-gradient(90deg, #2a2620 0%, #38332c 45%, #5a4a2a 50%, #38332c 55%, #2a2620 100%);
+  background-size: 200% 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-fadeIn {
+  .animate-fadeIn,
+  .dl-rise,
+  .dl-shimmer {
     animation: none;
   }
+}
+
+/* ── Global Readability Improvements ─────────────────────────── */
+
+/* Labels, badges, and uppercase tracking chips — slightly bumped */
+.uppercase.tracking-wider,
+.uppercase.tracking-widest {
+  font-size: max(12px, 0.75em);
+}
+
+/* Input fields, textareas — comfortable reading size */
+input, textarea, select {
+  font-size: 15px;
+}
+
+/* Sidebar navigation items */
+nav a, nav button {
+  font-size: 14px;
+}
+
+/* Table cells */
+td, th {
+  font-size: 14px;
 }

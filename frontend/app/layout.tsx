@@ -22,7 +22,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased bg-[#F5F1E8] text-[#161E33] dark:bg-[#181614] dark:text-[#F0EAE1] min-h-screen transition-colors duration-200">
+      <body className="antialiased bg-[#F5F1E8] text-[#26211b] dark:bg-[#181614] dark:text-[#F0EAE1] min-h-screen transition-colors duration-200">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

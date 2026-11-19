@@ -36,14 +36,14 @@ export function DecisionLensIcon({
           {/* Burnished Gold to Amber Metallic Gradient */}
           <linearGradient id="dlIconGold" x1="6" y1="6" x2="38" y2="38" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#FBBF24" />
-            <stop offset="45%" stopColor="#D97706" />
+            <stop offset="45%" stopColor="#b4874b" />
             <stop offset="100%" stopColor="#92400E" />
           </linearGradient>
 
           {/* Frosted Lens Interior Glow */}
           <linearGradient id="dlLensGlow" x1="22" y1="8" x2="22" y2="36" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#FDE68A" stopOpacity="0.28" />
-            <stop offset="60%" stopColor="#D97706" stopOpacity="0.10" />
+            <stop offset="60%" stopColor="#b4874b" stopOpacity="0.10" />
             <stop offset="100%" stopColor="#92400E" stopOpacity="0.04" />
           </linearGradient>
         </defs>
@@ -52,10 +52,10 @@ export function DecisionLensIcon({
         <circle cx="22" cy="22" r="17" stroke="#374151" strokeWidth="0.8" strokeDasharray="2 3" opacity="0.8" />
 
         {/* Cardinal Optical Ticks (Precision Axis) */}
-        <line x1="22" y1="3" x2="22" y2="6.5" stroke="#D97706" strokeWidth="1.25" strokeLinecap="round" />
-        <line x1="22" y1="37.5" x2="22" y2="41" stroke="#D97706" strokeWidth="1.25" strokeLinecap="round" />
-        <line x1="3" y1="22" x2="6.5" y2="22" stroke="#D97706" strokeWidth="1.25" strokeLinecap="round" />
-        <line x1="37.5" y1="22" x2="41" y2="22" stroke="#D97706" strokeWidth="1.25" strokeLinecap="round" />
+        <line x1="22" y1="3" x2="22" y2="6.5" stroke="#b4874b" strokeWidth="1.25" strokeLinecap="round" />
+        <line x1="22" y1="37.5" x2="22" y2="41" stroke="#b4874b" strokeWidth="1.25" strokeLinecap="round" />
+        <line x1="3" y1="22" x2="6.5" y2="22" stroke="#b4874b" strokeWidth="1.25" strokeLinecap="round" />
+        <line x1="37.5" y1="22" x2="41" y2="22" stroke="#b4874b" strokeWidth="1.25" strokeLinecap="round" />
 
         {/* Transverse Focal Alignment Line */}
         <line x1="9" y1="22" x2="35" y2="22" stroke="#9CA3AF" strokeWidth="0.75" strokeDasharray="1.5 2.5" opacity="0.5" />
@@ -96,7 +96,7 @@ export default function DecisionLensLogo({
           <span className="text-2xl font-serif font-bold tracking-tight text-ink block leading-none">
             DecisionLens
           </span>
-          <span className="text-[10px] font-mono font-semibold uppercase tracking-widest text-accent block mt-1">
+          <span className="text-[14px] font-mono font-semibold uppercase tracking-widest text-accent block mt-1">
             Executive Cognitive Intelligence
           </span>
         </div>

@@ -337,7 +337,7 @@ export default function ReportExportModal({
             {/* Left Column: Format Deck */}
             <div className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--bg-page)]/30 p-4 space-y-2.5 overflow-y-auto flex flex-col justify-between">
               <div className="space-y-2">
-                <span className="block text-[11px] font-mono text-[var(--ink-secondary)] font-semibold uppercase tracking-wider mb-1">
+                <span className="block text-[15px] font-mono text-[var(--ink-secondary)] font-semibold uppercase tracking-wider mb-1">
                   Export formats
                 </span>
                 {FORMATS.map((fmt) => {
@@ -358,15 +358,15 @@ export default function ReportExportModal({
                         <span className={`text-xs font-semibold ${isSelected ? "text-[var(--ink)]" : "text-[var(--ink-secondary)]"}`}>
                           {fmt.title}
                         </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)]">
+                        <span className="text-[14px] font-mono px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)]">
                           {fmt.extension}
                         </span>
                       </div>
-                      <p className="text-[11px] text-[var(--ink-secondary)] leading-relaxed mb-2.5">
+                      <p className="text-[15px] text-[var(--ink-secondary)] leading-relaxed mb-2.5">
                         {fmt.description}
                       </p>
                       <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]/60 text-xs">
-                        <span className="text-[10px] text-[var(--ink-tertiary)] font-mono">
+                        <span className="text-[14px] text-[var(--ink-tertiary)] font-mono">
                           {fmt.badge}
                         </span>
                         <button
@@ -413,7 +413,7 @@ export default function ReportExportModal({
                   <span className="font-semibold text-[var(--ink)]">
                     {FORMATS.find((f) => f.id === selectedFormat)?.title}
                   </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--bg-surface)] text-[var(--ink-secondary)] border border-[var(--border)]">
+                  <span className="text-[14px] font-mono px-2 py-0.5 rounded-full bg-[var(--bg-surface)] text-[var(--ink-secondary)] border border-[var(--border)]">
                     {FORMATS.find((f) => f.id === selectedFormat)?.badge}
                   </span>
                 </div>
@@ -590,7 +590,7 @@ export default function ReportExportModal({
 
           {/* Clean Footer */}
           <div className="p-3.5 bg-[var(--bg-page)]/50 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--ink-secondary)]">
-            <span className="text-[11px] font-mono">
+            <span className="text-[15px] font-mono">
               DecisionLens intelligence dossier • Verified audit trail
             </span>
             <div className="flex items-center gap-2">

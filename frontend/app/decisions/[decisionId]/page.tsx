@@ -321,11 +321,11 @@ export default function DecisionDetailPage({
           {/* Main Working Canvas (Center Focus) */}
           <div className="flex-1 min-w-0 w-full space-y-5">
             {/* Clean Studio Header Strip */}
-            <div className="pt-1 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] space-y-2">
+            <div className="pt-1 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] space-y-1.5">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-6 h-[2.5px] rounded-full bg-[#7a4e10] dark:bg-[#D4AA50]" />
-                  <span className="font-mono text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-[2px] bg-[#7a4e10] dark:bg-[#D4AA50]" />
+                  <span className="font-courier text-xs font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#D4AA50]">
                     {folder?.name ? `${folder.name} / ` : ""}#{sequenceDisplay} • {recordType === "meeting" ? "MEETING DELIBERATION" : "DECISION DELIBERATION"}
                   </span>
                 </div>
@@ -334,9 +334,9 @@ export default function DecisionDetailPage({
                 <button
                   type="button"
                   onClick={() => setInspectorOpen((prev) => !prev)}
-                  className="xl:hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1]"
+                  className="xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-courier font-bold uppercase tracking-wider rounded-none border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1]"
                 >
-                  <Layers className="w-3.5 h-3.5" />
+                  <Layers className="w-3 h-3" />
                   <span>{inspectorOpen ? "Hide Details" : "Details"}</span>
                 </button>
               </div>
@@ -349,12 +349,12 @@ export default function DecisionDetailPage({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter decision title..."
                 aria-label="Decision Title"
-                className="w-full font-newsreader text-2xl sm:text-3xl font-medium leading-tight tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1] bg-transparent border-0 border-b border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-1 transition-colors outline-none"
+                className="w-full font-newsreader text-[28px] sm:text-[36px] font-normal leading-tight tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1] bg-transparent border-0 border-b border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
               />
 
               {/* Core Dilemma Secondary Inline Editable Line */}
-              <div className="flex items-center gap-2.5 pt-0.5">
-                <span className="font-mono text-xs uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
+              <div className="flex items-center gap-2 pt-0.5">
+                <span className="font-courier text-[15px] uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
                   Core Dilemma:
                 </span>
                 <input
@@ -362,18 +362,18 @@ export default function DecisionDetailPage({
                   value={problemStatement}
                   onChange={(e) => setProblemStatement(e.target.value)}
                   placeholder="Refine specific technical dilemma or architectural tension..."
-                  className="flex-1 font-newsreader text-sm sm:text-[15px] text-[#4f4b40] dark:text-[#C5BDB0] italic bg-transparent border-0 border-b border-dashed border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
+                  className="flex-1 font-newsreader text-sm text-[#4f4b40] dark:text-[#C5BDB0] italic bg-transparent border-0 border-b border-dashed border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
                 />
               </div>
             </div>
 
 
 
-            {/* Phase 11: End-to-End Guided Workflow Stepper (Sticky on scroll below 56px header) */}
+            {/* Phase 11: End-to-End Guided Workflow Stepper (Sticky on scroll) */}
             <div
               id="deep-audit-section"
               ref={stepContentRef}
-              className="sticky top-14 z-20 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md pt-2 pb-2 -mx-2 px-2 sm:-mx-4 sm:px-4 border-b border-[#cfc7b2] dark:border-[#38332C] shadow-2xs transition-all font-courier"
+              className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md pt-2 pb-2 -mx-2 px-2 sm:-mx-4 sm:px-4 border-b border-[#cfc7b2] dark:border-[#38332C] shadow-2xs transition-all font-courier"
             >
               <WorkflowStepper
                 currentStage={workflowStage}
@@ -398,55 +398,82 @@ export default function DecisionDetailPage({
 
             {/* Dedicated Active Stage Viewport with Auto-Focus Anchor */}
             <div id="active-stage-viewport" className="scroll-mt-24 space-y-6">
+              {/* Dynamic Stage Purpose Guidance Banner */}
+              <div className="bg-[#EDE7D6]/80 dark:bg-[#221F1C]/80 border border-[#cfc7b2] dark:border-[#38332C] rounded-sm px-4 py-2.5 flex items-center justify-between text-xs font-courier">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider font-mono">
+                    {workflowStage === "ingestion" && "Stage 01: Capture Context"}
+                    {workflowStage === "structuring" && "Stage 02: Cognitive Structuring"}
+                    {workflowStage === "gaps" && "Stage 03: Unknowns & Domain RAG"}
+                    {workflowStage === "frameworks" && "Stage 04: Trade-off Matrix & Mental Models"}
+                    {workflowStage === "synthesis" && "Stage 05: Architecture Decision Record"}
+                  </span>
+                  <span className="text-[#6e655a] dark:text-[#A89F91] hidden sm:inline">•</span>
+                  <span className="text-[#4f4b40] dark:text-[#A89F91] hidden sm:inline">
+                    {workflowStage === "ingestion" && "Add background specs, upload PRD documents, or record a meeting (AI strips distracting banter)."}
+                    {workflowStage === "structuring" && "AI extracts verifiable facts, technical assumptions, and cognitive biases from your context."}
+                    {workflowStage === "gaps" && "Stress-test assumptions against real cloud costs and hardware latency, uncovering hidden risks."}
+                    {workflowStage === "frameworks" && "Multi-Attribute Utility Theory (MAUT) scores options across Latency, Cost, and Lock-in."}
+                    {workflowStage === "synthesis" && "Final verdict, executive memo, consensus roadmap, and 1-click export to PDF or Markdown."}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowExportModal(true)}
+                  className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:underline uppercase tracking-wider shrink-0 cursor-pointer ml-3"
+                >
+                  Export Brief →
+                </button>
+              </div>
               {/* STAGE 1: Supporting Evidence & Context (Zero Duplication) */}
               {(viewMode === "all" || workflowStage === "ingestion") && (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   {/* Context & Reference Data (Optional) */}
-                  <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-none p-5 sm:p-6 shadow-2xs space-y-4 transition-colors font-sans">
+                  <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-none p-6 sm:p-7 shadow-2xs space-y-5 transition-colors">
                     <div>
                       <div className="flex items-center justify-between">
-                        <h2 className="font-newsreader text-xl sm:text-2xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight">
-                          Supporting Evidence &amp; Context{" "}
-                          <span className="font-mono text-[11px] text-[#7B8491] dark:text-[#A89F91] uppercase tracking-wider">
+                        <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                          Supporting Evidence & Context{" "}
+                          <span className="font-courier text-xs text-[#97907e] dark:text-[#A89F91] uppercase tracking-wider">
                             (Optional)
                           </span>
                         </h2>
                       </div>
-                      <p className="text-xs sm:text-[13px] font-sans text-[#4f4b40] dark:text-[#A89F91] mt-1 leading-relaxed">
+                      <p className="text-xs font-courier text-[#4f4b40] dark:text-[#A89F91] mt-1">
                         Your decision dilemma is framed above. Choose any source below to provide technical specifications, constraints, or meeting audio:
                       </p>
                     </div>
 
                     {/* 3 Clear, Mutually-Exclusive Modality Selector Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-courier">
                       {/* Option 1: Written Notes */}
                       <button
                         type="button"
                         onClick={() => setIngestionTab("context")}
-                        className={`p-3.5 sm:p-4 text-left border rounded-xl transition-all cursor-pointer ${
+                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
                           ingestionTab === "context"
-                            ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm ring-1 ring-[#7a4e10]/20"
-                            : "bg-[#EDE7D6]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#F4F0E6] dark:hover:bg-[#1E1B18] hover:border-[#7a4e10]/50"
+                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
+                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`font-newsreader text-sm sm:text-[15px] font-semibold flex items-center gap-2 ${
-                            ingestionTab === "context" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#1d1d1b] dark:text-[#F0EAE1]"
-                          }`}>
+                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5" />
                             Written Notes
                           </span>
                           {description.trim() ? (
                             <span
-                              className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]"
+                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                                ingestionTab === "context"
+                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
+                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
+                              }`}
                             >
                               Filled
                             </span>
                           ) : null}
                         </div>
-                        <p className={`text-xs font-sans leading-relaxed ${
-                          ingestionTab === "context" ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-medium" : "text-[#4f4b40] dark:text-[#A89F91]"
-                        }`}>
+                        <p className="text-[15px] opacity-75 leading-snug">
                           Add stakeholders, deadlines, budget limits, or known constraints.
                         </p>
                       </button>
@@ -455,30 +482,30 @@ export default function DecisionDetailPage({
                       <button
                         type="button"
                         onClick={() => setIngestionTab("docs")}
-                        className={`p-3.5 sm:p-4 text-left border rounded-xl transition-all cursor-pointer ${
+                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
                           ingestionTab === "docs"
-                            ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm ring-1 ring-[#7a4e10]/20"
-                            : "bg-[#EDE7D6]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#F4F0E6] dark:hover:bg-[#1E1B18] hover:border-[#7a4e10]/50"
+                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
+                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`font-newsreader text-sm sm:text-[15px] font-semibold flex items-center gap-2 ${
-                            ingestionTab === "docs" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#1d1d1b] dark:text-[#F0EAE1]"
-                          }`}>
+                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                             <Paperclip className="w-3.5 h-3.5" />
                             Attach Specs
                           </span>
                           {attachments.length > 0 ? (
                             <span
-                              className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]"
+                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                                ingestionTab === "docs"
+                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
+                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
+                              }`}
                             >
                               {attachments.length} {attachments.length === 1 ? "doc" : "docs"}
                             </span>
                           ) : null}
                         </div>
-                        <p className={`text-xs font-sans leading-relaxed ${
-                          ingestionTab === "docs" ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-medium" : "text-[#4f4b40] dark:text-[#A89F91]"
-                        }`}>
+                        <p className="text-[15px] opacity-75 leading-snug">
                           Upload architectural diagrams, PRDs, RFCs, or benchmark data.
                         </p>
                       </button>
@@ -487,30 +514,30 @@ export default function DecisionDetailPage({
                       <button
                         type="button"
                         onClick={() => setIngestionTab("voice")}
-                        className={`p-3.5 sm:p-4 text-left border rounded-xl transition-all cursor-pointer ${
+                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
                           ingestionTab === "voice" || ingestionTab === "meeting"
-                            ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm ring-1 ring-[#7a4e10]/20"
-                            : "bg-[#EDE7D6]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#F4F0E6] dark:hover:bg-[#1E1B18] hover:border-[#7a4e10]/50"
+                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
+                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`font-newsreader text-sm sm:text-[15px] font-semibold flex items-center gap-2 ${
-                            ingestionTab === "voice" || ingestionTab === "meeting" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#1d1d1b] dark:text-[#F0EAE1]"
-                          }`}>
+                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                             <Mic className="w-3.5 h-3.5" />
-                            Voice &amp; Meetings
+                            Voice & Meetings
                           </span>
                           {Boolean(decision.transcript) ? (
                             <span
-                              className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]"
+                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
+                                ingestionTab === "voice" || ingestionTab === "meeting"
+                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
+                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
+                              }`}
                             >
                               Transcribed
                             </span>
                           ) : null}
                         </div>
-                        <p className={`text-xs font-sans leading-relaxed ${
-                          ingestionTab === "voice" || ingestionTab === "meeting" ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-medium" : "text-[#4f4b40] dark:text-[#A89F91]"
-                        }`}>
+                        <p className="text-[15px] opacity-75 leading-snug">
                           Record spoken notes, upload an audio file, or sync a live meeting call.
                         </p>
                       </button>
@@ -522,8 +549,8 @@ export default function DecisionDetailPage({
                       {ingestionTab === "context" && (
                         <div className="space-y-3 animate-in fade-in duration-150">
                           <div className="flex items-center justify-between">
-                            <label className="font-mono text-xs sm:text-sm font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
-                              Background Notes, Constraints &amp; Deadlines:
+                            <label className="font-courier text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+                              Background Notes, Constraints & Deadlines:
                             </label>
                             <SpeechDictationButton
                               onTranscript={(text) =>
@@ -541,7 +568,7 @@ export default function DecisionDetailPage({
                                 ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
                                 : "Add initial notes, key stakeholders, technical constraints, budget limits, or known deadlines..."
                             }
-                            className="w-full text-base sm:text-[17px] font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl p-4 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
+                            className="w-full text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
                           />
                         </div>
                       )}
@@ -613,7 +640,7 @@ export default function DecisionDetailPage({
                                           type="button"
                                           onClick={() => handleDeleteAttachment(att.id)}
                                           title="Delete document"
-                                          className="p-1.5 text-[#7B8491] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
+                                          className="p-1.5 text-[#97907e] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
                                         >
                                           <Trash2 className="w-4 h-4" />
                                         </button>
@@ -629,7 +656,7 @@ export default function DecisionDetailPage({
                                           <button
                                             type="button"
                                             onClick={() => handleCopyText(att.extracted_text, att.id)}
-                                            className="inline-flex items-center gap-1 text-[#2B4C8C] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline"
+                                            className="inline-flex items-center gap-1 text-[#443a30] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline"
                                           >
                                             {copiedId === att.id ? (
                                               <>
@@ -658,15 +685,15 @@ export default function DecisionDetailPage({
 
                       {/* Active Panel 3: Voice & Call Sync */}
                       {(ingestionTab === "voice" || ingestionTab === "meeting") && (
-                        <div className="space-y-4 animate-in fade-in duration-150 font-sans">
+                        <div className="space-y-4 animate-in fade-in duration-150 font-courier">
                           <div className="flex items-center gap-2 border-b border-[#cfc7b2] dark:border-[#38332C] pb-3">
                             <button
                               type="button"
                               onClick={() => setIngestionTab("voice")}
-                              className={`px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors ${
+                              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer transition-colors ${
                                 ingestionTab === "voice"
-                                  ? "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-2xs"
-                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
+                                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
                               }`}
                             >
                               🎙️ Voice Memo & Audio Upload
@@ -674,10 +701,10 @@ export default function DecisionDetailPage({
                             <button
                               type="button"
                               onClick={() => setIngestionTab("meeting")}
-                              className={`px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider rounded-lg cursor-pointer transition-colors ${
+                              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer transition-colors ${
                                 ingestionTab === "meeting"
-                                  ? "bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-2xs"
-                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
+                                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
                               }`}
                             >
                               📹 Live Call & Anonymous Scribe
@@ -789,15 +816,7 @@ export default function DecisionDetailPage({
                 <div className="animate-in fade-in duration-200">
                   <FrameworkPanel
                     decisionId={decisionId}
-                    initialAnalysis={
-                      decision.analysis &&
-                      typeof decision.analysis === "object" &&
-                      "selected_frameworks" in decision.analysis &&
-                      Array.isArray(decision.analysis.selected_frameworks) &&
-                      decision.analysis.selected_frameworks.length > 0
-                        ? decision.analysis
-                        : null
-                    }
+                    initialAnalysis={decision.analysis}
                     onAnalysisUpdated={() => loadData()}
                     onAdvanceToNextStage={() => handleSelectStage("synthesis")}
                   />
@@ -822,12 +841,12 @@ export default function DecisionDetailPage({
 
             {/* Guided Bottom Stage Action Bar (In Step Mode) */}
             {viewMode === "step" && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3.5 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl shadow-2xs mt-8 font-sans">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-8 font-courier">
                 <button
                   type="button"
                   disabled={currentStageIdx === 0}
                   onClick={() => handleSelectStage(workflowStagesList[currentStageIdx - 1].id)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>
@@ -835,13 +854,11 @@ export default function DecisionDetailPage({
                   </span>
                 </button>
 
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-[#4f4b40] dark:text-[#A89F91] font-mono font-bold uppercase tracking-wider">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50] animate-pulse" />
+                <div className="flex items-center gap-2 text-xs text-[#4f4b40] dark:text-[#A89F91] font-courier font-bold uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50] animate-pulse" />
                   <span>
                     Step {currentStageIdx + 1} of 5:{" "}
-                    <strong className="font-newsreader text-base sm:text-lg font-bold text-[#1d1d1b] dark:text-[#F0EAE1] capitalize">
-                      {workflowStagesList[currentStageIdx]?.label}
-                    </strong>
+                    <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{workflowStagesList[currentStageIdx]?.label}</strong>
                   </span>
                 </div>
 
@@ -852,7 +869,7 @@ export default function DecisionDetailPage({
                       handleSave();
                       handleSelectStage(workflowStagesList[currentStageIdx + 1].id);
                     }}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-[15px] sm:text-base font-semibold text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-xl border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-all cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
                   >
                     <span>Continue to {workflowStagesList[currentStageIdx + 1].label}</span>
                     <ArrowRight className="w-4 h-4" />
@@ -861,7 +878,7 @@ export default function DecisionDetailPage({
                   <button
                     type="button"
                     onClick={() => setShowExportModal(true)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm sm:text-base font-semibold text-[#F4F0E6] bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-xl border border-[#1d1d1b] dark:border-[#D4AA50] transition-all cursor-pointer shadow-sm"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#4f4b40] hover:bg-[#38342b] dark:bg-[#b08a3c] dark:text-[#181614] rounded-none border border-[#4f4b40] dark:border-[#b08a3c] transition-colors cursor-pointer"
                   >
                     <Share2 className="w-4 h-4" />
                     <span>Export Executive Brief</span>

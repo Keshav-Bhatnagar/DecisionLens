@@ -185,7 +185,7 @@ function CallbackHandler() {
           </div>
         )}
 
-        <div className="text-[11px] text-ink-tertiary pt-2 border-t border-border">
+        <div className="text-[15px] text-ink-tertiary pt-2 border-t border-border">
           DecisionLens Institutional Access &middot; Single Sign-On
         </div>
       </div>

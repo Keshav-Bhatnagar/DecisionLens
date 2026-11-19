@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   X,
@@ -18,11 +18,10 @@ import {
   Layers,
   ChevronRight,
   ExternalLink,
-  Search,
   Database,
-  Loader2,
 } from "lucide-react";
-import { Decision, Folder, Attachment, queryDecisionRag, getDecisionRagStatus, RagSearchResultItem } from "@/lib/api";
+import { Decision, Folder, Attachment, RagStatusResponse } from "@/lib/api";
+import AskDocumentsPanel from "@/components/AskDocumentsPanel";
 import { WorkflowStage } from "@/components/WorkflowStepper";
 
 interface DecisionInspectorProps {
@@ -66,33 +65,9 @@ export default function DecisionInspector({
   onSelectStage,
   onSelectIngestionTab,
 }: DecisionInspectorProps) {
-  // RAG Dossier Search State
-  const [ragQuery, setRagQuery] = useState("");
-  const [ragResults, setRagResults] = useState<RagSearchResultItem[]>([]);
-  const [isSearchingRag, setIsSearchingRag] = useState(false);
-  const [ragChunkCount, setRagChunkCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (decision?.id && attachments.length > 0) {
-      getDecisionRagStatus(decision.id)
-        .then((res) => setRagChunkCount(res.chunk_count))
-        .catch(() => {});
-    }
-  }, [decision?.id, attachments.length]);
-
-  const handleSearchRag = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!ragQuery.trim() || !decision?.id) return;
-    setIsSearchingRag(true);
-    try {
-      const res = await queryDecisionRag(decision.id, ragQuery.trim(), 3);
-      setRagResults(res.results || []);
-    } catch (err) {
-      console.error("RAG search failed", err);
-    } finally {
-      setIsSearchingRag(false);
-    }
-  };
+  // RAG index status (reported by the Ask your documents panel)
+  const [ragStatus, setRagStatus] = useState<RagStatusResponse | null>(null);
+  const ragChunkCount = ragStatus?.chunk_count ?? null;
 
   // Epistemic Rigor calculation
   const rigorData = useMemo(() => {
@@ -100,7 +75,7 @@ export default function DecisionInspector({
       return { percent: 92, label: "Fully Scrutinized", level: "high", color: "text-emerald-700 dark:text-emerald-400", bar: "bg-emerald-600 dark:bg-emerald-400" };
     }
     if (decision.analysis && typeof decision.analysis === "object" && Object.keys(decision.analysis).length > 0) {
-      return { percent: 75, label: "Trade-offs Balanced", level: "med-high", color: "text-[#2B4C8C] dark:text-[#93b3ee]", bar: "bg-[#2B4C8C] dark:bg-[#93b3ee]" };
+      return { percent: 75, label: "Trade-offs Balanced", level: "med-high", color: "text-[#443a30] dark:text-[#d9c69a]", bar: "bg-[#443a30] dark:bg-[#d9c69a]" };
     }
     const hasGaps = Array.isArray(decision.gaps) ? decision.gaps.length > 0 : Boolean(decision.gaps && typeof decision.gaps === "object" && Object.keys(decision.gaps).length > 0);
     if (hasGaps) {
@@ -145,7 +120,7 @@ export default function DecisionInspector({
         <button
           type="button"
           onClick={onToggle}
-          className="p-1 text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/50 dark:hover:bg-[#38332C]/50 rounded-none transition-colors"
+          className="p-1 text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/50 dark:hover:bg-[#38332C]/50 rounded-none transition-colors"
           title="Close Inspector"
           aria-label="Close Inspector"
         >
@@ -157,11 +132,11 @@ export default function DecisionInspector({
         {/* 2. Primary Actions Group */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+            <span className="text-[15px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
               Executive Actions
             </span>
             {savedSuccess && (
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+              <span className="text-[15px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Saved
               </span>
             )}
@@ -171,7 +146,7 @@ export default function DecisionInspector({
             <button
               type="button"
               onClick={onOpenAutoPilot}
-              className="px-3 py-2.5 bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-3 py-2.5 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
               title="Run end-to-end deliberation pipeline autonomously"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300 dark:text-[#181614]" />
@@ -204,7 +179,7 @@ export default function DecisionInspector({
               type="button"
               onClick={() => onDelete()}
               title="Delete record"
-              className="p-2 text-[#7B8491] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
+              className="p-2 text-[#97907e] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -228,7 +203,7 @@ export default function DecisionInspector({
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+          <div className="flex items-center justify-between text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
             <span>{rigorData.label}</span>
             <span>Step {currentStage === "ingestion" ? "1" : currentStage === "structuring" ? "2" : currentStage === "gaps" ? "3" : currentStage === "frameworks" ? "4" : "5"} of 5</span>
           </div>
@@ -236,13 +211,13 @@ export default function DecisionInspector({
 
         {/* 4. Metadata Attributes Group */}
         <div className="space-y-3 pt-1 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70">
-          <span className="text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+          <span className="text-[15px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
             Dossier Properties
           </span>
 
           {/* Status Field */}
           <div className="space-y-1">
-            <label className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
+            <label className="text-[15px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
               Deliberation Status
             </label>
             <select
@@ -259,7 +234,7 @@ export default function DecisionInspector({
 
           {/* Record Type Field */}
           <div className="space-y-1">
-            <label className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
+            <label className="text-[15px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
               Record Modality
             </label>
             <div className="grid grid-cols-2 gap-1.5">
@@ -294,7 +269,7 @@ export default function DecisionInspector({
           {/* Workspace Parent Link */}
           {folder && (
             <div className="space-y-1">
-              <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
+              <span className="text-[15px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider font-bold block">
                 Parent Workspace
               </span>
               <Link
@@ -302,13 +277,13 @@ export default function DecisionInspector({
                 className="flex items-center justify-between p-2 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-xs text-[#1d1d1b] dark:text-[#F0EAE1] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] transition-colors"
               >
                 <span className="truncate font-bold">{folder.name}</span>
-                <ExternalLink className="w-3 h-3 text-[#7B8491]" />
+                <ExternalLink className="w-3 h-3 text-[#97907e]" />
               </Link>
             </div>
           )}
 
           {/* Creation Date & ID */}
-          <div className="flex items-center justify-between text-[11px] text-[#7B8491] pt-1">
+          <div className="flex items-center justify-between text-[15px] text-[#97907e] pt-1">
             <span>RECORD ID #{decision.id}</span>
             <span>CREATED {createdFormatted}</span>
           </div>
@@ -318,12 +293,12 @@ export default function DecisionInspector({
         <div className="space-y-2 pt-1 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+              <span className="text-[15px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
                 RAG Grounding ({attachments.length})
               </span>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[15px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                 <Database className="w-2.5 h-2.5" />
-                pgvector {ragChunkCount !== null ? `(${ragChunkCount} chunks)` : ""}
+                {ragStatus?.semantic ? "semantic" : "index"} {ragChunkCount !== null ? `(${ragChunkCount} chunks)` : ""}
               </span>
             </div>
             {onSelectIngestionTab && (
@@ -333,7 +308,7 @@ export default function DecisionInspector({
                   onSelectStage("ingestion");
                   onSelectIngestionTab("docs");
                 }}
-                className="text-[11px] font-bold text-[#2B4C8C] dark:text-[#D4AA50] hover:underline"
+                className="text-[15px] font-bold text-[#443a30] dark:text-[#D4AA50] hover:underline"
               >
                 + Attach
               </button>
@@ -341,7 +316,7 @@ export default function DecisionInspector({
           </div>
 
           {attachments.length === 0 ? (
-            <div className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#7B8491]">
+            <div className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[15px] text-[#97907e]">
               0 reference documents attached. Upload RFCs, specs or benchmarks to ground AI checks.
             </div>
           ) : (
@@ -354,78 +329,28 @@ export default function DecisionInspector({
                   >
                     <div className="flex items-center gap-1.5 truncate min-w-0">
                       <Paperclip className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
-                      <span className="truncate text-[11px] font-bold">{att.original_name}</span>
+                      <span className="truncate text-[15px] font-bold">{att.original_name}</span>
                     </div>
-                    <span className="text-[10px] text-[#7B8491] shrink-0 ml-1">
+                    <span className="text-[14px] text-[#97907e] shrink-0 ml-1">
                       {(att.file_size / 1024).toFixed(0)} KB
                     </span>
                   </div>
                 ))}
               </div>
 
-              {/* Semantic Dossier Query Box */}
-              <form onSubmit={handleSearchRag} className="flex gap-1 pt-1">
-                <div className="relative flex-1">
-                  <Search className="w-3 h-3 absolute left-2 top-2 text-[#7B8491]" />
-                  <input
-                    type="text"
-                    value={ragQuery}
-                    onChange={(e) => setRagQuery(e.target.value)}
-                    placeholder="Search indexed dossier..."
-                    className="w-full pl-6 pr-2 py-1 text-[11px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[#24211D] dark:text-[#E8E2D2] placeholder-[#7B8491] focus:outline-none focus:border-[#7a4e10]"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isSearchingRag || !ragQuery.trim()}
-                  className="px-2 py-1 bg-[#2B4C8C] text-white text-[10px] font-bold disabled:opacity-50 hover:bg-[#1F3664] shrink-0"
-                >
-                  {isSearchingRag ? <Loader2 className="w-3 h-3 animate-spin" /> : "Query"}
-                </button>
-              </form>
-
-              {/* Retrieved Chunks Display */}
-              {ragResults.length > 0 && (
-                <div className="space-y-1.5 pt-1">
-                  <div className="text-[10px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider flex items-center justify-between">
-                    <span>Retrieved Excerpts ({ragResults.length})</span>
-                    <button
-                      type="button"
-                      onClick={() => setRagResults([])}
-                      className="text-[#7B8491] hover:text-[#24211D] dark:hover:text-[#E8E2D2]"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                    {ragResults.map((r, idx) => (
-                      <div
-                        key={r.id || idx}
-                        className="p-2 bg-[#F4F0E6] dark:bg-[#181614] border-l-2 border-l-[#2B4C8C] border-y border-r border-[#cfc7b2] dark:border-[#38332C] text-[11px] space-y-1"
-                      >
-                        <div className="flex items-center justify-between text-[10px] text-[#7B8491]">
-                          <span className="font-semibold text-[#24211D] dark:text-[#E8E2D2] truncate max-w-[140px]">
-                            {r.document_name || "Attachment"}
-                          </span>
-                          <span className="font-mono text-emerald-700 dark:text-emerald-400">
-                            {Math.round(r.score * 100)}% Match
-                          </span>
-                        </div>
-                        <p className="text-[#4f4b40] dark:text-[#A89F91] text-[10.5px] leading-relaxed line-clamp-3">
-                          {r.content}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Ask your documents: cited answers grounded in the attachments */}
+              <AskDocumentsPanel
+                decisionId={decision.id}
+                attachmentCount={attachments.length}
+                onStatusChange={setRagStatus}
+              />
             </>
           )}
         </div>
 
         {/* 6. Hotkey Quick Reference */}
-        <div className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#4f4b40] dark:text-[#A89F91] space-y-1">
-          <div className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[10px]">
+        <div className="p-2.5 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[15px] text-[#4f4b40] dark:text-[#A89F91] space-y-1">
+          <div className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider text-[14px]">
             Navigation Shortcuts
           </div>
           <div className="flex items-center justify-between">

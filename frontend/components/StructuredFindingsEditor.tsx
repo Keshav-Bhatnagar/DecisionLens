@@ -431,7 +431,7 @@ export default function StructuredFindingsEditor({
       count: groundTruthCombined.length,
       colorTheme: {
         border: "border-[#cfc7b2] dark:border-[#38332C]",
-        badge: "bg-[#161E33] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]",
+        badge: "bg-[#26211b] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]",
         accent: "border-[#7a4e10] dark:border-[#D4AA50]",
       },
     },
@@ -443,8 +443,8 @@ export default function StructuredFindingsEditor({
       count: assumptionsList.length,
       colorTheme: {
         border: "border-[#cfc7b2] dark:border-[#38332C]",
-        badge: "bg-[#2F5D8F]/15 text-[#2F5D8F] dark:bg-[#2F5D8F]/30 dark:text-[#93B4D7]",
-        accent: "border-[#2F5D8F]",
+        badge: "bg-[#6e655a]/15 text-[#6e655a] dark:bg-[#6e655a]/30 dark:text-[#93B4D7]",
+        accent: "border-[#6e655a]",
       },
     },
     {
@@ -467,8 +467,8 @@ export default function StructuredFindingsEditor({
       count: caveatsCombined.length,
       colorTheme: {
         border: "border-[#cfc7b2] dark:border-[#38332C]",
-        badge: "bg-[#5A6275]/15 text-[#5A6275] dark:bg-[#5A6275]/30 dark:text-[#C5CBD8]",
-        accent: "border-[#5A6275]",
+        badge: "bg-[#7a7264]/15 text-[#7a7264] dark:bg-[#7a7264]/30 dark:text-[#C5CBD8]",
+        accent: "border-[#7a7264]",
       },
     },
   ];
@@ -476,17 +476,17 @@ export default function StructuredFindingsEditor({
   const currentSlide = slides[activeSlide];
 
   return (
-    <div className="bg-[#EDE7D6] dark:bg-[#181614] rounded-xl border border-[#cfc7b2] dark:border-[#38332C] p-6 sm:p-8 space-y-6 font-sans">
+    <div className="bg-[#FCFBF8] dark:bg-[#181614] rounded-xl border border-[#D9D2C3] dark:border-[#38332C] p-6 sm:p-8 space-y-6 font-sans">
       {/* Editorial Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-[#cfc7b2] dark:border-[#38332C]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-[#D9D2C3]/60 dark:border-[#38332C]">
         <div>
-          <span className="text-xs sm:text-sm font-mono font-bold tracking-wider text-[#7a4e10] dark:text-[#D4AA50] uppercase">
+          <span className="text-xs font-mono font-bold tracking-wider text-[#7a4e10] dark:text-[#D4AA50] uppercase">
             Stage 02 • Evidence &amp; Cognitive Triage
           </span>
-          <h2 className="font-newsreader text-2xl sm:text-3xl lg:text-4xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight mt-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#26211b] dark:text-[#F0EAE1] tracking-tight mt-1">
             The Evidence Orbit
           </h2>
-          <p className="text-[15px] sm:text-[16px] font-sans text-[#4f4b40] dark:text-[#A89F91] mt-1.5 max-w-2xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#7a7264] dark:text-[#A89F91] mt-1 max-w-2xl leading-relaxed">
             Review direct facts, untested assumptions, and unspoken friction in a 3D rotating stage before committing to a decision.
           </p>
         </div>
@@ -497,10 +497,10 @@ export default function StructuredFindingsEditor({
               type="button"
               onClick={() => handleSaveAndApprove(!reviewed)}
               disabled={isSaving}
-              className={`px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border transition-colors cursor-pointer ${
+              className={`px-3.5 py-2 text-xs font-bold rounded-lg border transition-colors cursor-pointer ${
                 reviewed
-                  ? "bg-[#E5DEC9] text-[#7a4e10] border-[#cfc7b2] dark:bg-[#221F1C] dark:text-[#D4AA50] dark:border-[#38332C]"
-                  : "bg-[#F4F0E6] text-[#5A6275] border-[#cfc7b2] dark:bg-[#1A1815] dark:text-[#A89F91] dark:border-[#38332C]"
+                  ? "bg-[#EDE7D6] text-[#7a4e10] border-[#cfc7b2] dark:bg-[#221F1C] dark:text-[#D4AA50] dark:border-[#38332C]"
+                  : "bg-[#F5F1E8] text-[#7a7264] border-[#D9D2C3] dark:bg-[#1A1815] dark:text-[#A89F91] dark:border-[#38332C]"
               }`}
             >
               {reviewed ? "Ground Truth Locked" : "Lock Ground Truth"}
@@ -511,7 +511,7 @@ export default function StructuredFindingsEditor({
             type="button"
             onClick={handleRunAnalysis}
             disabled={isAnalyzing}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold text-[#F5F1E8] bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#26211b] hover:bg-[#2e2822] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             {isAnalyzing && <RotateCw className="w-3.5 h-3.5 animate-spin" />}
             <span>
@@ -527,12 +527,12 @@ export default function StructuredFindingsEditor({
 
       {/* Ingestion Sources Summary */}
       {sourceSummary && sourceSummary !== "None" && (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-[#E5DEC9]/50 dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-xs sm:text-sm text-[#4f4b40] dark:text-[#A89F91]">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#EDE7D6]/50 dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#7a7264] dark:text-[#A89F91]">
           <span>
-            Context Sources: <strong className="font-semibold text-[#1d1d1b] dark:text-[#F0EAE1]">{sourceSummary}</strong>
+            Context Sources: <strong className="font-bold text-[#26211b] dark:text-[#F0EAE1]">{sourceSummary}</strong>
           </span>
           {sourceSummary.includes("Folder Memory") && (
-            <span className="font-mono text-xs text-[#7a4e10] dark:text-[#D4AA50] font-bold">
+            <span className="font-mono text-[15px] text-[#7a4e10] dark:text-[#D4AA50]">
               [Linked to Prior Folder Decisions]
             </span>
           )}
@@ -541,80 +541,80 @@ export default function StructuredFindingsEditor({
 
       {/* Notifications */}
       {error && (
-        <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl text-xs sm:text-sm text-red-800 dark:text-red-300">
+        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg text-xs text-red-800 dark:text-red-300">
           {error}
         </div>
       )}
 
       {successMsg && (
-        <div className="p-3.5 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-xs sm:text-sm text-[#1d1d1b] dark:text-[#D4AA50]">
+        <div className="p-3 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#26211b] dark:text-[#D4AA50]">
           {successMsg}
         </div>
       )}
 
       {/* COLD START: Signal Readiness Audit (When No Findings Yet) */}
       {!findings && !isAnalyzing && (
-        <div className="p-6 sm:p-8 bg-[#E5DEC9]/50 dark:bg-[#1A1815] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-2xl space-y-6">
+        <div className="p-6 sm:p-8 bg-[#F5F1E8]/70 dark:bg-[#1A1815] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-newsreader text-xl sm:text-2xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight">
+              <h3 className="text-sm sm:text-base font-bold text-[#26211b] dark:text-[#F0EAE1]">
                 Input Signal Readiness Audit
               </h3>
-              <p className="text-[14px] sm:text-[15px] font-sans text-[#4f4b40] dark:text-[#A89F91] mt-1">
+              <p className="text-xs text-[#7a7264] dark:text-[#A89F91] mt-0.5">
                 Aggregates your problem statement, meeting scribe, and dossier into 4 structured dimensions.
               </p>
             </div>
-            <span className="text-xs sm:text-sm font-mono font-bold px-3 py-1.5 bg-[#F4F0E6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg">
+            <span className="text-xs font-mono font-bold px-2.5 py-1 bg-[#EDE7D6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-md">
               Ready to Structure
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-1.5">
-              <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+              <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Problem Statement
               </span>
-              <p className="font-newsreader text-[17px] sm:text-[18px] font-medium text-[#1d1d1b] dark:text-[#F0EAE1] line-clamp-2 leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#26211b] dark:text-[#F0EAE1] line-clamp-2">
                 {problemStatement ? problemStatement : "Pending framing in Stage 1"}
               </p>
-              <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
+              <span className="text-[15px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
                 {problemStatement ? `${problemStatement.split(/\s+/).length} words framed` : "0 words"}
               </span>
             </div>
 
-            <div className="p-5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-1.5">
-              <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+              <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Meeting Scribe &amp; Audio
               </span>
-              <p className="font-newsreader text-[17px] sm:text-[18px] font-medium text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#26211b] dark:text-[#F0EAE1]">
                 {wordCount > 0 ? `${wordCount} words transcribed` : "No voice recording uploaded"}
               </p>
-              <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
+              <span className="text-[15px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
                 {wordCount > 0 ? "IIT Madras / IndicReady" : "Optional input"}
               </span>
             </div>
 
-            <div className="p-5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-1.5">
-              <span className="text-xs font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+              <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Document Dossier
               </span>
-              <p className="font-newsreader text-[17px] sm:text-[18px] font-medium text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#26211b] dark:text-[#F0EAE1]">
                 {attachmentCount > 0 ? `${attachmentCount} attachment(s) parsed` : "No attachments parsed"}
               </p>
-              <span className="text-xs text-[#7B8491] dark:text-[#A89F91] block font-mono">
+              <span className="text-[15px] text-[#7a7264] dark:text-[#A89F91] block font-mono">
                 PDF, DOCX, TXT Evidence
               </span>
             </div>
           </div>
 
-          <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#cfc7b2] dark:border-[#38332C]">
-            <p className="text-[14px] text-[#4f4b40] dark:text-[#A89F91]">
+          <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#D9D2C3]/60 dark:border-[#38332C]">
+            <p className="text-xs text-[#7a7264] dark:text-[#A89F91]">
               Click below to initiate the 3D rotating evidence carousel.
             </p>
             <button
               type="button"
               onClick={handleRunAnalysis}
-              className="w-full sm:w-auto px-6 py-2.5 text-xs sm:text-sm font-semibold text-[#F5F1E8] bg-[#1d1d1b] hover:bg-[#2C2723] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-xl transition-all shadow-sm cursor-pointer"
+              className="w-full sm:w-auto px-5 py-2 text-xs font-bold text-[#F5F1E8] bg-[#26211b] hover:bg-[#2e2822] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
             >
               Launch Evidence Orbit
             </button>
@@ -637,7 +637,7 @@ export default function StructuredFindingsEditor({
                   className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${
                     isActive
                       ? "bg-[#EDE7D6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-xs"
-                      : "bg-[#E5DEC9]/50 dark:bg-[#1A1815] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE7D6]"
+                      : "bg-[#F5F1E8]/70 dark:bg-[#1A1815] border-[#D9D2C3] dark:border-[#38332C] hover:bg-[#EDE7D6]/50"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1">
@@ -645,19 +645,19 @@ export default function StructuredFindingsEditor({
                       {s.number}
                     </span>
                     <span
-                      className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                      className={`text-[15px] font-mono font-bold px-2 py-0.5 rounded-md ${
                         isActive
-                          ? "bg-[#161E33] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]"
-                          : "bg-[#cfc7b2] dark:bg-[#2C2722] text-[#5A6275] dark:text-[#A89F91]"
+                          ? "bg-[#26211b] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]"
+                          : "bg-[#D9D2C3]/70 dark:bg-[#2C2722] text-[#7a7264] dark:text-[#A89F91]"
                       }`}
                     >
                       {s.count} items
                     </span>
                   </div>
-                  <div className="font-newsreader text-base sm:text-lg font-normal text-[#1d1d1b] dark:text-[#F0EAE1] truncate mt-1.5">
+                  <div className="text-xs sm:text-sm font-bold text-[#26211b] dark:text-[#F0EAE1] truncate mt-1.5">
                     {s.title}
                   </div>
-                  <div className="text-xs font-sans text-[#4f4b40] dark:text-[#A89F91] truncate mt-0.5">
+                  <div className="text-[15px] text-[#7a7264] dark:text-[#A89F91] truncate mt-0.5">
                     {s.subtitle}
                   </div>
                 </button>
@@ -666,19 +666,19 @@ export default function StructuredFindingsEditor({
           </div>
 
           {/* Active Dimension Orbit Stage */}
-          <div className="rounded-xl border border-[#cfc7b2] dark:border-[#38332C] bg-[#E5DEC9]/35 dark:bg-[#1A1815] p-5 sm:p-6 space-y-4">
+          <div className="rounded-xl border border-[#D9D2C3] dark:border-[#38332C] bg-[#FCFBF8] dark:bg-[#1A1815] p-5 sm:p-6 space-y-4">
             {/* Header: Title & Stepper */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#D9D2C3]/60 dark:border-[#38332C]">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-newsreader text-xl sm:text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  <h3 className="text-base sm:text-lg font-bold text-[#26211b] dark:text-[#F0EAE1]">
                     {currentSlide.title}
                   </h3>
                   <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-[#EDE7D6] dark:bg-[#221F1C] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C]">
                     {currentSlide.count} items
                   </span>
                 </div>
-                <p className="text-xs text-[#5A6275] dark:text-[#A89F91] mt-0.5">
+                <p className="text-xs text-[#7a7264] dark:text-[#A89F91] mt-0.5">
                   {currentSlide.subtitle}
                 </p>
               </div>
@@ -689,20 +689,20 @@ export default function StructuredFindingsEditor({
                   type="button"
                   disabled={activeSlide === 0}
                   onClick={() => setActiveSlide((prev) => Math.max(0, prev - 1))}
-                  className="w-8 h-8 rounded-lg bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#161E33] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center cursor-pointer"
+                  className="w-8 h-8 rounded-lg bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#26211b] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center cursor-pointer"
                   title="Previous Category (Shift + ArrowLeft)"
                   aria-label="Previous Category"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-xs font-mono font-bold text-[#5A6275] dark:text-[#A89F91] px-1">
+                <span className="text-xs font-mono font-bold text-[#7a7264] dark:text-[#A89F91] px-1">
                   Category {activeSlide + 1} of 4
                 </span>
                 <button
                   type="button"
                   disabled={activeSlide === 3}
                   onClick={() => setActiveSlide((prev) => Math.min(3, prev + 1))}
-                  className="w-8 h-8 rounded-lg bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#161E33] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center cursor-pointer"
+                  className="w-8 h-8 rounded-lg bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[#26211b] dark:text-[#F0EAE1] hover:bg-[#E5DEC9] disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center cursor-pointer"
                   title="Next Category (Shift + ArrowRight)"
                   aria-label="Next Category"
                 >
@@ -731,8 +731,8 @@ export default function StructuredFindingsEditor({
                     downstreamDestination="Moves to Stage 4 & 5 as hard boundary conditions. Any architecture violating these is penalized."
                   />
 
-                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#F0EAE1]">
-                    <span className="font-bold font-mono text-[10px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#26211b] dark:text-[#F0EAE1]">
+                    <span className="font-bold font-mono text-[14px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                       Stage 4 &amp; 5 Pipeline Destination
                     </span>
                     <span>
@@ -761,9 +761,9 @@ export default function StructuredFindingsEditor({
                     downstreamDestination="Moves to Stage 3 Web Research to retrieve benchmarks & empirical proof."
                   />
 
-                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg flex items-center justify-between gap-3 text-xs text-[#161E33] dark:text-[#F0EAE1]">
+                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg flex items-center justify-between gap-3 text-xs text-[#26211b] dark:text-[#F0EAE1]">
                     <div>
-                      <span className="font-bold font-mono text-[10px] text-[#2F5D8F] dark:text-[#93B4D7] uppercase tracking-wider block">
+                      <span className="font-bold font-mono text-[14px] text-[#6e655a] dark:text-[#93B4D7] uppercase tracking-wider block">
                         Stage 3 Pipeline Destination
                       </span>
                       <span>
@@ -774,7 +774,7 @@ export default function StructuredFindingsEditor({
                       <button
                         type="button"
                         onClick={onAdvanceToGaps}
-                        className="px-3 py-1.5 bg-[#2F5D8F] hover:bg-[#244870] text-white font-bold rounded-md transition-colors shrink-0 cursor-pointer"
+                        className="px-3 py-1.5 bg-[#6e655a] hover:bg-[#244870] text-white font-bold rounded-md transition-colors shrink-0 cursor-pointer"
                       >
                         Validate in Stage 3 →
                       </button>
@@ -801,8 +801,8 @@ export default function StructuredFindingsEditor({
                     downstreamDestination="Moves to Stage 4 Pre-Mortem & Inversion analysis to stress-test your team."
                   />
 
-                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#F0EAE1]">
-                    <span className="font-bold font-mono text-[10px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
+                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#26211b] dark:text-[#F0EAE1]">
+                    <span className="font-bold font-mono text-[14px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                       Stage 4 Pipeline Destination
                     </span>
                     <span>
@@ -830,8 +830,8 @@ export default function StructuredFindingsEditor({
                     downstreamDestination="Moves to Stage 5 Risk Register to enforce SRE safeguards & rollback criteria."
                   />
 
-                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#161E33] dark:text-[#F0EAE1]">
-                    <span className="font-bold font-mono text-[10px] text-[#5A6275] dark:text-[#A89F91] uppercase tracking-wider block">
+                  <div className="p-3 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg text-xs text-[#26211b] dark:text-[#F0EAE1]">
+                    <span className="font-bold font-mono text-[14px] text-[#7a7264] dark:text-[#A89F91] uppercase tracking-wider block">
                       Stage 5 Pipeline Destination
                     </span>
                     <span>
@@ -844,8 +844,8 @@ export default function StructuredFindingsEditor({
 
             {/* Bottom Actions */}
             <div className="pt-4 border-t border-[#D9D2C3]/60 dark:border-[#38332C] flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-xs text-[#5A6275] dark:text-[#A89F91]">
-                Use <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#161E33] dark:text-[#F0EAE1]">←</kbd> and <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#161E33] dark:text-[#F0EAE1]">→</kbd> to rotate points. Press <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[11px] font-mono text-[#161E33] dark:text-[#F0EAE1]">Shift + ← / →</kbd> to switch categories.
+              <div className="text-xs text-[#7a7264] dark:text-[#A89F91]">
+                Use <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[15px] font-mono text-[#26211b] dark:text-[#F0EAE1]">←</kbd> and <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[15px] font-mono text-[#26211b] dark:text-[#F0EAE1]">→</kbd> to rotate points. Press <kbd className="px-1.5 py-0.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded text-[15px] font-mono text-[#26211b] dark:text-[#F0EAE1]">Shift + ← / →</kbd> to switch categories.
               </div>
 
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
@@ -853,7 +853,7 @@ export default function StructuredFindingsEditor({
                   type="button"
                   onClick={() => handleSaveAndApprove(true)}
                   disabled={isSaving}
-                  className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
+                  className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-[#26211b] dark:text-[#F0EAE1] bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
                 >
                   {isSaving ? "Saving..." : "Save Findings"}
                 </button>
@@ -865,7 +865,7 @@ export default function StructuredFindingsEditor({
                       handleSaveAndApprove(true);
                       onAdvanceToGaps();
                     }}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#26211b] hover:bg-[#2e2822] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
                   >
                     <span>Advance to Stage 3 Research</span>
                     <ArrowRight className="w-3.5 h-3.5" />

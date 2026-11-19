@@ -218,24 +218,24 @@ export default function AutoPilotModal({
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-[#161E33]/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="w-full max-w-2xl bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl shadow-2xl overflow-hidden flex flex-col font-sans text-[#1d1d1b] dark:text-[#F0EAE1]">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-[#26211b]/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="w-full max-w-2xl bg-[#FCFBF8] border border-[#D9D2C3] rounded-2xl shadow-2xl overflow-hidden flex flex-col font-ui text-[#26211b]">
           {/* Modal Header */}
-          <div className="px-6 py-5 border-b border-[#cfc7b2] dark:border-[#38332C] bg-[#E5DEC9] dark:bg-[#221F1C] flex items-center justify-between">
+          <div className="px-6 py-5 border-b border-[#D9D2C3] bg-[#F5F1E8] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#161E33] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] flex items-center justify-center font-bold">
-                <Sparkles className="w-4 h-4 text-[#F4F0E6] dark:text-[#181614]" />
+              <div className="w-8 h-8 rounded-lg bg-[#26211b] text-[#FCFBF8] flex items-center justify-center font-bold">
+                <Sparkles className="w-4 h-4 text-[#F5F1E8]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold tracking-tight text-[#161E33] dark:text-[#F0EAE1]">
+                  <h3 className="text-sm font-bold tracking-tight text-[#26211b]">
                     Auto-Pilot Decision Dossier Run
                   </h3>
-                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#161E33]/10 dark:bg-[#D4AA50]/20 text-[#161E33] dark:text-[#D4AA50] font-bold">
+                  <span className="text-[14px] font-mono uppercase px-2 py-0.5 rounded-full bg-[#26211b]/10 text-[#26211b] font-bold">
                     Sequential Orchestration
                   </span>
                 </div>
-                <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] truncate max-w-md mt-0.5 font-mono">
+                <p className="text-xs text-[#7a7264] truncate max-w-md mt-0.5 font-mono">
                   Target: {decisionTitle || "Untitled Decision"}
                 </p>
               </div>
@@ -248,7 +248,7 @@ export default function AutoPilotModal({
                 onClose();
               }}
               disabled={isRunning}
-              className="p-1.5 rounded-lg text-[#5A6275] hover:text-[#161E33] hover:bg-[#D9D2C3]/50 transition cursor-pointer disabled:opacity-40"
+              className="p-1.5 rounded-lg text-[#7a7264] hover:text-[#26211b] hover:bg-[#D9D2C3]/50 transition cursor-pointer disabled:opacity-40"
             >
               <X className="w-4 h-4" />
             </button>
@@ -257,12 +257,12 @@ export default function AutoPilotModal({
           {/* Modal Body */}
           <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
             {/* Explanatory Banner */}
-            <div className="p-4 rounded-xl border border-[#D9D2C3] bg-[#F5F1E8]/70 text-xs text-[#5A6275] leading-relaxed flex items-start gap-3">
-              <div className="p-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded-md shrink-0 text-[#161E33]">
+            <div className="p-4 rounded-xl border border-[#D9D2C3] bg-[#F5F1E8]/70 text-xs text-[#7a7264] leading-relaxed flex items-start gap-3">
+              <div className="p-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded-md shrink-0 text-[#26211b]">
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
               <div>
-                <p className="font-semibold text-[#161E33] mb-0.5">
+                <p className="font-semibold text-[#26211b] mb-0.5">
                   Full 4-Stage Autonomous Pipeline
                 </p>
                 <p>
@@ -280,12 +280,12 @@ export default function AutoPilotModal({
                     key={step.id}
                     className={`p-3.5 rounded-xl border transition-all flex items-start gap-3.5 ${
                       step.status === "completed"
-                        ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-[#cfc7b2] dark:border-[#38332C]"
+                        ? "bg-[#FCFBF8] border-emerald-500/40"
                         : step.status === "running"
-                        ? "bg-[#E5DEC9] dark:bg-[#2C2723] border-[#7a4e10] dark:border-[#D4AA50] shadow-sm ring-1 ring-[#7a4e10]/20"
+                        ? "bg-white border-[#26211b] shadow-sm ring-1 ring-[#26211b]/20"
                         : step.status === "error"
-                        ? "bg-red-50/50 dark:bg-red-950/40 border-red-300 dark:border-red-800"
-                        : "bg-[#E5DEC9]/40 dark:bg-[#1A1815] border-[#cfc7b2]/70 dark:border-[#38332C] opacity-75"
+                        ? "bg-red-50/50 border-red-300"
+                        : "bg-[#F5F1E8]/50 border-[#D9D2C3]/80 opacity-75"
                     }`}
                   >
                     {/* Status Icon */}
@@ -295,7 +295,7 @@ export default function AutoPilotModal({
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                         </div>
                       ) : step.status === "running" ? (
-                        <div className="w-6 h-6 rounded-md bg-[#161E33] text-white flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-md bg-[#26211b] text-white flex items-center justify-center">
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         </div>
                       ) : step.status === "error" ? (
@@ -303,7 +303,7 @@ export default function AutoPilotModal({
                           <ShieldAlert className="w-4 h-4" />
                         </div>
                       ) : (
-                        <div className="w-6 h-6 rounded-md bg-[#D9D2C3] text-[#5A6275] flex items-center justify-center text-[10px] font-mono font-bold">
+                        <div className="w-6 h-6 rounded-md bg-[#D9D2C3] text-[#7a7264] flex items-center justify-center text-[14px] font-mono font-bold">
                           {step.num}
                         </div>
                       )}
@@ -312,10 +312,10 @@ export default function AutoPilotModal({
                     {/* Step Title & Subtitle */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-[#161E33] flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-[#26211b] flex items-center gap-1.5">
                           <span>{step.title}</span>
                         </span>
-                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#F5F1E8] border border-[#D9D2C3] text-[#5A6275]">
+                        <span className="text-[14px] font-mono uppercase px-2 py-0.5 rounded bg-[#F5F1E8] border border-[#D9D2C3] text-[#7a7264]">
                           {step.status === "completed"
                             ? "DONE"
                             : step.status === "running"
@@ -325,12 +325,12 @@ export default function AutoPilotModal({
                             : "PENDING"}
                         </span>
                       </div>
-                      <p className="text-[11px] text-[#5A6275] mt-0.5 truncate">
+                      <p className="text-[15px] text-[#7a7264] mt-0.5 truncate">
                         {step.subtitle}
                       </p>
                       {step.detailMsg && (
                         <p
-                          className={`text-[11px] font-mono mt-1 ${
+                          className={`text-[15px] font-mono mt-1 ${
                             step.status === "error"
                               ? "text-red-700 font-semibold"
                               : "text-emerald-700"
@@ -348,10 +348,10 @@ export default function AutoPilotModal({
             {/* Real-time Execution Logs */}
             {logs.length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-[11px] font-mono uppercase tracking-wider text-[#5A6275] font-semibold">
+                <span className="text-[15px] font-mono uppercase tracking-wider text-[#7a7264] font-semibold">
                   Execution Telemetry:
                 </span>
-                <div className="bg-[#161E33] text-[#FCFBF8] p-3.5 rounded-xl font-mono text-[11px] max-h-36 overflow-y-auto space-y-1 select-text">
+                <div className="bg-[#26211b] text-[#FCFBF8] p-3.5 rounded-xl font-mono text-[15px] max-h-36 overflow-y-auto space-y-1 select-text">
                   {logs.map((log, i) => (
                     <div key={i} className="leading-relaxed opacity-90">
                       {log}
@@ -376,7 +376,7 @@ export default function AutoPilotModal({
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                   <div>
                     <p className="font-bold">Autonomous Dossier Synthesis Complete!</p>
-                    <p className="text-emerald-700 text-[11px]">
+                    <p className="text-emerald-700 text-[15px]">
                       All cognitive layers, framework trade-offs, and ADR recommendations are ready.
                     </p>
                   </div>
@@ -386,7 +386,7 @@ export default function AutoPilotModal({
           </div>
 
           {/* Modal Footer */}
-          <div className="px-6 py-4 bg-[#E5DEC9] dark:bg-[#221F1C] border-t border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-between">
+          <div className="px-6 py-4 bg-[#F5F1E8] border-t border-[#D9D2C3] flex items-center justify-between">
             <button
               type="button"
               onClick={() => {
@@ -394,7 +394,7 @@ export default function AutoPilotModal({
                 onClose();
               }}
               disabled={isRunning}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 transition disabled:opacity-40"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#7a7264] hover:text-[#26211b] hover:bg-[#D9D2C3]/40 transition disabled:opacity-40"
             >
               {allCompleted ? "Close" : "Cancel"}
             </button>
@@ -406,7 +406,7 @@ export default function AutoPilotModal({
                   onComplete();
                   onClose();
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#161E33] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] hover:opacity-90 shadow-sm transition cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#26211b] text-[#FCFBF8] hover:bg-[#253252] shadow-sm transition cursor-pointer"
               >
                 <span>View Finalized Dossier</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -415,7 +415,7 @@ export default function AutoPilotModal({
               <button
                 type="button"
                 disabled
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#161E33]/70 dark:bg-[#D4AA50]/70 text-[#F4F0E6] dark:text-[#181614] cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#26211b]/70 text-[#FCFBF8] cursor-not-allowed"
               >
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Synthesizing Dossier...</span>
@@ -424,7 +424,7 @@ export default function AutoPilotModal({
               <button
                 type="button"
                 onClick={runAutoPilot}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#161E33] text-[#FCFBF8] hover:bg-[#253252] shadow-sm transition cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#26211b] text-[#FCFBF8] hover:bg-[#253252] shadow-sm transition cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Start Auto-Pilot Pipeline</span>

@@ -122,7 +122,7 @@ export default function MeetingTakeawaysModal({
                   activeTab
                 )
               }
-              className="px-3 py-1 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] text-[11px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] text-[15px] font-bold uppercase tracking-wider inline-flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               {copiedType === activeTab ? (
                 <>
@@ -153,7 +153,7 @@ export default function MeetingTakeawaysModal({
               <div className="space-y-6">
                 {/* 1. Executive Summary */}
                 <div className="p-4 bg-[#F4F0E6] dark:bg-[#181614] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
+                  <span className="text-[14px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
                     1. Executive Summary
                   </span>
                   <p className="text-sm font-newsreader text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
@@ -185,7 +185,7 @@ export default function MeetingTakeawaysModal({
                     <span className="text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
                       3. Unspoken Objections & Silent Caveats ({takeaways.hidden_risks.length})
                     </span>
-                    <span className="text-[10px] text-[#4f4b40] dark:text-[#A89F91] uppercase">
+                    <span className="text-[14px] text-[#4f4b40] dark:text-[#A89F91] uppercase">
                       From Silent Scribe
                     </span>
                   </div>
@@ -196,7 +196,7 @@ export default function MeetingTakeawaysModal({
                           key={i}
                           className="p-3 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-xs space-y-1"
                         >
-                          <div className="flex items-center justify-between text-[10px]">
+                          <div className="flex items-center justify-between text-[14px]">
                             <span className="font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
                               [{r.category}] · {r.role}
                             </span>
@@ -224,7 +224,7 @@ export default function MeetingTakeawaysModal({
                   </span>
                   <div className="border border-[#cfc7b2] dark:border-[#38332C] overflow-hidden">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-[#F4F0E6] dark:bg-[#221F1C] border-b border-[#cfc7b2] dark:border-[#38332C] text-[10px] uppercase font-bold text-[#4f4b40] dark:text-[#A89F91]">
+                      <thead className="bg-[#F4F0E6] dark:bg-[#221F1C] border-b border-[#cfc7b2] dark:border-[#38332C] text-[14px] uppercase font-bold text-[#4f4b40] dark:text-[#A89F91]">
                         <tr>
                           <th className="p-2.5">Task & Deliverable</th>
                           <th className="p-2.5">Owner</th>
@@ -238,7 +238,7 @@ export default function MeetingTakeawaysModal({
                             <td className="p-2.5 font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">{a.task}</td>
                             <td className="p-2.5 text-[#4f4b40] dark:text-[#A89F91]">{a.owner}</td>
                             <td className="p-2.5">
-                              <span className="uppercase text-[10px] font-bold text-[#7a4e10] dark:text-[#D4AA50]">
+                              <span className="uppercase text-[14px] font-bold text-[#7a4e10] dark:text-[#D4AA50]">
                                 {a.priority}
                               </span>
                             </td>
@@ -292,7 +292,7 @@ export default function MeetingTakeawaysModal({
 
         {/* Footer */}
         <div className="p-4 border-t border-[#cfc7b2] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#221F1C] flex items-center justify-between">
-          <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+          <span className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
             Synced with DecisionLens Deliberation Dossier
           </span>
           <button

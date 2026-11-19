@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
@@ -23,7 +23,13 @@ import {
   ArrowRight,
   Folder as FolderIcon,
   Layers,
+  HelpCircle,
+  Sparkles,
+  Zap,
+  CheckCircle2,
+  BookOpen,
 } from "lucide-react";
+import UserGuideModal from "@/components/UserGuideModal";
 
 function ActionParamWatcher({
   onOpenNewFolder,
@@ -33,24 +39,14 @@ function ActionParamWatcher({
   onOpenChallenge: () => void;
 }) {
   const searchParams = useSearchParams();
-  const handledKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!searchParams) return;
     const action = searchParams.get("action");
     const challenge = searchParams.get("challenge");
-    if (!action && !challenge) {
-      handledKeyRef.current = null;
-      return;
-    }
-    const key = `${action}-${challenge}`;
-    if (handledKeyRef.current === key) return;
-
     if (action === "new-workspace") {
-      handledKeyRef.current = key;
       onOpenNewFolder();
     } else if (action === "new" || challenge === "true") {
-      handledKeyRef.current = key;
       onOpenChallenge();
     }
   }, [searchParams, onOpenNewFolder, onOpenChallenge]);
@@ -74,6 +70,28 @@ export default function DashboardPage() {
   // Modals
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
+  const [guideBannerDismissed, setGuideBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const dismissed = localStorage.getItem("dl_guide_banner_dismissed");
+      if (dismissed === "true") {
+        setGuideBannerDismissed(true);
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const handleDismissGuideBanner = () => {
+    setGuideBannerDismissed(true);
+    try {
+      localStorage.setItem("dl_guide_banner_dismissed", "true");
+    } catch {
+      // Ignore
+    }
+  };
 
   // Forms
   const [newFolderName, setNewFolderName] = useState("");
@@ -84,29 +102,6 @@ export default function DashboardPage() {
   const [challengeTitle, setChallengeTitle] = useState("");
   const [challengeFolderId, setChallengeFolderId] = useState<number | "">("");
   const [challengeSubmitting, setChallengeSubmitting] = useState(false);
-
-  const handleCloseCreateFolderModal = useCallback(() => {
-    setShowCreateFolderModal(false);
-    setError(null);
-    router.replace("/dashboard", { scroll: false });
-  }, [router]);
-
-  const handleCloseChallengeModal = useCallback(() => {
-    setShowChallengeModal(false);
-    setError(null);
-    router.replace("/dashboard", { scroll: false });
-  }, [router]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (showChallengeModal) handleCloseChallengeModal();
-        if (showCreateFolderModal) handleCloseCreateFolderModal();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showChallengeModal, showCreateFolderModal, handleCloseChallengeModal, handleCloseCreateFolderModal]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -204,8 +199,22 @@ export default function DashboardPage() {
     }
   };
 
+  // Helper to resolve decision status
+  const resolveStatus = (d: Decision): "UNDER_SCRUTINY" | "NEEDS_EVIDENCE" | "READY_TO_DECIDE" | "DECIDED" => {
+    const rawGaps = d.gaps as { gaps?: unknown[] } | undefined;
+    const gapCount = Array.isArray(rawGaps?.gaps) ? rawGaps.gaps.length : 0;
+    if (d.status === "decided") return "DECIDED";
+    if (d.status === "evaluating" && gapCount > 0) return "NEEDS_EVIDENCE";
+    if (d.status === "evaluating") return "UNDER_SCRUTINY";
+    if (d.status === "ready") return "READY_TO_DECIDE";
+    return "UNDER_SCRUTINY";
+  };
+
   // Metrics
   const activeFoldersCount = folders.length;
+  const activeDecisionsCount = decisions.length;
+  const underScrutinyCount = decisions.filter((d) => resolveStatus(d) === "UNDER_SCRUTINY").length;
+  const decidedCount = decisions.filter((d) => resolveStatus(d) === "DECIDED").length;
 
   // Filtered workspaces
   const filteredFolders = useMemo(() => {
@@ -229,78 +238,210 @@ export default function DashboardPage() {
 
       {!currentUser && !loading ? (
         /* Unauthenticated State */
-        <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-8 sm:p-12 text-center max-w-[620px] mx-auto my-12 transition-colors font-sans shadow-soft">
-          <h2 className="font-newsreader text-[32px] sm:text-[38px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mb-2 tracking-tight">
+        <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-8 sm:p-12 text-center max-w-[620px] mx-auto my-12 transition-colors font-courier">
+          <h2 className="font-newsreader text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mb-2 tracking-tight">
             Sign in
           </h2>
-          <p className="text-[16px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed max-w-[460px] mx-auto mb-6">
+          <p className="text-[14px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed max-w-[460px] mx-auto mb-6">
             Sign in to access your workspaces and decisions.
           </p>
           <div>
             <Link
               href="/auth"
-              className="inline-block px-6 py-3 bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-xl text-sm font-semibold tracking-wide transition-colors shadow-sm"
+              className="inline-block px-6 py-2.5 bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-sm text-xs font-bold uppercase tracking-wider transition-colors"
             >
               Sign in to DecisionLens
             </Link>
           </div>
         </div>
       ) : (
-        <div className="space-y-8 sm:space-y-10 font-sans text-[#1d1d1b] dark:text-[#F0EAE1]">
+        <div className="space-y-8 sm:space-y-10 font-courier text-[#1d1d1b] dark:text-[#F0EAE1]">
+          {/* USER-FRIENDLY WELCOME & SYSTEM EXPLAINER BANNER */}
+          {!guideBannerDismissed && (
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border-l-4 border-l-[#7a4e10] dark:border-l-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-6 sm:p-7 relative transition-colors shadow-xs">
+              <button
+                type="button"
+                onClick={handleDismissGuideBanner}
+                className="absolute top-4 right-4 p-1.5 text-[#6e655a] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C] rounded-sm transition-colors"
+                title="Dismiss overview"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="max-w-3xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase tracking-wider bg-[#7a4e10]/15 text-[#7a4e10] dark:bg-[#D4AA50]/20 dark:text-[#D4AA50]">
+                    Quick Start & User Guide
+                  </span>
+                  <span className="text-xs font-mono text-[#6e655a] dark:text-[#A89F91]">
+                    What is this website and how does it work?
+                  </span>
+                </div>
+
+                <h2 className="font-newsreader text-2xl sm:text-3xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mb-2">
+                  DecisionLens turns complex technical debates into evidence-backed Architecture Decisions.
+                </h2>
+                <p className="text-sm text-[#4f4b40] dark:text-[#A89F91] leading-relaxed mb-6 max-w-2xl">
+                  Instead of losing decisions in messy Slack threads or endless meetings, DecisionLens guides tech leaders through a 4-step decision intelligence process:
+                </p>
+
+                {/* 4 Interactive Process Steps */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                  <div className="p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-1">
+                    <div className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+                      Step 1 • Workspace
+                    </div>
+                    <div className="font-bold text-xs">Create a Project</div>
+                    <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91] leading-snug">
+                      Group technical decisions by system, team, or domain (e.g. Infrastructure, Payments).
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-1">
+                    <div className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+                      Step 2 • Add Context
+                    </div>
+                    <div className="font-bold text-xs">Docs & Meetings</div>
+                    <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91] leading-snug">
+                      Upload architecture specs, or start an audio call with <strong>AI Tangent Scrubbing</strong> to strip banter.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-1">
+                    <div className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+                      Step 3 • Technical RAG
+                    </div>
+                    <div className="font-bold text-xs">Gaps & Formulas</div>
+                    <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91] leading-snug">
+                      AI grounds choices in real cloud prices, hardware latency numbers, and flags missing evidence.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-1">
+                    <div className="text-[11px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+                      Step 4 • Recommendation
+                    </div>
+                    <div className="font-bold text-xs">ADR & Matrix</div>
+                    <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91] leading-snug">
+                      Export executive-ready trade-off matrices, risks, and consensus roadmap to PDF or Markdown.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowGuideModal(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold uppercase tracking-wider font-mono rounded-sm transition-colors shadow-2xs cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Open Interactive Guide</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateFolderModal(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-transparent hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-bold uppercase tracking-wider font-mono rounded-sm transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create Your First Workspace</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* HEADER: Workspaces */}
           <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4 transition-colors">
-            <div>
-              <h1 className="font-newsreader text-2xl sm:text-3xl font-medium tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
-                Workspaces
-              </h1>
-              <p className="text-xs sm:text-sm text-[#4f4b40] dark:text-[#A89F91] mt-0.5 font-sans">
-                Manage your strategic initiatives and decision domains.
-              </p>
-            </div>
+            <h1 className="font-newsreader text-[32px] sm:text-[38px] font-normal tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
+              Workspaces
+            </h1>
 
             <button
               type="button"
               onClick={() => setShowCreateFolderModal(true)}
-              className="px-4 py-2 bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs sm:text-[13px] font-semibold uppercase tracking-wider rounded-xl transition-all shadow-2xs flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold font-courier uppercase tracking-wider rounded-sm transition-colors shadow-2xs flex items-center gap-1.5"
             >
-              <Plus className="w-4 h-4 text-[#EFEADF] dark:text-[#181614]" />
+              <Plus className="w-3.5 h-3.5 text-[#EFEADF] dark:text-[#181614]" />
               <span>New Workspace</span>
             </button>
           </div>
+
+          {/* STATS ROW: Editorial Ledger Box */}
+          {activeFoldersCount > 0 && (
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-sm py-4 px-6 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#cfc7b2] dark:divide-[#38332C] transition-colors shadow-xs">
+              <div className="py-2 sm:py-0 sm:px-4 first:pl-0">
+                <div className="font-newsreader text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight">
+                  {activeFoldersCount}
+                </div>
+                <div className="text-[15px] font-courier font-bold uppercase tracking-[0.1em] text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+                  Workspaces
+                </div>
+              </div>
+
+              <div className="py-2 sm:py-0 sm:px-4">
+                <div className="font-newsreader text-[32px] font-normal text-[#443a30] dark:text-[#D4AA50] leading-tight">
+                  {activeDecisionsCount}
+                </div>
+                <div className="text-[15px] font-courier font-bold uppercase tracking-[0.1em] text-[#443a30] dark:text-[#D4AA50] mt-0.5">
+                  Total Decisions
+                </div>
+              </div>
+
+              <div className="py-2 sm:py-0 sm:px-4">
+                <div className="font-newsreader text-[32px] font-normal text-[#7a4e10] dark:text-[#e5a93c] leading-tight">
+                  {underScrutinyCount}
+                </div>
+                <div className="text-[15px] font-courier font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#e5a93c] mt-0.5">
+                  Under Scrutiny
+                </div>
+              </div>
+
+              <div className="py-2 sm:py-0 sm:px-4 last:pr-0">
+                <div className="font-newsreader text-[32px] font-normal text-[#4f4b40] dark:text-[#b08a3c] leading-tight">
+                  {decidedCount}
+                </div>
+                <div className="text-[15px] font-courier font-bold uppercase tracking-[0.1em] text-[#4f4b40] dark:text-[#b08a3c] mt-0.5">
+                  Decided
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* SEARCH & WORKSPACES CATALOG */}
           {activeFoldersCount > 0 ? (
             <div className="space-y-6">
               {/* Search Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-courier">
                 <div className="relative flex-1 max-w-md">
-                  <Search className="w-4 h-4 text-[#7B8491] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Search className="w-4 h-4 text-[#97907e] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search workspaces by name or description..."
-                    className="w-full pl-9 pr-8 py-2.5 text-sm bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors"
+                    className="w-full pl-9 pr-8 py-2 text-[15px] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
-                <div className="text-xs sm:text-sm text-[#4f4b40] dark:text-[#A89F91]">
-                  Showing <strong className="text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold">{filteredFolders.length}</strong> of {folders.length} {folders.length === 1 ? "workspace" : "workspaces"}
+                <div className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
+                  Showing <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{filteredFolders.length}</strong> of {folders.length} {folders.length === 1 ? "workspace" : "workspaces"}
                 </div>
               </div>
 
               {/* Workspaces Grid */}
               {filteredFolders.length === 0 ? (
-                <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-8 text-center text-[#4f4b40] dark:text-[#A89F91] text-sm">
+                <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-8 text-center text-[#4f4b40] dark:text-[#A89F91] text-[15px] font-courier">
                   No workspaces match your search query &quot;{searchQuery}&quot;.
                 </div>
               ) : (
@@ -313,26 +454,26 @@ export default function DashboardPage() {
                       <Link
                         key={f.id}
                         href={`/folders/${f.id}`}
-                        className="group bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] rounded-xl p-6 flex flex-col justify-between transition-all focus:ring-2 focus:ring-[#7a4e10]/25 focus:outline-none shadow-2xs hover:shadow-soft"
+                        className="group bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] hover:border-[#443a30] dark:hover:border-[#D4AA50] rounded-sm p-6 flex flex-col justify-between transition-all focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs hover:shadow-md"
                       >
                         <div className="space-y-3">
                           <div className="flex items-start justify-between gap-3">
-                            <h2 className="font-newsreader text-lg sm:text-xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#7a4e10] dark:group-hover:text-[#D4AA50] transition-colors leading-tight">
+                            <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] transition-colors leading-tight">
                               {f.name}
                             </h2>
-                            <span className="font-mono text-[11px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-lg bg-[#cfc7b2]/50 dark:bg-[#38332C]/60 text-[#7a4e10] dark:text-[#D4AA50] shrink-0 border border-[#cfc7b2] dark:border-[#38332C]">
+                            <span className="font-courier text-[14px] uppercase tracking-[0.1em] font-bold px-2 py-0.5 rounded-sm bg-[#cfc7b2]/50 dark:bg-[#38332C]/60 text-[#7a4e10] dark:text-[#D4AA50] shrink-0 border border-[#cfc7b2] dark:border-[#38332C]">
                               {count} {count === 1 ? "DECISION" : "DECISIONS"}
                             </span>
                           </div>
 
-                          <p className="text-xs sm:text-sm font-sans text-[#4f4b40] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
+                          <p className="text-[15px] font-courier text-[#4f4b40] dark:text-[#A89F91] line-clamp-2 leading-relaxed">
                             {f.description || "Workspace for strategic decisions."}
                           </p>
 
                           {/* Preview of decisions inside this workspace */}
                           {workspaceDecisions.length > 0 ? (
-                            <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 space-y-2">
-                              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
+                            <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 space-y-1.5">
+                              <span className="text-[14px] font-courier font-bold uppercase tracking-[0.08em] text-[#4f4b40] dark:text-[#A89F91] block">
                                 Recent decisions:
                               </span>
                               {workspaceDecisions.slice(0, 3).map((d) => (
@@ -343,15 +484,15 @@ export default function DashboardPage() {
                                     e.preventDefault();
                                     router.push(`/decisions/${d.id}`);
                                   }}
-                                  className="flex items-center justify-between text-sm font-sans text-[#1d1d1b] dark:text-[#F0EAE1] truncate hover:text-[#7a4e10] dark:hover:text-[#D4AA50] transition-colors py-1 cursor-pointer group/item"
+                                  className="flex items-center justify-between text-xs font-courier text-[#1d1d1b] dark:text-[#F0EAE1] truncate hover:text-[#443a30] dark:hover:text-[#D4AA50] transition-colors py-0.5 cursor-pointer group/item"
                                   title={`Open decision: ${d.title}`}
                                 >
-                                  <span className="truncate pr-2 group-hover/item:underline font-medium">• {d.title}</span>
+                                  <span className="truncate pr-2 group-hover/item:underline">• {d.title}</span>
                                   <span
-                                    className={`text-xs uppercase px-2 py-0.5 rounded-full font-mono font-bold shrink-0 ${
+                                    className={`text-[15px] uppercase px-1.5 py-0.2 rounded-xs font-bold shrink-0 ${
                                       d.status === "decided"
                                         ? "text-emerald-700 dark:text-emerald-400 bg-emerald-100/60 dark:bg-emerald-950/40"
-                                        : "text-[#7a4e10] dark:text-[#D4AA50] bg-[#E5DEC9] dark:bg-[#2A2622]"
+                                        : "text-[#7a4e10] dark:text-[#D4AA50]"
                                     }`}
                                   >
                                     {d.status === "draft" ? "needs evidence" : d.status || "scrutiny"}
@@ -359,64 +500,43 @@ export default function DashboardPage() {
                                 </div>
                               ))}
                               {workspaceDecisions.length > 3 && (
-                                <span className="text-xs font-mono text-[#7B8491] dark:text-[#A89F91] block pt-1">
+                                <span className="text-[14px] font-courier text-[#97907e] block pt-0.5">
                                   + {workspaceDecisions.length - 3} more
                                 </span>
                               )}
                             </div>
                           ) : (
-                            <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 text-xs font-sans text-[#7B8491] dark:text-[#A89F91] italic">
+                            <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 text-[15px] font-courier text-[#97907e] italic">
                               No decisions recorded yet
                             </div>
                           )}
                         </div>
 
-                        <div className="pt-4 mt-4 border-t border-[#cfc7b2] dark:border-[#38332C] text-sm font-mono text-[#7a4e10] dark:text-[#D4AA50] font-bold flex items-center justify-between">
+                        <div className="pt-4 mt-4 border-t border-[#cfc7b2] dark:border-[#38332C] text-[14px] font-courier text-[#443a30] dark:text-[#D4AA50] font-bold flex items-center justify-between">
                           <span>Open workspace</span>
                           <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                         </div>
                       </Link>
                     );
                   })}
-
-                  {/* Subtle Actionable "New Workspace" Slot Card to Prevent Empty Grid Look */}
-                  {!searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setShowCreateFolderModal(true)}
-                      className="border-2 border-dashed border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] rounded-xl p-6 flex flex-col items-center justify-center gap-3 text-center text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#EDE7D6]/50 dark:hover:bg-[#221F1C]/50 transition-all min-h-[180px] cursor-pointer group shadow-2xs"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] group-hover:scale-110 transition-transform">
-                        <Plus className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <span className="font-newsreader text-base sm:text-lg font-medium block leading-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
-                          Create new workspace
-                        </span>
-                        <span className="text-xs text-[#7B8491] dark:text-[#A89F91] font-sans mt-1 block">
-                          Organize strategic decisions by initiative
-                        </span>
-                      </div>
-                    </button>
-                  )}
                 </div>
               )}
             </div>
           ) : (
             /* Empty State: Prompt to create first workspace */
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-2xl p-10 sm:p-14 text-center max-w-xl mx-auto space-y-4 font-sans transition-colors">
-              <Compass className="w-12 h-12 text-[#7a4e10] dark:text-[#D4AA50] mx-auto opacity-80" />
-              <h2 className="font-newsreader text-2xl sm:text-3xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight">
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-12 text-center max-w-[640px] mx-auto my-8 font-courier transition-colors">
+              <Compass className="w-12 h-12 text-[#97907e] mx-auto mb-3" />
+              <h2 className="font-newsreader text-3xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mb-2">
                 No workspaces yet
               </h2>
-              <p className="text-[15px] sm:text-[16px] text-[#4f4b40] dark:text-[#A89F91] max-w-md mx-auto leading-relaxed">
+              <p className="text-xs font-courier text-[#4f4b40] dark:text-[#A89F91] max-w-md mx-auto mb-6 leading-relaxed">
                 Create a workspace to start organizing and evaluating your strategic decisions.
               </p>
               <button
                 onClick={() => setShowCreateFolderModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-xl text-sm font-semibold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                className="px-6 py-3 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-sm text-xs font-bold font-courier uppercase tracking-wider transition-colors shadow-xs"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5 inline mr-1.5" />
                 <span>Create Workspace</span>
               </button>
             </div>
@@ -427,37 +547,30 @@ export default function DashboardPage() {
       {/* MODAL: CREATE WORKSPACE */}
       {showCreateFolderModal && (
         <ModalPortal>
-          <div
-            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-sans animate-in fade-in duration-150"
-            onClick={handleCloseCreateFolderModal}
-          >
-            <div
-              className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-2xl border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier">
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
               <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
-                <h3 className="font-newsreader text-2xl font-semibold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                <h3 className="font-newsreader text-[22px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
                   New Workspace
                 </h3>
                 <button
                   type="button"
-                  onClick={handleCloseCreateFolderModal}
-                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1.5 rounded-lg hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] transition-colors cursor-pointer"
-                  aria-label="Close modal"
+                  onClick={() => setShowCreateFolderModal(false)}
+                  className="text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               {error && (
-                <div className="mb-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs">
+                <div className="mb-3 p-2.5 rounded-sm bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-courier">
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleCreateFolder} className="space-y-4 font-sans text-sm">
+              <form onSubmit={handleCreateFolder} className="space-y-4 font-courier text-xs sm:text-[15px]">
                 <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     Workspace name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -466,37 +579,37 @@ export default function DashboardPage() {
                     value={newFolderName}
                     onChange={(e) => setNewFolderName(e.target.value)}
                     placeholder="e.g. Infrastructure, Leadership, Product Strategy"
-                    className="w-full px-3.5 py-2.5 text-sm bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     Decision Domain / Focus
                   </label>
                   <select
                     value={newFolderDomain}
                     onChange={(e) => setNewFolderDomain(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors cursor-pointer"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors cursor-pointer"
                   >
                     <option value="AUTO">⚡ Auto-Detect from Content (Recommended)</option>
-                    <option value="SOFTWARE">💻 Software Engineering &amp; Cloud Infrastructure</option>
-                    <option value="BUSINESS">🏢 Enterprise Strategy &amp; Corporate Deliberation</option>
-                    <option value="PRODUCT">🚀 Product Strategy &amp; Growth Experiments</option>
-                    <option value="FINANCE">📈 Finance, Capital Allocation &amp; Treasury</option>
-                    <option value="REAL_ESTATE">🏛️ Real Estate, Land &amp; Property Acquisition</option>
-                    <option value="CAREER">👔 Executive Career &amp; Leadership Hiring</option>
-                    <option value="OPERATIONS">📦 Operations, Logistics &amp; Supply Chain</option>
-                    <option value="EDUCATION">🎓 Education &amp; Academic Research</option>
-                    <option value="PERSONAL">🌱 Personal Life &amp; Habit Changes</option>
+                    <option value="SOFTWARE">💻 Software Engineering & Cloud Infrastructure</option>
+                    <option value="BUSINESS">🏢 Enterprise Strategy & Corporate Deliberation</option>
+                    <option value="PRODUCT">🚀 Product Strategy & Growth Experiments</option>
+                    <option value="FINANCE">📈 Finance, Capital Allocation & Treasury</option>
+                    <option value="REAL_ESTATE">🏛️ Real Estate, Land & Property Acquisition</option>
+                    <option value="CAREER">👔 Executive Career & Leadership Hiring</option>
+                    <option value="OPERATIONS">📦 Operations, Logistics & Supply Chain</option>
+                    <option value="EDUCATION">🎓 Education & Academic Research</option>
+                    <option value="PERSONAL">🌱 Personal Life & Habit Changes</option>
                   </select>
-                  <p className="text-xs text-[#7B8491] dark:text-[#A89F91] mt-1.5 font-sans">
+                  <p className="text-[15px] text-[#97907e] dark:text-[#A89F91] mt-1 font-courier">
                     Pre-calibrates evaluation criteria and prevents technical jargon ambiguity across deliberations.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     Description (optional)
                   </label>
                   <textarea
@@ -504,22 +617,22 @@ export default function DashboardPage() {
                     value={newFolderDesc}
                     onChange={(e) => setNewFolderDesc(e.target.value)}
                     placeholder="Brief description (optional)..."
-                    className="w-full px-3.5 py-2.5 text-sm bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                 </div>
 
-                <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-[#cfc7b2] dark:border-[#38332C]">
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#cfc7b2] dark:border-[#38332C]">
                   <button
                     type="button"
-                    onClick={handleCloseCreateFolderModal}
-                    className="px-4 py-2 text-sm font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-xl transition-colors cursor-pointer"
+                    onClick={() => setShowCreateFolderModal(false)}
+                    className="px-3.5 py-1.5 text-[14px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={folderSubmitting}
-                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-sm font-semibold rounded-xl transition-all disabled:opacity-50 shadow-sm cursor-pointer"
+                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[14px] font-bold font-courier uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50"
                   >
                     {folderSubmitting ? "Creating..." : "Create workspace"}
                   </button>
@@ -533,48 +646,41 @@ export default function DashboardPage() {
       {/* MODAL: CHALLENGE A DECISION (Target workspace selector) */}
       {showChallengeModal && (
         <ModalPortal>
-          <div
-            className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-sans animate-in fade-in duration-150"
-            onClick={handleCloseChallengeModal}
-          >
-            <div
-              className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-2xl border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier">
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm border-2 border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-md w-full p-6 relative shadow-2xl text-[#1d1d1b] dark:text-[#F0EAE1]">
               <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
                 <div>
-                  <span className="font-mono text-xs tracking-wider font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase block">
+                  <span className="font-courier text-[14px] tracking-[0.14em] font-bold text-[#443a30] dark:text-[#D4AA50] uppercase block">
                     NEW DECISION SCRUTINY
                   </span>
-                  <h3 className="font-newsreader text-2xl font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] mt-0.5">
+                  <h3 className="font-newsreader text-[22px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
                     Challenge a decision
                   </h3>
                 </div>
                 <button
                   type="button"
-                  onClick={handleCloseChallengeModal}
-                  className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1.5 rounded-lg hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] transition-colors cursor-pointer"
-                  aria-label="Close modal"
+                  onClick={() => setShowChallengeModal(false)}
+                  className="text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] p-1 rounded-[2px]"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               {error && (
-                <div className="mb-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs">
+                <div className="mb-3 p-2.5 rounded-sm bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-courier">
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleChallengeDecision} className="space-y-4 font-sans text-sm">
+              <form onSubmit={handleChallengeDecision} className="space-y-4 font-courier text-xs sm:text-[15px]">
                 <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     Select Target Workspace <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={challengeFolderId}
                     onChange={(e) => setChallengeFolderId(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 text-sm bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors font-courier"
                   >
                     {folders.map((f) => (
                       <option key={f.id} value={f.id}>
@@ -588,7 +694,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1.5">
+                  <label className="block text-[14px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] mb-1">
                     What decision are you weighing? <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -598,22 +704,22 @@ export default function DashboardPage() {
                     value={challengeTitle}
                     onChange={(e) => setChallengeTitle(e.target.value)}
                     placeholder="e.g. Choose between Kubernetes vs Cloud Run for multi-region scale"
-                    className="w-full px-3.5 py-2.5 text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
+                    className="w-full px-3 py-2 text-[15px] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors font-courier"
                   />
                 </div>
 
-                <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-[#cfc7b2] dark:border-[#38332C]">
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#cfc7b2] dark:border-[#38332C]">
                   <button
                     type="button"
-                    onClick={handleCloseChallengeModal}
-                    className="px-4 py-2 text-sm font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-xl transition-colors cursor-pointer"
+                    onClick={() => setShowChallengeModal(false)}
+                    className="px-3.5 py-1.5 text-[14px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] rounded-sm"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={challengeSubmitting}
-                    className="px-5 py-2.5 text-sm font-semibold rounded-xl transition-all disabled:opacity-50 bg-[#1d1d1b] hover:bg-[#2C2723] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] shadow-sm cursor-pointer"
+                    className="px-5 py-2.5 text-[14px] font-bold uppercase tracking-wider rounded-sm transition-colors disabled:opacity-50 font-courier bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64]"
                   >
                     {challengeSubmitting ? "Starting Scrutiny..." : "Challenge Decision →"}
                   </button>
@@ -623,6 +729,12 @@ export default function DashboardPage() {
           </div>
         </ModalPortal>
       )}
+
+      {/* User Guide Modal */}
+      <UserGuideModal
+        isOpen={showGuideModal}
+        onClose={() => setShowGuideModal(false)}
+      />
     </AppShell>
   );
 }

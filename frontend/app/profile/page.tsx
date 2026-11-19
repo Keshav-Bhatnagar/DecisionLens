@@ -10,7 +10,6 @@ import {
   getFolders,
   getDecisions,
   changePassword,
-  updateProfile,
   clearStoredToken,
   User,
   Folder,
@@ -42,8 +41,6 @@ import {
   Key,
   Database,
   ExternalLink,
-  Pencil,
-  Clock,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -74,45 +71,6 @@ export default function ProfilePage() {
 
   // Export State
   const [exportingData, setExportingData] = useState(false);
-
-  // Username / Display Name Editing State
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState("");
-  const [savingName, setSavingName] = useState(false);
-  const [nameSuccess, setNameSuccess] = useState<string | null>(null);
-  const [nameError, setNameError] = useState<string | null>(null);
-
-  const handleStartEditName = () => {
-    setEditedName(currentUser?.display_name || currentUser?.email.split("@")[0] || "");
-    setIsEditingName(true);
-    setNameError(null);
-    setNameSuccess(null);
-  };
-
-  const handleSaveName = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const clean = editedName.trim();
-    if (!clean) {
-      setNameError("Name cannot be empty.");
-      return;
-    }
-    setSavingName(true);
-    setNameError(null);
-    try {
-      const updated = await updateProfile({ display_name: clean });
-      setCurrentUser(updated);
-      setIsEditingName(false);
-      setNameSuccess(`Username updated to "${clean}"`);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("user-profile-updated", { detail: updated }));
-      }
-      setTimeout(() => setNameSuccess(null), 3500);
-    } catch (err: unknown) {
-      setNameError(err instanceof Error ? err.message : "Failed to update name");
-    } finally {
-      setSavingName(false);
-    }
-  };
 
   // Load Settings from localStorage
   useEffect(() => {
@@ -319,27 +277,13 @@ export default function ProfilePage() {
       ) : (
         <div className="font-sans space-y-8 py-4 pb-24">
           {/* Executive Sub-Header / Breadcrumb Label */}
-          <div className="flex items-center justify-between text-xs tracking-wider uppercase font-mono text-[var(--ink-secondary)] border-b border-[var(--border)] pb-2.5">
+          <div className="flex items-center justify-between text-[15px] tracking-wider uppercase font-mono text-[var(--ink-secondary)] border-b border-[var(--border)] pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-              <span>Workspace Overview &bull; Account {shortUid}</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Executive Folio &bull; Tenant Workspace {shortUid}</span>
             </div>
             <span className="hidden sm:inline">Deliberation Engine v2.4</span>
           </div>
-
-          {/* Name Success / Error Toast */}
-          {nameSuccess && (
-            <div className="p-3 rounded-xl bg-[#EDE7D6] dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-[#7a4e10] dark:text-[#D4AA50] text-xs font-medium flex items-center gap-2 animate-fadeIn">
-              <Check className="w-4 h-4 shrink-0 text-[#7a4e10] dark:text-[#D4AA50]" />
-              <span>{nameSuccess}</span>
-            </div>
-          )}
-          {nameError && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-center gap-2 animate-fadeIn">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
-              <span>{nameError}</span>
-            </div>
-          )}
 
           {/* 1. HERO FOLIO IDENTITY CARD (Tactile Luxury Dossier) */}
           <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 sm:p-8 transition-all duration-300 shadow-xs">
@@ -362,7 +306,7 @@ export default function ProfilePage() {
                 {/* Artisanal Interactive Executive Seal */}
                 <div
                   className="group relative w-18 h-18 sm:w-20 sm:h-20 shrink-0 cursor-default select-none"
-                  title="DecisionLens Verified Member Seal"
+                  title="DecisionLens Verified Executive Seal"
                 >
                   {/* Rotating Outer Guilloche Compass Ring */}
                   <svg
@@ -396,68 +340,32 @@ export default function ProfilePage() {
                   {/* Inner Solid Monogram Medallion */}
                   <div className="absolute inset-2 rounded-full bg-[var(--bg-page)] border border-[var(--border)] flex flex-col items-center justify-center shadow-inner group-hover:border-[var(--accent)] transition-colors">
                     <span className="font-newsreader font-bold text-2xl sm:text-3xl text-[var(--ink)] leading-none">
-                      {(currentUser.display_name || currentUser.email).charAt(0).toUpperCase()}
+                      {currentUser.email.charAt(0).toUpperCase()}
                     </span>
-                    <span className="font-mono text-[9px] tracking-wider uppercase text-[var(--ink-secondary)] mt-0.5">
-                      USER
+                    <span className="font-mono text-[7px] tracking-widest uppercase text-[var(--ink-secondary)] mt-0.5">
+                      SEAL
                     </span>
                   </div>
 
                   {/* Micro Verified Shield Badge */}
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[var(--accent)] text-white flex items-center justify-center shadow-md border-2 border-[var(--bg-surface)]">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md border-2 border-[var(--bg-surface)]">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                 </div>
 
                 {/* Name, Email & Auth Metadata */}
-                <div className="space-y-2">
-                  {isEditingName ? (
-                    <form onSubmit={handleSaveName} className="flex items-center gap-2 flex-wrap">
-                      <input
-                        type="text"
-                        value={editedName}
-                        onChange={(e) => setEditedName(e.target.value)}
-                        placeholder="Enter your name (e.g. Tamanna)"
-                        className="px-3 py-1.5 text-base sm:text-lg font-medium border border-[var(--accent)] rounded-lg bg-[var(--bg-page)] text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] shadow-inner min-w-[200px]"
-                        autoFocus
-                      />
-                      <button
-                        type="submit"
-                        disabled={savingName}
-                        className="px-3 py-1.5 bg-[#161E33] hover:bg-[#232C47] text-white dark:bg-[#D4AA50] dark:text-[#181614] rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                      >
-                        {savingName ? "Saving..." : "Save Name"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingName(false)}
-                        className="px-3 py-1.5 border border-[var(--border)] text-[var(--ink-secondary)] hover:text-[var(--ink)] rounded-lg text-xs font-medium transition cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </form>
-                  ) : (
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <h1 className="text-2xl sm:text-3xl font-newsreader font-bold text-[var(--ink)] tracking-tight">
-                        {currentUser.display_name || currentUser.email.split("@")[0]}
-                      </h1>
-                      <button
-                        type="button"
-                        onClick={handleStartEditName}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink)] hover:bg-[var(--border)]/40 transition-colors cursor-pointer shadow-2xs"
-                        title="Change your username / display name"
-                      >
-                        <Pencil className="w-3 h-3 text-[var(--ink-secondary)]" />
-                        <span>Edit Name</span>
-                      </button>
-                      <span className="font-mono text-xs tracking-wider uppercase px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)]">
-                        {shortUid}
-                      </span>
-                    </div>
-                  )}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl font-newsreader font-bold text-[var(--ink)] tracking-tight">
+                      {currentUser.display_name || currentUser.email.split("@")[0]}
+                    </h1>
+                    <span className="font-mono text-[14px] tracking-wider uppercase px-2 py-0.5 rounded border border-[var(--border)] bg-[var(--bg-page)] text-[var(--ink-secondary)]">
+                      {shortUid}
+                    </span>
+                  </div>
 
                   <div className="flex items-center gap-3 text-xs text-[var(--ink-secondary)] flex-wrap">
-                    <span className="font-sans text-xs text-[var(--ink)] font-medium">
+                    <span className="font-mono text-[15px] text-[var(--ink)]">
                       {currentUser.email}
                     </span>
 
@@ -465,7 +373,7 @@ export default function ProfilePage() {
 
                     {/* Google Workspace Verification Pill */}
                     {currentUser.oauth_provider === "google" ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--bg-page)] border border-[var(--border)] text-xs font-medium text-[var(--ink)]">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[15px] font-medium text-blue-700 dark:text-blue-300">
                         <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
                           <path
                             fill="#4285F4"
@@ -484,17 +392,17 @@ export default function ProfilePage() {
                             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                           />
                         </svg>
-                        <span>Google Verified</span>
+                        <span>Google Workspace Verified</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--bg-page)] border border-[var(--border)] text-xs font-medium text-[var(--ink)]">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--bg-page)] border border-[var(--border)] text-[15px] font-medium text-[var(--ink)]">
                         <Key className="w-3 h-3 text-[var(--accent)]" />
-                        <span>Passkey Authentication</span>
+                        <span>Executive Passkey Authentication</span>
                       </span>
                     )}
 
                     <span>&bull;</span>
-                    <span className="text-xs">Member since {joinedDate}</span>
+                    <span className="text-[15px]">Member since {joinedDate}</span>
                   </div>
                 </div>
               </div>
@@ -506,26 +414,26 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => setTheme("light")}
-                    className={`px-3 py-1.5 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3 py-1 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 ${
                       theme === "light"
                         ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-xs"
                         : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                     }`}
                   >
                     <Sun className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Light Mode</span>
+                    <span>Parchment</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setTheme("dark")}
-                    className={`px-3 py-1.5 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3 py-1 text-xs rounded-md font-medium transition inline-flex items-center gap-1.5 ${
                       theme === "dark"
                         ? "bg-[var(--bg-surface)] text-[var(--ink)] font-semibold shadow-xs"
                         : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                     }`}
                   >
                     <Moon className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Dark Mode</span>
+                    <span>Obsidian</span>
                   </button>
                 </div>
 
@@ -533,7 +441,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="px-3.5 py-1.5 border border-[var(--border)] hover:border-rose-500/40 hover:bg-rose-500/5 text-[var(--ink-secondary)] hover:text-rose-600 dark:hover:text-rose-400 text-xs font-semibold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 border border-[var(--border)] hover:border-rose-500/40 hover:bg-rose-500/5 text-[var(--ink-secondary)] hover:text-rose-600 dark:hover:text-rose-400 text-xs font-semibold rounded-lg transition inline-flex items-center gap-1.5"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Exit Session</span>
@@ -541,15 +449,15 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* 2. DELIBERATION VITALITY & COGNITIVE CADENCE HUD */}
+            {/* 2. DELIBERATION VITALITY & COGNITIVE CADENCE HUD (Generative Radial Visualization) */}
             <div className="pt-6">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs uppercase font-medium text-[var(--ink-secondary)] flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-[var(--ink-secondary)]" />
-                  Portfolio Overview &amp; Decisions Summary
+                <span className="text-[14px] uppercase font-mono tracking-wider text-[var(--ink-secondary)] flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
+                  Portfolio Cadence &amp; Epistemic Throughput
                 </span>
-                <span className="text-xs text-[var(--ink-secondary)]">
-                  {decidedCount} of {decisions.length} Decisions Finalized
+                <span className="text-[15px] font-mono text-[var(--ink-secondary)]">
+                  {decidedCount} of {decisions.length} Decisions Locked
                 </span>
               </div>
 
@@ -589,13 +497,13 @@ export default function ProfilePage() {
                       <span className="text-xl font-bold font-newsreader text-[var(--ink)] tabular-nums">
                         {consensusRate}%
                       </span>
-                      <span className="text-xs font-sans uppercase tracking-wider text-[var(--ink-secondary)]">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--ink-secondary)]">
                         Consensus
                       </span>
                     </div>
                   </div>
-                  <span className="text-xs text-[var(--ink-secondary)] font-medium mt-1">
-                    Completion Rate
+                  <span className="text-[14px] text-[var(--ink-secondary)] font-medium mt-1">
+                    Locking Velocity
                   </span>
                 </div>
 
@@ -604,54 +512,54 @@ export default function ProfilePage() {
                   {/* Card A: Active Workspaces */}
                   <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition flex flex-col justify-between">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                      <span className="text-[15px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
                         Workspaces
                       </span>
-                      <FolderIcon className="w-4 h-4 text-[var(--ink-secondary)]" />
+                      <FolderIcon className="w-4 h-4 text-[var(--accent)]" />
                     </div>
                     <div className="my-2">
                       <span className="text-3xl font-newsreader font-bold text-[var(--ink)] tabular-nums">
                         {folders.length}
                       </span>
                     </div>
-                    <span className="text-xs text-[var(--ink-secondary)] truncate">
+                    <span className="text-[14px] text-[var(--ink-secondary)] truncate">
                       {folders.length > 0 ? `Active: ${folders[0].name}` : "Zero workspaces"}
                     </span>
                   </div>
 
                   {/* Card B: Deliberations In Flight */}
-                  <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition flex flex-col justify-between">
+                  <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-amber-500/40 transition flex flex-col justify-between">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                      <span className="text-[15px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
                         Evaluating
                       </span>
-                      <Clock className="w-4 h-4 text-[var(--ink-secondary)]" />
+                      <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
                     </div>
                     <div className="my-2">
                       <span className="text-3xl font-newsreader font-bold text-[var(--ink)] tabular-nums">
                         {evaluatingCount}
                       </span>
                     </div>
-                    <span className="text-xs text-[var(--ink-secondary)] font-medium truncate">
-                      {evaluatingCount > 0 ? "Under active evaluation" : "All decisions finalized"}
+                    <span className="text-[14px] text-amber-600 dark:text-amber-400 font-medium truncate">
+                      {evaluatingCount > 0 ? "Under active Gauntlet" : "All deliberations locked"}
                     </span>
                   </div>
 
                   {/* Card C: Consensus Mandates Locked */}
-                  <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition flex flex-col justify-between">
+                  <div className="p-4 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] hover:border-emerald-500/40 transition flex flex-col justify-between">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
-                        Decided
+                      <span className="text-[15px] font-semibold text-[var(--ink-secondary)] uppercase tracking-wider">
+                        Mandates Sealed
                       </span>
-                      <CheckCircle2 className="w-4 h-4 text-[var(--ink-secondary)]" />
+                      <CheckCircle className="w-4 h-4 text-emerald-500" />
                     </div>
                     <div className="my-2">
                       <span className="text-3xl font-newsreader font-bold text-[var(--ink)] tabular-nums">
                         {decidedCount}
                       </span>
                     </div>
-                    <span className="text-xs text-[var(--ink-secondary)] font-medium truncate">
-                      Finalized decisions
+                    <span className="text-[14px] text-emerald-600 dark:text-emerald-400 font-medium truncate">
+                      Boardroom ADRs generated
                     </span>
                   </div>
                 </div>
@@ -675,7 +583,7 @@ export default function ProfilePage() {
               </div>
 
               {prefSavedMsg && (
-                <span className="text-xs font-semibold text-[#7a4e10] dark:text-[#D4AA50] flex items-center gap-1.5 animate-fadeIn">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-fadeIn">
                   <Check className="w-3.5 h-3.5 stroke-[3]" /> Settings Applied
                 </span>
               )}
@@ -689,7 +597,7 @@ export default function ProfilePage() {
                     <Volume2 className="w-3.5 h-3.5 text-[var(--accent)]" />
                     Speech Transcription Target
                   </span>
-                  <span className="text-[10px] font-mono text-[var(--accent)] font-semibold">
+                  <span className="text-[14px] font-mono text-[var(--accent)] font-semibold">
                     WHISPER-PRO
                   </span>
                 </div>
@@ -710,7 +618,7 @@ export default function ProfilePage() {
                     >
                       <div>
                         <span className="block font-medium">English (en)</span>
-                        <span className="text-[10px] font-normal text-[var(--ink-secondary)]">Global Enterprise</span>
+                        <span className="text-[14px] font-normal text-[var(--ink-secondary)]">Global Enterprise</span>
                       </div>
                       {defaultLanguage === "en" && <Check className="w-3.5 h-3.5 text-[var(--accent)]" />}
                     </button>
@@ -726,7 +634,7 @@ export default function ProfilePage() {
                     >
                       <div>
                         <span className="block font-medium">Hindi (hi / Hinglish)</span>
-                        <span className="text-[10px] font-normal text-[var(--ink-secondary)]">Indian Context &amp; Slang</span>
+                        <span className="text-[14px] font-normal text-[var(--ink-secondary)]">Indian Context &amp; Slang</span>
                       </div>
                       {defaultLanguage === "hi" && <Check className="w-3.5 h-3.5 text-[var(--accent)]" />}
                     </button>
@@ -740,7 +648,7 @@ export default function ProfilePage() {
                       <span className="text-xs font-semibold text-[var(--ink)] block">
                         Acoustic Noise Gate &amp; Rumble Filter
                       </span>
-                      <p className="text-[11px] text-[var(--ink-secondary)]">
+                      <p className="text-[15px] text-[var(--ink-secondary)]">
                         Filters HVAC rumble, keystroke clatter, and balances voice loudness.
                       </p>
                     </div>
@@ -775,7 +683,7 @@ export default function ProfilePage() {
                         />
                       ))}
                     </div>
-                    <span className="text-[10px] font-mono text-[var(--ink-secondary)]">
+                    <span className="text-[14px] font-mono text-[var(--ink-secondary)]">
                       {audioEnhancement ? "DSP Filter Armed" : "Bypass Mode"}
                     </span>
                   </div>
@@ -790,7 +698,7 @@ export default function ProfilePage() {
                       <Scale className="w-3.5 h-3.5 text-[var(--accent)]" />
                       Default Deliberation Mode
                     </span>
-                    <span className="text-[10px] font-mono text-[#7a4e10] dark:text-[#D4AA50] font-semibold">
+                    <span className="text-[14px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                       AUTONOMOUS
                     </span>
                   </div>
@@ -817,7 +725,7 @@ export default function ProfilePage() {
                             Deep Epistemic Gauntlet (Recommended)
                           </span>
                         </div>
-                        <p className="text-[11px] text-[var(--ink-secondary)] leading-relaxed">
+                        <p className="text-[15px] text-[var(--ink-secondary)] leading-relaxed">
                           Full 13-Shark stress test: token COGS, unit economics, zero-hallucination verification, and boardroom ADR.
                         </p>
                       </div>
@@ -850,7 +758,7 @@ export default function ProfilePage() {
                             Express Strategic Pilot
                           </span>
                         </div>
-                        <p className="text-[11px] text-[var(--ink-secondary)] leading-relaxed">
+                        <p className="text-[15px] text-[var(--ink-secondary)] leading-relaxed">
                           High velocity mode: fast multi-criteria ranking and instant summary for quick operational pivots.
                         </p>
                       </div>
@@ -897,19 +805,19 @@ export default function ProfilePage() {
                     className="py-3.5 flex items-center justify-between gap-4 hover:bg-[var(--bg-page)]/60 -mx-3 px-3 rounded-xl transition group"
                   >
                     <div className="min-w-0 flex items-center gap-3.5">
-                      <span className="font-mono text-[11px] text-[var(--ink-secondary)] shrink-0 w-8">
+                      <span className="font-mono text-[15px] text-[var(--ink-secondary)] shrink-0 w-8">
                         #{d.id}
                       </span>
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-[var(--ink)] group-hover:text-[var(--accent)] transition truncate">
                           {d.title}
                         </p>
-                        <div className="flex items-center gap-2 text-[11px] text-[var(--ink-secondary)] mt-0.5">
+                        <div className="flex items-center gap-2 text-[15px] text-[var(--ink-secondary)] mt-0.5">
                           <span>{new Date(d.created_at).toLocaleDateString()}</span>
                           {d.domain && (
                             <>
                               <span>&bull;</span>
-                              <span className="uppercase font-mono text-[10px] text-[var(--ink-secondary)]">
+                              <span className="uppercase font-mono text-[14px] text-[var(--ink-secondary)]">
                                 {d.domain}
                               </span>
                             </>
@@ -919,8 +827,14 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--ink)]">
-                        {d.status === "decided" ? "Decided" : "Evaluating"}
+                      <span
+                        className={`text-[14px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                          d.status === "decided"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                        }`}
+                      >
+                        {d.status === "decided" ? "Consensus Locked" : "Gauntlet Evaluating"}
                       </span>
                       <ArrowRight className="w-3.5 h-3.5 text-[var(--ink-secondary)] group-hover:text-[var(--accent)] group-hover:translate-x-0.5 transition" />
                     </div>
@@ -930,20 +844,20 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* 5. DATA SOVEREIGNTY & SECURITY */}
+          {/* 5. DATA SOVEREIGNTY & ENTERPRISE VAULT */}
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 sm:p-8 space-y-6 transition-all duration-300">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-[var(--ink)]" />
+                <Shield className="w-4 h-4 text-[var(--accent)]" />
                 <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
-                  Data Sovereignty &amp; Security Standards
+                  Data Sovereignty &amp; Cryptographic Export
                 </h2>
               </div>
               {currentUser.oauth_provider !== "google" && (
                 <button
                   type="button"
                   onClick={() => setShowPasswordSection(!showPasswordSection)}
-                  className="text-xs font-semibold text-[var(--accent)] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-semibold text-[var(--accent)] hover:underline inline-flex items-center gap-1"
                 >
                   <span>{showPasswordSection ? "Close Password Form" : "Change Password"}</span>
                   {showPasswordSection ? (
@@ -955,52 +869,53 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Enterprise Sovereign Enclave & DPDP 2023 Shield */}
-            <div className="p-5 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] space-y-4">
+            {/* Enterprise Sovereign Enclave & DPDP 2023 Shield (CISO & Bank Certified) */}
+            <div className="p-5 rounded-xl bg-[var(--bg-page)] border border-blue-500/25 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border)] pb-3">
                 <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                   <span className="text-xs font-bold text-[var(--ink)] uppercase tracking-wider">
-                    Enterprise Enclave &bull; Indian DPDP Act 2023 Compliant
+                    Enterprise Sovereign Enclave &bull; Indian DPDP Act 2023 Compliant
                   </span>
                 </div>
-                <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded bg-[var(--bg-surface)] text-[var(--ink)] border border-[var(--border)] self-start sm:self-auto">
-                  Audit Grade
+                <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 self-start sm:self-auto">
+                  CISO &amp; Banking Grade
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div className="space-y-1">
-                  <span className="text-xs font-medium uppercase text-[var(--ink-secondary)] block">
+                  <span className="text-[14px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
                     Data Residency &amp; Storage
                   </span>
-                  <p className="text-sm font-semibold text-[var(--ink)]">
+                  <p className="text-xs font-semibold text-[var(--ink)]">
                     India Primary (AWS ap-south-1)
                   </p>
-                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  <p className="text-[15px] text-[var(--ink-secondary)] leading-tight">
                     Audio &amp; decision memory stored exclusively within Indian borders under DPDP 2023 statutory mandates.
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-xs font-medium uppercase text-[var(--ink-secondary)] block">
+                  <span className="text-[14px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
                     Zero-Training Warranty
                   </span>
-                  <p className="text-sm font-semibold text-[var(--ink)]">
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     100% Zero-Model Retention
                   </p>
-                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  <p className="text-[15px] text-[var(--ink-secondary)] leading-tight">
                     Strict B2B API terms ensure confidential audio and ADR memos are never retained or used to train public LLMs.
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-xs font-medium uppercase text-[var(--ink-secondary)] block">
+                  <span className="text-[14px] font-mono uppercase text-[var(--ink-secondary)] font-bold block">
                     Liability &amp; IP Protection
                   </span>
-                  <p className="text-sm font-semibold text-[var(--ink)]">
+                  <p className="text-xs font-semibold text-[var(--ink)]">
                     12-Mo Fee Super-Cap
                   </p>
-                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed">
+                  <p className="text-[15px] text-[var(--ink-secondary)] leading-tight">
                     Standard enterprise MSA with 12-month trailing liability cap and mutual waiver of consequential damages.
                   </p>
                 </div>
@@ -1017,7 +932,7 @@ export default function ProfilePage() {
                   </div>
                 )}
                 {passwordSuccess && (
-                  <div className="p-3 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#2C2723] text-[#7a4e10] dark:text-[#D4AA50] text-xs flex items-center gap-2">
+                  <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 text-xs flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>{passwordSuccess}</span>
                   </div>

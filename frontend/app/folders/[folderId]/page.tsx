@@ -38,48 +38,13 @@ type FaultLineName = (typeof FAULT_LINE_NAMES)[number];
 // Default fault line levels (0 = OPEN, 1 = STARTED, 2 = EXAMINED)
 function getDecisionFaultLines(d: Decision): Record<FaultLineName, number> {
   const stored = (d.fault_lines || {}) as Record<string, number>;
-  const isDecided = d.status === "decided";
-
-  // Check actual cognitive artifacts for dynamic fallback
-  const hasRawInput = Boolean(
-    d.raw_input?.trim() ||
-    d.transcript?.trim() ||
-    (d.problem_statement && d.problem_statement.trim().length > 0)
-  );
-  const hasPoints = Boolean(d.points && Object.keys(d.points).length > 0);
-  const hasGaps = Boolean(d.gaps && Object.keys(d.gaps).length > 0);
-  const hasAnalysis = Boolean(d.analysis && Object.keys(d.analysis).length > 0);
-  const hasRecommendation = Boolean(
-    d.recommendation && Object.keys(d.recommendation).length > 0
-  );
-
-  const getLvl = (name: FaultLineName, dynamicLvl: number): number => {
-    // If user explicitly scored this fault line > 0 via radar, honor it
-    if (typeof stored[name] === "number" && stored[name] > 0) {
-      return stored[name];
-    }
-    // If decided, all 6 fault lines are fully examined
-    if (isDecided) {
-      return 2;
-    }
-    return dynamicLvl;
-  };
-
-  // Compute dynamic levels based on actual workflow progression
-  const assumptionsLvl = (hasAnalysis || d.points_reviewed) ? 2 : hasPoints ? 1 : 0;
-  const evidenceLvl = (hasPoints && hasRawInput) ? 2 : hasRawInput ? 1 : 0;
-  const blindSpotsLvl = (hasAnalysis || hasRecommendation) ? 2 : hasGaps ? 1 : 0;
-  const biasLvl = (hasRecommendation || hasAnalysis) ? 2 : d.status === "evaluating" ? 1 : 0;
-  const tradeOffsLvl = (hasRecommendation || hasAnalysis) ? 2 : d.status === "evaluating" ? 1 : 0;
-  const alternativesLvl = (hasRecommendation || hasAnalysis) ? 2 : d.status === "evaluating" ? 1 : 0;
-
   return {
-    Assumptions: getLvl("Assumptions", assumptionsLvl),
-    Evidence: getLvl("Evidence", evidenceLvl),
-    "Blind spots": getLvl("Blind spots", blindSpotsLvl),
-    Bias: getLvl("Bias", biasLvl),
-    "Trade-offs": getLvl("Trade-offs", tradeOffsLvl),
-    Alternatives: getLvl("Alternatives", alternativesLvl),
+    Assumptions: typeof stored["Assumptions"] === "number" ? stored["Assumptions"] : 0,
+    Evidence: typeof stored["Evidence"] === "number" ? stored["Evidence"] : 0,
+    "Blind spots": typeof stored["Blind spots"] === "number" ? stored["Blind spots"] : 0,
+    Bias: typeof stored["Bias"] === "number" ? stored["Bias"] : 0,
+    "Trade-offs": typeof stored["Trade-offs"] === "number" ? stored["Trade-offs"] : 0,
+    Alternatives: typeof stored["Alternatives"] === "number" ? stored["Alternatives"] : 0,
   };
 }
 
@@ -260,7 +225,7 @@ function HexagonRadar({
         {/* Blue polygon radar shape */}
         <polygon
           points={polygonPoints}
-          className="fill-[#2B4C8C]/22 dark:fill-[#D4AA50]/25 stroke-[#2B4C8C] dark:stroke-[#D4AA50]"
+          className="fill-[#443a30]/22 dark:fill-[#D4AA50]/25 stroke-[#443a30] dark:stroke-[#D4AA50]"
           strokeWidth="2.4"
           strokeLinejoin="round"
         />
@@ -276,7 +241,7 @@ function HexagonRadar({
               cx={x}
               cy={y}
               r="3.5"
-              className="fill-[#2B4C8C] dark:fill-[#D4AA50]"
+              className="fill-[#443a30] dark:fill-[#D4AA50]"
             />
           );
         })}
@@ -288,7 +253,7 @@ function HexagonRadar({
             x={lbl.x}
             y={lbl.y}
             textAnchor={lbl.anchor}
-            className="font-courier text-[12px] font-bold fill-[#4f4b40] dark:fill-[#A89F91] tracking-[0.08em]"
+            className="font-courier text-[14px] font-bold fill-[#4f4b40] dark:fill-[#A89F91] tracking-[0.08em]"
           >
             {lbl.text}
           </text>
@@ -305,8 +270,6 @@ function SixSegmentBar({
   levels: Record<FaultLineName, number>;
 }) {
   const examined = countExamined(levels);
-  const isFullyExamined = examined === 6;
-
   return (
     <div className="flex items-center gap-1.5" title="Fault lines progress">
       <div className="flex items-center gap-1">
@@ -316,24 +279,18 @@ function SixSegmentBar({
             <span
               key={name}
               title={`${name}: ${lvl === 2 ? "EXAMINED" : lvl === 1 ? "STARTED" : "OPEN"}`}
-              className={`inline-block w-[26px] h-[8px] rounded-xs shrink-0 transition-all ${
+              className={`inline-block w-[26px] h-[8px] rounded-none shrink-0 ${
                 lvl === 2
-                  ? isFullyExamined
-                    ? "bg-[#1B4332] dark:bg-[#52b788] border border-[#1B4332] dark:border-[#52b788]"
-                    : "bg-[#1d1d1b] dark:bg-[#D4AA50] border border-[#1d1d1b] dark:border-[#D4AA50]"
+                  ? "bg-[#443a30] dark:bg-[#D4AA50] border border-[#443a30] dark:border-[#D4AA50]"
                   : lvl === 1
-                  ? "bg-[linear-gradient(to_right,#7a4e10_50%,transparent_50%)] dark:bg-[linear-gradient(to_right,#D4AA50_50%,transparent_50%)] border border-[#7a4e10] dark:border-[#D4AA50]"
+                  ? "bg-[linear-gradient(to_right,#443a30_50%,transparent_50%)] dark:bg-[linear-gradient(to_right,#D4AA50_50%,transparent_50%)] border border-[#443a30] dark:border-[#D4AA50]"
                   : "bg-transparent border border-[#cfc7b2] dark:border-[#524B40]"
               }`}
             />
           );
         })}
       </div>
-      <span className={`font-courier text-xs font-bold uppercase tracking-wider ml-1 ${
-        isFullyExamined
-          ? "text-[#1B4332] dark:text-[#52b788]"
-          : "text-[#4f4b40] dark:text-[#A89F91]"
-      }`}>
+      <span className="font-courier text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] ml-1">
         {examined}/6
       </span>
     </div>
@@ -515,19 +472,10 @@ export default function FolderDetailPage({
     if (!selectedDecision) return;
     const isCurrentlyDecided = selectedDecision.status === "decided";
     const nextStatus = isCurrentlyDecided ? "evaluating" : "decided";
-    const nextFaultLines = nextStatus === "decided" ? {
-      Assumptions: 2,
-      Evidence: 2,
-      "Blind spots": 2,
-      Bias: 2,
-      "Trade-offs": 2,
-      Alternatives: 2,
-    } : selectedDecision.fault_lines;
 
     const updated: Decision = {
       ...selectedDecision,
       status: nextStatus,
-      fault_lines: nextFaultLines,
     };
 
     setDecisions((prev) => prev.map((d) => (d.id === selectedDecision.id ? updated : d)));
@@ -535,7 +483,6 @@ export default function FolderDetailPage({
     try {
       await updateDecision(selectedDecision.id, {
         status: nextStatus,
-        fault_lines: nextFaultLines,
       });
     } catch {
       setDecisions((prev) => prev.map((d) => (d.id === selectedDecision.id ? selectedDecision : d)));
@@ -641,38 +588,38 @@ export default function FolderDetailPage({
           </div>
         ) : folder ? (
           <>
-            {/* A) MASTHEAD (Full-bleed typographic header with bold architectural DECISIONS watermark) */}
+            {/* A) MASTHEAD (Full-bleed typographic header with faint watermark) */}
             <div className="relative overflow-hidden pt-2 pb-6 border-b border-[#cfc7b2] dark:border-[#38332C]">
-              {/* Grand architectural DECISIONS watermark (Artistic editorial statement) */}
+              {/* Giant faint DECISIONS watermark behind right side */}
               <div
                 aria-hidden="true"
-                className="absolute right-[-10px] sm:right-[-30px] lg:right-[-50px] bottom-[-20px] sm:bottom-[-35px] lg:bottom-[-50px] text-[#1d1d1b]/[0.055] dark:text-[#F0EAE1]/[0.055] font-newsreader font-bold text-[120px] sm:text-[170px] lg:text-[220px] xl:text-[260px] leading-none select-none pointer-events-none -z-0 tracking-tight whitespace-nowrap transition-colors"
+                className="absolute right-0 bottom-[-20px] text-[#1d1d1b]/[0.035] dark:text-[#F0EAE1]/[0.035] font-newsreader font-bold text-[100px] sm:text-[150px] lg:text-[200px] leading-none select-none pointer-events-none -z-0 tracking-tight"
               >
                 DECISIONS
               </div>
 
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-                <div className="space-y-2 max-w-4xl">
+                <div className="space-y-3 max-w-4xl">
                   {/* Small amber eyebrow */}
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-[2px] bg-[#7a4e10] dark:bg-[#D4AA50] inline-block" />
-                    <span className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#D4AA50]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-[34px] h-[3px] bg-[#7a4e10] dark:bg-[#D4AA50] inline-block" />
+                    <span className="font-courier text-xs font-bold uppercase tracking-[0.1em] text-[#7a4e10] dark:text-[#D4AA50]">
                       WORKSPACE
                     </span>
                   </div>
 
-                  {/* Refined Workspace Name (Calibrated down from giant 112px book text) */}
-                  <h1 className="font-newsreader text-3xl sm:text-4xl lg:text-[42px] font-medium leading-tight tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  {/* Huge Serif Workspace Name */}
+                  <h1 className="font-newsreader text-[56px] sm:text-[76px] lg:text-[96px] xl:text-[112px] font-normal leading-[0.92] tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
                     {folder.name}
                   </h1>
 
                   {/* Description: Italic serif */}
                   {folder.description && folder.description.trim() ? (
-                    <p className="font-newsreader italic text-sm sm:text-base text-[#4f4b40] dark:text-[#A89F91] leading-relaxed max-w-3xl">
+                    <p className="font-newsreader italic text-[17px] sm:text-[19px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed max-w-3xl">
                       {folder.description}
                     </p>
                   ) : (
-                    <p className="font-newsreader italic text-sm sm:text-base text-[#7B8491] dark:text-[#8E867B] leading-relaxed max-w-3xl">
+                    <p className="font-newsreader italic text-[17px] sm:text-[19px] text-[#97907e] dark:text-[#8E867B] leading-relaxed max-w-3xl">
                       No description for this workspace.
                     </p>
                   )}
@@ -690,7 +637,7 @@ export default function FolderDetailPage({
                   <button
                     type="button"
                     onClick={handleOpenCreateModal}
-                    className="px-5 py-3 bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold font-courier uppercase tracking-wider rounded-none transition-colors flex items-center gap-2"
+                    className="px-5 py-3 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold font-courier uppercase tracking-wider rounded-none transition-colors flex items-center gap-2"
                     title="Start challenging a new decision (Shortcut: N)"
                   >
                     <span>＋</span>
@@ -701,7 +648,7 @@ export default function FolderDetailPage({
                     type="button"
                     onClick={handleDeleteFolder}
                     title="Delete workspace"
-                    className="p-3 text-[#7B8491] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
+                    className="p-3 text-[#97907e] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -770,20 +717,20 @@ export default function FolderDetailPage({
               {/* Right: Search input & INDEX / BOARD toggle */}
               <div className="flex items-center gap-3 self-end md:self-auto">
                 <div className="relative w-48 sm:w-56">
-                  <Search className="w-3.5 h-3.5 text-[#7B8491] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Search className="w-3.5 h-3.5 text-[#97907e] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="SEARCH"
                     aria-label="Search decisions by title"
-                    className="w-full pl-8 pr-7 py-1.5 text-xs font-courier uppercase tracking-wider bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
+                    className="w-full pl-8 pr-7 py-1.5 text-xs font-courier uppercase tracking-wider bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                       aria-label="Clear search"
                     >
                       <X className="w-3 h-3" />
@@ -856,9 +803,9 @@ export default function FolderDetailPage({
                             {/* Row 1: Status badge + date */}
                             <div className="flex items-center gap-2.5">
                               <span
-                                className={`font-courier text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-none ${
+                                className={`font-courier text-[15px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-none ${
                                   isDecided
-                                    ? "text-[#1B4332] dark:text-[#52b788] bg-[#E4EFE7] dark:bg-[#142d22]"
+                                    ? "text-[#4f4b40] dark:text-[#b08a3c] bg-[#E4EFE7] dark:bg-[#142d22]"
                                     : isEvidence
                                     ? "text-[#8F2D2D] dark:text-[#E57373] border border-[#8F2D2D] dark:border-[#E57373] bg-transparent"
                                     : "text-[#7a4e10] dark:text-[#D4AA50] border border-[#7a4e10] dark:border-[#D4AA50] bg-transparent"
@@ -871,7 +818,7 @@ export default function FolderDetailPage({
                                   : "UNDER SCRUTINY"}
                               </span>
 
-                              <span className="font-courier text-xs text-[#7B8491] uppercase tracking-wider">
+                              <span className="font-courier text-xs text-[#97907e] uppercase tracking-wider">
                                 {new Date(decision.created_at).toLocaleDateString("en-US", {
                                   month: "short",
                                   day: "numeric",
@@ -881,7 +828,7 @@ export default function FolderDetailPage({
                             </div>
 
                             {/* Row 2: Title in Serif */}
-                            <h2 className="font-newsreader text-lg sm:text-xl font-medium text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] transition-colors truncate">
+                            <h2 className="font-newsreader text-[24px] sm:text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] transition-colors truncate">
                               {decision.title}
                             </h2>
 
@@ -917,13 +864,13 @@ export default function FolderDetailPage({
                         <Link
                           key={d.id}
                           href={`/decisions/${d.id}`}
-                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#7a4e10] dark:border-l-[#D4AA50] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#2B4C8C] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
+                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#7a4e10] dark:border-l-[#D4AA50] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#443a30] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
                         >
-                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
+                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
-                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[11px] font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
+                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                           </div>
@@ -947,13 +894,13 @@ export default function FolderDetailPage({
                         <Link
                           key={d.id}
                           href={`/decisions/${d.id}`}
-                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#8F2D2D] dark:border-l-[#E57373] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#2B4C8C] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
+                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#8F2D2D] dark:border-l-[#E57373] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#443a30] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
                         >
-                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
+                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
-                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[11px] font-courier font-bold text-[#8F2D2D] dark:text-[#E57373] uppercase tracking-wider">
+                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#8F2D2D] dark:text-[#E57373] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                           </div>
@@ -965,10 +912,10 @@ export default function FolderDetailPage({
                   {/* Column 3: Decided */}
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-[#cfc7b2] dark:border-[#38332C]">
-                      <span className="font-courier text-xs font-bold uppercase tracking-wider text-[#1B4332] dark:text-[#52b788]">
+                      <span className="font-courier text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#b08a3c]">
                         DECIDED
                       </span>
-                      <span className="font-courier text-xs font-bold text-[#1B4332] dark:text-[#52b788]">
+                      <span className="font-courier text-xs font-bold text-[#4f4b40] dark:text-[#b08a3c]">
                         {boardColumns.decided.length}
                       </span>
                     </div>
@@ -977,13 +924,13 @@ export default function FolderDetailPage({
                         <Link
                           key={d.id}
                           href={`/decisions/${d.id}`}
-                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#1B4332] dark:border-l-[#52b788] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#2B4C8C] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
+                          className="block p-4 border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#4f4b40] dark:border-l-[#b08a3c] bg-[#EDE7D6]/60 dark:bg-[#221F1C]/60 hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C] hover:border-[#443a30] dark:hover:border-[#D4AA50] transition-all cursor-pointer shadow-2xs group"
                         >
-                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#2B4C8C] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
+                          <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
                           <SixSegmentBar levels={getDecisionFaultLines(d)} />
-                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[11px] font-courier font-bold text-[#1B4332] dark:text-[#52b788] uppercase tracking-wider">
+                          <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#4f4b40] dark:text-[#b08a3c] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                           </div>
@@ -1001,13 +948,12 @@ export default function FolderDetailPage({
         {showCreateModal && (
           <ModalPortal>
             <div
-              className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier cursor-pointer animate-in fade-in duration-150"
-              onClick={() => setShowCreateModal(false)}
+              className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 font-courier"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setShowCreateModal(false);
+              }}
             >
-              <div
-                className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-none shadow-2xl border-2 border-l-5 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-lg w-full p-6 text-[#1d1d1b] dark:text-[#F0EAE1] cursor-default"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="bg-[#EDE7D6] dark:bg-[#221F1C] rounded-none shadow-2xl border-2 border-l-5 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] max-w-lg w-full p-6 text-[#1d1d1b] dark:text-[#F0EAE1]">
                 <div className="flex items-center justify-between pb-3 border-b border-[#cfc7b2] dark:border-[#38332C] mb-4">
                   <div>
                     <span className="font-courier text-xs font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-[0.1em] block">
@@ -1020,7 +966,7 @@ export default function FolderDetailPage({
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="text-[#7B8491] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition p-1 rounded-none"
+                    className="text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition p-1 rounded-none"
                     aria-label="Close dialog"
                   >
                     <X className="w-4 h-4" />
@@ -1034,7 +980,7 @@ export default function FolderDetailPage({
                   </div>
                 )}
 
-                <form onSubmit={handleCreateDecision} className="space-y-4 font-courier text-xs sm:text-[13px]">
+                <form onSubmit={handleCreateDecision} className="space-y-4 font-courier text-xs sm:text-[15px]">
                   <div>
                     <label className="block text-xs font-bold text-[#1d1d1b] dark:text-[#F0EAE1] font-courier uppercase tracking-wider mb-1.5">
                       Decision Question or Dilemma <span className="text-red-500">*</span>
@@ -1046,9 +992,9 @@ export default function FolderDetailPage({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. Should we migrate our production infrastructure to the cloud?"
-                      className="w-full px-3 py-2 text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7B8491] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
+                      className="w-full px-3 py-2 text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
                     />
-                    <p className="mt-1.5 text-[11px] font-courier text-[#7B8491] dark:text-[#A89F91]">
+                    <p className="mt-1.5 text-[15px] font-courier text-[#97907e] dark:text-[#A89F91]">
                       Sets your core problem statement and frames deliberation.
                     </p>
                   </div>
@@ -1064,7 +1010,7 @@ export default function FolderDetailPage({
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-5 py-2.5 font-courier text-xs font-bold uppercase tracking-wider rounded-none transition-colors flex items-center gap-1.5 disabled:opacity-50 bg-[#1d1d1b] hover:bg-[#2B4C8C] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64]"
+                      className="px-5 py-2.5 font-courier text-xs font-bold uppercase tracking-wider rounded-none transition-colors flex items-center gap-1.5 disabled:opacity-50 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64]"
                     >
                       {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                       <span>{isSubmitting ? "INITIALIZING..." : "START DELIBERATION →"}</span>

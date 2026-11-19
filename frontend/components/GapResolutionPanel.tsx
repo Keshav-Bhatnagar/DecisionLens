@@ -27,6 +27,7 @@ import {
   FileCheck2,
   AlertTriangle,
   Zap,
+  BookOpen,
 } from "lucide-react";
 import {
   detectGaps,
@@ -396,26 +397,26 @@ export default function GapResolutionPanel({
     switch (importance) {
       case "critical":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
             Critical Blocker
           </span>
         );
       case "high":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-orange-50 text-orange-800 border border-orange-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-semibold uppercase tracking-wider bg-orange-50 text-orange-800 border border-orange-200">
             High Impact
           </span>
         );
       case "medium":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium uppercase tracking-wider bg-paper-sidebar text-ink-secondary border border-border">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-medium uppercase tracking-wider bg-paper-sidebar text-ink-secondary border border-border">
             Tactical
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono text-ink-secondary border border-border">
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[14px] font-mono text-ink-secondary border border-border">
             Low
           </span>
         );
@@ -427,35 +428,35 @@ export default function GapResolutionPanel({
     switch (status) {
       case "answered":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300">
             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
             Grounded Fact
           </span>
         );
       case "researched":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-sky-50 text-sky-800 border border-sky-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold uppercase tracking-wider bg-sky-50 text-sky-800 border border-sky-300">
             <Globe className="w-3 h-3 text-sky-600" />
             Empirically Audited
           </span>
         );
       case "skipped":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-stone-100 text-stone-700 border border-stone-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-semibold uppercase tracking-wider bg-stone-100 text-stone-700 border border-stone-300">
             <AlertTriangle className="w-3 h-3 text-stone-500" />
             Known Risk
           </span>
         );
       case "research_queued":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-semibold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
             <Clock className="w-3 h-3 text-amber-600" />
             Research Queued
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 text-amber-800 border border-amber-300/80">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 text-amber-800 border border-amber-300/80">
             Pending Resolution
           </span>
         );
@@ -467,21 +468,21 @@ export default function GapResolutionPanel({
     switch (consensus) {
       case "corroborated":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[15px] font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             CORROBORATED BENCHMARK {isVerified && <Check className="w-3 h-3 text-emerald-700 inline ml-0.5" />}
           </span>
         );
       case "conflicting_evidence":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[15px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300">
             <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
             CONFLICTING EVIDENCE / DIVERGENT METRICS
           </span>
         );
       case "unsupported":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-rose-50 text-rose-900 border border-rose-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[15px] font-mono font-bold bg-rose-50 text-rose-900 border border-rose-300">
             <X className="w-3.5 h-3.5 text-rose-600" />
             FALSIFIED / UNSUPPORTED CLAIM
           </span>
@@ -489,7 +490,7 @@ export default function GapResolutionPanel({
       case "single_source":
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-sky-50 text-sky-900 border border-sky-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[15px] font-mono font-bold bg-sky-50 text-sky-900 border border-sky-300">
             <Info className="w-3.5 h-3.5 text-sky-600" />
             SINGLE SOURCE {isVerified ? "(Primary Source Verified)" : "(Uncorroborated)"}
           </span>
@@ -560,7 +561,7 @@ export default function GapResolutionPanel({
           <div className="flex items-center gap-2.5">
             <DecisionLensIcon size={32} />
             <div>
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-widest text-accent block leading-none">
+              <span className="text-[14px] font-mono font-semibold uppercase tracking-widest text-accent block leading-none">
                 STAGE 03 / EVIDENCE AUDIT & RESEARCH
               </span>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-ink tracking-tight mt-1">
@@ -599,12 +600,12 @@ export default function GapResolutionPanel({
           <div className="flex items-center gap-2 font-mono">
             <span className="font-bold text-ink uppercase tracking-wider">Epistemic Grounding Ratio:</span>
             <span className="text-sm font-bold text-accent">{groundingPercentage}%</span>
-            <span className="text-[11px] text-ink-secondary">
+            <span className="text-[15px] text-ink-secondary">
               ({answeredCount + researchedCount} of {totalCount} items verified)
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px] font-mono text-ink-secondary">
+          <div className="flex items-center gap-4 text-[15px] font-mono text-ink-secondary">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
               <strong className="text-ink">{pendingCount}</strong> Blockers Open
@@ -643,11 +644,11 @@ export default function GapResolutionPanel({
                 <span className="text-xs font-mono font-bold text-ink uppercase tracking-wider">
                   Executive Fast-Track:
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-paper-surface border border-border text-ink-secondary">
+                <span className="text-[14px] font-mono px-2 py-0.5 rounded-full bg-paper-surface border border-border text-ink-secondary">
                   {criticalDoubts.length} Critical Focus • {secondaryPendingGaps.length} Bundled • {pendingWebGaps.length} Web Gaps
                 </span>
               </div>
-              <p className="text-[11px] text-ink-secondary">
+              <p className="text-[15px] text-ink-secondary">
                 {pendingWebGaps.length > 0
                   ? `${pendingWebGaps.length} external evidence queries can be auto-resolved in background.`
                   : "External evidence queries cleared. Focus on core critical doubts below."}
@@ -848,13 +849,13 @@ export default function GapResolutionPanel({
                 {/* 1. Header Meta Row */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/70">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-mono font-bold text-ink-secondary bg-paper-sidebar px-2 py-0.5 rounded border border-border">
+                    <span className="text-[14px] font-mono font-bold text-ink-secondary bg-paper-sidebar px-2 py-0.5 rounded border border-border">
                       #{gap.priority_score}
                     </span>
                     {getImportanceBadge(gap.importance)}
                     {getStatusBadge(gap.status)}
 
-                    <span className="text-[11px] font-mono text-ink-secondary flex items-center gap-1.5 px-2 py-0.5 rounded bg-paper-sidebar border border-border">
+                    <span className="text-[15px] font-mono text-ink-secondary flex items-center gap-1.5 px-2 py-0.5 rounded bg-paper-sidebar border border-border">
                       {gap.recommended_resolution_method === "web_research" ? (
                         <>
                           <Globe className="w-3 h-3 text-sky-600" />
@@ -867,11 +868,21 @@ export default function GapResolutionPanel({
                         </>
                       )}
                     </span>
+
+                    {gap.derived_from?.includes("domain_guideline") && (
+                      <span
+                        title="Flagged with help from the expert guide for this kind of decision"
+                        className="text-[15px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded bg-[#F3E7CC] text-[#7a4e10] border border-[#D9C08A] dark:bg-[#D4AA50]/15 dark:text-[#D4AA50] dark:border-[#D4AA50]/40"
+                      >
+                        <BookOpen className="w-3 h-3" />
+                        From domain guide
+                      </span>
+                    )}
                   </div>
 
                   {gap.affected_options && gap.affected_options.length > 0 && (
-                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-ink-secondary">
-                      <span className="text-accent uppercase text-[10px] font-bold">Stakes on:</span>
+                    <div className="flex items-center gap-1.5 text-[15px] font-mono text-ink-secondary">
+                      <span className="text-accent uppercase text-[14px] font-bold">Stakes on:</span>
                       <div className="flex items-center gap-1">
                         {gap.affected_options.map((opt, i) => (
                           <span key={i} className="px-2 py-0.5 rounded bg-paper-sidebar border border-border text-ink font-semibold">
@@ -900,8 +911,8 @@ export default function GapResolutionPanel({
                     {gap.reason || "This unknown represents a foundational constraint that directly dictates downstream architectural feasibility and financial risk."}
                   </p>
                   {gap.source_spans && gap.source_spans.length > 0 && (
-                    <div className="pt-2 text-[11px] font-mono text-ink-secondary border-t border-border/50">
-                      <span className="text-[10px] uppercase text-accent font-bold mr-1.5">Evidence Origin:</span>
+                    <div className="pt-2 text-[15px] font-mono text-ink-secondary border-t border-border/50">
+                      <span className="text-[14px] uppercase text-accent font-bold mr-1.5">Evidence Origin:</span>
                       <span className="italic text-ink">&ldquo;{gap.source_spans[0]}&rdquo;</span>
                     </div>
                   )}
@@ -916,7 +927,7 @@ export default function GapResolutionPanel({
                     </div>
 
                     {finding && (
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-900 border border-sky-300">
+                      <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-900 border border-sky-300">
                         {finding.sources?.length || 0} Sources Corroborated
                       </span>
                     )}
@@ -934,10 +945,10 @@ export default function GapResolutionPanel({
                           {finding.claims.map((clm, idx) => (
                             <div
                               key={idx}
-                              className="text-[11px] font-mono bg-paper-surface p-2 rounded border border-border flex items-start justify-between gap-2"
+                              className="text-[15px] font-mono bg-paper-surface p-2 rounded border border-border flex items-start justify-between gap-2"
                             >
                               <span className="text-ink">{clm.claim}</span>
-                              <span className="text-[10px] text-accent shrink-0 uppercase font-bold">
+                              <span className="text-[14px] text-accent shrink-0 uppercase font-bold">
                                 {clm.evidence_type} ({clm.sources_count} sources)
                               </span>
                             </div>
@@ -948,7 +959,7 @@ export default function GapResolutionPanel({
                       {/* Clickable Transparent Sources */}
                       {finding.sources && finding.sources.length > 0 && (
                         <div className="space-y-1.5 pt-1">
-                          <span className="text-[10px] font-mono uppercase text-ink-secondary block">
+                          <span className="text-[14px] font-mono uppercase text-ink-secondary block">
                             Direct Primary Sources (Click to verify with your own eyes):
                           </span>
                           <div className="flex flex-wrap gap-2">
@@ -958,7 +969,7 @@ export default function GapResolutionPanel({
                                 href={src.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-paper-surface border border-border text-[11px] font-mono text-sky-800 hover:text-ink hover:border-sky-500 transition group"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-paper-surface border border-border text-[15px] font-mono text-sky-800 hover:text-ink hover:border-sky-500 transition group"
                               >
                                 <Globe className="w-3 h-3 text-sky-600" />
                                 <span className="font-semibold">{src.source_title || src.url}</span>
@@ -1003,7 +1014,7 @@ export default function GapResolutionPanel({
                     </span>
 
                     {gap.status === "answered" && gap.answer && (
-                      <span className="text-[11px] font-mono text-emerald-800 font-semibold">
+                      <span className="text-[15px] font-mono text-emerald-800 font-semibold">
                         Grounded: &ldquo;{gap.answer.slice(0, 40)}...&rdquo;
                       </span>
                     )}
@@ -1012,7 +1023,7 @@ export default function GapResolutionPanel({
                   {gap.status === "answered" && gap.answer && !isActionOpen ? (
                     <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="space-y-0.5">
-                        <span className="text-[10px] font-mono uppercase text-emerald-800 font-bold block">
+                        <span className="text-[14px] font-mono uppercase text-emerald-800 font-bold block">
                           Audited Human Decision:
                         </span>
                         <p className="text-xs text-emerald-950 font-medium">
@@ -1037,7 +1048,7 @@ export default function GapResolutionPanel({
                           disabled={isWorking}
                           className="p-3.5 rounded-xl border border-border bg-paper-sidebar/50 hover:bg-paper-surface hover:border-accent text-left transition group space-y-1 disabled:opacity-50"
                         >
-                          <span className="text-[10px] font-mono font-bold uppercase text-accent block">
+                          <span className="text-[14px] font-mono font-bold uppercase text-accent block">
                             Scenario A: Conservative Standard Tier
                           </span>
                           <p className="text-xs text-ink font-medium leading-snug">
@@ -1051,7 +1062,7 @@ export default function GapResolutionPanel({
                           disabled={isWorking}
                           className="p-3.5 rounded-xl border border-border bg-paper-sidebar/50 hover:bg-paper-surface hover:border-accent text-left transition group space-y-1 disabled:opacity-50"
                         >
-                          <span className="text-[10px] font-mono font-bold uppercase text-accent block">
+                          <span className="text-[14px] font-mono font-bold uppercase text-accent block">
                             Scenario B: Scale-Out Allocation
                           </span>
                           <p className="text-xs text-ink font-medium leading-snug">
@@ -1139,7 +1150,7 @@ export default function GapResolutionPanel({
                       <h4 className="text-base font-serif font-bold text-ink">
                         Consolidated Secondary Considerations
                       </h4>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
                         {secondaryPendingGaps.length} Items Merged Into 1 Bundle
                       </span>
                     </div>
@@ -1200,16 +1211,16 @@ export default function GapResolutionPanel({
                       >
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono font-bold text-ink-secondary px-1.5 py-0.5 rounded bg-paper-sidebar border border-border">
+                            <span className="text-[14px] font-mono font-bold text-ink-secondary px-1.5 py-0.5 rounded bg-paper-sidebar border border-border">
                               #{gap.priority_score || idx + 1}
                             </span>
                             <span className="font-semibold text-ink font-sans">{gap.question}</span>
-                            <span className="text-[10px] font-mono text-ink-secondary uppercase">
+                            <span className="text-[14px] font-mono text-ink-secondary uppercase">
                               ({gap.importance})
                             </span>
                           </div>
                           {gap.reason && (
-                            <p className="text-[11px] text-ink-secondary font-light pl-6">
+                            <p className="text-[15px] text-ink-secondary font-light pl-6">
                               {gap.reason}
                             </p>
                           )}
@@ -1218,7 +1229,7 @@ export default function GapResolutionPanel({
                         <button
                           type="button"
                           onClick={() => openAskMe(gap)}
-                          className="inline-flex items-center gap-1 text-[11px] font-mono text-accent hover:underline shrink-0"
+                          className="inline-flex items-center gap-1 text-[15px] font-mono text-accent hover:underline shrink-0"
                         >
                           <span>Answer Separately</span>
                           <ArrowRight className="w-3 h-3" />

@@ -119,16 +119,12 @@ export function clearStoredToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-export interface FetchApiOptions extends RequestInit {
-  timeoutMs?: number;
-}
-
 /**
  * Common fetch helper with auto token injection and standardized error handling
  */
 export async function fetchApi<T>(
   endpoint: string,
-  options?: FetchApiOptions
+  options?: RequestInit
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getStoredToken();
@@ -139,21 +135,9 @@ export async function fetchApi<T>(
     ...(options?.headers as Record<string, string>),
   };
 
-  // Heavy AI multi-model endpoints need up to 120s; standard CRUD gets generous 30s
-  const isHeavyAiEndpoint =
-    endpoint.includes("/analysis") ||
-    endpoint.includes("/synthesis") ||
-    endpoint.includes("/gaps") ||
-    endpoint.includes("/transcribe") ||
-    endpoint.includes("/autopilot") ||
-    endpoint.includes("/structure") ||
-    endpoint.includes("/deliberate") ||
-    endpoint.includes("/matrix");
-
-  const defaultTimeout = isHeavyAiEndpoint ? 120000 : 30000;
-  const timeoutMs = options?.signal ? undefined : (options?.timeoutMs ?? defaultTimeout);
-
+  // Add 15s timeout to prevent infinite UI freeze if backend is restarting
   const controller = new AbortController();
+  const timeoutMs = options?.signal ? undefined : 15000;
   const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
   try {
@@ -185,12 +169,7 @@ export async function fetchApi<T>(
   } catch (err: unknown) {
     if (err instanceof ApiError) throw err;
     if (err instanceof Error && err.name === "AbortError") {
-      throw new ApiError(
-        504,
-        isHeavyAiEndpoint
-          ? "AI Analysis is taking longer than expected while executing multi-model evaluations. Please wait a moment or click Re-Run."
-          : "Backend request timed out. Please verify the backend server on port 8000 is active."
-      );
+      throw new ApiError(504, "Backend request timed out. Please verify the backend server on port 8000 is active.");
     }
     throw err;
   } finally {
@@ -238,13 +217,6 @@ export async function getMe(): Promise<User | null> {
     }
     throw err;
   }
-}
-
-export async function updateProfile(data: { display_name?: string }): Promise<User> {
-  return fetchApi<User>("/api/auth/me", {
-    method: "PATCH",
-    body: JSON.stringify(data),
-  });
 }
 
 export async function changePassword(
@@ -464,6 +436,39 @@ export interface TranscriptionResponse {
   audio_id?: number | null;
   audio_recording?: AudioRecording | null;
   message?: string;
+  tangents_filtered_count?: number;
+  signal_ratio?: number;
+  removed_tangents?: Array<{ speaker: string; text: string; reason: string; index: number }>;
+}
+
+export interface TranscriptFilterResponse {
+  decision_id: number;
+  original_transcript: string;
+  filtered_transcript: string;
+  tangents_filtered_count: number;
+  signal_ratio: number;
+  removed_tangents: Array<{ speaker: string; text: string; reason: string; index: number }>;
+}
+
+export async function filterTranscriptTangents(
+  decisionId: number,
+  forceHeuristics: boolean = false
+): Promise<TranscriptFilterResponse> {
+  const token = getStoredToken();
+  const res = await fetch(
+    `${API_BASE_URL}/api/decisions/${decisionId}/transcription/filter-tangents?force_heuristics=${forceHeuristics}`,
+    {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to filter transcript tangents");
+  }
+  return res.json();
 }
 
 export async function uploadAudio(
@@ -1198,8 +1203,6 @@ export interface RoadmapPhase {
 export interface RoadmapData {
   title: string;
   phases: RoadmapPhase[];
-  start_date?: string;
-  kickoff_date?: string;
 }
 
 export interface ReceiptLineItem {
@@ -1263,8 +1266,6 @@ export interface SynthesisRequest {
 export interface RoadmapUpdateRequest {
   title?: string;
   phases: RoadmapPhase[];
-  start_date?: string;
-  kickoff_date?: string;
 }
 
 export interface SnapshotSummary {
@@ -1607,6 +1608,66 @@ export interface RagStatusResponse {
   has_indexed_documents: boolean;
   chunk_count: number;
   storage_engine: string;
+  document_count?: number;
+  embedding_model?: string | null;
+  semantic?: boolean;
+  stale_chunks?: number;
+}
+
+export interface RagCitation {
+  index: number;
+  chunk_id: string;
+  document_name: string;
+  attachment_id?: number | null;
+  content: string;
+  score: number;
+}
+
+export interface RagAskResponse {
+  decision_id: number;
+  question: string;
+  answer: string;
+  covered: boolean;
+  citations: RagCitation[];
+  documents_used: number;
+  documents_indexed: number;
+  engine: string;
+  embedding_model?: string | null;
+  semantic: boolean;
+}
+
+export interface RagReindexResponse {
+  decisions_reindexed: number;
+  chunk_count: number;
+  embedding_model?: string | null;
+  semantic: boolean;
+  failed_decision_ids: number[];
+}
+
+/** Ask a question; the answer is built only from this decision's uploaded documents, with numbered citations. */
+export async function askDecisionDocuments(
+  decisionId: number,
+  question: string,
+  topK: number = 5
+): Promise<RagAskResponse> {
+  return fetchApi<RagAskResponse>(`/api/decisions/${decisionId}/rag/ask`, {
+    method: "POST",
+    body: JSON.stringify({ question, top_k: topK }),
+  });
+}
+
+/** Rebuild the document index for one decision. */
+export async function reindexDecisionRag(decisionId: number): Promise<RagReindexResponse> {
+  return fetchApi<RagReindexResponse>(`/api/decisions/${decisionId}/rag/reindex`, {
+    method: "POST",
+  });
+}
+
+/** Rebuild the document index for all of the signed-in user's decisions (run once after enabling embeddings). */
+export async function reindexAllRag(): Promise<RagReindexResponse> {
+  return fetchApi<RagReindexResponse>(`/api/rag/reindex`, {
+    method: "POST",
+  });
 }
 
 export async function queryDecisionRag(

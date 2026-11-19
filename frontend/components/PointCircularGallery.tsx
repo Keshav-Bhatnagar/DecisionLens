@@ -146,16 +146,16 @@ export default function PointCircularGallery({
   if (items.length === 0) {
     return (
       <div className="py-12 px-6 text-center bg-[#FDFCF8] dark:bg-[#1A1815] rounded-xl border border-dashed border-[#D9D2C3] dark:border-[#38332C] space-y-3 font-sans">
-        <h4 className="text-sm font-bold text-[#161E33] dark:text-[#F0EAE1]">
+        <h4 className="text-sm font-bold text-[#26211b] dark:text-[#F0EAE1]">
           No {title.toLowerCase()} recorded yet
         </h4>
-        <p className="text-xs text-[#5A6275] dark:text-[#A89F91] max-w-sm mx-auto leading-relaxed">
+        <p className="text-xs text-[#7a7264] dark:text-[#A89F91] max-w-sm mx-auto leading-relaxed">
           Add an initial point to ground this section of your decision context.
         </p>
         <button
           type="button"
           onClick={handleAddAndFocus}
-          className="inline-flex items-center px-4 py-2 text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
+          className="inline-flex items-center px-4 py-2 text-xs font-bold text-[#26211b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
         >
           Add {title.slice(0, -1) || title}
         </button>
@@ -202,13 +202,13 @@ export default function PointCircularGallery({
   return (
     <div className="space-y-3 font-sans">
       {/* Sub-header: Point counter, zoom mode & view toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs sm:text-sm text-[#5A6275] dark:text-[#A89F91]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-[#7a7264] dark:text-[#A89F91]">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-[#161E33] dark:text-[#F0EAE1]">
+          <span className="font-bold text-[#26211b] dark:text-[#F0EAE1]">
             Item {activeIndex + 1} of {items.length}
           </span>
           {viewMode === "circular" && items[activeIndex] && (
-            <span className="text-xs font-mono text-[#5A6275] dark:text-[#A89F91] border border-[#D9D2C3] dark:border-[#38332C] px-2.5 py-0.5 rounded-md bg-[#FCFBF8] dark:bg-[#1E1B18] hidden sm:inline-block">
+            <span className="text-[15px] font-mono text-[#7a7264] dark:text-[#A89F91] border border-[#D9D2C3] dark:border-[#38332C] px-2 py-0.5 rounded-md bg-[#FCFBF8] dark:bg-[#1E1B18] hidden sm:inline-block">
               {getReadingStats(items[activeIndex]).readTimeText}
             </span>
           )}
@@ -217,14 +217,14 @@ export default function PointCircularGallery({
         {/* View mode & Zoom controls */}
         <div className="flex items-center gap-2">
           {viewMode === "circular" && (
-            <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-xs">
+            <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-[15px]">
               <button
                 type="button"
                 onClick={() => handleSetZoom("zoomOut")}
-                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "zoomOut"
-                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
-                    : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
+                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#26211b] dark:text-[#D4AA50] font-bold shadow-2xs"
+                    : "text-[#7a7264] dark:text-[#A89F91] hover:text-[#26211b] dark:hover:text-[#F0EAE1]"
                 }`}
                 title="Wide angle: see surrounding cards in the 3D arc"
               >
@@ -233,10 +233,10 @@ export default function PointCircularGallery({
               <button
                 type="button"
                 onClick={() => handleSetZoom("spacious")}
-                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "spacious"
-                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
-                    : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
+                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#26211b] dark:text-[#D4AA50] font-bold shadow-2xs"
+                    : "text-[#7a7264] dark:text-[#A89F91] hover:text-[#26211b] dark:hover:text-[#F0EAE1]"
                 }`}
                 title="Spacious: balanced view for reading and in-place editing"
               >
@@ -245,10 +245,10 @@ export default function PointCircularGallery({
               <button
                 type="button"
                 onClick={() => handleSetZoom("focus")}
-                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                className={`px-2 py-1 rounded-md transition-colors cursor-pointer ${
                   zoomMode === "focus"
-                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
-                    : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
+                    ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#26211b] dark:text-[#D4AA50] font-bold shadow-2xs"
+                    : "text-[#7a7264] dark:text-[#A89F91] hover:text-[#26211b] dark:hover:text-[#F0EAE1]"
                 }`}
                 title="Focus: maximum card scale"
               >
@@ -257,14 +257,14 @@ export default function PointCircularGallery({
             </div>
           )}
 
-          <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-xs">
+          <div className="flex items-center bg-[#EDE7D6] dark:bg-[#221F1C] p-0.5 rounded-lg border border-[#cfc7b2] dark:border-[#38332C] text-[15px]">
             <button
               type="button"
               onClick={() => setViewMode("circular")}
-              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 viewMode === "circular"
-                  ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
-                  : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
+                  ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#26211b] dark:text-[#D4AA50] font-bold shadow-2xs"
+                  : "text-[#7a7264] dark:text-[#A89F91] hover:text-[#26211b] dark:hover:text-[#F0EAE1]"
               }`}
             >
               Orbit
@@ -272,10 +272,10 @@ export default function PointCircularGallery({
             <button
               type="button"
               onClick={() => setViewMode("list")}
-              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 viewMode === "list"
-                  ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#161E33] dark:text-[#D4AA50] font-bold shadow-2xs"
-                  : "text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1]"
+                  ? "bg-[#FCFBF8] dark:bg-[#2E2924] text-[#26211b] dark:text-[#D4AA50] font-bold shadow-2xs"
+                  : "text-[#7a7264] dark:text-[#A89F91] hover:text-[#26211b] dark:hover:text-[#F0EAE1]"
               }`}
             >
               List
@@ -380,7 +380,7 @@ export default function PointCircularGallery({
                     style={{ transform: "none", backfaceVisibility: "hidden" }}
                     className={`w-full h-full rounded-xl flex flex-col justify-between p-5 sm:p-6 transition-all duration-300 relative ${
                       isCenter
-                        ? "bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-md opacity-100"
+                        ? "bg-[#FCFBF8] dark:bg-[#221F1C] border-2 border-[#B4874B] dark:border-[#D4AA50] shadow-md opacity-100"
                         : "bg-[#EDE7D6] dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] opacity-85 hover:opacity-100"
                     }`}
                   >
@@ -390,13 +390,13 @@ export default function PointCircularGallery({
                         <span
                           className={`w-6 h-6 rounded-md text-xs font-mono font-bold flex items-center justify-center shrink-0 ${
                             isCenter
-                              ? "bg-[#161E33] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]"
-                              : "bg-[#D9D2C3] dark:bg-[#2E2924] text-[#161E33] dark:text-[#F0EAE1]"
+                              ? "bg-[#26211b] text-[#F5F1E8] dark:bg-[#D4AA50] dark:text-[#181614]"
+                              : "bg-[#D9D2C3] dark:bg-[#2E2924] text-[#26211b] dark:text-[#F0EAE1]"
                           }`}
                         >
                           {String(idx + 1).padStart(2, "0")}
                         </span>
-                        <span className="font-newsreader text-base font-normal text-[#1d1d1b] dark:text-[#F0EAE1] truncate max-w-[200px]">
+                        <span className="text-xs font-bold text-[#26211b] dark:text-[#F0EAE1] truncate max-w-[200px]">
                           {title} #{idx + 1}
                         </span>
                       </div>
@@ -409,7 +409,7 @@ export default function PointCircularGallery({
                               e.stopPropagation();
                               setFocusModalIndex(idx);
                             }}
-                            className="text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] hover:underline cursor-pointer"
+                            className="text-[#7a7264] dark:text-[#A89F91] hover:text-[#26211b] dark:hover:text-[#F0EAE1] hover:underline cursor-pointer"
                           >
                             Expand
                           </button>
@@ -420,7 +420,7 @@ export default function PointCircularGallery({
                             e.stopPropagation();
                             onDeleteItem(idx);
                           }}
-                          className="text-[#5A6275] dark:text-[#A89F91] hover:text-red-700 dark:hover:text-red-400 hover:underline cursor-pointer"
+                          className="text-[#7a7264] dark:text-[#A89F91] hover:text-red-700 dark:hover:text-red-400 hover:underline cursor-pointer"
                         >
                           Delete
                         </button>
@@ -429,8 +429,8 @@ export default function PointCircularGallery({
 
                     {/* Epistemic Rationale on Active Card */}
                     {isCenter && (getItemWhyClassified ? getItemWhyClassified(idx, item) : whyClassified) && (
-                      <div className="mt-2.5 mb-1 px-3.5 py-2.5 bg-[#F5F1E8] dark:bg-[#1A1815] rounded-xl border border-[#D9D2C3]/70 dark:border-[#38332C] text-xs sm:text-[13px] leading-relaxed text-[#4f4b40] dark:text-[#A89F91] shrink-0 font-sans">
-                        <span className="font-bold font-mono text-xs text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block mb-0.5">
+                      <div className="mt-2.5 mb-1 px-3 py-2 bg-[#F5F1E8] dark:bg-[#1A1815] rounded-lg border border-[#D9D2C3]/70 dark:border-[#38332C] text-[15px] leading-relaxed text-[#7a7264] dark:text-[#A89F91] shrink-0 font-sans">
+                        <span className="font-bold font-mono text-[14px] text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                           Why {title}?
                         </span>
                         <span>{getItemWhyClassified ? getItemWhyClassified(idx, item) : whyClassified}</span>
@@ -444,17 +444,17 @@ export default function PointCircularGallery({
                           value={item}
                           onChange={(e) => onUpdateItem(idx, e.target.value)}
                           placeholder={`Describe this ${title.toLowerCase().slice(0, -1)} in detail...`}
-                          className="w-full h-full text-[17px] sm:text-[18px] leading-[1.65] text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#8B909C] bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-newsreader font-normal scrollbar-none subpixel-antialiased select-text"
+                          className="w-full h-full text-[15px] sm:text-[15.5px] leading-[1.7] text-[#26211b] dark:text-[#F0EAE1] placeholder-[#a89f91] bg-transparent border-0 focus:ring-0 p-0 focus:outline-none resize-none font-sans font-normal scrollbar-none subpixel-antialiased select-text"
                         />
                       ) : (
-                        <p className="text-[17px] sm:text-[18px] font-newsreader text-[#4f4b40] dark:text-[#A89F91] line-clamp-6 leading-[1.65] select-none">
+                        <p className="text-sm text-[#7a7264] dark:text-[#A89F91] line-clamp-6 leading-relaxed select-none">
                           {item || `Empty ${title.toLowerCase()} point...`}
                         </p>
                       )}
                     </div>
 
                     {/* Footer */}
-                    <div className="pt-2.5 border-t border-[#D9D2C3]/60 dark:border-[#38332C] flex items-center justify-between text-xs text-[#5A6275] dark:text-[#A89F91] shrink-0 font-mono">
+                    <div className="pt-2.5 border-t border-[#D9D2C3]/60 dark:border-[#38332C] flex items-center justify-between text-[15px] text-[#7a7264] dark:text-[#A89F91] shrink-0 font-mono">
                       <span>
                         {stats.words} words • {stats.readTimeText}
                       </span>
@@ -463,7 +463,7 @@ export default function PointCircularGallery({
                           Click to edit
                         </span>
                       ) : (
-                        <span className="text-[#8B909C] font-sans">
+                        <span className="text-[#a89f91] font-sans">
                           Click to rotate
                         </span>
                       )}
@@ -482,7 +482,7 @@ export default function PointCircularGallery({
                     e.stopPropagation();
                     handlePrev();
                   }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 z-50 w-9 h-9 rounded-full bg-[#FCFBF8]/95 dark:bg-[#221F1C]/95 text-[#161E33] dark:text-[#F0EAE1] hover:text-[#7a4e10] dark:hover:text-[#D4AA50] shadow-sm border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-50 w-9 h-9 rounded-full bg-[#FCFBF8]/95 dark:bg-[#221F1C]/95 text-[#26211b] dark:text-[#F0EAE1] hover:text-[#7a4e10] dark:hover:text-[#D4AA50] shadow-sm border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   title="Previous item (or press ← Arrow)"
                   aria-label="Previous item"
                 >
@@ -494,7 +494,7 @@ export default function PointCircularGallery({
                     e.stopPropagation();
                     handleNext();
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 z-50 w-9 h-9 rounded-full bg-[#FCFBF8]/95 dark:bg-[#221F1C]/95 text-[#161E33] dark:text-[#F0EAE1] hover:text-[#7a4e10] dark:hover:text-[#D4AA50] shadow-sm border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-50 w-9 h-9 rounded-full bg-[#FCFBF8]/95 dark:bg-[#221F1C]/95 text-[#26211b] dark:text-[#F0EAE1] hover:text-[#7a4e10] dark:hover:text-[#D4AA50] shadow-sm border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   title="Next item (or press → Arrow)"
                   aria-label="Next item"
                 >
@@ -524,13 +524,13 @@ export default function PointCircularGallery({
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-[11px] text-[#5A6275] dark:text-[#A89F91] hidden sm:inline">
+              <span className="text-[15px] text-[#7a7264] dark:text-[#A89F91] hidden sm:inline">
                 Drag stage or press ← / →
               </span>
               <button
                 type="button"
                 onClick={handleAddAndFocus}
-                className="px-3 py-1.5 text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-xs font-bold text-[#26211b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
               >
                 + Add Point
               </button>
@@ -546,13 +546,13 @@ export default function PointCircularGallery({
               className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-xl space-y-2.5 transition-colors"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#161E33] dark:text-[#F0EAE1]">
+                <span className="text-xs font-bold text-[#26211b] dark:text-[#F0EAE1]">
                   #{idx + 1} {title.slice(0, -1) || title}
                 </span>
                 <button
                   type="button"
                   onClick={() => onDeleteItem(idx)}
-                  className="text-xs text-[#5A6275] dark:text-[#A89F91] hover:text-red-700 dark:hover:text-red-400 hover:underline cursor-pointer"
+                  className="text-xs text-[#7a7264] dark:text-[#A89F91] hover:text-red-700 dark:hover:text-red-400 hover:underline cursor-pointer"
                 >
                   Delete
                 </button>
@@ -563,7 +563,7 @@ export default function PointCircularGallery({
                 rows={3}
                 onChange={(e) => onUpdateItem(idx, e.target.value)}
                 placeholder={`Describe this ${title.toLowerCase().slice(0, -1)}...`}
-                className="w-full text-sm leading-relaxed text-[#161E33] dark:text-[#F0EAE1] bg-[#F5F1E8] dark:bg-[#1A1815] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg p-3 focus:ring-1 focus:ring-[#7a4e10] dark:focus:ring-[#D4AA50] focus:outline-none resize-y font-sans font-normal"
+                className="w-full text-sm leading-relaxed text-[#26211b] dark:text-[#F0EAE1] bg-[#F5F1E8] dark:bg-[#1A1815] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg p-3 focus:ring-1 focus:ring-[#7a4e10] dark:focus:ring-[#D4AA50] focus:outline-none resize-y font-sans font-normal"
               />
             </div>
           ))}
@@ -571,7 +571,7 @@ export default function PointCircularGallery({
           <button
             type="button"
             onClick={handleAddAndFocus}
-            className="w-full py-2.5 text-xs font-bold text-[#161E33] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
+            className="w-full py-2.5 text-xs font-bold text-[#26211b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2C2723] border border-dashed border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
           >
             + Add Another Point
           </button>
@@ -580,14 +580,14 @@ export default function PointCircularGallery({
 
       {/* Focus Modal */}
       {focusModalIndex !== null && items[focusModalIndex] !== undefined && (
-        <div className="fixed inset-0 z-50 bg-[#161E33]/60 dark:bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#26211b]/60 dark:bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-[#FCFBF8] dark:bg-[#221F1C] rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#D9D2C3] dark:border-[#38332C] overflow-hidden font-sans">
             <div className="px-6 py-4 border-b border-[#D9D2C3] dark:border-[#38332C] flex items-center justify-between bg-[#EDE7D6] dark:bg-[#1A1815]">
               <div>
-                <h3 className="text-base font-bold text-[#161E33] dark:text-[#F0EAE1]">
+                <h3 className="text-base font-bold text-[#26211b] dark:text-[#F0EAE1]">
                   {title} — Point #{focusModalIndex + 1}
                 </h3>
-                <p className="text-xs text-[#5A6275] dark:text-[#A89F91]">
+                <p className="text-xs text-[#7a7264] dark:text-[#A89F91]">
                   Expanded reading &amp; editing
                 </p>
                 {(getItemWhyClassified ? getItemWhyClassified(focusModalIndex, items[focusModalIndex] || "") : whyClassified) && (
@@ -600,7 +600,7 @@ export default function PointCircularGallery({
               <button
                 type="button"
                 onClick={() => setFocusModalIndex(null)}
-                className="p-1.5 text-[#5A6275] dark:text-[#A89F91] hover:text-[#161E33] dark:hover:text-[#F0EAE1] rounded-lg transition cursor-pointer"
+                className="p-1.5 text-[#7a7264] dark:text-[#A89F91] hover:text-[#26211b] dark:hover:text-[#F0EAE1] rounded-lg transition cursor-pointer"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" />
@@ -613,7 +613,7 @@ export default function PointCircularGallery({
                 value={items[focusModalIndex]}
                 onChange={(e) => onUpdateItem(focusModalIndex, e.target.value)}
                 placeholder="Write the full detail here..."
-                className="w-full text-base leading-relaxed text-[#161E33] dark:text-[#F0EAE1] bg-[#F5F1E8] dark:bg-[#1A1815] border border-[#D9D2C3] dark:border-[#38332C] rounded-xl p-4 focus:ring-1 focus:ring-[#7a4e10] dark:focus:ring-[#D4AA50] focus:outline-none resize-y font-sans font-normal"
+                className="w-full text-base leading-relaxed text-[#26211b] dark:text-[#F0EAE1] bg-[#F5F1E8] dark:bg-[#1A1815] border border-[#D9D2C3] dark:border-[#38332C] rounded-xl p-4 focus:ring-1 focus:ring-[#7a4e10] dark:focus:ring-[#D4AA50] focus:outline-none resize-y font-sans font-normal"
               />
             </div>
 
@@ -632,7 +632,7 @@ export default function PointCircularGallery({
               <button
                 type="button"
                 onClick={() => setFocusModalIndex(null)}
-                className="px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#161E33] hover:bg-[#232C47] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-[#F5F1E8] bg-[#26211b] hover:bg-[#2e2822] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-lg transition-colors cursor-pointer"
               >
                 Done
               </button>
