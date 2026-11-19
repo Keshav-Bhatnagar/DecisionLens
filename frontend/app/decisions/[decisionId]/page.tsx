@@ -1053,8 +1053,8 @@ export default function DecisionDetailPage({
                     </div>
                   )}
 
-                  {/* Stage 3 Bottom Action Bar */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs font-courier">
+                  {/* Single Unified Stage 3 Action Bar */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-8 font-courier">
                     <button
                       type="button"
                       onClick={() => handleSelectStage("gaps")}
@@ -1075,32 +1075,6 @@ export default function DecisionDetailPage({
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* End of Page Action Bar: Download Meeting Takeaways */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 sm:p-6 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-8 font-courier">
-              <div className="space-y-1">
-                <div className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
-                  <span>
-                    {recordType === "meeting"
-                      ? "Meeting Deliberation Complete"
-                      : "Executive Deliberation Complete"}
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
-                  Export and download executive takeaways, consensus matrices, and action items in publication-grade PDF, Markdown, LaTeX, or JSON.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowExportModal(true)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer shrink-0"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Meeting Takeaways</span>
-              </button>
             </div>
           </div>
 
