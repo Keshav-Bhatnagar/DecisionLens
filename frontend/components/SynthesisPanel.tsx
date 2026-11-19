@@ -172,6 +172,7 @@ export default function SynthesisPanel({
   const [priorities, setPriorities] = useState<string[]>([]);
   const [newPriorityInput, setNewPriorityInput] = useState("");
   const [showPriorities, setShowPriorities] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   // New task inline creation state
   const [addingTaskPhaseId, setAddingTaskPhaseId] = useState<string | null>(null);
@@ -706,19 +707,19 @@ jobs:
   return (
     <div className="space-y-6">
       {/* Editorial Header & Action Bar */}
-      <div className="bg-paper-surface border border-border rounded-2xl p-5 shadow-2xs space-y-4">
+      <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-5 shadow-2xs space-y-4 font-courier">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-accent"></span>
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                STAGE 05 / EXECUTIVE SYNTHESIS & ROADMAP
+              <span className="w-2.5 h-2.5 rounded-none bg-[#7a4e10] dark:bg-[#D4AA50]"></span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                STAGE 03 / FINAL REPORT & EXECUTIVE VERDICT
               </span>
             </div>
-            <h2 className="font-newsreader text-2xl font-normal text-ink mt-0.5">
+            <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mt-0.5">
               Boardroom Decision Memo & Execution Roadmap
             </h2>
-            <p className="text-xs text-muted font-sans mt-0.5">
+            <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] font-courier mt-0.5">
               Synthesized from cognitive findings, resolved information gaps, and multi-criteria stress testing.
             </p>
           </div>
@@ -726,7 +727,7 @@ jobs:
           <div className="flex items-center gap-2 flex-wrap">
             {snapshots.length > 0 && (
               <select
-                className="text-xs bg-paper-surface border border-border rounded-lg px-2.5 py-1.5 font-mono text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+                className="text-xs bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none px-2.5 py-1.5 font-mono text-[#1d1d1b] dark:text-[#F0EAE1] focus:outline-none"
                 value={viewingSnapshot?.id || ""}
                 onChange={(e) =>
                   handleSelectSnapshot(Number(e.target.value) || 0)
@@ -743,70 +744,88 @@ jobs:
               </select>
             )}
 
-            {!viewingSnapshot && (
+            {/* Consolidated Actions & Export Dropdown Button */}
+            <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowPriorities(!showPriorities)}
-                className={`text-xs px-3 py-1.5 rounded-lg font-semibold border transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
-                  showPriorities || priorities.length > 0
-                    ? "bg-paper-sidebar border-accent text-accent"
-                    : "bg-paper-surface border-border text-muted hover:text-ink hover:bg-paper-sidebar"
-                }`}
+                onClick={() => setShowActionsMenu(!showActionsMenu)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-bold text-xs uppercase tracking-wider rounded-none transition-colors cursor-pointer"
               >
-                <Sliders className="w-3 h-3" />
-                <span>{priorities.length > 0 ? `Priorities (${priorities.length})` : "Set Priorities"}</span>
+                <span>Actions & Export</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
               </button>
-            )}
 
-            {displaySynthesis && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleCopyBoardroomADR}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-surface hover:bg-paper-sidebar border border-border text-ink font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-                  title="Copy full Architectural Decision Record (Markdown) to clipboard"
-                >
-                  {copiedADR ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-emerald-700">Copied ADR!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 text-muted" />
-                      <span>Copy Boardroom ADR</span>
-                    </>
-                  )}
-                </button>
+              {showActionsMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowActionsMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 w-60 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-lg z-50 py-1 font-courier text-xs divide-y divide-[#cfc7b2]/40 dark:divide-[#38332C]/40">
+                    {!viewingSnapshot && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPriorities(!showPriorities);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer"
+                      >
+                        <Sliders className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                        <span>{priorities.length > 0 ? `Priorities (${priorities.length})` : "Set Priorities"}</span>
+                      </button>
+                    )}
 
-                <button
-                  type="button"
-                  onClick={handleDownloadGitADR}
-                  disabled={downloadingGitADR}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-surface hover:bg-paper-sidebar border border-border text-ink font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-                  title="Export MADR standard markdown file directly for Git / GitHub repository"
-                >
-                  <FileCode className="w-3.5 h-3.5 text-accent" />
-                  <span>{downloadingGitADR ? "Exporting..." : "Export Git ADR (.md)"}</span>
-                </button>
+                    {displaySynthesis && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleCopyBoardroomADR();
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                          <span>{copiedADR ? "Copied ADR!" : "Copy Boardroom ADR"}</span>
+                        </button>
 
-                <button
-                  type="button"
-                  onClick={handleDownloadCIGuard}
-                  disabled={downloadingCIGuard}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-paper-surface hover:bg-paper-sidebar border border-border text-ink font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-                  title="Download GitHub Action workflow to detect Day-2 architecture drift in CI/CD"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{downloadingCIGuard ? "Exporting..." : "CI Drift Guard (.yml)"}</span>
-                </button>
-              </>
-            )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleDownloadGitADR();
+                            setShowActionsMenu(false);
+                          }}
+                          disabled={downloadingGitADR}
+                          className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                          <FileCode className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                          <span>{downloadingGitADR ? "Exporting..." : "Export Git ADR (.md)"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleDownloadCIGuard();
+                            setShowActionsMenu(false);
+                          }}
+                          disabled={downloadingCIGuard}
+                          className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                          <span>{downloadingCIGuard ? "Exporting..." : "CI Drift Guard (.yml)"}</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
             <button
               onClick={handleRunSynthesis}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-1.5 bg-ink hover:bg-ink-light text-paper-surface font-semibold text-xs rounded-lg transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] font-bold text-xs uppercase tracking-wider rounded-none transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
             >
               {loading ? (
                 <>
@@ -815,7 +834,7 @@ jobs:
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3.5 h-3.5 text-accent" />
+                  <Sparkles className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#181614]" />
                   <span>{synthesis ? "Re-Synthesize Memo" : "Generate Final Synthesis"}</span>
                 </>
               )}
