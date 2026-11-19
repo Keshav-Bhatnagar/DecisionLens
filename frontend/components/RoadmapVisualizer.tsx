@@ -120,17 +120,36 @@ export default function RoadmapVisualizer({
       const base = new Date(kickoffDate);
       if (isNaN(base.getTime())) return { start: "TBD", end: "TBD", range: "TBD" };
 
-      // Phase 1: Weeks 1-2 (days 0 to 14)
-      // Phase 2: Weeks 3-5 (days 14 to 35)
-      // Phase 3: Weeks 6-8 (days 35 to 56)
+      const isDayBased = roadmap.phases.some(
+        (p) =>
+          (p.timeline || "").toLowerCase().includes("day") ||
+          p.tasks.some((t) => (t.timeline || "").toLowerCase().includes("day"))
+      );
+
       let offsetStart = 0;
       let offsetEnd = 14;
-      if (phaseIdx === 1) {
-        offsetStart = 14;
-        offsetEnd = 35;
-      } else if (phaseIdx >= 2) {
-        offsetStart = 35;
-        offsetEnd = 56;
+
+      if (isDayBased) {
+        // Day-based planning horizon (matching 3-5 days planning)
+        if (phaseIdx === 0) {
+          offsetStart = 0;
+          offsetEnd = 2; // Days 1-2
+        } else if (phaseIdx === 1) {
+          offsetStart = 2;
+          offsetEnd = 5; // Days 3-5
+        } else {
+          offsetStart = 5;
+          offsetEnd = 9; // Travel Horizon / Return
+        }
+      } else {
+        // Week-based planning horizon (Weeks 1-2, 3-5, 6-8)
+        if (phaseIdx === 1) {
+          offsetStart = 14;
+          offsetEnd = 35;
+        } else if (phaseIdx >= 2) {
+          offsetStart = 35;
+          offsetEnd = 56;
+        }
       }
 
       const s = new Date(base.getTime() + offsetStart * 86400000);
@@ -1000,3 +1019,4 @@ export default function RoadmapVisualizer({
     </div>
   );
 }
+

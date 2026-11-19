@@ -60,11 +60,20 @@ EXECUTIVE MANDATE & WRITING GUIDELINES:
 
 4. CONTEXTUAL & GROUNDED ROADMAP:
    - Formulate a 3-phase execution roadmap where EVERY milestone is directly tailored to the user's specific problem, domain, and alternatives.
-   - Phase 1: Due Diligence & Pre-Commitment Validation (Weeks 1-2) — Resolve active unknowns, stress-test core assumptions, and secure pre-commitment clearances.
-   - Phase 2: Contract Structuring & Primary Execution (Weeks 3-5) — Negotiate binding terms, procure assets, or deploy core operational workflows for the chosen option.
-   - Phase 3: Operationalization & Performance Governance (Weeks 6-8) — Complete final cutover/closing, establish KPI telemetry, and institute executive audit checkpoints.
+   - For PERSONAL / LIFESTYLE decisions (e.g. travel, vacation, hobbies, personal life):
+     * Phase 1: Planning, Availability & Budget Check (Timeline: "Days 1–2") — Confirm participant schedules, workplace leave approvals, and baseline budget before locking non-refundable reservations.
+     * Phase 2: Bookings, Logistics & Preparation (Timeline: "Days 3–5") — Lock cancellable reservations, finalize day-by-day activity logistics, and prepare emergency cash buffers.
+     * Phase 3: Trip Execution & Wrap-up (Timeline: "Travel & Return") — Embark on trip, monitor live spending against buffer, reconcile shared expenses, and capture personal learnings.
+   - For SOFTWARE / TECH decisions:
+     * Phase 1: Architecture Validation & Spike Prototype (Weeks 1–2)
+     * Phase 2: Core Build & Canary Migration (Weeks 3–5)
+     * Phase 3: Production Cutover & Observability (Weeks 6–8)
+   - For BUSINESS / OPERATIONS / REAL ESTATE / FINANCE decisions:
+     * Phase 1: Due Diligence & Pre-Commitment Validation (Weeks 1–2)
+     * Phase 2: Contract Structuring & Primary Execution (Weeks 3–5)
+     * Phase 3: Operationalization & Performance Governance (Weeks 6–8)
    - Every task must have: "task_id", "title", "description", "owner_role", "timeline", "dependencies", "success_criteria", "is_completed": false, "source_type", "source_ids", "depends_on_gap_ids", and "reason".
-   - Assign domain-appropriate owner roles (e.g. Legal Counsel, Investment Committee, Technical Architect, Operations Lead, People Partner).
+   - Assign domain-appropriate owner roles (e.g. Trip Planner, Budget Coordinator, Legal Counsel, Investment Committee, Technical Architect, Operations Lead).
 
 5. EVIDENCE & CITATIONS:
    - Ground claims strictly in provided facts and research findings. Never invent fake URLs or external citations.
@@ -793,7 +802,10 @@ def generate_domain_grounded_roadmap(
     roles = role_map.get(domain_upper, role_map["BUSINESS"])
     legal_role, risk_role, ops_role, exec_role = roles
 
-    # Phase 1: Pre-Commitment Validation & Due Diligence (Weeks 1-2)
+    is_personal_timeline = domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION")
+    default_p1_timeline = "Days 1–2" if is_personal_timeline else "Weeks 1–2"
+
+    # Phase 1: Pre-Commitment Validation & Due Diligence
     phase1_tasks: List[RoadmapTask] = []
 
     if critical_gaps:
@@ -810,7 +822,7 @@ def generate_domain_grounded_roadmap(
                     title=f"Resolve Unknown: {summary}",
                     description=f"Conduct focused investigation and audit operational readiness regarding: {clean_gap}",
                     owner_role=risk_role if idx == 0 else legal_role,
-                    timeline="Weeks 1-2",
+                    timeline=default_p1_timeline,
                     dependencies=[],
                     success_criteria=f"Documented evidentiary clearance resolving ambiguity on {summary.lower()}.",
                     is_completed=False,
@@ -821,14 +833,14 @@ def generate_domain_grounded_roadmap(
                 )
             )
     else:
-        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+        if is_personal_timeline:
             phase1_tasks.append(
                 RoadmapTask(
                     task_id="task-p1-pers",
                     title=f"Confirm Calendar Dates, Leave & Feasibility{title_context}",
                     description=f"Verify participant schedules, workplace leave approvals, and baseline availability for {top_option_name}.",
                     owner_role=legal_role,
-                    timeline="Days 1-3",
+                    timeline="Days 1–2",
                     dependencies=[],
                     success_criteria="Approved calendar dates and aligned participant availability.",
                     is_completed=False,
@@ -921,7 +933,7 @@ def generate_domain_grounded_roadmap(
                 title=f"Stress-Test Assumption: {asmp_summary}",
                 description=f"Gather empirical benchmark data to validate operating assumption: '{first_asmp}'.",
                 owner_role=risk_role,
-                timeline="Week 2",
+                timeline="Day 2" if is_personal_timeline else "Week 2",
                 dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
                 success_criteria="Empirical data confirms variance is within acceptable operational tolerance.",
                 is_completed=False,
@@ -930,14 +942,14 @@ def generate_domain_grounded_roadmap(
             )
         )
     else:
-        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+        if is_personal_timeline:
             phase1_tasks.append(
                 RoadmapTask(
                     task_id="task-p1-eval",
                     title=f"Verify Budget Allocation & Booking Terms{title_context}",
                     description="Confirm personal budget allowance, refundability conditions, and contingency reserves.",
                     owner_role=risk_role,
-                    timeline="Week 2",
+                    timeline="Day 2",
                     dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
                     success_criteria="Budget allocated and non-refundable deposit terms identified.",
                     is_completed=False,
@@ -1127,7 +1139,7 @@ def generate_domain_grounded_roadmap(
                 title=f"Lock Core Bookings with Flexible Cancellation Policies for {top_option_name}",
                 description="Secure transit and accommodation reservations prioritizing free cancellation and price-drop protection.",
                 owner_role=legal_role,
-                timeline="Days 4-7",
+                timeline="Days 3–4",
                 dependencies=[t.task_id for t in phase1_tasks[:1]],
                 success_criteria="Core reservations confirmed with documented cancellation windows.",
                 is_completed=False,
@@ -1139,7 +1151,7 @@ def generate_domain_grounded_roadmap(
                 title="Coordinate Day-by-Day Itinerary & Local Logistics",
                 description="Finalize daily activity routes, transit arrangements, essential permits, and packing checklist.",
                 owner_role=ops_role,
-                timeline="Week 2",
+                timeline="Day 4",
                 dependencies=["task-p2-terms"],
                 success_criteria="Actionable day-to-day itinerary shared with participants.",
                 is_completed=False,
@@ -1151,7 +1163,7 @@ def generate_domain_grounded_roadmap(
                 title="Emergency Readiness & Contingency Setup",
                 description="Verify travel insurance coverage, emergency contact access, medical supplies, and contingency cash buffer.",
                 owner_role=risk_role,
-                timeline="Week 2",
+                timeline="Day 5",
                 dependencies=["task-p2-exec"],
                 success_criteria="Emergency kit, contacts, and policy documents readily accessible offline.",
                 is_completed=False,
@@ -1179,7 +1191,7 @@ def generate_domain_grounded_roadmap(
                 title="Post-Trip Reconciliation & Return Handover",
                 description="Reconcile shared travel expenses among participants, settle payments, and smoothly resume daily commitments.",
                 owner_role=ops_role,
-                timeline="Post-Trip Week 1",
+                timeline="Post-Trip Day 1",
                 dependencies=["task-p3-close"],
                 success_criteria="All shared expenses reconciled and settled without discrepancies.",
                 is_completed=False,
@@ -1191,7 +1203,7 @@ def generate_domain_grounded_roadmap(
                 title="Personal Retrospective & Learnings",
                 description="Review trip value, lodging quality, and transit convenience to guide future travel planning.",
                 owner_role=exec_role,
-                timeline="Post-Trip Week 2",
+                timeline="Post-Trip Day 2",
                 dependencies=["task-p3-runbook"],
                 success_criteria="Key takeaways documented for future trip planning.",
                 is_completed=False,
@@ -1280,28 +1292,77 @@ def generate_domain_grounded_roadmap(
             ),
         ]
 
+    if is_personal_timeline:
+        p1_title = "Phase 1: Planning, Availability & Budget Check"
+        p1_timeline = "Days 1–2"
+        p1_desc = "Confirm participant availability, workplace leave approvals, and baseline budget before locking non-refundable reservations."
+
+        p2_title = "Phase 2: Bookings, Logistics & Preparation"
+        p2_timeline = "Days 3–5"
+        p2_desc = f"Lock cancellable reservations, finalize day-by-day activity logistics, and set up travel emergency buffers for {top_option_name}."
+
+        p3_title = "Phase 3: Trip Execution & Wrap-up"
+        p3_timeline = "Travel & Return"
+        p3_desc = "Embark on trip, monitor live spending against buffer, reconcile shared expenses, and capture personal learnings."
+    elif domain_upper == "REAL_ESTATE":
+        p1_title = "Phase 1: Title Verification & Municipal Zoning"
+        p1_timeline = "Weeks 1–2"
+        p1_desc = "Verify clean marketable title, non-encumbrance certificates, and municipal zoning compliance."
+
+        p2_title = "Phase 2: Conveyance Agreements & Perimeter Survey"
+        p2_timeline = "Weeks 3–5"
+        p2_desc = f"Establish binding conveyance covenants, escrow payment schedules, and physical site demarcation for {top_option_name}."
+
+        p3_title = "Phase 3: Deed Registration & Handover"
+        p3_timeline = "Weeks 6–8"
+        p3_desc = "Register definitive deed, disburse escrow milestone tranches, and transition facility operating protocols."
+    elif domain_upper == "SOFTWARE":
+        p1_title = "Phase 1: Architecture Validation & Spike Prototype"
+        p1_timeline = "Weeks 1–2"
+        p1_desc = "Validate integration feasibility, latency budgets, and security boundaries before engineering allocation."
+
+        p2_title = "Phase 2: Core Build & Canary Migration"
+        p2_timeline = "Weeks 3–5"
+        p2_desc = f"Build core service modules, run staging integration, and configure automated canary routing for {top_option_name}."
+
+        p3_title = "Phase 3: Production Cutover & Observability"
+        p3_timeline = "Weeks 6–8"
+        p3_desc = "Execute full production traffic cutover, deprecate legacy infrastructure, and establish 24/7 runbooks."
+    else:
+        p1_title = "Phase 1: Due Diligence & Pre-Commitment Validation"
+        p1_timeline = "Weeks 1–2"
+        p1_desc = "Resolve critical unknowns, stress-test operating assumptions, and complete pre-commitment audits before irreversible resource allocation."
+
+        p2_title = "Phase 2: Contract Structuring & Primary Execution"
+        p2_timeline = "Weeks 3–5"
+        p2_desc = f"Finalize binding agreements and mobilize primary execution workstreams for {top_option_name}."
+
+        p3_title = "Phase 3: Operationalization & Performance Governance"
+        p3_timeline = "Weeks 6–8"
+        p3_desc = "Complete formal transition, achieve steady-state operations, and institute ongoing executive governance."
+
     return RoadmapData(
         title=f"Strategic Execution Roadmap: {top_option_name}",
         phases=[
             RoadmapPhase(
                 phase_id="phase-1",
-                title="Phase 1: Due Diligence & Pre-Commitment Validation",
-                timeline="Weeks 1-2",
-                description="Resolve critical unknowns, stress-test operating assumptions, and complete pre-commitment audits before irreversible resource allocation.",
+                title=p1_title,
+                timeline=p1_timeline,
+                description=p1_desc,
                 tasks=phase1_tasks,
             ),
             RoadmapPhase(
                 phase_id="phase-2",
-                title="Phase 2: Contract Structuring & Primary Execution",
-                timeline="Weeks 3-5",
-                description=f"Finalize binding agreements and mobilize primary execution workstreams for {top_option_name}.",
+                title=p2_title,
+                timeline=p2_timeline,
+                description=p2_desc,
                 tasks=phase2_tasks,
             ),
             RoadmapPhase(
                 phase_id="phase-3",
-                title="Phase 3: Operationalization & Performance Governance",
-                timeline="Weeks 6-8",
-                description="Complete formal transition, achieve steady-state operations, and institute ongoing executive governance.",
+                title=p3_title,
+                timeline=p3_timeline,
+                description=p3_desc,
                 tasks=phase3_tasks,
             ),
         ],

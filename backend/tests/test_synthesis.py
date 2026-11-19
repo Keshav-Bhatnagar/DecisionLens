@@ -853,4 +853,11 @@ def test_personal_lifestyle_domain_synthesis_free_from_tech_jargon(
         assert "gmv outage" not in ca.rebuttal_or_concession.lower()
         assert "go prototype" not in ca.rebuttal_or_concession.lower()
 
+    # Verify phases align with personal planning horizon (3-5 days planning, not enterprise weeks)
+    assert synth.roadmap.phases[0].timeline == "Days 1–2"
+    assert "Planning" in synth.roadmap.phases[0].title
+    assert synth.roadmap.phases[1].timeline == "Days 3–5"
+    assert "Bookings" in synth.roadmap.phases[1].title or "Preparation" in synth.roadmap.phases[1].title
+    assert "Travel" in synth.roadmap.phases[2].timeline or "Return" in synth.roadmap.phases[2].timeline
+
 
