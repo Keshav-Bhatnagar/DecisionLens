@@ -625,6 +625,7 @@ def generate_domain_grounded_roadmap(
     risks: List[str],
     decision_title: Optional[str] = None,
     assumptions: Optional[List[str]] = None,
+    force_mock: bool = False,
 ) -> RoadmapData:
     """
     Generate a realistic, tailored 3-phase execution roadmap grounded in the decision's domain and context.
@@ -633,6 +634,105 @@ def generate_domain_grounded_roadmap(
     """
     domain_upper = (domain or "BUSINESS").upper()
     title_context = f" for {decision_title}" if decision_title else ""
+
+    # Tier 1: True AI / Semantic Intent-Driven Roadmap Generation (When LLM is available)
+    if not force_mock:
+        client, model, provider = get_llm_client_and_model("frameworks")
+        if client and provider != "mock":
+            try:
+                system_prompt = (
+                    "You are the Strategic Execution Architect for DecisionLens.\n"
+                    "Generate a realistic, tailored 3-phase execution roadmap grounded strictly in the decision's domain and context.\n"
+                    "CRITICAL DOMAIN RULES:\n"
+                    "- If DOMAIN is PERSONAL or LIFESTYLE (e.g. travel, vacation, hobbies, personal health, relocation): Tasks must strictly focus on real-world personal steps (e.g. schedule verification, bookings, packing, local logistics, emergency buffers, post-trip review). Use authentic personal roles (e.g. 'Trip Planner', 'Budget Coordinator', 'Participant'). NEVER use corporate, IT, software engineering, or DevOps jargon (NO 'canary', 'Kafka', 'PgBouncer', 'dual-write', 'SLA', 'API contract', 'SRE', 'executive committee')!\n"
+                    "- If DOMAIN is SOFTWARE / TECH: Tasks must focus on architectural validation, spike prototypes, staging canaries, data migration, and observability.\n"
+                    "- If DOMAIN is REAL ESTATE: Tasks must focus on legal title search, municipal zoning, structural survey, escrow disbursement, and deed registration.\n"
+                    "- If DOMAIN is FINANCE: Tasks must focus on financial audit, valuation multiples, term sheet covenants, capital disbursement, and portfolio tracking.\n"
+                    "- If DOMAIN is CAREER: Tasks must focus on offer evaluation, negotiation, resignation transition, onboarding, and 90-day review.\n"
+                    "- If DOMAIN is PRODUCT / OPERATIONS: Tasks must focus on user interviews, prototype walkthroughs, vendor SLAs, and pilot rollout.\n"
+                    "\n"
+                    "STRUCTURAL RULES:\n"
+                    "- Provide EXACTLY 3 Phases:\n"
+                    "  Phase 1: Pre-Commitment Validation & Due Diligence (Timeline: Weeks 1-2, or Days 1-3 for personal)\n"
+                    "  Phase 2: Core Execution & Rollout (Timeline: Weeks 3-5, or Week 2)\n"
+                    "  Phase 3: Operationalization & Sustained Value (Timeline: Weeks 6-8, or Post-Execution)\n"
+                    "- Each phase must contain 2 to 3 actionable tasks.\n"
+                    "- Tasks in Phase 2 must include prerequisite dependencies on Phase 1 tasks (forming a connected DAG).\n"
+                    "- Tasks in Phase 3 must include prerequisite dependencies on Phase 2 tasks.\n"
+                    "- Each task MUST have:\n"
+                    "  * task_id (e.g. 'task-p1-1', 'task-p2-1', 'task-p3-1')\n"
+                    "  * title (short, punchy action title)\n"
+                    "  * description (concrete, specific instructions tailored to this dilemma)\n"
+                    "  * owner_role (authentic role for this domain)\n"
+                    "  * timeline (e.g. 'Days 1-2', 'Week 1', 'Weeks 3-4')\n"
+                    "  * dependencies (list of prerequisite task_ids)\n"
+                    "  * success_criteria (objective test/verification for completion)\n"
+                    "  * is_completed: false\n"
+                    "  * source_type ('gap', 'condition', 'risk', or 'decision_requirement')\n"
+                    "  * reason (explicit justification for why this milestone is needed)\n"
+                    "\n"
+                    "Return ONLY valid JSON matching this schema:\n"
+                    "{\n"
+                    f'  "title": "Execution Roadmap: {top_option_name}",\n'
+                    '  "phases": [\n'
+                    '    {\n'
+                    '      "phase_id": "phase-1",\n'
+                    '      "title": "Phase 1: Pre-Commitment Validation & Due Diligence",\n'
+                    '      "timeline": "Weeks 1-2",\n'
+                    '      "description": "...",\n'
+                    '      "tasks": [...]\n'
+                    '    }\n'
+                    '  ]\n'
+                    "}"
+                )
+
+                user_prompt = (
+                    f"Decision Title: {decision_title or 'Executive Strategy'}\n"
+                    f"Selected Winner Option: {top_option_name}\n"
+                    f"Classified Domain: {domain_upper}\n"
+                    f"Unresolved Unknown Gaps: {json.dumps(critical_gaps or [])}\n"
+                    f"Critical Conditions Precedent: {json.dumps(critical_conditions or [])}\n"
+                    f"Identified Risks: {json.dumps(risks or [])}\n"
+                    f"Operating Assumptions: {json.dumps(assumptions or [])}\n\n"
+                    "Generate the tailored 3-phase execution roadmap in JSON:"
+                )
+
+                raw_ai_roadmap = None
+                if provider == "azure":
+                    resp = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.2,
+                        timeout=5.0,
+                    )
+                    raw_ai_roadmap = resp.choices[0].message.content
+                elif provider in ("gemini", "azure"):
+                    gemini_key = (settings.gemini_api_key or settings.google_api_key or "").strip()
+                    if gemini_key:
+                        raw_ai_roadmap = call_gemini_direct_rest(
+                            model=model or "gemini-2.5-flash",
+                            system_prompt=system_prompt,
+                            user_prompt=user_prompt,
+                            api_key=gemini_key,
+                            temperature=0.2,
+                        )
+
+                if raw_ai_roadmap:
+                    clean_json = raw_ai_roadmap.strip()
+                    if clean_json.startswith("```"):
+                        clean_json = re.sub(r"^```(?:json)?\s*", "", clean_json)
+                        clean_json = re.sub(r"\s*```$", "", clean_json)
+                    parsed_roadmap = json.loads(clean_json)
+                    roadmap_obj = RoadmapData.model_validate(parsed_roadmap)
+                    if len(roadmap_obj.phases) >= 3 and all(len(p.tasks) > 0 for p in roadmap_obj.phases):
+                        logger.info("Successfully generated AI-grounded roadmap for '%s'", decision_title)
+                        return roadmap_obj
+            except Exception as e:
+                logger.warning("AI roadmap generation failed (%s), using dynamic heuristic synthesis", e)
 
     role_map = {
         "REAL_ESTATE": (
@@ -1808,6 +1908,7 @@ def generate_mock_synthesis(
         risks=[r.risk for r in risks_and_mitigations],
         decision_title=decision.title,
         assumptions=[a.assumption for a in assumptions_items],
+        force_mock=True,
     )
 
     blunder_shield = compute_blunder_shield(
@@ -2118,6 +2219,29 @@ def execute_hosted_synthesis(
             decision_id=decision.id,
         )
         parsed["blunder_shield"] = computed_shield.model_dump()
+
+    # Defensive enrichment: Ensure roadmap is populated, valid, and domain-appropriate
+    raw_roadmap = parsed.get("roadmap")
+    needs_computed_roadmap = False
+    if not raw_roadmap or not isinstance(raw_roadmap, dict) or not raw_roadmap.get("phases") or len(raw_roadmap.get("phases", [])) < 3:
+        needs_computed_roadmap = True
+    elif domain.upper() in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+        roadmap_str = json.dumps(raw_roadmap).lower()
+        if any(jargon in roadmap_str for jargon in ["kafka", "microservice", "pgbouncer", "canary routing", "p99 latency", "api contract"]):
+            needs_computed_roadmap = True
+
+    if needs_computed_roadmap:
+        computed_roadmap = generate_domain_grounded_roadmap(
+            domain=domain,
+            top_option_name=canonical_winner_name,
+            critical_gaps=critical_unknowns,
+            critical_conditions=parsed.get("conditional_triggers", []),
+            risks=[r.get("risk", "") for r in parsed.get("risks_and_mitigations", []) if isinstance(r, dict)],
+            decision_title=decision.title,
+            assumptions=[a.get("assumption", "") for a in parsed.get("assumptions", []) if isinstance(a, dict)],
+            force_mock=req.force_mock if req else False,
+        )
+        parsed["roadmap"] = computed_roadmap.model_dump()
 
     return DecisionSynthesis.model_validate(parsed)
 

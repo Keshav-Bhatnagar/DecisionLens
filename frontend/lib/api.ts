@@ -1234,6 +1234,8 @@ export interface RoadmapPhase {
 export interface RoadmapData {
   title: string;
   phases: RoadmapPhase[];
+  start_date?: string;
+  kickoff_date?: string;
 }
 
 export interface ReceiptLineItem {
