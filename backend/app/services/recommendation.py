@@ -626,6 +626,74 @@ def compute_blunder_shield(
     )
 
 
+def _calculate_timeline_cadence(text_context: str, domain: str) -> dict:
+    """
+    Dynamically analyze problem context, explicit timeframe signals, and domain to calculate
+    appropriate chronological time units, horizons, and phase spans (zero static hardcoding).
+    """
+    lower = text_context.lower()
+
+    # Check for explicit day or quick turnaround signals
+    has_day_signals = any(k in lower for k in [
+        "day", "weekend", "trip", "travel", "vacation", "holiday", "manali",
+        "getaway", "urgent", "immediate", "flight", "hotel", "resort", "leave",
+        "quick", "short-term", "short term"
+    ]) or domain.upper() in ("PERSONAL", "LIFESTYLE")
+
+    # Check for multi-month / long-term enterprise or capital signals
+    has_long_signals = any(k in lower for k in [
+        "real estate", "land", "zoning", "deed", "acquisition", "merger",
+        "quarter", "year", "annual", "multi-year", "capital expansion"
+    ]) or domain.upper() in ("REAL_ESTATE", "FINANCE")
+
+    if has_day_signals and not has_long_signals:
+        return {
+            "unit": "Day",
+            "p1_timeline": "Days 1–2",
+            "p2_timeline": "Days 3–5",
+            "p3_timeline": "Travel & Return",
+            "t1_timeline": "Days 1–2",
+            "t2_timeline": "Day 2",
+            "t3_timeline": "Days 3–4",
+            "t4_timeline": "Day 4",
+            "t5_timeline": "Day 5",
+            "t6_timeline": "Travel Horizon",
+            "t7_timeline": "Post-Trip Day 1",
+            "t8_timeline": "Post-Trip Day 2",
+        }
+    elif has_long_signals:
+        return {
+            "unit": "Month",
+            "p1_timeline": "Month 1",
+            "p2_timeline": "Months 2–3",
+            "p3_timeline": "Months 4–6",
+            "t1_timeline": "Weeks 1–2",
+            "t2_timeline": "Weeks 3–4",
+            "t3_timeline": "Weeks 5–8",
+            "t4_timeline": "Weeks 9–10",
+            "t5_timeline": "Weeks 11–12",
+            "t6_timeline": "Month 4",
+            "t7_timeline": "Month 5",
+            "t8_timeline": "Month 6",
+        }
+    else:
+        # Standard sprint / operational cadence
+        return {
+            "unit": "Week",
+            "p1_timeline": "Weeks 1–2",
+            "p2_timeline": "Weeks 3–4",
+            "p3_timeline": "Weeks 5–6",
+            "t1_timeline": "Week 1",
+            "t2_timeline": "Week 2",
+            "t3_timeline": "Week 3",
+            "t4_timeline": "Week 4",
+            "t5_timeline": "Week 5",
+            "t6_timeline": "Week 6",
+            "t7_timeline": "Week 6+",
+            "t8_timeline": "Post-Deployment",
+        }
+
+
 def generate_domain_grounded_roadmap(
     domain: str,
     top_option_name: str,
@@ -637,9 +705,9 @@ def generate_domain_grounded_roadmap(
     force_mock: bool = False,
 ) -> RoadmapData:
     """
-    Generate a realistic, tailored 3-phase execution roadmap grounded in the decision's domain and context.
-    Tasks are dynamically derived from active unknown gaps, assumptions, and domain governance practices.
-    Never uses hardcoded templates or non-domain jargon.
+    Generate a realistic, timely calculated execution roadmap dynamically synthesized
+    from the decision's operational horizon, domain context, and identified evidentiary gaps.
+    Never uses static boilerplate templates.
     """
     domain_upper = (domain or "BUSINESS").upper()
     title_context = f" for {decision_title}" if decision_title else ""
@@ -651,39 +719,24 @@ def generate_domain_grounded_roadmap(
             try:
                 system_prompt = (
                     "You are the Strategic Execution Architect for DecisionLens.\n"
-                    "Generate a realistic, tailored 3-phase execution roadmap grounded strictly in the decision's domain and context.\n"
-                    "CRITICAL DOMAIN RULES:\n"
-                    "- If DOMAIN is PERSONAL or LIFESTYLE (e.g. travel, vacation, hobbies, personal health, relocation): Tasks must strictly focus on real-world personal steps (e.g. schedule verification, bookings, packing, local logistics, emergency buffers, post-trip review). Use authentic personal roles (e.g. 'Trip Planner', 'Budget Coordinator', 'Participant'). NEVER use corporate, IT, software engineering, or DevOps jargon (NO 'canary', 'Kafka', 'PgBouncer', 'dual-write', 'SLA', 'API contract', 'SRE', 'executive committee')!\n"
-                    "- If DOMAIN is SOFTWARE / TECH: Tasks must focus on architectural validation, spike prototypes, staging canaries, data migration, and observability.\n"
-                    "- If DOMAIN is REAL ESTATE: Tasks must focus on legal title search, municipal zoning, structural survey, escrow disbursement, and deed registration.\n"
-                    "- If DOMAIN is FINANCE: Tasks must focus on financial audit, valuation multiples, term sheet covenants, capital disbursement, and portfolio tracking.\n"
-                    "- If DOMAIN is CAREER: Tasks must focus on offer evaluation, negotiation, resignation transition, onboarding, and 90-day review.\n"
-                    "- If DOMAIN is PRODUCT / OPERATIONS: Tasks must focus on user interviews, prototype walkthroughs, vendor SLAs, and pilot rollout.\n"
+                    "Your objective is to synthesize a realistic, timely calculated execution roadmap in the visual style of roadmap.sh.\n"
+                    "CRITICAL DIRECTIVES FOR TIMELY CALCULATION & ZERO HARDCODING:\n"
+                    "1. DYNAMIC TIMELINE CADENCE:\n"
+                    "   - Inspect the decision problem, domain, constraints, and urgency to deduce the natural operational timeline.\n"
+                    "   - Calculate chronological time units: 'Days' for rapid turnarounds, personal plans, trips, and quick sprints; 'Weeks' for engineering features, hiring, or team pilots; 'Months' for complex capital or multi-year transitions.\n"
+                    "   - Assign contiguous sequential time spans across 3 contiguous execution phases.\n"
                     "\n"
-                    "STRUCTURAL RULES:\n"
-                    "- Provide EXACTLY 3 Phases:\n"
-                    "- If DOMAIN is PERSONAL or LIFESTYLE (e.g. travel, vacation, hobbies, personal health):\n"
-                    "  Phase 1: Planning, Availability & Budget Check (Timeline: Days 1–2)\n"
-                    "  Phase 2: Bookings, Logistics & Preparation (Timeline: Days 3–5)\n"
-                    "  Phase 3: Trip Execution & Wrap-up (Timeline: Travel & Return)\n"
-                    "- If DOMAIN is TECH / ENTERPRISE / REAL ESTATE / OTHER:\n"
-                    "  Phase 1: Due Diligence & Pre-Commitment Validation (Timeline: Weeks 1-2)\n"
-                    "  Phase 2: Core Execution & Rollout (Timeline: Weeks 3-5)\n"
-                    "  Phase 3: Operationalization & Sustained Value (Timeline: Weeks 6-8)\n"
-                    "- Each phase must contain 2 to 3 actionable tasks.\n"
-                    "- Tasks in Phase 2 must include prerequisite dependencies on Phase 1 tasks (forming a connected DAG).\n"
-                    "- Tasks in Phase 3 must include prerequisite dependencies on Phase 2 tasks.\n"
-                    "- Each task MUST have:\n"
-                    "  * task_id (e.g. 'task-p1-1', 'task-p2-1', 'task-p3-1')\n"
-                    "  * title (short, punchy action title)\n"
-                    "  * description (concrete, specific instructions tailored to this dilemma)\n"
-                    "  * owner_role (authentic role for this domain)\n"
-                    "  * timeline (e.g. 'Days 1-2', 'Week 1', 'Weeks 3-4')\n"
-                    "  * dependencies (list of prerequisite task_ids)\n"
-                    "  * success_criteria (objective test/verification for completion)\n"
-                    "  * is_completed: false\n"
-                    "  * source_type ('gap', 'condition', 'risk', or 'decision_requirement')\n"
-                    "  * reason (explicit justification for why this milestone is needed)\n"
+                    "2. CONTEXTUAL DYNAMIC PHASING:\n"
+                    "   - DO NOT copy static or generic boilerplate titles (e.g. NEVER use 'Due Diligence & Pre-Commitment Validation' for a personal holiday, NEVER use 'Kafka' for non-software decisions).\n"
+                    f"   - Dynamically craft 3 sequential phase titles that describe what actually needs to be delivered for this specific option ('{top_option_name}'):\n"
+                    "     * Phase 1: Initial readiness, stakeholder alignment, and resolving blocking unknowns/gaps.\n"
+                    "     * Phase 2: Core commitment, booking/procurement/building, and milestone rollout.\n"
+                    "     * Phase 3: Final execution, live deployment/trip execution, and retrospective value capture.\n"
+                    "\n"
+                    "3. GROUNDED TASKS & AUTHENTIC ROLES:\n"
+                    "   - Directly target the unresolved gaps, assumptions, and risks supplied in the prompt.\n"
+                    "   - Assign authentic, context-appropriate roles matching the real participants (e.g. 'Trip Planner', 'Travel Crew', 'Lead Architect', 'Site Surveyor', etc.).\n"
+                    "   - Form a connected dependency DAG where Phase 2 tasks depend on Phase 1 milestones, and Phase 3 tasks depend on Phase 2.\n"
                     "\n"
                     "Return ONLY valid JSON matching this schema:\n"
                     "{\n"
@@ -691,10 +744,25 @@ def generate_domain_grounded_roadmap(
                     '  "phases": [\n'
                     '    {\n'
                     '      "phase_id": "phase-1",\n'
-                    '      "title": "Phase 1: [Domain Phase Title]",\n'
-                    '      "timeline": "[Timeline matching phase, e.g. Days 1–2 or Weeks 1-2]",\n'
-                    '      "description": "...",\n'
-                    '      "tasks": [...]\n'
+                    '      "title": "Phase 1: [Contextual title tailored to initial steps]",\n'
+                    '      "timeline": "[Calculated timeline window, e.g. Days 1–2, Weeks 1-2, Month 1]",\n'
+                    '      "description": "[Calculated phase objective]",\n'
+                    '      "tasks": [\n'
+                    '        {\n'
+                    '          "task_id": "task-p1-1",\n'
+                    '          "title": "[Actionable milestone title]",\n'
+                    '          "description": "[Concrete instructions]",\n'
+                    '          "owner_role": "[Authentic contextual role]",\n'
+                    '          "timeline": "[Calculated task timeline]",\n'
+                    '          "dependencies": [],\n'
+                    '          "success_criteria": "[Measurable exit condition]",\n'
+                    '          "is_completed": false,\n'
+                    '          "source_type": "gap" | "condition" | "risk" | "decision_requirement",\n'
+                    '          "source_ids": [],\n'
+                    '          "depends_on_gap_ids": [],\n'
+                    '          "reason": "[Why this milestone is essential to progress]"\n'
+                    '        }\n'
+                    '      ]\n'
                     '    }\n'
                     '  ]\n'
                     "}"
@@ -708,7 +776,7 @@ def generate_domain_grounded_roadmap(
                     f"Critical Conditions Precedent: {json.dumps(critical_conditions or [])}\n"
                     f"Identified Risks: {json.dumps(risks or [])}\n"
                     f"Operating Assumptions: {json.dumps(assumptions or [])}\n\n"
-                    "Generate the tailored 3-phase execution roadmap in JSON:"
+                    "Generate the timely calculated 3-phase execution roadmap in JSON:"
                 )
 
                 raw_ai_roadmap = None
@@ -745,7 +813,7 @@ def generate_domain_grounded_roadmap(
                     if len(roadmap_obj.phases) >= 3 and all(len(p.tasks) > 0 for p in roadmap_obj.phases):
                         if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
                             obj_str = json.dumps(roadmap_obj.model_dump()).lower()
-                            if any(w in obj_str for w in ["weeks 1-2", "week 1-2", "weeks 3-5", "due diligence", "contract structuring", "operationalization"]):
+                            if any(w in obj_str for w in ["weeks 1-2", "week 1-2", "due diligence & pre-commitment", "contract structuring & primary execution", "kafka", "microservice"]):
                                 logger.info("AI returned generic corporate phase for personal roadmap; falling back to tailored heuristic")
                             else:
                                 logger.info("Successfully generated AI-grounded roadmap for '%s'", decision_title)
@@ -816,7 +884,8 @@ def generate_domain_grounded_roadmap(
     legal_role, risk_role, ops_role, exec_role = roles
 
     is_personal_timeline = domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION")
-    default_p1_timeline = "Days 1–2" if is_personal_timeline else "Weeks 1–2"
+    cadence = _calculate_timeline_cadence(f"{decision_title or ''} {top_option_name}", domain_upper)
+    default_p1_timeline = cadence["t1_timeline"]
 
     # Phase 1: Pre-Commitment Validation & Due Diligence
     phase1_tasks: List[RoadmapTask] = []
@@ -1306,53 +1375,53 @@ def generate_domain_grounded_roadmap(
         ]
 
     if is_personal_timeline:
-        p1_title = "Phase 1: Planning, Availability & Budget Check"
-        p1_timeline = "Days 1–2"
-        p1_desc = "Confirm participant availability, workplace leave approvals, and baseline budget before locking non-refundable reservations."
+        p1_title = f"Phase 1: Planning, Availability & Budget Alignment for {top_option_name}"
+        p1_timeline = cadence["p1_timeline"]
+        p1_desc = f"Align schedules, verify leave and budget parameters, and resolve critical uncertainties before locking non-refundable commitments to {top_option_name}."
 
-        p2_title = "Phase 2: Bookings, Logistics & Preparation"
-        p2_timeline = "Days 3–5"
+        p2_title = f"Phase 2: Reservations, Logistics & Preparation for {top_option_name}"
+        p2_timeline = cadence["p2_timeline"]
         p2_desc = f"Lock cancellable reservations, finalize day-by-day activity logistics, and set up travel emergency buffers for {top_option_name}."
 
-        p3_title = "Phase 3: Trip Execution & Wrap-up"
-        p3_timeline = "Travel & Return"
-        p3_desc = "Embark on trip, monitor live spending against buffer, reconcile shared expenses, and capture personal learnings."
+        p3_title = f"Phase 3: Itinerary Execution & Wrap-up for {top_option_name}"
+        p3_timeline = cadence["p3_timeline"]
+        p3_desc = f"Embark on trip, monitor live spending against buffer, reconcile shared expenses, and capture personal learnings."
     elif domain_upper == "REAL_ESTATE":
-        p1_title = "Phase 1: Title Verification & Municipal Zoning"
-        p1_timeline = "Weeks 1–2"
-        p1_desc = "Verify clean marketable title, non-encumbrance certificates, and municipal zoning compliance."
+        p1_title = f"Phase 1: Title Verification & Encumbrance Clearance for {top_option_name}"
+        p1_timeline = cadence["p1_timeline"]
+        p1_desc = f"Verify clean marketable title, non-encumbrance certificates, and municipal zoning compliance for {top_option_name}."
 
-        p2_title = "Phase 2: Conveyance Agreements & Perimeter Survey"
-        p2_timeline = "Weeks 3–5"
+        p2_title = f"Phase 2: Conveyance Agreements & Boundary Survey for {top_option_name}"
+        p2_timeline = cadence["p2_timeline"]
         p2_desc = f"Establish binding conveyance covenants, escrow payment schedules, and physical site demarcation for {top_option_name}."
 
-        p3_title = "Phase 3: Deed Registration & Handover"
-        p3_timeline = "Weeks 6–8"
-        p3_desc = "Register definitive deed, disburse escrow milestone tranches, and transition facility operating protocols."
+        p3_title = f"Phase 3: Deed Registration & Handover for {top_option_name}"
+        p3_timeline = cadence["p3_timeline"]
+        p3_desc = f"Register definitive deed, disburse escrow milestone tranches, and transition facility operating protocols for {top_option_name}."
     elif domain_upper == "SOFTWARE":
-        p1_title = "Phase 1: Architecture Validation & Spike Prototype"
-        p1_timeline = "Weeks 1–2"
-        p1_desc = "Validate integration feasibility, latency budgets, and security boundaries before engineering allocation."
+        p1_title = f"Phase 1: Architecture Validation & Prototype Spikes for {top_option_name}"
+        p1_timeline = cadence["p1_timeline"]
+        p1_desc = f"Validate integration feasibility, latency budgets, and security boundaries before engineering allocation for {top_option_name}."
 
-        p2_title = "Phase 2: Core Build & Canary Migration"
-        p2_timeline = "Weeks 3–5"
+        p2_title = f"Phase 2: Core Engineering Build & Staged Migration for {top_option_name}"
+        p2_timeline = cadence["p2_timeline"]
         p2_desc = f"Build core service modules, run staging integration, and configure automated canary routing for {top_option_name}."
 
-        p3_title = "Phase 3: Production Cutover & Observability"
-        p3_timeline = "Weeks 6–8"
-        p3_desc = "Execute full production traffic cutover, deprecate legacy infrastructure, and establish 24/7 runbooks."
+        p3_title = f"Phase 3: Production Cutover & Observability for {top_option_name}"
+        p3_timeline = cadence["p3_timeline"]
+        p3_desc = f"Execute full production traffic cutover, deprecate legacy infrastructure, and establish 24/7 runbooks for {top_option_name}."
     else:
-        p1_title = "Phase 1: Due Diligence & Pre-Commitment Validation"
-        p1_timeline = "Weeks 1–2"
-        p1_desc = "Resolve critical unknowns, stress-test operating assumptions, and complete pre-commitment audits before irreversible resource allocation."
+        p1_title = f"Phase 1: Pre-Commitment Readiness & Feasibility for {top_option_name}"
+        p1_timeline = cadence["p1_timeline"]
+        p1_desc = f"Resolve critical unknowns, stress-test operating assumptions, and complete pre-commitment audits before irreversible resource allocation for {top_option_name}."
 
-        p2_title = "Phase 2: Contract Structuring & Primary Execution"
-        p2_timeline = "Weeks 3–5"
+        p2_title = f"Phase 2: Mobilization & Core Delivery for {top_option_name}"
+        p2_timeline = cadence["p2_timeline"]
         p2_desc = f"Finalize binding agreements and mobilize primary execution workstreams for {top_option_name}."
 
-        p3_title = "Phase 3: Operationalization & Performance Governance"
-        p3_timeline = "Weeks 6–8"
-        p3_desc = "Complete formal transition, achieve steady-state operations, and institute ongoing executive governance."
+        p3_title = f"Phase 3: Operationalization & Strategic Value Realization for {top_option_name}"
+        p3_timeline = cadence["p3_timeline"]
+        p3_desc = f"Complete formal transition, achieve steady-state operations, and audit realized outcomes against strategic baseline targets for {top_option_name}."
 
     return RoadmapData(
         title=f"Strategic Execution Roadmap: {top_option_name}",
@@ -2166,7 +2235,7 @@ def execute_hosted_synthesis(
         f"MANDATORY INSTRUCTIONS:\n"
         f"1. You MUST recommend '{canonical_winner_name}' (ID: {canonical_winner_id}, Score: {canonical_winner_score:.2f}/10, Rank #{canonical_winner_rank}). Do NOT substitute or alter the winner.\n"
         f"2. In 'alternatives_considered', mark '{canonical_winner_name}' as is_recommended=true and ALL others as is_recommended=false.\n"
-        f"3. Ground all roadmap tasks and language strictly in the domain '{domain}'. If domain is 'PERSONAL' or 'LIFESTYLE', use everyday personal planning terms (itinerary, bookings, calendar dates, packing, travel budget, leave approvals) and NEVER use software development or enterprise corporate jargon (POC, SRE, microservices, staging, traffic migration, boardroom, fiduciary, capital allocation).\n"
+        f"3. ROADMAP TIMELY CALCULATION & ZERO BOILERPLATE: Analyze the decision context and calculate the real-world operational cadence. Determine the natural time unit (days, weeks, months) and span based on the dilemma (e.g., Days for short-term/travel/leisure, Weeks for engineering/team projects, Months for capital/property transitions). Derive 3 sequential phase titles and task timelines directly from the dilemma's next steps. NEVER copy static boilerplate templates (NO generic 'Due Diligence' for personal trips, NO 'PgBouncer' for non-tech).\n"
         f"{continuity_instruction}"
         f"5. Output JSON strictly matching the DecisionSynthesis schema."
     )

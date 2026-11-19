@@ -135,40 +135,56 @@ export default function RoadmapVisualizer({
     );
   }, [roadmap]);
 
+  // Dynamic regex parser to extract calculated offsets and units from any timeline span
+  function parseTimelineSpan(timeline: string, pIdx: number): { offsetDaysStart: number; offsetDaysEnd: number } {
+    const lower = (timeline || "").toLowerCase();
+
+    // Day-based match: "days 1-2", "days 3–4", "day 5"
+    const dayMatch = lower.match(/days?\s*(\d+)(?:\s*[-–—to]+\s*(\d+))?/);
+    if (dayMatch) {
+      const startDay = parseInt(dayMatch[1], 10) - 1;
+      const endDay = dayMatch[2] ? parseInt(dayMatch[2], 10) : startDay + 1;
+      return { offsetDaysStart: Math.max(0, startDay), offsetDaysEnd: Math.max(startDay + 1, endDay) };
+    }
+
+    // Week-based match: "weeks 1-2", "weeks 3–4", "week 2"
+    const weekMatch = lower.match(/weeks?\s*(\d+)(?:\s*[-–—to]+\s*(\d+))?/);
+    if (weekMatch) {
+      const startWeek = parseInt(weekMatch[1], 10) - 1;
+      const endWeek = weekMatch[2] ? parseInt(weekMatch[2], 10) : startWeek + 1;
+      return { offsetDaysStart: Math.max(0, startWeek * 7), offsetDaysEnd: Math.max(startWeek + 1, endWeek) * 7 };
+    }
+
+    // Month-based match: "month 1", "months 2–3"
+    const monthMatch = lower.match(/months?\s*(\d+)(?:\s*[-–—to]+\s*(\d+))?/);
+    if (monthMatch) {
+      const startMonth = parseInt(monthMatch[1], 10) - 1;
+      const endMonth = monthMatch[2] ? parseInt(monthMatch[2], 10) : startMonth + 1;
+      return { offsetDaysStart: Math.max(0, startMonth * 30), offsetDaysEnd: Math.max(startMonth + 1, endMonth) * 30 };
+    }
+
+    // Dynamic sequential fallback
+    if (isDayBased) {
+      if (pIdx === 0) return { offsetDaysStart: 0, offsetDaysEnd: 2 };
+      if (pIdx === 1) return { offsetDaysStart: 2, offsetDaysEnd: 5 };
+      return { offsetDaysStart: 5, offsetDaysEnd: 8 };
+    }
+    if (pIdx === 0) return { offsetDaysStart: 0, offsetDaysEnd: 14 };
+    if (pIdx === 1) return { offsetDaysStart: 14, offsetDaysEnd: 35 };
+    return { offsetDaysStart: 35, offsetDaysEnd: 56 };
+  }
+
   // Dynamic Phase Calendar Dates helper based on Kickoff Anchor
   function getPhaseDates(phaseIdx: number): { start: string; end: string; range: string } {
     try {
       const base = new Date(kickoffDate);
       if (isNaN(base.getTime())) return { start: "TBD", end: "TBD", range: "TBD" };
 
-      let offsetStart = 0;
-      let offsetEnd = 14;
+      const phase = roadmap.phases[phaseIdx];
+      const { offsetDaysStart, offsetDaysEnd } = parseTimelineSpan(phase?.timeline || "", phaseIdx);
 
-      if (isDayBased) {
-        // Day-based planning horizon (matching 3-5 days planning)
-        if (phaseIdx === 0) {
-          offsetStart = 0;
-          offsetEnd = 2; // Days 1-2
-        } else if (phaseIdx === 1) {
-          offsetStart = 2;
-          offsetEnd = 5; // Days 3-5
-        } else {
-          offsetStart = 5;
-          offsetEnd = 9; // Travel Horizon / Return
-        }
-      } else {
-        // Week-based planning horizon (Weeks 1-2, 3-5, 6-8)
-        if (phaseIdx === 1) {
-          offsetStart = 14;
-          offsetEnd = 35;
-        } else if (phaseIdx >= 2) {
-          offsetStart = 35;
-          offsetEnd = 56;
-        }
-      }
-
-      const s = new Date(base.getTime() + offsetStart * 86400000);
-      const e = new Date(base.getTime() + offsetEnd * 86400000);
+      const s = new Date(base.getTime() + offsetDaysStart * 86400000);
+      const e = new Date(base.getTime() + offsetDaysEnd * 86400000);
 
       const fmt = (d: Date) =>
         d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -183,45 +199,15 @@ export default function RoadmapVisualizer({
     }
   }
 
-  // Helper to ensure phases and tasks display domain-accurate timelines and titles
+  // Smart Contextual Display Helpers (Presents calculated values directly without static overrides)
   function getPhaseDisplay(phase: RoadmapPhase, pIdx: number) {
-    let title = phase.title || "";
-    let timeline = phase.timeline || "";
-
-    const isOldCorporate =
-      title.toLowerCase().includes("due diligence") ||
-      title.toLowerCase().includes("contract structuring") ||
-      title.toLowerCase().includes("operationalization & performance") ||
-      timeline.toLowerCase().includes("weeks 1-2") ||
-      timeline.toLowerCase().includes("week 1-2") ||
-      timeline.toLowerCase().includes("weeks 3-5");
-
-    if (isDayBased && isOldCorporate) {
-      if (pIdx === 0) {
-        title = "Phase 1: Planning, Availability & Budget Check";
-        timeline = "Days 1–2";
-      } else if (pIdx === 1) {
-        title = "Phase 2: Bookings, Logistics & Preparation";
-        timeline = "Days 3–5";
-      } else {
-        title = "Phase 3: Trip Execution & Wrap-up";
-        timeline = "Travel & Return";
-      }
-    }
+    const title = phase.title || `Phase ${pIdx + 1}: Execution Milestone`;
+    const timeline = phase.timeline || (isDayBased ? `Days ${pIdx * 2 + 1}–${(pIdx + 1) * 2}` : `Weeks ${pIdx * 2 + 1}–${(pIdx + 1) * 2}`);
     return { title, timeline };
   }
 
   function getTaskTimelineDisplay(taskTimeline: string | undefined, pIdx: number) {
-    const raw = taskTimeline || "";
-    if (isDayBased) {
-      const lower = raw.toLowerCase();
-      if (lower.includes("weeks 1-2") || lower.includes("week 1-2")) return "Days 1–2";
-      if (lower.includes("week 2")) return "Day 2";
-      if (lower.includes("weeks 3-5") || lower.includes("weeks 3-4") || lower.includes("week 3")) return "Days 3–4";
-      if (lower.includes("week 4") || lower.includes("week 5")) return "Day 5";
-      if (lower.includes("weeks 6-8") || lower.includes("week 6") || lower.includes("week 7") || lower.includes("week 8")) return "Travel Horizon";
-    }
-    return raw;
+    return taskTimeline || (isDayBased ? `Day ${pIdx + 1}` : `Week ${pIdx + 1}`);
   }
 
   // Check if a task is blocked by incomplete prerequisite dependencies
