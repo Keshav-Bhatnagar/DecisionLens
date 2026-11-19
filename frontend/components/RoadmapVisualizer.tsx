@@ -114,17 +114,32 @@ export default function RoadmapVisualizer({
     return { total, completed, pending: total - completed, percent, gapsAddressed };
   }, [roadmap]);
 
+  // Detect if roadmap is for personal/travel/short horizon
+  const isDayBased = useMemo(() => {
+    const titleLower = (roadmap.title || "").toLowerCase();
+    const isPersonalTitle =
+      titleLower.includes("trip") ||
+      titleLower.includes("travel") ||
+      titleLower.includes("vacation") ||
+      titleLower.includes("holiday") ||
+      titleLower.includes("manali") ||
+      titleLower.includes("personal");
+
+    return (
+      isPersonalTitle ||
+      roadmap.phases.some(
+        (p) =>
+          (p.timeline || "").toLowerCase().includes("day") ||
+          p.tasks.some((t) => (t.timeline || "").toLowerCase().includes("day"))
+      )
+    );
+  }, [roadmap]);
+
   // Dynamic Phase Calendar Dates helper based on Kickoff Anchor
   function getPhaseDates(phaseIdx: number): { start: string; end: string; range: string } {
     try {
       const base = new Date(kickoffDate);
       if (isNaN(base.getTime())) return { start: "TBD", end: "TBD", range: "TBD" };
-
-      const isDayBased = roadmap.phases.some(
-        (p) =>
-          (p.timeline || "").toLowerCase().includes("day") ||
-          p.tasks.some((t) => (t.timeline || "").toLowerCase().includes("day"))
-      );
 
       let offsetStart = 0;
       let offsetEnd = 14;
@@ -166,6 +181,47 @@ export default function RoadmapVisualizer({
     } catch {
       return { start: "TBD", end: "TBD", range: "TBD" };
     }
+  }
+
+  // Helper to ensure phases and tasks display domain-accurate timelines and titles
+  function getPhaseDisplay(phase: RoadmapPhase, pIdx: number) {
+    let title = phase.title || "";
+    let timeline = phase.timeline || "";
+
+    const isOldCorporate =
+      title.toLowerCase().includes("due diligence") ||
+      title.toLowerCase().includes("contract structuring") ||
+      title.toLowerCase().includes("operationalization & performance") ||
+      timeline.toLowerCase().includes("weeks 1-2") ||
+      timeline.toLowerCase().includes("week 1-2") ||
+      timeline.toLowerCase().includes("weeks 3-5");
+
+    if (isDayBased && isOldCorporate) {
+      if (pIdx === 0) {
+        title = "Phase 1: Planning, Availability & Budget Check";
+        timeline = "Days 1–2";
+      } else if (pIdx === 1) {
+        title = "Phase 2: Bookings, Logistics & Preparation";
+        timeline = "Days 3–5";
+      } else {
+        title = "Phase 3: Trip Execution & Wrap-up";
+        timeline = "Travel & Return";
+      }
+    }
+    return { title, timeline };
+  }
+
+  function getTaskTimelineDisplay(taskTimeline: string | undefined, pIdx: number) {
+    const raw = taskTimeline || "";
+    if (isDayBased) {
+      const lower = raw.toLowerCase();
+      if (lower.includes("weeks 1-2") || lower.includes("week 1-2")) return "Days 1–2";
+      if (lower.includes("week 2")) return "Day 2";
+      if (lower.includes("weeks 3-5") || lower.includes("weeks 3-4") || lower.includes("week 3")) return "Days 3–4";
+      if (lower.includes("week 4") || lower.includes("week 5")) return "Day 5";
+      if (lower.includes("weeks 6-8") || lower.includes("week 6") || lower.includes("week 7") || lower.includes("week 8")) return "Travel Horizon";
+    }
+    return raw;
   }
 
   // Check if a task is blocked by incomplete prerequisite dependencies
@@ -489,6 +545,7 @@ export default function RoadmapVisualizer({
 
           {roadmap.phases.map((phase, pIdx) => {
             const phaseDates = getPhaseDates(pIdx);
+            const { title: phaseTitle, timeline: phaseTimeline } = getPhaseDisplay(phase, pIdx);
             const filteredTasks = phase.tasks.filter(filterTask);
             const completedCount = phase.tasks.filter((t) => t.is_completed).length;
             const isPhaseDone = phase.tasks.length > 0 && completedCount === phase.tasks.length;
@@ -513,10 +570,10 @@ export default function RoadmapVisualizer({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#cfc7b2]/60 dark:border-[#38332C]/60 pb-2">
                       <div>
                         <span className="text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
-                          Phase {pIdx + 1} • {phase.timeline}
+                          Phase {pIdx + 1} • {phaseTimeline}
                         </span>
                         <h4 className="font-newsreader text-xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
-                          {phase.title}
+                          {phaseTitle}
                         </h4>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -616,7 +673,7 @@ export default function RoadmapVisualizer({
                                   )}
 
                                   <span className="text-[#57534e] dark:text-[#A89F91]">
-                                    Timeline: <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{task.timeline}</strong>
+                                    Timeline: <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{getTaskTimelineDisplay(task.timeline, pIdx)}</strong>
                                   </span>
 
                                   <span className="text-[#57534e] dark:text-[#A89F91]">
@@ -756,16 +813,17 @@ export default function RoadmapVisualizer({
         /* ========================================================================= */
         <div className="space-y-6">
           {roadmap.phases.map((phase, pIdx) => {
+            const { title: phaseTitle, timeline: phaseTimeline } = getPhaseDisplay(phase, pIdx);
             const filteredTasks = phase.tasks.filter(filterTask);
             return (
               <div key={phase.phase_id} className="bg-[#F4F0E6] dark:bg-[#1f1d1a] border border-[#cfc7b2] dark:border-[#38332C] p-4 sm:p-5 space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-[#cfc7b2]/60 dark:border-[#38332C]/60">
                   <div>
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
-                      Phase {pIdx + 1} • {phase.timeline}
+                      Phase {pIdx + 1} • {phaseTimeline}
                     </span>
                     <h4 className="font-newsreader text-lg font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
-                      {phase.title}
+                      {phaseTitle}
                     </h4>
                   </div>
                   <span className="text-xs font-mono text-[#57534e]">
@@ -807,7 +865,7 @@ export default function RoadmapVisualizer({
                           <div className="flex items-center gap-2 text-[11px] font-mono text-[#57534e] mt-0.5">
                             <span>Owner: {task.owner_role}</span>
                             <span>•</span>
-                            <span>{task.timeline}</span>
+                            <span>{getTaskTimelineDisplay(task.timeline, pIdx)}</span>
                           </div>
                         </div>
                       </div>
@@ -987,7 +1045,7 @@ export default function RoadmapVisualizer({
                 </div>
                 <div>
                   <span className="text-[10px] uppercase text-[#78716c] block">Target Timeline</span>
-                  <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{selectedTask.task.timeline}</strong>
+                  <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{getTaskTimelineDisplay(selectedTask.task.timeline, 0)}</strong>
                 </div>
               </div>
             </div>

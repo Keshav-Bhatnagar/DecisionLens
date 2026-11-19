@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -19,7 +20,7 @@ from app.schemas import (
     SynthesisRequest,
     OverrideRequest,
 )
-from app.services.recommendation import run_decision_synthesis
+from app.services.recommendation import run_decision_synthesis, generate_domain_grounded_roadmap
 from app.services.report_generator import (
     generate_decision_markdown_report,
     generate_decision_json_report,
@@ -288,6 +289,63 @@ def get_active_roadmap(
         .order_by(RoadmapRecord.version.desc())
         .first()
     )
+
+    # Domain-aware self-healing check for personal, lifestyle, and travel decisions
+    domain_val = getattr(decision, "domain", "") or ""
+    title_problem = f"{decision.title or ''} {decision.problem_statement or ''}".lower()
+    is_personal = (
+        domain_val.upper() in ("PERSONAL", "LIFESTYLE", "EDUCATION")
+        or any(k in title_problem for k in ["trip", "vacation", "holiday", "tour", "travel", "flight", "hotel", "manali", "resort", "leave", "personal"])
+    )
+
+    if is_personal:
+        check_phases = active_record.phases if active_record else (decision.roadmap.get("phases", []) if isinstance(decision.roadmap, dict) else [])
+        phases_str = json.dumps(check_phases).lower()
+        if any(stale in phases_str for stale in ["weeks 1-2", "week 1-2", "weeks 3-5", "due diligence", "contract structuring", "operationalization & performance", "kafka", "microservice", "pgbouncer"]):
+            logger.info("Self-healing stale corporate roadmap for personal decision %s", decision_id)
+            canonical = (decision.recommendation or {}).get("canonical_result") or {}
+            winner_name = canonical.get("winner_option_name") or decision.title or "Trip"
+            critical_gaps = []
+            if decision.gaps and isinstance(decision.gaps, dict):
+                critical_gaps = [g.get("question", "") for g in decision.gaps.get("gaps", []) if isinstance(g, dict)]
+
+            clean_roadmap = generate_domain_grounded_roadmap(
+                domain="PERSONAL",
+                top_option_name=winner_name,
+                critical_gaps=critical_gaps,
+                critical_conditions=[],
+                risks=[],
+                decision_title=decision.title,
+                assumptions=[],
+                force_mock=True,
+            )
+            clean_phases = [p.model_dump() for p in clean_roadmap.phases]
+            if active_record:
+                active_record.phases = clean_phases
+                active_record.title = clean_roadmap.title
+                flag_modified(active_record, "phases")
+            else:
+                active_record = RoadmapRecord(
+                    decision_id=decision.id,
+                    owner_id=decision.owner_id,
+                    version=1,
+                    title=clean_roadmap.title,
+                    phases=clean_phases,
+                    is_active=True,
+                )
+                db.add(active_record)
+
+            if isinstance(decision.roadmap, dict):
+                decision.roadmap["phases"] = clean_phases
+                decision.roadmap["title"] = clean_roadmap.title
+                flag_modified(decision, "roadmap")
+            if isinstance(decision.recommendation, dict) and "roadmap" in decision.recommendation:
+                decision.recommendation["roadmap"] = clean_roadmap.model_dump()
+                flag_modified(decision, "recommendation")
+
+            db.commit()
+            db.refresh(active_record)
+            return clean_roadmap
 
     if active_record:
         return RoadmapData(

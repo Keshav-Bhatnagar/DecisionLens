@@ -146,16 +146,16 @@ OUTPUT JSON SCHEMA:
     "phases": [
       {
         "phase_id": "phase-1",
-        "title": "Phase 1: Due Diligence & Pre-Commitment Validation",
-        "timeline": "Weeks 1-2",
+        "title": "Phase 1: [Domain-specific title, e.g. 'Planning & Availability' for personal, 'Due Diligence' for enterprise]",
+        "timeline": "[Domain timeline, e.g. 'Days 1–2' for 3–5 day personal planning, 'Weeks 1–2' for enterprise]",
         "description": "Phase summary",
         "tasks": [
           {
             "task_id": "task-1",
             "title": "Actionable task title",
             "description": "Concrete task description",
-            "owner_role": "Executive / Operational role",
-            "timeline": "Weeks 1-2",
+            "owner_role": "Domain-appropriate role (e.g. 'Trip Planner' for personal, 'Lead Architect' for tech)",
+            "timeline": "[Timeline matching phase, e.g. 'Days 1–2' or 'Weeks 1–2']",
             "dependencies": [],
             "success_criteria": "Measurable exit criteria",
             "is_completed": false,
@@ -662,9 +662,14 @@ def generate_domain_grounded_roadmap(
                     "\n"
                     "STRUCTURAL RULES:\n"
                     "- Provide EXACTLY 3 Phases:\n"
-                    "  Phase 1: Pre-Commitment Validation & Due Diligence (Timeline: Weeks 1-2, or Days 1-3 for personal)\n"
-                    "  Phase 2: Core Execution & Rollout (Timeline: Weeks 3-5, or Week 2)\n"
-                    "  Phase 3: Operationalization & Sustained Value (Timeline: Weeks 6-8, or Post-Execution)\n"
+                    "- If DOMAIN is PERSONAL or LIFESTYLE (e.g. travel, vacation, hobbies, personal health):\n"
+                    "  Phase 1: Planning, Availability & Budget Check (Timeline: Days 1–2)\n"
+                    "  Phase 2: Bookings, Logistics & Preparation (Timeline: Days 3–5)\n"
+                    "  Phase 3: Trip Execution & Wrap-up (Timeline: Travel & Return)\n"
+                    "- If DOMAIN is TECH / ENTERPRISE / REAL ESTATE / OTHER:\n"
+                    "  Phase 1: Due Diligence & Pre-Commitment Validation (Timeline: Weeks 1-2)\n"
+                    "  Phase 2: Core Execution & Rollout (Timeline: Weeks 3-5)\n"
+                    "  Phase 3: Operationalization & Sustained Value (Timeline: Weeks 6-8)\n"
                     "- Each phase must contain 2 to 3 actionable tasks.\n"
                     "- Tasks in Phase 2 must include prerequisite dependencies on Phase 1 tasks (forming a connected DAG).\n"
                     "- Tasks in Phase 3 must include prerequisite dependencies on Phase 2 tasks.\n"
@@ -686,8 +691,8 @@ def generate_domain_grounded_roadmap(
                     '  "phases": [\n'
                     '    {\n'
                     '      "phase_id": "phase-1",\n'
-                    '      "title": "Phase 1: Pre-Commitment Validation & Due Diligence",\n'
-                    '      "timeline": "Weeks 1-2",\n'
+                    '      "title": "Phase 1: [Domain Phase Title]",\n'
+                    '      "timeline": "[Timeline matching phase, e.g. Days 1–2 or Weeks 1-2]",\n'
                     '      "description": "...",\n'
                     '      "tasks": [...]\n'
                     '    }\n'
@@ -738,8 +743,16 @@ def generate_domain_grounded_roadmap(
                     parsed_roadmap = json.loads(clean_json)
                     roadmap_obj = RoadmapData.model_validate(parsed_roadmap)
                     if len(roadmap_obj.phases) >= 3 and all(len(p.tasks) > 0 for p in roadmap_obj.phases):
-                        logger.info("Successfully generated AI-grounded roadmap for '%s'", decision_title)
-                        return roadmap_obj
+                        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+                            obj_str = json.dumps(roadmap_obj.model_dump()).lower()
+                            if any(w in obj_str for w in ["weeks 1-2", "week 1-2", "weeks 3-5", "due diligence", "contract structuring", "operationalization"]):
+                                logger.info("AI returned generic corporate phase for personal roadmap; falling back to tailored heuristic")
+                            else:
+                                logger.info("Successfully generated AI-grounded roadmap for '%s'", decision_title)
+                                return roadmap_obj
+                        else:
+                            logger.info("Successfully generated AI-grounded roadmap for '%s'", decision_title)
+                            return roadmap_obj
             except Exception as e:
                 logger.warning("AI roadmap generation failed (%s), using dynamic heuristic synthesis", e)
 
@@ -2288,7 +2301,11 @@ def execute_hosted_synthesis(
         needs_computed_roadmap = True
     elif domain.upper() in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
         roadmap_str = json.dumps(raw_roadmap).lower()
-        if any(jargon in roadmap_str for jargon in ["kafka", "microservice", "pgbouncer", "canary routing", "p99 latency", "api contract"]):
+        if any(jargon in roadmap_str for jargon in [
+            "kafka", "microservice", "pgbouncer", "canary routing", "p99 latency", "api contract",
+            "weeks 1-2", "week 1-2", "weeks 3-5", "due diligence", "contract structuring",
+            "performance governance", "operationalization", "fiduciary", "boardroom"
+        ]):
             needs_computed_roadmap = True
 
     if needs_computed_roadmap:
