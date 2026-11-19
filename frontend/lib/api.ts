@@ -3,12 +3,11 @@
  */
 
 export const API_BASE_URL =
-
-  typeof window !== "undefined"
-
+  process.env.NEXT_PUBLIC_API_URL !== undefined && process.env.NEXT_PUBLIC_API_URL !== ""
+    ? process.env.NEXT_PUBLIC_API_URL.replace("localhost", "127.0.0.1")
+    : typeof window !== "undefined"
     ? ""
-
-    : process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    : (process.env.INTERNAL_API_URL || "http://127.0.0.1:8000").replace("localhost", "127.0.0.1");
 
 export interface HealthStatus {
   status: string;
@@ -106,17 +105,38 @@ export const TOKEN_KEY = "decisionlens_token";
 
 export function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  const local = localStorage.getItem(TOKEN_KEY);
+  if (local) return local;
+  // Fallback to cookie check
+  try {
+    const match = document.cookie.match(new RegExp(`(^|;\\s*)(${TOKEN_KEY}|access_token)=([^;]*)`));
+    return match ? decodeURIComponent(match[3]) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function setStoredToken(token: string): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(TOKEN_KEY, token);
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+    document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=2592000; SameSite=Lax`;
+    window.dispatchEvent(new Event("decisionlens_auth_change"));
+  } catch {
+    // Ignore storage errors in restrictive environments
+  }
 }
 
 export function clearStoredToken(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(TOKEN_KEY);
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
+    document.cookie = `access_token=; path=/; max-age=0; SameSite=Lax`;
+    window.dispatchEvent(new Event("decisionlens_auth_change"));
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 /**
@@ -152,7 +172,18 @@ export async function fetchApi<T>(
       try {
         const errorJson = await response.json();
         if (errorJson.detail) {
-          errorDetail = errorJson.detail;
+          if (typeof errorJson.detail === "string") {
+            errorDetail = errorJson.detail;
+          } else if (Array.isArray(errorJson.detail)) {
+            errorDetail = errorJson.detail
+              .map((item: any) => {
+                const msg = item.msg || item.message || JSON.stringify(item);
+                return msg.replace(/^Value error,\s*/i, "");
+              })
+              .join(" ");
+          } else {
+            errorDetail = JSON.stringify(errorJson.detail);
+          }
         }
       } catch {
         // Non-JSON response

@@ -14,12 +14,11 @@ import {
   ArrowRight,
   ShieldCheck,
   Brain,
-  Search,
   Sparkles,
-  Layers,
   Users,
   X,
   ExternalLink,
+  Zap,
 } from "lucide-react";
 import {
   loginUser,
@@ -69,7 +68,7 @@ export default function AuthPage() {
   useEffect(() => {
     async function initAuth() {
       try {
-        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3000));
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2500));
         const authPromise = Promise.all([
           getMe().catch(() => null),
           getOAuthProviders().catch(() => []),
@@ -80,7 +79,7 @@ export default function AuthPage() {
         ])) as [User | null, OAuthProviderInfo[]];
         const [u, providers] = res || [null, []];
         if (u) {
-          router.push(getDestinationUrl());
+          window.location.href = getDestinationUrl();
           return;
         }
         setCurrentUser(u);
@@ -94,7 +93,18 @@ export default function AuthPage() {
       }
     }
     initAuth();
-  }, [router]);
+  }, []);
+
+  // Check mode from URL query parameters (e.g. /auth?mode=signup)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlMode = params.get("mode");
+      if (urlMode === "signup" || urlMode === "signin") {
+        setMode(urlMode);
+      }
+    }
+  }, []);
 
   // Live password validation checklist for Registration
   const passwordChecks = useMemo(() => {
@@ -121,13 +131,19 @@ export default function AuthPage() {
     setSuccessMsg(null);
 
     const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
+    if (!cleanEmail || !cleanEmail.includes("@")) {
       setError("Please provide a valid email address.");
       return;
     }
 
     if (mode === "signup" && !isPasswordValid) {
-      setError("Please ensure your password meets all complexity requirements below.");
+      const missing = [];
+      if (!passwordChecks.minLength) missing.push("at least 8 characters");
+      if (!passwordChecks.hasUpper) missing.push("an uppercase letter");
+      if (!passwordChecks.hasLower) missing.push("a lowercase letter");
+      if (!passwordChecks.hasDigit) missing.push("a digit");
+      if (!passwordChecks.hasSpecial) missing.push("a special character (!@#$...)");
+      setError(`Password must include: ${missing.join(", ")}.`);
       return;
     }
 
@@ -135,79 +151,31 @@ export default function AuthPage() {
     try {
       if (mode === "signup") {
         await registerUser(cleanEmail, password);
-        setSuccessMsg("Account created successfully! Redirecting to Workspace...");
+        setSuccessMsg("Account created successfully! Loading your workspace...");
       } else {
         await loginUser(cleanEmail, password);
-        setSuccessMsg("Signed in successfully! Redirecting...");
+        setSuccessMsg("Signed in successfully! Loading your workspace...");
       }
 
+      // Hard navigation to bootstrap clean session & reload all components
       setTimeout(() => {
-        router.push(getDestinationUrl());
-      }, 700);
+        window.location.href = getDestinationUrl();
+      }, 500);
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Authentication failed. Please verify your credentials."
-      );
+      const rawMsg = err instanceof Error ? err.message : "Authentication failed.";
+      if (rawMsg.includes("already exists")) {
+        setError("An account with this email already exists. Switch to Sign In above to access it.");
+      } else if (rawMsg.includes("Incorrect email or password")) {
+        setError("Incorrect email or password. Please recheck your credentials or use the 1-click Demo Login below.");
+      } else {
+        setError(rawMsg);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Check mode from URL query parameters (e.g. /auth?mode=signup)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlMode = params.get("mode");
-      if (urlMode === "signup" || urlMode === "signin") {
-        setMode(urlMode);
-      }
-    }
-  }, []);
-
-  // Open OAuth Dialog or Direct Redirect
-  const handleTriggerOAuth = async (provider: "google" | "github" | "microsoft" | "supabase") => {
-    setError(null);
-    setSuccessMsg(null);
-    setActiveOAuthProvider(provider);
-
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("oauth_provider", provider);
-    }
-
-    let provInfo = oauthProviders.find((p) => p.id === provider);
-    if (!provInfo) {
-      try {
-        const fresh = await getOAuthProviders();
-        setOauthProviders(fresh);
-        provInfo = fresh.find((p) => p.id === provider);
-      } catch {
-        // fallback continues below
-      }
-    }
-
-    if (provInfo?.configured && provInfo.auth_url) {
-      window.location.href = provInfo.auth_url;
-      return;
-    }
-
-    // Direct Google OAuth fallback if client ID is set in environment or server
-    const googleClientId =
-      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-      provInfo?.client_id;
-
-    if (provider === "google" && googleClientId) {
-      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-      const redirectUri = encodeURIComponent(`${origin}/auth/callback`);
-      const googleUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=select_account`;
-      window.location.href = googleUrl;
-      return;
-    }
-
-    // Sandbox / Instant Dev simulation dialog
-    setShowOAuthModal(true);
-  };
-
-  // Execute OAuth authentication with selected or custom email
+  // Execute 1-click OAuth authentication or simulation
   const handleExecuteOAuth = async (selectedEmail: string, displayName?: string) => {
     setOauthLoading(true);
     setError(null);
@@ -218,10 +186,10 @@ export default function AuthPage() {
         display_name: displayName,
       });
       setShowOAuthModal(false);
-      setSuccessMsg(`Successfully authenticated via ${activeOAuthProvider.toUpperCase()}! Redirecting...`);
+      setSuccessMsg(`Authenticated as ${selectedEmail}! Loading workspace...`);
       setTimeout(() => {
-        router.push(getDestinationUrl());
-      }, 650);
+        window.location.href = getDestinationUrl();
+      }, 500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "OAuth authentication failed.");
     } finally {
@@ -232,24 +200,50 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-paper-page text-ink font-sans flex items-center justify-center p-4 sm:p-6 lg:p-12 relative overflow-hidden">
       <AmbientWaveCanvas />
+
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center relative z-10 py-6">
-        {/* Left Column: Dossier Brand & Value Highlights */}
+        {/* Left Column: Brand & Value Highlights */}
         <div className="lg:col-span-7 space-y-8 pr-0 lg:pr-6 flex flex-col justify-center">
           <DecisionLensLogo href="/" size={44} />
 
           <div>
-            <h1 className="text-5xl sm:text-6xl font-serif font-medium text-ink tracking-tight leading-[1.08]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-medium text-ink tracking-tight leading-[1.1] mb-4">
               Structure Decisions. <br />
               <span className="text-accent italic font-normal">
                 Decide with Grounded Conviction.
               </span>
             </h1>
+            <p className="text-sm sm:text-base text-ink-secondary leading-relaxed max-w-xl font-courier">
+              The Decision Intelligence Platform for engineering leaders, CTOs, and technical teams.
+              Filter meeting banter, ground choices in cloud pricing and hardware latency, and generate verified Architecture Decision Records.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-courier text-xs text-ink-secondary max-w-xl">
+            <div className="p-3.5 bg-paper-surface/80 border border-border rounded-sm space-y-1">
+              <span className="font-bold text-ink uppercase tracking-wider block flex items-center gap-1.5 text-accent">
+                <Brain className="w-4 h-4" />
+                Technical Domain RAG
+              </span>
+              <p className="leading-snug">
+                Verified against AWS pricing formulas, hardware latency limits, and database pooling rules.
+              </p>
+            </div>
+            <div className="p-3.5 bg-paper-surface/80 border border-border rounded-sm space-y-1">
+              <span className="font-bold text-ink uppercase tracking-wider block flex items-center gap-1.5 text-accent">
+                <ShieldCheck className="w-4 h-4" />
+                Google Meet Autonomous Bot
+              </span>
+              <p className="leading-snug">
+                Joins meetings, auto-scrubs chit-chat, and captures confidential participant inputs.
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Authentication Card (100% Preserved) */}
+        {/* Right Column: Authentication Card */}
         <div className="lg:col-span-5">
-          <div className="bg-paper-surface rounded-md p-6 sm:p-8 border border-border relative">
+          <div className="bg-paper-surface rounded-md p-6 sm:p-8 border border-border relative shadow-lg">
             {/* If user is already authenticated */}
             {!checkingAuth && currentUser && (
               <div className="mb-6 p-4 rounded-md bg-paper-sidebar border border-border text-xs text-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -261,12 +255,15 @@ export default function AuthPage() {
                   <div className="font-mono text-ink-secondary mt-0.5">{currentUser.email}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link
-                    href="/dashboard"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = getDestinationUrl();
+                    }}
                     className="px-3 py-1.5 bg-ink hover:opacity-90 text-paper-surface font-semibold rounded-md transition text-xs"
                   >
                     Go to Workspace &rarr;
-                  </Link>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -275,7 +272,7 @@ export default function AuthPage() {
                     }}
                     className="px-2.5 py-1.5 text-ink-secondary hover:text-ink hover:bg-paper-surface rounded-md transition text-xs border border-border"
                   >
-                    Switch Account
+                    Switch
                   </button>
                 </div>
               </div>
@@ -315,62 +312,39 @@ export default function AuthPage() {
               </button>
             </div>
 
-            {/* Institutional / OAuth Providers Section */}
-            <div className="space-y-2 mb-5">
-              {/* Google Workspace Button */}
-              <button
-                type="button"
-                onClick={() => handleTriggerOAuth("google")}
-                className="w-full py-2.5 px-4 bg-paper-surface hover:bg-paper-sidebar border border-border rounded-md text-xs font-semibold text-ink transition flex items-center justify-center gap-3 group"
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Continue with Google Workspace</span>
-              </button>
-            </div>
-
-            <div className="relative flex items-center justify-center my-4">
-              <div className="border-t border-border w-full" />
-              <span className="bg-paper-surface px-3 text-[14px] font-mono font-semibold text-ink-tertiary uppercase tracking-wider absolute">
-                or sign in with password
-              </span>
-            </div>
-
             {/* Error & Success Feedback Alerts */}
             {error && (
-              <div className="mb-4 p-3 rounded-md border border-red-200 bg-red-50/80 text-red-900 text-xs flex items-start gap-2.5 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <span className="flex-1 leading-relaxed">{error}</span>
+              <div className="mb-4 p-3 rounded-md border border-rose-300 bg-rose-50/90 text-rose-900 text-xs flex items-start gap-2.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1 leading-relaxed">
+                  {error}
+                  {error.includes("already exists") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("signin");
+                        setError(null);
+                      }}
+                      className="block mt-1 font-bold underline text-rose-950"
+                    >
+                      Click here to switch to Sign In &rarr;
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
             {successMsg && (
-              <div className="mb-4 p-3 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-900 text-xs flex items-center gap-2.5 animate-in fade-in">
+              <div className="mb-4 p-3 rounded-md border border-emerald-300 bg-emerald-50 text-emerald-900 text-xs flex items-center gap-2.5 animate-in fade-in">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="leading-relaxed">{successMsg}</span>
+                <span className="leading-relaxed font-medium">{successMsg}</span>
               </div>
             )}
 
             {/* Authentication Form */}
-            <form onSubmit={handleSubmit} className="space-y-3.5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">
+                <label className="block text-xs font-semibold text-ink mb-1.5 font-courier uppercase tracking-wider">
                   Email Address
                 </label>
                 <div className="relative">
@@ -381,18 +355,18 @@ export default function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@organization.com"
-                    className="w-full pl-10 pr-4 py-2 text-xs bg-paper-surface border border-border rounded-md text-ink placeholder-ink-tertiary focus:outline-none focus:border-accent transition"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-paper-surface border border-border rounded-md text-ink placeholder-ink-tertiary focus:outline-none focus:border-accent transition font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-ink">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-ink font-courier uppercase tracking-wider">
                     Password
                   </label>
                   {mode === "signin" && (
-                    <span className="text-[15px] text-ink-tertiary">
+                    <span className="text-[12px] text-ink-tertiary font-courier">
                       Encrypted session
                     </span>
                   )}
@@ -406,12 +380,13 @@ export default function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full pl-10 pr-10 py-2 text-xs bg-paper-surface border border-border rounded-md text-ink placeholder-ink-tertiary focus:outline-none focus:border-accent transition"
+                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-paper-surface border border-border rounded-md text-ink placeholder-ink-tertiary focus:outline-none focus:border-accent transition font-mono"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-tertiary hover:text-ink transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-tertiary hover:text-ink transition cursor-pointer p-1"
+                    title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -420,11 +395,11 @@ export default function AuthPage() {
 
               {/* Password complexity checklist (during signup) */}
               {mode === "signup" && (
-                <div className="p-3 bg-paper-sidebar border border-border rounded-md text-[15px] space-y-1.5">
-                  <span className="font-semibold text-ink block text-[14px] uppercase font-mono tracking-wider">
+                <div className="p-3 bg-paper-sidebar border border-border rounded-md text-xs space-y-1.5 font-courier">
+                  <span className="font-semibold text-ink block text-[12px] uppercase tracking-wider">
                     Password Criteria
                   </span>
-                  <div className="grid grid-cols-2 gap-1.5 font-mono text-[14px]">
+                  <div className="grid grid-cols-2 gap-1.5 text-[12px]">
                     <span className={`flex items-center gap-1.5 ${passwordChecks.minLength ? "text-emerald-700 font-semibold" : "text-ink-tertiary"}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${passwordChecks.minLength ? "bg-emerald-600" : "bg-border"}`} />
                       8+ characters
@@ -451,13 +426,13 @@ export default function AuthPage() {
 
               <button
                 type="submit"
-                disabled={loading || (mode === "signup" && !isPasswordValid)}
-                className="w-full py-2.5 bg-ink hover:opacity-90 active:scale-[0.99] text-paper-surface font-semibold text-xs rounded-md transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
+                className="w-full py-2.5 bg-ink hover:opacity-90 active:scale-[0.99] text-paper-surface font-semibold text-xs rounded-md transition flex items-center justify-center gap-2 cursor-pointer font-courier uppercase tracking-wider disabled:opacity-50"
               >
                 {loading ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-paper-surface/30 border-t-paper-surface rounded-full animate-spin" />
-                    <span>Processing dossier access...</span>
+                    <span>Processing authentication...</span>
                   </>
                 ) : mode === "signup" ? (
                   <>
@@ -473,11 +448,56 @@ export default function AuthPage() {
               </button>
             </form>
 
-            <div className="pt-4 mt-5 border-t border-border flex items-center justify-between text-xs text-ink-secondary">
+            {/* Quick 1-Click Demo Profiles */}
+            <div className="pt-5 mt-5 border-t border-border space-y-2.5">
+              <div className="flex items-center justify-between text-xs text-ink-secondary font-courier">
+                <span className="font-bold uppercase tracking-wider flex items-center gap-1 text-accent">
+                  <Zap className="w-3.5 h-3.5" />
+                  1-Click Test Access
+                </span>
+                <span className="text-[11px] text-ink-tertiary">No password required</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-courier">
+                <button
+                  type="button"
+                  disabled={oauthLoading}
+                  onClick={() => handleExecuteOAuth("alex.lead@google.com", "Alex Lead (Lead Architect)")}
+                  className="p-2.5 bg-paper-sidebar hover:bg-paper-surface border border-border hover:border-accent rounded-sm text-left transition group cursor-pointer"
+                >
+                  <div className="text-xs font-bold text-ink group-hover:text-accent">
+                    Alex Lead
+                  </div>
+                  <div className="text-[11px] text-ink-secondary truncate">
+                    Lead Architect
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={oauthLoading}
+                  onClick={() => handleExecuteOAuth("sarah.director@enterprise.com", "Sarah Director (VP Eng)")}
+                  className="p-2.5 bg-paper-sidebar hover:bg-paper-surface border border-border hover:border-accent rounded-sm text-left transition group cursor-pointer"
+                >
+                  <div className="text-xs font-bold text-ink group-hover:text-accent">
+                    Sarah Director
+                  </div>
+                  <div className="text-[11px] text-ink-secondary truncate">
+                    VP of Engineering
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-4 mt-5 border-t border-border flex items-center justify-between text-xs text-ink-secondary font-courier">
               <button
                 type="button"
-                onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-                className="text-accent hover:underline font-semibold transition"
+                onClick={() => {
+                  setMode(mode === "signin" ? "signup" : "signin");
+                  setError(null);
+                  setSuccessMsg(null);
+                }}
+                className="text-accent hover:underline font-semibold transition cursor-pointer"
               >
                 {mode === "signin" ? "Need an institutional workspace? Sign up" : "Already have an account? Sign in"}
               </button>
@@ -488,97 +508,6 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
-
-      {/* Dev / Sandbox Persona Simulation Modal (fallback if live OAuth client unconfigured) */}
-      {showOAuthModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#FCFBF8] rounded-md border border-[#D9D2C3] p-6 max-w-md w-full shadow-2xl space-y-4 relative z-50">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2.5">
-                <DecisionLensIcon size={30} />
-                <div>
-                  <h3 className="text-sm font-serif font-bold text-ink">
-                    Sandbox: {activeOAuthProvider.toUpperCase()} Sign-In
-                  </h3>
-                  <span className="text-[14px] text-ink-tertiary font-mono">
-                    Local Dev Simulation Mode
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowOAuthModal(false)}
-                className="p-1 hover:bg-paper-sidebar rounded text-ink-secondary hover:text-ink transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-ink-secondary leading-relaxed">
-              Your OAuth client for <strong>{activeOAuthProvider.toUpperCase()}</strong> is in local development mode. Choose a preset executive profile or enter an email to authenticate directly:
-            </p>
-
-            <div className="space-y-2">
-              {activeOAuthProvider === "google" && (
-                <>
-                  <button
-                    type="button"
-                    disabled={oauthLoading}
-                    onClick={() => handleExecuteOAuth("alex.lead@google.com", "Alex Lead (Google)")}
-                    className="w-full p-2.5 rounded-md border border-border hover:border-accent hover:bg-paper-sidebar text-left transition flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="text-xs font-semibold text-ink group-hover:text-accent">
-                        Alex Lead (Google Workspace)
-                      </div>
-                      <div className="text-[14px] font-mono text-ink-secondary">alex.lead@google.com</div>
-                    </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-ink-tertiary group-hover:text-accent transition" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={oauthLoading}
-                    onClick={() => handleExecuteOAuth("sarah.director@enterprise.com", "Sarah Director (Corporate)")}
-                    className="w-full p-2.5 rounded-md border border-border hover:border-accent hover:bg-paper-sidebar text-left transition flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="text-xs font-semibold text-ink group-hover:text-accent">
-                        Sarah Director (Corporate Domain)
-                      </div>
-                      <div className="text-[14px] font-mono text-ink-secondary">sarah.director@enterprise.com</div>
-                    </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-ink-tertiary group-hover:text-accent transition" />
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Custom OAuth Account Input */}
-            <div className="pt-3 border-t border-border space-y-2">
-              <span className="text-[14px] font-mono font-semibold text-ink-tertiary uppercase tracking-wider block">
-                Or authenticate custom address
-              </span>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={customOAuthEmail}
-                  onChange={(e) => setCustomOAuthEmail(e.target.value)}
-                  placeholder="executive@organization.com"
-                  className="flex-1 px-3 py-1.5 text-xs bg-paper-surface border border-border rounded-md text-ink placeholder-ink-tertiary focus:outline-none focus:border-accent transition"
-                />
-                <button
-                  type="button"
-                  disabled={oauthLoading || !customOAuthEmail.includes("@")}
-                  onClick={() => handleExecuteOAuth(customOAuthEmail)}
-                  className="px-3.5 py-1.5 bg-ink hover:opacity-90 text-paper-surface font-semibold text-xs rounded-md transition disabled:opacity-50"
-                >
-                  {oauthLoading ? "Signing in..." : "Continue"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

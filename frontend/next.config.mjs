@@ -36,10 +36,13 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    const backendUrl =
+    let backendUrl =
       process.env.INTERNAL_API_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
       "http://127.0.0.1:8000";
+    if (backendUrl.includes("localhost")) {
+      backendUrl = backendUrl.replace("localhost", "127.0.0.1");
+    }
     return [
       {
         source: "/workspaces/:folderId",
