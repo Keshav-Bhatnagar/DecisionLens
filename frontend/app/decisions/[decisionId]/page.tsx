@@ -47,6 +47,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Layers,
+  Download,
 } from "lucide-react";
 
 export default function DecisionDetailPage({
@@ -851,14 +852,40 @@ export default function DecisionDetailPage({
                   <button
                     type="button"
                     onClick={() => setShowExportModal(true)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#4f4b40] hover:bg-[#38342b] dark:bg-[#b08a3c] dark:text-[#181614] rounded-none border border-[#4f4b40] dark:border-[#b08a3c] transition-colors cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
                   >
-                    <Share2 className="w-4 h-4" />
-                    <span>Export Executive Brief</span>
+                    <Download className="w-4 h-4" />
+                    <span>Download Meeting Takeaways</span>
                   </button>
                 )}
               </div>
             )}
+
+            {/* End of Page Action Bar: Download Meeting Takeaways */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 sm:p-6 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-8 font-courier">
+              <div className="space-y-1">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
+                  <span>
+                    {recordType === "meeting"
+                      ? "Meeting Deliberation Complete"
+                      : "Executive Deliberation Complete"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+                  Export and download executive takeaways, consensus matrices, and action items in publication-grade PDF, Markdown, LaTeX, or JSON.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowExportModal(true)}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer shrink-0"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Meeting Takeaways</span>
+              </button>
+            </div>
           </div>
 
           {/* Right Deliberation Dossier (Inspector Panel) */}

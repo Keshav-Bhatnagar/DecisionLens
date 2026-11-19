@@ -10,10 +10,8 @@ import {
   Compass,
   ArrowRight,
   ArrowLeft,
-  Share2,
   Mic,
   Users,
-  Sparkles,
 } from "lucide-react";
 
 export type WorkflowStage =
@@ -26,9 +24,9 @@ export type WorkflowStage =
 interface WorkflowStepperProps {
   currentStage: WorkflowStage;
   onSelectStage: (stage: WorkflowStage) => void;
-  viewMode: "step" | "all";
-  onToggleViewMode: () => void;
-  onOpenExportModal: () => void;
+  viewMode?: "step" | "all";
+  onToggleViewMode?: () => void;
+  onOpenExportModal?: () => void;
   onOpenAutoPilot?: () => void;
   hasTranscript: boolean;
   isTranscriptReviewed: boolean;
@@ -217,39 +215,6 @@ export default function WorkflowStepper({
             </button>
           );
         })}
-      </div>
-
-      {/* Quick Actions (Auto-Pilot + View Toggle + Export Brief) */}
-      <div className="flex items-center gap-2 shrink-0 justify-end">
-        {onOpenAutoPilot && (
-          <button
-            type="button"
-            onClick={onOpenAutoPilot}
-            className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-sm font-bold bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] uppercase tracking-wider font-courier shadow-xs transition cursor-pointer"
-            title="Auto-run full pipeline: Structuring → Gaps → Frameworks → Synthesis"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#D4AA50] dark:text-[#181614]" />
-            <span>Auto-Pilot</span>
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={onToggleViewMode}
-          className="text-xs px-3 py-1.5 rounded-sm border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] font-bold uppercase tracking-wider font-courier transition cursor-pointer"
-          title="Toggle between single stage focus or full view"
-        >
-          {viewMode === "step" ? "Step Mode" : "All Steps"}
-        </button>
-
-        <button
-          type="button"
-          onClick={onOpenExportModal}
-          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-sm font-bold bg-[#EDE7D6] dark:bg-[#221F1C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] uppercase tracking-wider font-courier shadow-xs transition cursor-pointer"
-        >
-          <Share2 className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-          <span>{isMeeting ? "Export Minutes" : "Export Brief"}</span>
-        </button>
       </div>
     </div>
   );
