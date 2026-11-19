@@ -1409,7 +1409,7 @@ jobs:
                   }}
                   className="px-3.5 py-1.5 rounded-lg border border-border bg-paper-sidebar hover:border-accent text-ink font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
                 >
-                  <span>⚡ Override Winner / Choose Alternative</span>
+                  <span>Override Winner / Choose Alternative</span>
                 </button>
               </div>
             )}
@@ -1890,7 +1890,7 @@ jobs:
 
                         {/* Dynamically Projected Calendar Range */}
                         <span className="text-[14px] font-mono text-muted block">
-                          📅 {phaseDates?.range || phase.timeline}
+                          {phaseDates?.range || phase.timeline}
                         </span>
 
                         {/* Progress Bar */}
@@ -1952,7 +1952,7 @@ jobs:
                       <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
                         {phaseDates && (
                           <span className="text-[15px] font-mono px-2 py-0.5 rounded bg-paper-surface border border-border text-ink font-bold">
-                            📅 {phaseDates.range}
+                            {phaseDates.range}
                           </span>
                         )}
                         <span className="text-[15px] font-mono px-2 py-0.5 rounded bg-paper-surface border border-border text-accent font-bold">

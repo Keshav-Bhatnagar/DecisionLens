@@ -93,7 +93,8 @@ export default function DecisionDetailPage({
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAutoPilotModal, setShowAutoPilotModal] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [reportAuditTab, setReportAuditTab] = useState<"verdict" | "frameworks" | "facts">("verdict");
+  const [showWhyBreakdown, setShowWhyBreakdown] = useState(false);
+  const [whySubTab, setWhySubTab] = useState<"frameworks" | "facts">("frameworks");
   const [pipelineLoadingMessage, setPipelineLoadingMessage] = useState<string | null>(null);
   const stepContentRef = useRef<HTMLDivElement>(null);
 
@@ -121,18 +122,21 @@ export default function DecisionDetailPage({
     }, 80);
   };
 
-  const handleSelectStage = (stage: WorkflowStage, targetAuditTab?: "verdict" | "frameworks" | "facts") => {
+  const handleSelectStage = (stage: WorkflowStage, targetWhySubTab?: "frameworks" | "facts") => {
     setStageManuallySelected(true);
     if (stage === "structuring") {
       setWorkflowStage("synthesis");
-      setReportAuditTab("facts");
+      setShowWhyBreakdown(true);
+      setWhySubTab("facts");
     } else if (stage === "frameworks") {
       setWorkflowStage("synthesis");
-      setReportAuditTab("frameworks");
+      setShowWhyBreakdown(true);
+      setWhySubTab("frameworks");
     } else {
       setWorkflowStage(stage);
-      if (stage === "synthesis" && targetAuditTab) {
-        setReportAuditTab(targetAuditTab);
+      if (stage === "synthesis" && targetWhySubTab) {
+        setShowWhyBreakdown(true);
+        setWhySubTab(targetWhySubTab);
       }
     }
     if (stage !== "ingestion") {
@@ -192,11 +196,11 @@ export default function DecisionDetailPage({
         await synthesizeDecision(decisionId);
       }
       await loadData(true);
-      setReportAuditTab("verdict");
+      setShowWhyBreakdown(false);
       handleSelectStage("synthesis");
     } catch (err: unknown) {
       console.error("Error generating final report:", err);
-      setReportAuditTab("verdict");
+      setShowWhyBreakdown(false);
       handleSelectStage("synthesis");
     } finally {
       setPipelineLoadingMessage(null);
@@ -242,10 +246,11 @@ export default function DecisionDetailPage({
       if (!stageManuallySelected && !silent) {
         if (d.recommendation && typeof d.recommendation === "object" && "headline" in d.recommendation) {
           setWorkflowStage("synthesis");
-          setReportAuditTab("verdict");
+          setShowWhyBreakdown(false);
         } else if (d.analysis && typeof d.analysis === "object" && Object.keys(d.analysis).length > 0) {
           setWorkflowStage("synthesis");
-          setReportAuditTab("frameworks");
+          setShowWhyBreakdown(true);
+          setWhySubTab("frameworks");
         } else if (
           Array.isArray(d.gaps)
             ? d.gaps.length > 0
@@ -813,7 +818,7 @@ export default function DecisionDetailPage({
                                   : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
                               }`}
                             >
-                              🎙️ Voice Memo & Audio Upload
+                              Voice Memo & Audio Upload
                             </button>
                             <button
                               type="button"
@@ -824,7 +829,7 @@ export default function DecisionDetailPage({
                                   : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
                               }`}
                             >
-                              📹 Live Call & Anonymous Scribe
+                              Live Call & Anonymous Scribe
                             </button>
                           </div>
 
@@ -968,124 +973,83 @@ export default function DecisionDetailPage({
                 </div>
               )}
 
-              {/* STAGE 3: Final Decision Synthesis, Actionable Roadmap & Audit Navigation */}
+              {/* STAGE 3: Final Decision Synthesis (Direct Verdict) & Inspection Drawer */}
               {(viewMode === "all" || workflowStage === "synthesis" || workflowStage === "frameworks" || workflowStage === "structuring") && (
                 <div className="space-y-6 animate-in fade-in duration-200">
-                  {/* Executive Navigation Bar: Why This Decision? / Frameworks / Facts */}
-                  <div className="p-3.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none font-courier">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                      <div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
-                          Stage 3: Executive Deliberation Dossier
-                        </span>
-                        <p className="text-[12px] text-[#4f4b40] dark:text-[#A89F91] font-sans">
-                          Inspect the final verdict, or verify why this decision was chosen via frameworks and extracted facts.
-                        </p>
-                      </div>
+                  {/* Primary Final ADR Verdict */}
+                  <SynthesisPanel
+                    decisionId={decisionId}
+                    initialSynthesis={
+                      decision.recommendation && "headline" in decision.recommendation
+                        ? (decision.recommendation as unknown as DecisionSynthesis)
+                        : null
+                    }
+                    onSynthesisUpdated={() => loadData()}
+                  />
 
-                      {/* 3 Tabs to Understand "Why" and "How" */}
-                      <div className="flex flex-wrap items-center gap-1 bg-[#F4F0E6] dark:bg-[#181614] p-1 border border-[#cfc7b2] dark:border-[#38332C]">
-                        <button
-                          type="button"
-                          onClick={() => setReportAuditTab("verdict")}
-                          className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            reportAuditTab === "verdict"
-                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                          }`}
-                        >
-                          📑 Final ADR Verdict
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setReportAuditTab("frameworks")}
-                          className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            reportAuditTab === "frameworks"
-                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                          }`}
-                        >
-                          ⚖️ Why This Decision? (Frameworks & Scores)
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setReportAuditTab("facts")}
-                          className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            reportAuditTab === "facts"
-                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                          }`}
-                        >
-                          🔍 Underlying Facts & Statements
-                        </button>
-                      </div>
-                    </div>
+                  {/* Small Why Button Directly Below the Verdict */}
+                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-[#cfc7b2] dark:border-[#38332C] font-courier">
+                    <button
+                      type="button"
+                      onClick={() => setShowWhyBreakdown(!showWhyBreakdown)}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer self-start sm:self-auto"
+                    >
+                      <span>{showWhyBreakdown ? "Hide Decision Rationale" : "Why was this decision chosen? (View Frameworks & Facts)"}</span>
+                      <span className="text-[10px] text-[#7a4e10] dark:text-[#D4AA50]">
+                        {showWhyBreakdown ? "▲" : "▼"}
+                      </span>
+                    </button>
+                    <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
+                      Deterministic Multi-Attribute Utility & Grounding Facts
+                    </span>
                   </div>
 
-                  {/* View 1: Verdict & Roadmap */}
-                  {reportAuditTab === "verdict" && (
-                    <SynthesisPanel
-                      decisionId={decisionId}
-                      initialSynthesis={
-                        decision.recommendation && "headline" in decision.recommendation
-                          ? (decision.recommendation as unknown as DecisionSynthesis)
-                          : null
-                      }
-                      onSynthesisUpdated={() => loadData()}
-                    />
-                  )}
-
-                  {/* View 2: Frameworks, Multi-Attribute Utility & Decision Tree */}
-                  {reportAuditTab === "frameworks" && (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-[#E5DEC9]/80 dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-courier text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center justify-between">
-                        <span>
-                          ⚖️ Multi-Attribute Utility (MAUT), Expected Value decision tree, and criteria weight trade-offs.
-                        </span>
+                  {/* Collapsible Inspection Details when toggled */}
+                  {showWhyBreakdown && (
+                    <div className="space-y-4 pt-2 border-t border-[#cfc7b2] dark:border-[#38332C] animate-in fade-in duration-150 font-courier">
+                      <div className="flex items-center gap-1 bg-[#EDE7D6] dark:bg-[#221F1C] p-1 border border-[#cfc7b2] dark:border-[#38332C] text-xs font-bold uppercase tracking-wider w-fit">
                         <button
                           type="button"
-                          onClick={() => setReportAuditTab("verdict")}
-                          className="underline font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] cursor-pointer"
+                          onClick={() => setWhySubTab("frameworks")}
+                          className={`px-3 py-1.5 transition-colors cursor-pointer ${
+                            whySubTab === "frameworks"
+                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                          }`}
                         >
-                          Back to Final Verdict →
+                          Frameworks & Scores (MAUT)
                         </button>
-                      </div>
-                      <FrameworkPanel
-                        decisionId={decisionId}
-                        initialAnalysis={decision.analysis}
-                        onAnalysisUpdated={() => loadData()}
-                        onAdvanceToNextStage={() => setReportAuditTab("verdict")}
-                      />
-                    </div>
-                  )}
-
-                  {/* View 3: Facts, Risks, Constraints & Assumptions */}
-                  {reportAuditTab === "facts" && (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-[#E5DEC9]/80 dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-courier text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center justify-between">
-                        <span>
-                          🔍 Extracted cognitive facts, constraints, risks, and stakeholder objections.
-                        </span>
                         <button
                           type="button"
-                          onClick={() => setReportAuditTab("verdict")}
-                          className="underline font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] cursor-pointer"
+                          onClick={() => setWhySubTab("facts")}
+                          className={`px-3 py-1.5 transition-colors cursor-pointer ${
+                            whySubTab === "facts"
+                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                          }`}
                         >
-                          Back to Final Verdict →
+                          Underlying Facts & Statements
                         </button>
                       </div>
-                      <StructuredFindingsEditor
-                        decisionId={decisionId}
-                        initialFindings={decision.points as unknown as StructuredFindings}
-                        isReviewed={decision.points_reviewed || false}
-                        onFindingsUpdated={() => loadData()}
-                        problemStatement={problemStatement || decision.problem_statement || ""}
-                        transcript={decision.transcript || ""}
-                        attachmentCount={attachments.length}
-                        onAdvanceToGaps={() => handleSelectStage("gaps")}
-                      />
+
+                      {whySubTab === "frameworks" ? (
+                        <FrameworkPanel
+                          decisionId={decisionId}
+                          initialAnalysis={decision.analysis}
+                          onAnalysisUpdated={() => loadData()}
+                        />
+                      ) : (
+                        <StructuredFindingsEditor
+                          decisionId={decisionId}
+                          initialFindings={decision.points as unknown as StructuredFindings}
+                          isReviewed={decision.points_reviewed || false}
+                          onFindingsUpdated={() => loadData()}
+                          problemStatement={problemStatement || decision.problem_statement || ""}
+                          transcript={decision.transcript || ""}
+                          attachmentCount={attachments.length}
+                          onAdvanceToGaps={() => handleSelectStage("gaps")}
+                        />
+                      )}
                     </div>
                   )}
 

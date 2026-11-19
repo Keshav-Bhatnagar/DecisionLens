@@ -418,22 +418,22 @@ export default function FrameworkPanel({
 
       {/* Alerts */}
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-xs text-rose-800 rounded-xl flex items-start gap-2.5 animate-in fade-in">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+        <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-xs text-[#1d1d1b] dark:text-[#F0EAE1] rounded-none flex items-start gap-2.5 animate-in fade-in font-courier">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#7a4e10] dark:text-[#D4AA50]" />
           <span className="font-medium">{error}</span>
         </div>
       )}
 
       {analysis?.is_stale && (
-        <div className="p-4 bg-amber-500/10 border border-amber-300 text-xs text-amber-950 rounded-xl flex items-center justify-between shadow-2xs">
+        <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-xs text-[#1d1d1b] dark:text-[#F0EAE1] rounded-none flex items-center justify-between shadow-2xs font-courier">
           <div className="flex items-center gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-[#7a4e10] dark:text-[#D4AA50]" />
             <span>Upstream problem inputs or gaps have changed. Re-run gauntlet to re-synchronize criteria and rankings.</span>
           </div>
           <button
             onClick={() => handleRunAnalysis()}
             disabled={loading}
-            className="px-3.5 py-1.5 bg-ink text-paper-surface text-xs font-semibold rounded-lg hover:opacity-90 transition shrink-0"
+            className="px-3.5 py-1.5 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] text-xs font-semibold rounded-none hover:opacity-90 transition shrink-0 cursor-pointer"
           >
             Re-run Gauntlet
           </button>
@@ -442,21 +442,21 @@ export default function FrameworkPanel({
 
       {/* Empty State when no analysis has been run yet */}
       {!analysis && !loading && (
-        <div className="text-center py-14 px-4 rounded-2xl border border-dashed border-border bg-paper-sidebar space-y-3">
-          <Scale className="w-10 h-10 text-accent/60 mx-auto" />
-          <h3 className="text-base font-serif font-bold text-ink">
+        <div className="text-center py-14 px-4 rounded-none border border-dashed border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] space-y-3 font-courier">
+          <Scale className="w-10 h-10 text-[#7a4e10] dark:text-[#D4AA50] mx-auto" />
+          <h3 className="text-base font-newsreader font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
             No Decision Gauntlet Run Yet
           </h3>
-          <p className="text-xs text-ink-secondary max-w-md mx-auto leading-relaxed">
+          <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] max-w-md mx-auto leading-relaxed">
             Click <strong>Run Decision Gauntlet</strong> to put your options through the 5 background crash-tests and extract the unified verdict.
           </p>
           <div className="pt-2">
             <button
               type="button"
               onClick={handleRunAnalysis}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink text-paper-surface hover:opacity-90 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] hover:opacity-90 rounded-none text-xs font-semibold shadow-xs transition cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-accent" />
+              <Sparkles className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#181614]" />
               Run Decision Gauntlet Now
             </button>
           </div>
@@ -467,43 +467,39 @@ export default function FrameworkPanel({
       {/* THE EXECUTIVE GAUNTLET VERDICT (The Single Source of Truth)              */}
       {/* ========================================================================= */}
       {analysis && canonicalWinner && (
-        <div className="rounded-2xl border border-amber-300/80 bg-paper-sidebar p-6 sm:p-7 space-y-6 shadow-2xs">
+        <div className="rounded-none border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] p-6 sm:p-7 space-y-6 shadow-2xs font-courier">
           
           {/* Winner Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#cfc7b2] dark:border-[#38332C]">
             <div className="flex items-start gap-3.5">
-              <span className="p-3 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-300 shrink-0 shadow-2xs mt-0.5">
-                <Award className="w-6 h-6 text-emerald-700" />
+              <span className="p-3 rounded-none bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] shrink-0 shadow-2xs mt-0.5">
+                <Award className="w-6 h-6 text-[#7a4e10] dark:text-[#D4AA50]" />
               </span>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14px] font-mono font-bold uppercase tracking-widest text-accent">
+                  <span className="text-[12px] font-mono font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50]">
                     The Gauntlet Winner (Rank #1)
                   </span>
                   <span
-                    className={`text-[15px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                      canonicalWinner.status === "READY"
-                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                        : "bg-amber-100 text-amber-900 border border-amber-300"
-                    }`}
+                    className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-none uppercase tracking-wider bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
                   >
                     {canonicalWinner.status === "READY" ? "Ready for Execution" : "Conditional on Due Diligence"}
                   </span>
                 </div>
-                <h3 className="text-2xl sm:text-3xl font-serif font-bold text-ink tracking-tight">
+                <h3 className="text-2xl sm:text-3xl font-newsreader font-bold text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight">
                   {canonicalWinner.name}
                 </h3>
-                <p className="text-xs text-ink-secondary font-light">
+                <p className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
                   Option {canonicalWinner.name} emerged as the dominant strategic choice across multi-criteria scoring and empirical citations.
                 </p>
               </div>
             </div>
 
-            <div className="text-left sm:text-right bg-paper-surface p-4 rounded-xl border border-border shrink-0 shadow-2xs">
-              <span className="font-mono text-3xl font-extrabold text-ink block leading-none">
-                {canonicalWinner.score.toFixed(2)}<span className="text-xs text-ink-secondary font-normal"> / 10</span>
+            <div className="text-left sm:text-right bg-[#F4F0E6] dark:bg-[#181614] p-4 rounded-none border border-[#cfc7b2] dark:border-[#38332C] shrink-0 shadow-2xs">
+              <span className="font-mono text-3xl font-extrabold text-[#1d1d1b] dark:text-[#F0EAE1] block leading-none">
+                {canonicalWinner.score.toFixed(2)}<span className="text-xs text-[#97907e] font-normal"> / 10</span>
               </span>
-              <span className="text-[14px] font-mono text-emerald-800 font-bold uppercase tracking-wider mt-1 block">
+              <span className="text-[12px] font-mono text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase tracking-wider mt-1 block">
                 {canonicalWinner.margin !== null && canonicalWinner.margin > 0
                   ? `+${canonicalWinner.margin.toFixed(2)} pts over runner-up`
                   : "Convergence Rank #1"}
@@ -512,31 +508,31 @@ export default function FrameworkPanel({
           </div>
 
           {/* The Tension & Resolution (The 2 things an executive must know) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-courier">
             {/* The Adversarial Trap Caught */}
-            <div className="p-4 sm:p-5 rounded-xl bg-paper-surface border border-rose-200/80 space-y-2 shadow-2xs">
-              <div className="flex items-center gap-2 font-mono text-[14px] font-bold text-rose-900 uppercase tracking-wider">
-                <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+            <div className="p-4 sm:p-5 rounded-none bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2 shadow-2xs">
+              <div className="flex items-center gap-2 font-mono text-[13px] font-bold text-[#1d1d1b] dark:text-[#F0EAE1] uppercase tracking-wider">
+                <ShieldAlert className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
                 <span>The One Fatal Trap Caught by Red-Teaming:</span>
               </div>
-              <p className="text-xs text-ink leading-relaxed font-sans">
+              <p className="text-xs text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed font-sans">
                 {adversarialFriction}
               </p>
-              <div className="pt-2 border-t border-border/60 text-[15px] text-ink-secondary font-mono">
+              <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 text-[11px] text-[#4f4b40] dark:text-[#A89F91] font-mono">
                 Flagged by: <strong>Adversarial Red-Team (Six Hats Black Hat)</strong>
               </div>
             </div>
 
             {/* The Clear Resolution & Protection */}
-            <div className="p-4 sm:p-5 rounded-xl bg-paper-surface border border-emerald-200/80 space-y-2 shadow-2xs">
-              <div className="flex items-center gap-2 font-mono text-[14px] font-bold text-emerald-900 uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="p-4 sm:p-5 rounded-none bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2 shadow-2xs">
+              <div className="flex items-center gap-2 font-mono text-[13px] font-bold text-[#1d1d1b] dark:text-[#F0EAE1] uppercase tracking-wider">
+                <ShieldCheck className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
                 <span>The Exact Condition to Proceed Safely:</span>
               </div>
-              <p className="text-xs text-ink leading-relaxed font-sans">
+              <p className="text-xs text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed font-sans">
                 {operationalCondition}
               </p>
-              <div className="pt-2 border-t border-border/60 text-[15px] text-ink-secondary font-mono">
+              <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 text-[11px] text-[#4f4b40] dark:text-[#A89F91] font-mono">
                 Mandated in: <strong>Executive Decision Memo & ADR</strong>
               </div>
             </div>
@@ -549,13 +545,13 @@ export default function FrameworkPanel({
       {/* CANDIDATE OPTIONS RANKING & SENSITIVITY TUNING                            */}
       {/* ========================================================================= */}
       {analysis && matrixResults.length > 0 && (
-        <div className="p-5 sm:p-6 rounded-2xl bg-paper-surface border border-border space-y-4 shadow-2xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/70">
+        <div className="p-5 sm:p-6 rounded-none bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] space-y-4 shadow-2xs font-courier">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C]">
             <div>
-              <h4 className="text-sm font-serif font-bold text-ink">
+              <h4 className="text-sm font-newsreader font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
                 Candidate Options Comparative Leaderboard
               </h4>
-              <p className="text-[15px] text-ink-secondary">
+              <p className="text-[12px] text-[#4f4b40] dark:text-[#A89F91]">
                 Deterministic scores based on weighted business and technical criteria.
               </p>
             </div>
@@ -563,9 +559,9 @@ export default function FrameworkPanel({
             <button
               type="button"
               onClick={() => setShowSensitivitySliders(!showSensitivitySliders)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium text-ink bg-paper-sidebar border border-border hover:bg-paper-surface transition cursor-pointer self-start sm:self-auto"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-none text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] transition cursor-pointer self-start sm:self-auto"
             >
-              <Sliders className="w-3.5 h-3.5 text-accent" />
+              <Sliders className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
               <span>{showSensitivitySliders ? "Hide Weight Sliders" : "Tune Criteria Weights"}</span>
               {showSensitivitySliders ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
@@ -578,27 +574,27 @@ export default function FrameworkPanel({
               return (
                 <div
                   key={res.option_id}
-                  className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition ${
+                  className={`p-3.5 sm:p-4 rounded-none border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition ${
                     isWinner
-                      ? "bg-emerald-500/5 border-emerald-300/80 shadow-2xs"
-                      : "bg-paper-sidebar border-border"
+                      ? "bg-[#F4F0E6] dark:bg-[#181614] border-[#7a4e10] dark:border-[#D4AA50] shadow-2xs"
+                      : "bg-[#F4F0E6] dark:bg-[#181614] border-[#cfc7b2] dark:border-[#38332C]"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className={`w-6 h-6 rounded-full font-mono font-bold text-[15px] flex items-center justify-center shrink-0 ${
+                      className={`w-6 h-6 rounded-none font-mono font-bold text-[12px] flex items-center justify-center shrink-0 ${
                         isWinner
-                          ? "bg-emerald-700 text-paper-surface"
-                          : "bg-paper-surface text-ink-secondary border border-border"
+                          ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                          : "bg-[#E5DEC9] dark:bg-[#2C2723] text-[#4f4b40] dark:text-[#A89F91] border border-[#cfc7b2] dark:border-[#38332C]"
                       }`}
                     >
                       {res.rank}
                     </span>
                     <div>
-                      <span className="font-semibold text-ink text-sm block">
+                      <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1] text-sm block">
                         {res.option_name}
                       </span>
-                      <span className="text-[15px] text-ink-secondary font-mono">
+                      <span className="text-[12px] text-[#4f4b40] dark:text-[#A89F91] font-mono">
                         {isWinner ? "Dominant Choice across all criteria" : `Rank #${res.rank} Alternative`}
                       </span>
                     </div>
@@ -606,10 +602,10 @@ export default function FrameworkPanel({
 
                   <div className="flex items-center gap-4 self-end sm:self-auto">
                     <div className="text-right">
-                      <span className="font-mono text-base font-extrabold text-ink block">
+                      <span className="font-mono text-base font-extrabold text-[#1d1d1b] dark:text-[#F0EAE1] block">
                         {res.weighted_score.toFixed(2)} / 10
                       </span>
-                      <span className="text-[14px] text-ink-secondary font-mono">
+                      <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] font-mono">
                         Weighted Score
                       </span>
                     </div>
@@ -621,35 +617,31 @@ export default function FrameworkPanel({
 
           {/* Sensitivity Sliders Drawer */}
           {showSensitivitySliders && (
-            <div className="pt-4 border-t border-border space-y-4 animate-in fade-in">
+            <div className="pt-4 border-t border-[#cfc7b2] dark:border-[#38332C] space-y-4 animate-in fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="font-mono text-xs font-bold text-ink uppercase tracking-wider">
+                <span className="font-mono text-xs font-bold text-[#1d1d1b] dark:text-[#F0EAE1] uppercase tracking-wider">
                   Interactive Sensitivity Sliders (Zero-Sum Budget):
                 </span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleAddCriterion}
-                    className="px-3 py-1 bg-paper-surface hover:bg-paper-sidebar border border-border rounded-lg text-xs font-semibold text-ink transition inline-flex items-center gap-1 shadow-2xs cursor-pointer"
+                    className="px-3 py-1 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] transition inline-flex items-center gap-1 shadow-2xs cursor-pointer"
                     title="Add new evaluation criterion"
                   >
-                    <Plus className="w-3 h-3 text-emerald-600" />
+                    <Plus className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50]" />
                     <span>Add Criterion</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleAutoBalanceWeights}
-                    className="px-3 py-1 bg-paper-surface hover:bg-paper-sidebar border border-border rounded-lg text-xs font-semibold text-ink transition inline-flex items-center gap-1 shadow-2xs cursor-pointer"
+                    className="px-3 py-1 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] transition inline-flex items-center gap-1 shadow-2xs cursor-pointer"
                   >
-                    <Zap className="w-3 h-3 text-accent" />
+                    <Zap className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50]" />
                     <span>Auto-Balance 100%</span>
                   </button>
                   <span
-                    className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
-                      Math.abs(totalMatrixWeight - 100.0) < 0.1
-                        ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
-                        : "bg-rose-50 text-rose-800 border border-rose-300"
-                    }`}
+                    className="font-mono text-xs font-bold px-2 py-0.5 rounded-none bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
                   >
                     {totalMatrixWeight.toFixed(1)}% / 100%
                   </span>
@@ -660,7 +652,7 @@ export default function FrameworkPanel({
                 {matrixCriteria.map((crit) => (
                   <div
                     key={crit.id}
-                    className="p-3 rounded-xl bg-paper-sidebar border border-border space-y-2 text-xs group relative"
+                    className="p-3 rounded-none bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2 text-xs group relative"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <input
@@ -778,34 +770,34 @@ export default function FrameworkPanel({
 
               {/* SWOT */}
               {activeAuditTab === "swot" && analysis.swot && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2">
-                    <span className="font-mono font-bold text-emerald-900 block uppercase text-[14px]">Strengths</span>
-                    <ul className="space-y-1 text-ink">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-courier">
+                  <div className="p-4 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-2">
+                    <span className="font-mono font-bold text-[#1d1d1b] dark:text-[#F0EAE1] block uppercase text-[12px]">Strengths</span>
+                    <ul className="space-y-1 text-[#1d1d1b] dark:text-[#F0EAE1]">
                       {analysis.swot.strengths.map((s) => (
                         <li key={s.id}>• {s.text}</li>
                       ))}
                     </ul>
                   </div>
-                  <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2">
-                    <span className="font-mono font-bold text-rose-900 block uppercase text-[14px]">Weaknesses</span>
-                    <ul className="space-y-1 text-ink">
+                  <div className="p-4 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-2">
+                    <span className="font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] block uppercase text-[12px]">Weaknesses</span>
+                    <ul className="space-y-1 text-[#1d1d1b] dark:text-[#F0EAE1]">
                       {analysis.swot.weaknesses.map((w) => (
                         <li key={w.id}>• {w.text}</li>
                       ))}
                     </ul>
                   </div>
-                  <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2">
-                    <span className="font-mono font-bold text-sky-900 block uppercase text-[14px]">Opportunities</span>
-                    <ul className="space-y-1 text-ink">
+                  <div className="p-4 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-2">
+                    <span className="font-mono font-bold text-[#1d1d1b] dark:text-[#F0EAE1] block uppercase text-[12px]">Opportunities</span>
+                    <ul className="space-y-1 text-[#1d1d1b] dark:text-[#F0EAE1]">
                       {analysis.swot.opportunities.map((o) => (
                         <li key={o.id}>• {o.text}</li>
                       ))}
                     </ul>
                   </div>
-                  <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2">
-                    <span className="font-mono font-bold text-amber-900 block uppercase text-[14px]">Threats</span>
-                    <ul className="space-y-1 text-ink">
+                  <div className="p-4 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-2">
+                    <span className="font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] block uppercase text-[12px]">Threats</span>
+                    <ul className="space-y-1 text-[#1d1d1b] dark:text-[#F0EAE1]">
                       {analysis.swot.threats.map((t) => (
                         <li key={t.id}>• {t.text}</li>
                       ))}
@@ -816,15 +808,15 @@ export default function FrameworkPanel({
 
               {/* Five Whys */}
               {activeAuditTab === "five_whys" && analysis.five_whys && (
-                <div className="space-y-2 text-xs">
+                <div className="space-y-2 text-xs font-courier">
                   {analysis.five_whys.steps.map((step) => (
-                    <div key={step.step_number} className="p-3 bg-paper-surface rounded-lg border border-border flex items-start gap-3">
-                      <span className="w-5 h-5 rounded-full bg-ink text-paper-surface font-mono font-bold text-[14px] flex items-center justify-center shrink-0">
+                    <div key={step.step_number} className="p-3 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] flex items-start gap-3">
+                      <span className="w-5 h-5 rounded-none bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] font-mono font-bold text-[12px] flex items-center justify-center shrink-0">
                         {step.step_number}
                       </span>
                       <div>
-                        <p className="font-semibold text-ink">{step.why_question}</p>
-                        <p className="text-ink-secondary">{step.answer}</p>
+                        <p className="font-semibold text-[#1d1d1b] dark:text-[#F0EAE1]">{step.why_question}</p>
+                        <p className="text-[#4f4b40] dark:text-[#A89F91]">{step.answer}</p>
                       </div>
                     </div>
                   ))}
@@ -833,17 +825,17 @@ export default function FrameworkPanel({
 
               {/* Decision Tree */}
               {activeAuditTab === "decision_tree" && analysis.decision_tree && (
-                <div className="p-4 bg-paper-surface rounded-xl border border-border space-y-2 text-xs">
-                  <span className="font-mono font-bold text-ink block">{analysis.decision_tree.root_question}</span>
-                  <p className="text-ink-secondary text-[15px]">{analysis.decision_tree.probabilities_note}</p>
+                <div className="p-4 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] space-y-2 text-xs font-courier">
+                  <span className="font-mono font-bold text-[#1d1d1b] dark:text-[#F0EAE1] block">{analysis.decision_tree.root_question}</span>
+                  <p className="text-[#4f4b40] dark:text-[#A89F91] text-[12px]">{analysis.decision_tree.probabilities_note}</p>
                 </div>
               )}
 
               {/* Decision Matrix raw table */}
               {activeAuditTab === "decision_matrix" && (
-                <div className="p-4 bg-paper-surface rounded-xl border border-border text-xs">
-                  <span className="font-mono font-bold text-ink block mb-2">Raw Deterministic Ratings Matrix:</span>
-                  <p className="text-ink-secondary">
+                <div className="p-4 bg-[#F4F0E6] dark:bg-[#181614] rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs font-courier">
+                  <span className="font-mono font-bold text-[#1d1d1b] dark:text-[#F0EAE1] block mb-2">Raw Deterministic Ratings Matrix:</span>
+                  <p className="text-[#4f4b40] dark:text-[#A89F91]">
                     All option ratings and criteria weights are audited and synchronized with Step 1 and Step 3 evidence.
                   </p>
                 </div>
@@ -857,15 +849,15 @@ export default function FrameworkPanel({
       {/* 6. Stage 5 Readiness & Advance Gate (Bottom Action Banner)                */}
       {/* ========================================================================= */}
       {analysis && canonicalWinner && (
-        <div className="pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="pt-5 border-t border-[#cfc7b2] dark:border-[#38332C] flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-courier">
           <div className="space-y-0.5">
-            <div className="flex items-center gap-2 text-xs font-mono text-emerald-800">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="flex items-center gap-2 text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1]">
+              <CheckCircle2 className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
               <span>
                 <strong>Gauntlet Complete.</strong> Unified verdict grounded with zero conflicting confusion.
               </span>
             </div>
-            <p className="text-[15px] text-ink-secondary pl-6">
+            <p className="text-[12px] text-[#4f4b40] dark:text-[#A89F91] pl-6">
               Option {canonicalWinner.name} is ready for executive decision memo formulation.
             </p>
           </div>
@@ -875,10 +867,10 @@ export default function FrameworkPanel({
               <button
                 type="button"
                 onClick={onAdvanceToNextStage}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-ink text-paper-surface hover:opacity-90 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] hover:opacity-90 rounded-none text-xs font-bold uppercase tracking-wider shadow-xs transition-all cursor-pointer"
               >
                 <span>Advance to Decision Synthesis & ADR</span>
-                <ArrowRight className="w-3.5 h-3.5 text-accent" />
+                <ArrowRight className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#181614]" />
               </button>
             )}
           </div>
