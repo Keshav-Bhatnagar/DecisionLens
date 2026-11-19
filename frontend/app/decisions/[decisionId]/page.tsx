@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, use } from "react";
+import React, { useEffect, useState, useCallback, useRef, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
@@ -25,6 +25,10 @@ import {
   getFolder,
   getAttachments,
   deleteAttachment,
+  analyzeDecisionInputs,
+  detectGaps,
+  evaluateFrameworks,
+  synthesizeDecision,
   Decision,
   Folder,
   Attachment,
@@ -48,6 +52,9 @@ import {
   ArrowLeft,
   Layers,
   Download,
+  Sparkles,
+  Loader2,
+  ChevronRight,
 } from "lucide-react";
 
 export default function DecisionDetailPage({
@@ -86,16 +93,21 @@ export default function DecisionDetailPage({
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAutoPilotModal, setShowAutoPilotModal] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [reportAuditTab, setReportAuditTab] = useState<"verdict" | "frameworks" | "facts">("verdict");
+  const [pipelineLoadingMessage, setPipelineLoadingMessage] = useState<string | null>(null);
   const stepContentRef = useRef<HTMLDivElement>(null);
 
-  const workflowStagesList: { id: WorkflowStage; label: string; number: string }[] = [
-    { id: "ingestion", label: "Input & Audio", number: "01" },
-    { id: "structuring", label: "Cognitive Structuring", number: "02" },
-    { id: "gaps", label: "Gaps & Web Research", number: "03" },
-    { id: "frameworks", label: "Thinking Frameworks", number: "04" },
-    { id: "synthesis", label: "Synthesis & Roadmap", number: "05" },
+  const primaryStages: { id: "ingestion" | "gaps" | "synthesis"; label: string; number: string }[] = [
+    { id: "ingestion", label: "Input & Evidence", number: "01" },
+    { id: "gaps", label: "Unknowns & Gaps", number: "02" },
+    { id: "synthesis", label: "Final Report", number: "03" },
   ];
-  const currentStageIdx = workflowStagesList.findIndex((s) => s.id === workflowStage);
+  const currentPrimaryIdx =
+    workflowStage === "ingestion"
+      ? 0
+      : workflowStage === "gaps"
+      ? 1
+      : 2;
 
   const scrollToActiveStage = (smooth: boolean = true) => {
     setTimeout(() => {
@@ -109,15 +121,85 @@ export default function DecisionDetailPage({
     }, 80);
   };
 
-  const handleSelectStage = (stage: WorkflowStage) => {
+  const handleSelectStage = (stage: WorkflowStage, targetAuditTab?: "verdict" | "frameworks" | "facts") => {
     setStageManuallySelected(true);
-    setWorkflowStage(stage);
+    if (stage === "structuring") {
+      setWorkflowStage("synthesis");
+      setReportAuditTab("facts");
+    } else if (stage === "frameworks") {
+      setWorkflowStage("synthesis");
+      setReportAuditTab("frameworks");
+    } else {
+      setWorkflowStage(stage);
+      if (stage === "synthesis" && targetAuditTab) {
+        setReportAuditTab(targetAuditTab);
+      }
+    }
     if (stage !== "ingestion") {
       setIsHeaderCollapsed(true);
     }
     scrollToActiveStage(true);
     if (stage === "synthesis" || stage === "frameworks") {
       loadData(true);
+    }
+  };
+
+  // Step 1 -> Step 2: From Input to Gaps
+  const handleAdvanceToGaps = async () => {
+    try {
+      await handleSave();
+      const hasPoints =
+        decision?.points && typeof decision.points === "object" && Object.keys(decision.points).length > 0;
+      const hasGaps = Array.isArray(decision?.gaps)
+        ? decision.gaps.length > 0
+        : Boolean(decision?.gaps && typeof decision.gaps === "object" && Object.keys(decision.gaps).length > 0);
+
+      if (!hasPoints) {
+        setPipelineLoadingMessage("Structuring dilemma inputs & cognitive facts...");
+        await analyzeDecisionInputs(decisionId);
+      }
+      if (!hasGaps) {
+        setPipelineLoadingMessage("Detecting critical unknowns & information gaps...");
+        await detectGaps(decisionId);
+      }
+      await loadData(true);
+      handleSelectStage("gaps");
+    } catch (err: unknown) {
+      console.error("Error advancing to gaps:", err);
+      handleSelectStage("gaps");
+    } finally {
+      setPipelineLoadingMessage(null);
+    }
+  };
+
+  // Step 2 -> Step 3: From Gaps to Final Report
+  const handleAdvanceToReport = async () => {
+    try {
+      await handleSave();
+      const hasAnalysis = Boolean(
+        decision?.analysis && typeof decision.analysis === "object" && Object.keys(decision.analysis).length > 0
+      );
+      const hasSynthesis = Boolean(
+        decision?.recommendation && typeof decision.recommendation === "object" && "headline" in decision.recommendation
+      );
+
+      if (!hasAnalysis) {
+        setPipelineLoadingMessage("Evaluating trade-offs & decision frameworks...");
+        await evaluateFrameworks(decisionId);
+      }
+      if (!hasSynthesis) {
+        setPipelineLoadingMessage("Synthesizing final executive ADR & execution roadmap...");
+        await synthesizeDecision(decisionId);
+      }
+      await loadData(true);
+      setReportAuditTab("verdict");
+      handleSelectStage("synthesis");
+    } catch (err: unknown) {
+      console.error("Error generating final report:", err);
+      setReportAuditTab("verdict");
+      handleSelectStage("synthesis");
+    } finally {
+      setPipelineLoadingMessage(null);
     }
   };
 
@@ -160,8 +242,10 @@ export default function DecisionDetailPage({
       if (!stageManuallySelected && !silent) {
         if (d.recommendation && typeof d.recommendation === "object" && "headline" in d.recommendation) {
           setWorkflowStage("synthesis");
+          setReportAuditTab("verdict");
         } else if (d.analysis && typeof d.analysis === "object" && Object.keys(d.analysis).length > 0) {
-          setWorkflowStage("frameworks");
+          setWorkflowStage("synthesis");
+          setReportAuditTab("frameworks");
         } else if (
           Array.isArray(d.gaps)
             ? d.gaps.length > 0
@@ -169,7 +253,7 @@ export default function DecisionDetailPage({
         ) {
           setWorkflowStage("gaps");
         } else if (d.points && typeof d.points === "object" && Object.keys(d.points).length > 0) {
-          setWorkflowStage("structuring");
+          setWorkflowStage("gaps");
         } else {
           setWorkflowStage("ingestion");
         }
@@ -270,7 +354,7 @@ export default function DecisionDetailPage({
       breadcrumbs={[
         ...(folder ? [{ label: folder.name, href: `/folders/${folder.id}` }] : []),
         { label: decision?.title ? `#${sequenceDisplay}: ${decision.title}` : "Decision Analysis", href: `/decisions/${decisionId}` },
-        { label: `Step ${currentStageIdx + 1}: ${workflowStagesList[currentStageIdx]?.label}` },
+        { label: currentPrimaryIdx === 0 ? "Stage 1: Input & Evidence" : currentPrimaryIdx === 1 ? "Stage 2: Unknowns & Gaps" : "Stage 3: Final Report" },
       ]}
       actions={
         <button
@@ -370,31 +454,90 @@ export default function DecisionDetailPage({
 
 
 
-            {/* Phase 11: End-to-End Guided Workflow Stepper (Sticky on scroll) */}
+            {/* 3-Milestone Streamlined Workflow Navigation (No Hectic Stepper) */}
             <div
               id="deep-audit-section"
               ref={stepContentRef}
               className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md pt-2 pb-2 -mx-2 px-2 sm:-mx-4 sm:px-4 border-b border-[#cfc7b2] dark:border-[#38332C] shadow-2xs transition-all font-courier"
             >
-              <WorkflowStepper
-                currentStage={workflowStage}
-                onSelectStage={(stage) => handleSelectStage(stage)}
-                viewMode={viewMode}
-                onToggleViewMode={() => setViewMode(viewMode === "step" ? "all" : "step")}
-                onOpenExportModal={() => setShowExportModal(true)}
-                onOpenAutoPilot={() => setShowAutoPilotModal(true)}
-                hasTranscript={Boolean(decision.transcript && decision.transcript.trim().length > 0)}
-                isTranscriptReviewed={Boolean(decision.transcript_reviewed)}
-                isPointsReviewed={Boolean(decision.points_reviewed)}
-                hasGaps={
-                  Array.isArray(decision.gaps)
-                    ? decision.gaps.length > 0
-                    : Boolean(decision.gaps && typeof decision.gaps === "object" && Object.keys(decision.gaps).length > 0)
-                }
-                hasFrameworks={Boolean(decision.analysis && typeof decision.analysis === "object" && Object.keys(decision.analysis).length > 0)}
-                hasSynthesis={Boolean(decision.recommendation && typeof decision.recommendation === "object" && "headline" in decision.recommendation)}
-                recordType={recordType}
-              />
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C]">
+                <nav className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto" aria-label="Deliberation stages">
+                  {primaryStages.map((stage, idx) => {
+                    const isActive =
+                      stage.id === "ingestion"
+                        ? workflowStage === "ingestion"
+                        : stage.id === "gaps"
+                        ? workflowStage === "gaps"
+                        : workflowStage === "synthesis" || workflowStage === "frameworks" || workflowStage === "structuring";
+
+                    const isComplete =
+                      stage.id === "ingestion"
+                        ? Boolean(description.trim() || attachments.length > 0 || decision?.transcript)
+                        : stage.id === "gaps"
+                        ? Boolean(
+                            Array.isArray(decision?.gaps)
+                              ? decision.gaps.length > 0
+                              : decision?.gaps && Object.keys(decision.gaps).length > 0
+                          )
+                        : Boolean(decision?.recommendation && "headline" in decision.recommendation);
+
+                    return (
+                      <React.Fragment key={stage.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectStage(stage.id)}
+                          className={`flex-1 sm:flex-initial inline-flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-[#1d1d1b] text-[#F4F0E6] border-[#1d1d1b] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50] shadow-2xs"
+                              : "bg-[#F4F0E6] text-[#4f4b40] dark:bg-[#181614] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                          }`}
+                        >
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-none font-mono ${
+                              isActive
+                                ? "bg-[#38332C] text-[#F4F0E6] dark:bg-[#181614] dark:text-[#D4AA50]"
+                                : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
+                            }`}
+                          >
+                            {stage.number}
+                          </span>
+                          <span>{stage.label}</span>
+                          {isComplete && (
+                            <CheckCircle2
+                              className={`w-3.5 h-3.5 shrink-0 ${
+                                isActive ? "text-emerald-400 dark:text-emerald-900" : "text-emerald-600 dark:text-emerald-400"
+                              }`}
+                            />
+                          )}
+                        </button>
+                        {idx < primaryStages.length - 1 && (
+                          <ChevronRight className="w-3.5 h-3.5 text-[#97907e] hidden sm:inline shrink-0" />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </nav>
+
+                <div className="flex items-center gap-2 text-[11px] text-[#4f4b40] dark:text-[#A89F91] self-end sm:self-center">
+                  {pipelineLoadingMessage ? (
+                    <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold animate-pulse">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>{pipelineLoadingMessage}</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50] animate-pulse" />
+                      <span>
+                        {workflowStage === "ingestion"
+                          ? "Stage 1: Input & Evidence"
+                          : workflowStage === "gaps"
+                          ? "Stage 2: Unknowns & Gaps"
+                          : "Stage 3: Final Report & Insights"}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Dedicated Active Stage Viewport with Auto-Focus Anchor */}
@@ -755,111 +898,220 @@ export default function DecisionDetailPage({
                       )}
                     </div>
                   </div>
+
+                  {/* Stage 1 Bottom Action Bar */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-6 font-courier">
+                    <div className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
+                      Stage 1 of 3: Provide dilemma context, reference specs, or meeting recording
+                    </div>
+                    <button
+                      type="button"
+                      disabled={Boolean(pipelineLoadingMessage)}
+                      onClick={handleAdvanceToGaps}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
+                    >
+                      {pipelineLoadingMessage ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>{pipelineLoadingMessage}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Find Gaps & Unknowns</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* STAGE 2: 2-Sided Cognitive De-Biasing & Input Triage */}
-              {(viewMode === "all" || workflowStage === "structuring") && (
-                <div className="animate-in fade-in duration-200">
-                  <StructuredFindingsEditor
-                    decisionId={decisionId}
-                    initialFindings={decision.points as unknown as StructuredFindings}
-                    isReviewed={decision.points_reviewed || false}
-                    onFindingsUpdated={() => loadData()}
-                    problemStatement={problemStatement || decision.problem_statement || ""}
-                    transcript={decision.transcript || ""}
-                    attachmentCount={attachments.length}
-                    onAdvanceToGaps={() => handleSelectStage("gaps")}
-                  />
-                </div>
-              )}
-
-              {/* STAGE 3: Information Gap Detection & Resolution (Phase 7 & 8) */}
+              {/* STAGE 2: Unknowns & Information Gap Resolution */}
               {(viewMode === "all" || workflowStage === "gaps") && (
-                <div className="animate-in fade-in duration-200">
+                <div className="space-y-6 animate-in fade-in duration-200">
                   <GapResolutionPanel
                     decisionId={decisionId}
                     initialGaps={decision.gaps}
                     onGapsUpdated={() => loadData()}
                   />
+
+                  {/* Stage 2 Bottom Action Bar */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs font-courier">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectStage("ingestion")}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Back to Input</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={Boolean(pipelineLoadingMessage)}
+                      onClick={handleAdvanceToReport}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
+                    >
+                      {pipelineLoadingMessage ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>{pipelineLoadingMessage}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Generate Final Report</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* STAGE 4: Structured Thinking Frameworks (Phase 9) */}
-              {(viewMode === "all" || workflowStage === "frameworks") && (
-                <div className="animate-in fade-in duration-200">
-                  <FrameworkPanel
-                    decisionId={decisionId}
-                    initialAnalysis={decision.analysis}
-                    onAnalysisUpdated={() => loadData()}
-                    onAdvanceToNextStage={() => handleSelectStage("synthesis")}
-                  />
-                </div>
-              )}
+              {/* STAGE 3: Final Decision Synthesis, Actionable Roadmap & Audit Navigation */}
+              {(viewMode === "all" || workflowStage === "synthesis" || workflowStage === "frameworks" || workflowStage === "structuring") && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  {/* Executive Navigation Bar: Why This Decision? / Frameworks / Facts */}
+                  <div className="p-3.5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none font-courier">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
+                          Stage 3: Executive Deliberation Dossier
+                        </span>
+                        <p className="text-[12px] text-[#4f4b40] dark:text-[#A89F91] font-sans">
+                          Inspect the final verdict, or verify why this decision was chosen via frameworks and extracted facts.
+                        </p>
+                      </div>
 
-              {/* STAGE 5: Final Decision Synthesis & Actionable Roadmap (Phase 10) */}
-              {(viewMode === "all" || workflowStage === "synthesis") && (
-                <div className="animate-in fade-in duration-200">
-                  <SynthesisPanel
-                    decisionId={decisionId}
-                    initialSynthesis={
-                      decision.recommendation && "headline" in decision.recommendation
-                        ? (decision.recommendation as unknown as DecisionSynthesis)
-                        : null
-                    }
-                    onSynthesisUpdated={() => loadData()}
-                  />
+                      {/* 3 Tabs to Understand "Why" and "How" */}
+                      <div className="flex flex-wrap items-center gap-1 bg-[#F4F0E6] dark:bg-[#181614] p-1 border border-[#cfc7b2] dark:border-[#38332C]">
+                        <button
+                          type="button"
+                          onClick={() => setReportAuditTab("verdict")}
+                          className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            reportAuditTab === "verdict"
+                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                          }`}
+                        >
+                          📑 Final ADR Verdict
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setReportAuditTab("frameworks")}
+                          className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            reportAuditTab === "frameworks"
+                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                          }`}
+                        >
+                          ⚖️ Why This Decision? (Frameworks & Scores)
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setReportAuditTab("facts")}
+                          className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            reportAuditTab === "facts"
+                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                          }`}
+                        >
+                          🔍 Underlying Facts & Statements
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* View 1: Verdict & Roadmap */}
+                  {reportAuditTab === "verdict" && (
+                    <SynthesisPanel
+                      decisionId={decisionId}
+                      initialSynthesis={
+                        decision.recommendation && "headline" in decision.recommendation
+                          ? (decision.recommendation as unknown as DecisionSynthesis)
+                          : null
+                      }
+                      onSynthesisUpdated={() => loadData()}
+                    />
+                  )}
+
+                  {/* View 2: Frameworks, Multi-Attribute Utility & Decision Tree */}
+                  {reportAuditTab === "frameworks" && (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-[#E5DEC9]/80 dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-courier text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center justify-between">
+                        <span>
+                          ⚖️ Multi-Attribute Utility (MAUT), Expected Value decision tree, and criteria weight trade-offs.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setReportAuditTab("verdict")}
+                          className="underline font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] cursor-pointer"
+                        >
+                          Back to Final Verdict →
+                        </button>
+                      </div>
+                      <FrameworkPanel
+                        decisionId={decisionId}
+                        initialAnalysis={decision.analysis}
+                        onAnalysisUpdated={() => loadData()}
+                        onAdvanceToNextStage={() => setReportAuditTab("verdict")}
+                      />
+                    </div>
+                  )}
+
+                  {/* View 3: Facts, Risks, Constraints & Assumptions */}
+                  {reportAuditTab === "facts" && (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-[#E5DEC9]/80 dark:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] text-xs font-courier text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center justify-between">
+                        <span>
+                          🔍 Extracted cognitive facts, constraints, risks, and stakeholder objections.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setReportAuditTab("verdict")}
+                          className="underline font-bold text-[#7a4e10] dark:text-[#D4AA50] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] cursor-pointer"
+                        >
+                          Back to Final Verdict →
+                        </button>
+                      </div>
+                      <StructuredFindingsEditor
+                        decisionId={decisionId}
+                        initialFindings={decision.points as unknown as StructuredFindings}
+                        isReviewed={decision.points_reviewed || false}
+                        onFindingsUpdated={() => loadData()}
+                        problemStatement={problemStatement || decision.problem_statement || ""}
+                        transcript={decision.transcript || ""}
+                        attachmentCount={attachments.length}
+                        onAdvanceToGaps={() => handleSelectStage("gaps")}
+                      />
+                    </div>
+                  )}
+
+                  {/* Stage 3 Bottom Action Bar */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs font-courier">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectStage("gaps")}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Back to Unknowns & Gaps</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowExportModal(true)}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download Meeting Takeaways</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-
-            {/* Guided Bottom Stage Action Bar (In Step Mode) */}
-            {viewMode === "step" && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-8 font-courier">
-                <button
-                  type="button"
-                  disabled={currentStageIdx === 0}
-                  onClick={() => handleSelectStage(workflowStagesList[currentStageIdx - 1].id)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>
-                    Previous: {currentStageIdx > 0 ? workflowStagesList[currentStageIdx - 1].label : "Start"}
-                  </span>
-                </button>
-
-                <div className="flex items-center gap-2 text-xs text-[#4f4b40] dark:text-[#A89F91] font-courier font-bold uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50] animate-pulse" />
-                  <span>
-                    Step {currentStageIdx + 1} of 5:{" "}
-                    <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{workflowStagesList[currentStageIdx]?.label}</strong>
-                  </span>
-                </div>
-
-                {currentStageIdx < workflowStagesList.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleSave();
-                      handleSelectStage(workflowStagesList[currentStageIdx + 1].id);
-                    }}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
-                  >
-                    <span>Continue to {workflowStagesList[currentStageIdx + 1].label}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowExportModal(true)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Meeting Takeaways</span>
-                  </button>
-                )}
-              </div>
-            )}
 
             {/* End of Page Action Bar: Download Meeting Takeaways */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 sm:p-6 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-8 font-courier">
