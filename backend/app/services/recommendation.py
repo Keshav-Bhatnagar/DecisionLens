@@ -2152,6 +2152,8 @@ def execute_hosted_synthesis(
     research = decision.research or {}
     analysis = decision.analysis or {}
 
+    critical_unknowns = _detect_critical_unknowns(gaps, points)
+
     matrix_data = analysis.get("decision_matrix", {}) if isinstance(analysis, dict) else {}
     canonical_dict = analysis.get("canonical_result") or matrix_data.get("canonical_result")
     matrix_results = matrix_data.get("results", [])
@@ -2434,7 +2436,7 @@ def execute_hosted_synthesis(
             risks=[r.get("risk", "") for r in parsed.get("risks_and_mitigations", []) if isinstance(r, dict)],
             decision_title=decision.title,
             assumptions=[a.get("assumption", "") for a in parsed.get("assumptions", []) if isinstance(a, dict)],
-            force_mock=req.force_mock if req else False,
+            force_mock=False,
         )
         parsed["roadmap"] = computed_roadmap.model_dump()
 
