@@ -58,22 +58,21 @@ EXECUTIVE MANDATE & WRITING GUIDELINES:
    - In "alternatives_considered", mark the canonical winner as "is_recommended": true and all other options as "is_recommended": false.
    - For alternative options, articulate genuine strategic trade-offs and provide a clear, respectful "why_not_recommended" explanation.
 
-4. CONTEXTUAL & GROUNDED ROADMAP:
-   - Formulate a 3-phase execution roadmap where EVERY milestone is directly tailored to the user's specific problem, domain, and alternatives.
-   - For PERSONAL / LIFESTYLE decisions (e.g. travel, vacation, hobbies, personal life):
-     * Phase 1: Planning, Availability & Budget Check (Timeline: "Days 1–2") — Confirm participant schedules, workplace leave approvals, and baseline budget before locking non-refundable reservations.
-     * Phase 2: Bookings, Logistics & Preparation (Timeline: "Days 3–5") — Lock cancellable reservations, finalize day-by-day activity logistics, and prepare emergency cash buffers.
-     * Phase 3: Trip Execution & Wrap-up (Timeline: "Travel & Return") — Embark on trip, monitor live spending against buffer, reconcile shared expenses, and capture personal learnings.
-   - For SOFTWARE / TECH decisions:
-     * Phase 1: Architecture Validation & Spike Prototype (Weeks 1–2)
-     * Phase 2: Core Build & Canary Migration (Weeks 3–5)
-     * Phase 3: Production Cutover & Observability (Weeks 6–8)
-   - For BUSINESS / OPERATIONS / REAL ESTATE / FINANCE decisions:
-     * Phase 1: Due Diligence & Pre-Commitment Validation (Weeks 1–2)
-     * Phase 2: Contract Structuring & Primary Execution (Weeks 3–5)
-     * Phase 3: Operationalization & Performance Governance (Weeks 6–8)
-   - Every task must have: "task_id", "title", "description", "owner_role", "timeline", "dependencies", "success_criteria", "is_completed": false, "source_type", "source_ids", "depends_on_gap_ids", and "reason".
-   - Assign domain-appropriate owner roles (e.g. Trip Planner, Budget Coordinator, Legal Counsel, Investment Committee, Technical Architect, Operations Lead).
+4. TIMELY CALCULATED ROADMAP & DOMAIN-AWARE OWNERSHIP (ZERO HARDCODING):
+   - Analyze the decision dilemma, domain, and constraints to calculate the natural operational cadence:
+     * Days for short-term turnarounds, trips, personal plans, and rapid sprints.
+     * Weeks for engineering builds, feature delivery, canary rollouts, hiring, or team pilots.
+     * Months for multi-quarter capital transitions, land acquisition, or large-scale re-platforming.
+   - DYNAMIC 3-PHASE EXECUTION:
+     * Derive 3 contiguous, sequential phase titles tailored specifically to the winner option's concrete deliverables (e.g., Phase 1: Feasibility & Readiness, Phase 2: Core Rollout & Validation, Phase 3: Final Cutover & Steady-State).
+     * NEVER regurgitate generic boilerplate phase titles (e.g. NEVER output "Due Diligence & Pre-Commitment Validation" for a personal trip, and NEVER output "Kafka / Microservices" for non-tech decisions).
+   - AUTHENTIC, DOMAIN-GROUNDED PARTICIPANT ROLES:
+     * For TECHNICAL / SOFTWARE decisions: Assign genuine engineering and platform roles reflecting real cross-functional ownership (e.g. 'Lead Architect', 'Staff SRE', 'Platform Lead', 'Security Counsel', 'VP of Engineering').
+     * For PERSONAL / LIFESTYLE decisions: The owner role is strictly "You". Do NOT invent artificial corporate titles, fake committees, or bureaucratic roles (NO 'Trip Planner', NO 'Budget Coordinator', NO 'Legal Counsel').
+     * For BUSINESS / OPERATIONS decisions: Assign real organizational operational roles (e.g. 'Operations Director', 'Procurement Lead', 'Financial Analyst', 'Executive Sponsor').
+   - TASK SPECIFICATION:
+     * Every task must have: "task_id", "title", "description", "owner_role", "timeline", "dependencies", "success_criteria", "is_completed": false, "source_type", "source_ids", "depends_on_gap_ids", and "reason".
+     * Address unresolved research gaps, operating assumptions, and blocking risks as explicit Phase 1 clearance tasks.
 
 5. EVIDENCE & CITATIONS:
    - Ground claims strictly in provided facts and research findings. Never invent fake URLs or external citations.
@@ -146,16 +145,16 @@ OUTPUT JSON SCHEMA:
     "phases": [
       {
         "phase_id": "phase-1",
-        "title": "Phase 1: [Domain-specific title, e.g. 'Planning & Availability' for personal, 'Due Diligence' for enterprise]",
-        "timeline": "[Domain timeline, e.g. 'Days 1–2' for 3–5 day personal planning, 'Weeks 1–2' for enterprise]",
-        "description": "Phase summary",
+        "title": "Phase 1: [Contextual title for initial feasibility & readiness]",
+        "timeline": "[Chronologically calculated timeline, e.g. 'Days 1–2' for short-term/personal, 'Weeks 1–2' for engineering]",
+        "description": "Calculated phase objective",
         "tasks": [
           {
             "task_id": "task-1",
             "title": "Actionable task title",
             "description": "Concrete task description",
-            "owner_role": "Domain-appropriate role (e.g. 'Trip Planner' for personal, 'Lead Architect' for tech)",
-            "timeline": "[Timeline matching phase, e.g. 'Days 1–2' or 'Weeks 1–2']",
+            "owner_role": "[Domain-grounded role: 'You' for personal; 'Lead Architect' or 'Staff SRE' for tech; 'Operations Lead' for business]",
+            "timeline": "[Timeline matching phase cadence]",
             "dependencies": [],
             "success_criteria": "Measurable exit criteria",
             "is_completed": false,
@@ -733,9 +732,11 @@ def generate_domain_grounded_roadmap(
                     "     * Phase 2: Core commitment, booking/procurement/building, and milestone rollout.\n"
                     "     * Phase 3: Final execution, live deployment/trip execution, and retrospective value capture.\n"
                     "\n"
-                    "3. GROUNDED TASKS & AUTHENTIC ROLES:\n"
+                    "3. GROUNDED TASKS & DOMAIN-AWARE ROLES:\n"
                     "   - Directly target the unresolved gaps, assumptions, and risks supplied in the prompt.\n"
-                    "   - Assign authentic, context-appropriate roles matching the real participants (e.g. 'Trip Planner', 'Travel Crew', 'Lead Architect', 'Site Surveyor', etc.).\n"
+                    "   - For PERSONAL/LIFESTYLE decisions, the owner role is strictly 'You'. Do NOT invent fictional corporate departments or committee roles (NO 'Trip Planner', NO 'Budget Coordinator').\n"
+                    "   - For SOFTWARE/TECH decisions, assign authentic engineering and platform roles ('Lead Architect', 'Staff SRE', 'Platform Lead', 'Security Counsel').\n"
+                    "   - For BUSINESS/OPERATIONS, assign authentic organizational roles ('Operations Lead', 'Procurement Director', 'Financial Analyst').\n"
                     "   - Form a connected dependency DAG where Phase 2 tasks depend on Phase 1 milestones, and Phase 3 tasks depend on Phase 2.\n"
                     "\n"
                     "Return ONLY valid JSON matching this schema:\n"
@@ -898,22 +899,40 @@ def generate_domain_grounded_roadmap(
                 .strip()
             )
             summary = (clean_gap[:55] + "...") if len(clean_gap) > 55 else clean_gap
-            phase1_tasks.append(
-                RoadmapTask(
-                    task_id=f"task-p1-{idx+1}",
-                    title=f"Resolve Unknown: {summary}",
-                    description=f"Conduct focused investigation and audit operational readiness regarding: {clean_gap}",
-                    owner_role=risk_role if idx == 0 else legal_role,
-                    timeline=default_p1_timeline,
-                    dependencies=[],
-                    success_criteria=f"Documented evidentiary clearance resolving ambiguity on {summary.lower()}.",
-                    is_completed=False,
-                    source_type="gap",
-                    source_ids=[g],
-                    depends_on_gap_ids=[g],
-                    reason="Pre-commitment diligence must resolve this unknown to avoid premature capital allocation.",
+            if is_personal_timeline:
+                phase1_tasks.append(
+                    RoadmapTask(
+                        task_id=f"task-p1-{idx+1}",
+                        title=f"Resolve Unknown: {summary}",
+                        description=f"Clarify and verify essential details regarding: {clean_gap}",
+                        owner_role="You",
+                        timeline=default_p1_timeline,
+                        dependencies=[],
+                        success_criteria=f"Clear confirmation resolving questions about {summary.lower()}.",
+                        is_completed=False,
+                        source_type="gap",
+                        source_ids=[g],
+                        depends_on_gap_ids=[g],
+                        reason="Resolves critical schedule, budget, or booking uncertainties before making non-refundable commitments.",
+                    )
                 )
-            )
+            else:
+                phase1_tasks.append(
+                    RoadmapTask(
+                        task_id=f"task-p1-{idx+1}",
+                        title=f"Resolve Unknown: {summary}",
+                        description=f"Conduct focused investigation and audit operational readiness regarding: {clean_gap}",
+                        owner_role=risk_role if idx == 0 else legal_role,
+                        timeline=default_p1_timeline,
+                        dependencies=[],
+                        success_criteria=f"Documented evidentiary clearance resolving ambiguity on {summary.lower()}.",
+                        is_completed=False,
+                        source_type="gap",
+                        source_ids=[g],
+                        depends_on_gap_ids=[g],
+                        reason="Pre-commitment diligence must resolve this unknown to avoid premature capital allocation.",
+                    )
+                )
     else:
         if is_personal_timeline:
             phase1_tasks.append(
@@ -1009,20 +1028,36 @@ def generate_domain_grounded_roadmap(
     if assumptions:
         first_asmp = str(assumptions[0]).strip()
         asmp_summary = (first_asmp[:55] + "...") if len(first_asmp) > 55 else first_asmp
-        phase1_tasks.append(
-            RoadmapTask(
-                task_id="task-p1-asmp",
-                title=f"Stress-Test Assumption: {asmp_summary}",
-                description=f"Gather empirical benchmark data to validate operating assumption: '{first_asmp}'.",
-                owner_role=risk_role,
-                timeline="Day 2" if is_personal_timeline else "Week 2",
-                dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
-                success_criteria="Empirical data confirms variance is within acceptable operational tolerance.",
-                is_completed=False,
-                source_type="condition",
-                reason="Mitigates execution risks originating from unverified baseline hypotheses.",
+        if is_personal_timeline:
+            phase1_tasks.append(
+                RoadmapTask(
+                    task_id="task-p1-asmp",
+                    title=f"Verify Condition: {asmp_summary}",
+                    description=f"Confirm that personal availability and travel conditions remain feasible: '{first_asmp}'.",
+                    owner_role="You",
+                    timeline="Day 2",
+                    dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
+                    success_criteria="Confirmation that schedule, leave approvals, and travel plans are aligned.",
+                    is_completed=False,
+                    source_type="condition",
+                    reason="Prevents last-minute cancellations, non-refundable deposit losses, and schedule disruption.",
+                )
             )
-        )
+        else:
+            phase1_tasks.append(
+                RoadmapTask(
+                    task_id="task-p1-asmp",
+                    title=f"Stress-Test Assumption: {asmp_summary}",
+                    description=f"Gather empirical benchmark data to validate operating assumption: '{first_asmp}'.",
+                    owner_role=risk_role,
+                    timeline="Week 2",
+                    dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
+                    success_criteria="Empirical data confirms variance is within acceptable operational tolerance.",
+                    is_completed=False,
+                    source_type="condition",
+                    reason="Mitigates execution risks originating from unverified baseline hypotheses.",
+                )
+            )
     else:
         if is_personal_timeline:
             phase1_tasks.append(
@@ -1967,17 +2002,30 @@ def generate_mock_synthesis(
                 AssumptionItem(
                     assumption=str(a),
                     is_verified=False,
-                    impact_if_false="May require re-evaluating operational timeline or adjusting cost projections by 10-20%.",
+                    impact_if_false=(
+                        "Trip dates or itinerary may need to be rescheduled or adjusted."
+                        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION")
+                        else "May require re-evaluating operational timeline or adjusting cost projections by 10-20%."
+                    ),
                 )
             )
     else:
-        assumptions_items.append(
-            AssumptionItem(
-                assumption="Target team bandwidth and operational continuity remain stable over the execution horizon.",
-                is_verified=False,
-                impact_if_false="Project completion milestones may slip by 2-4 weeks.",
+        if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+            assumptions_items.append(
+                AssumptionItem(
+                    assumption="Personal calendar availability, leave approvals, and travel conditions remain stable over the planning horizon.",
+                    is_verified=False,
+                    impact_if_false="Trip dates or itinerary may need to be rescheduled or adjusted.",
+                )
             )
-        )
+        else:
+            assumptions_items.append(
+                AssumptionItem(
+                    assumption="Target team bandwidth and operational continuity remain stable over the execution horizon.",
+                    is_verified=False,
+                    impact_if_false="Project completion milestones may slip by 2-4 weeks.",
+                )
+            )
 
     if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
         risks_and_mitigations = [
@@ -2389,6 +2437,16 @@ def execute_hosted_synthesis(
             force_mock=req.force_mock if req else False,
         )
         parsed["roadmap"] = computed_roadmap.model_dump()
+
+    # Strict role normalization: for personal/lifestyle decisions, all task owners are "You"
+    if domain.upper() in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+        roadmap_dict = parsed.get("roadmap")
+        if isinstance(roadmap_dict, dict) and "phases" in roadmap_dict:
+            for phase in roadmap_dict.get("phases", []):
+                if isinstance(phase, dict):
+                    for task in phase.get("tasks", []):
+                        if isinstance(task, dict):
+                            task["owner_role"] = "You"
 
     return DecisionSynthesis.model_validate(parsed)
 

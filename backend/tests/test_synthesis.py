@@ -860,4 +860,24 @@ def test_personal_lifestyle_domain_synthesis_free_from_tech_jargon(
     assert "Bookings" in synth.roadmap.phases[1].title or "Preparation" in synth.roadmap.phases[1].title
     assert "Travel" in synth.roadmap.phases[2].timeline or "Return" in synth.roadmap.phases[2].timeline
 
+    # Verify participant roles: for personal decisions, owner_role is strictly "You"
+    banned_corporate_roles = [
+        "trip planner", "travel crew", "budget coordinator", "budget & schedule guardian",
+        "participant & coordinator", "decision maker & planner", "lead decision maker",
+        "lead architect", "legal counsel", "site surveyor", "operations director"
+    ]
+    for p in synth.roadmap.phases:
+        for t in p.tasks:
+            assert t.owner_role == "You", f"Expected task owner_role to be 'You', got '{t.owner_role}'"
+            assert t.owner_role.lower() not in banned_corporate_roles
+
+    # Verify task descriptions and reasons are free from corporate due diligence clichés
+    all_reasons_and_desc = " ".join(
+        f"{t.description} {t.reason} {t.success_criteria}" for p in synth.roadmap.phases for t in p.tasks
+    ).lower()
+    assert "audit operational readiness" not in all_reasons_and_desc
+    assert "premature capital allocation" not in all_reasons_and_desc
+    assert "empirical benchmark data" not in all_reasons_and_desc
+
+
 
