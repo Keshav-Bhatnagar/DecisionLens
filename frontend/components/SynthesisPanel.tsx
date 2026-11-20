@@ -103,23 +103,53 @@ export default function SynthesisPanel({
   const [selectedGeoRate, setSelectedGeoRate] = useState<"INDIA" | "US" | "EUROPE" | "SEA">("INDIA");
   const [selectedScaleTier, setSelectedScaleTier] = useState<"STARTUP" | "GROWTH" | "ENTERPRISE">("GROWTH");
 
-  // Dynamic date calculation based on leadership's start date
-  function getPhaseDates(phaseIdx: number) {
+  // Smart phase date calculation — reads the phase's actual timeline string to derive correct offsets
+  // Mirrors the parseTimelineSpan logic in RoadmapVisualizer so dates stay consistent
+  function getPhaseDates(phaseIdx: number, phaseTimeline?: string) {
     try {
       const base = new Date(projectStartDate);
       if (isNaN(base.getTime())) return null;
+      const lower = (phaseTimeline || "").toLowerCase();
+
+      // Day-based: "Days 1–2", "Days 3–5", "Travel & Return"
+      const dayMatch = lower.match(/days?\s*(\d+)(?:\s*[-–—to]+\s*(\d+))?/);
+      if (dayMatch) {
+        const startDay = parseInt(dayMatch[1], 10) - 1;
+        const endDay = dayMatch[2] ? parseInt(dayMatch[2], 10) : startDay + 1;
+        const s = new Date(base.getTime() + Math.max(0, startDay) * 86400000);
+        const e = new Date(base.getTime() + Math.max(startDay + 1, endDay) * 86400000);
+        const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        return { startStr: fmt(s), endStr: fmt(e), range: `${fmt(s)} – ${fmt(e)}` };
+      }
+
+      // Week-based: "Weeks 1–2", "Weeks 3–4"
+      const weekMatch = lower.match(/weeks?\s*(\d+)(?:\s*[-–—to]+\s*(\d+))?/);
+      if (weekMatch) {
+        const startWeek = parseInt(weekMatch[1], 10) - 1;
+        const endWeek = weekMatch[2] ? parseInt(weekMatch[2], 10) : startWeek + 1;
+        const s = new Date(base.getTime() + Math.max(0, startWeek * 7) * 86400000);
+        const e = new Date(base.getTime() + Math.max(startWeek + 1, endWeek) * 7 * 86400000);
+        const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        return { startStr: fmt(s), endStr: fmt(e), range: `${fmt(s)} – ${fmt(e)}` };
+      }
+
+      // Month-based: "Month 1", "Months 2–3"
+      const monthMatch = lower.match(/months?\s*(\d+)(?:\s*[-–—to]+\s*(\d+))?/);
+      if (monthMatch) {
+        const startMonth = parseInt(monthMatch[1], 10) - 1;
+        const endMonth = monthMatch[2] ? parseInt(monthMatch[2], 10) : startMonth + 1;
+        const s = new Date(base.getTime() + Math.max(0, startMonth * 30) * 86400000);
+        const e = new Date(base.getTime() + Math.max(startMonth + 1, endMonth) * 30 * 86400000);
+        const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        return { startStr: fmt(s), endStr: fmt(e), range: `${fmt(s)} – ${fmt(e)}` };
+      }
+
+      // Sequential fallback based on phase index
       let startOffset = 0;
       let duration = 14;
-      if (phaseIdx === 0) {
-        startOffset = 0;
-        duration = 14;
-      } else if (phaseIdx === 1) {
-        startOffset = 14;
-        duration = 21;
-      } else {
-        startOffset = 35;
-        duration = 21;
-      }
+      if (phaseIdx === 0) { startOffset = 0; duration = 14; }
+      else if (phaseIdx === 1) { startOffset = 14; duration = 21; }
+      else { startOffset = 35; duration = 21; }
       const s = new Date(base);
       s.setDate(s.getDate() + startOffset);
       const e = new Date(s);
@@ -1525,7 +1555,13 @@ jobs:
 
             <span className="hidden lg:inline text-[15px] text-[#97907e] dark:text-[#A89F91] italic font-newsreader">
               {activeTab === "memo" && "Executive verdict, stakeholder alignment, and pre-commitment gates."}
-              {activeTab === "roadmap" && "30-60-90 day milestone delivery plan and operational ownership."}
+              {activeTab === "roadmap" && (
+                isPersonalDomain
+                  ? "Day-by-day action plan, ownership, and execution milestones."
+                  : displayRoadmap?.phases?.[0]?.timeline?.toLowerCase().includes("month")
+                    ? "Multi-month execution roadmap with phase milestones and operational ownership."
+                    : "Sprint-based execution roadmap with phase milestones and operational ownership."
+              )}
               {activeTab === "audit" && "Evidentiary claims, stress-tested assumptions, risks, and counterarguments."}
             </span>
           </div>
@@ -1625,7 +1661,7 @@ jobs:
                     Execution Next Steps
                   </span>
                   <span className="text-xs text-muted">
-                    Decision validated. Review the 30-60-90 day delivery roadmap or examine the full evidence audit.
+                    Decision validated. Review the timely calculated execution roadmap or examine the full evidence audit.
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

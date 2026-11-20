@@ -814,7 +814,25 @@ def generate_domain_grounded_roadmap(
                     if len(roadmap_obj.phases) >= 3 and all(len(p.tasks) > 0 for p in roadmap_obj.phases):
                         if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
                             obj_str = json.dumps(roadmap_obj.model_dump()).lower()
-                            if any(w in obj_str for w in ["weeks 1-2", "week 1-2", "due diligence & pre-commitment", "contract structuring & primary execution", "kafka", "microservice"]):
+                            # Detect corporate boilerplate — check both ASCII hyphen and en-dash variants
+                            _corporate_tokens = [
+                                # Week-based timelines (wrong for personal/days decisions)
+                                "weeks 1-2", "week 1-2", "weeks 1\u20132", "week 1\u20132",
+                                "weeks 3-5", "weeks 3\u20135", "weeks 6-8", "weeks 6\u20138",
+                                # Generic corporate phase titles
+                                "due diligence & pre-commitment", "due diligence &amp; pre-commitment",
+                                "contract structuring & primary execution",
+                                "operationalization & performance governance",
+                                "operationalization &amp; performance governance",
+                                # Corporate role names that should never appear for personal decisions
+                                "budget & schedule guardian", "budget &amp; schedule guardian",
+                                "decision maker & planner", "decision maker &amp; planner",
+                                "participant & coordinator", "participant &amp; coordinator",
+                                "fiduciary sponsor", "boardroom", "steering committee",
+                                # Tech-specific jargon that doesn't belong in personal decisions
+                                "kafka", "microservice", "pgbouncer", "canary routing",
+                            ]
+                            if any(w in obj_str for w in _corporate_tokens):
                                 logger.info("AI returned generic corporate phase for personal roadmap; falling back to tailored heuristic")
                             else:
                                 logger.info("Successfully generated AI-grounded roadmap for '%s'", decision_title)
