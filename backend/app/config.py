@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Optional
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,8 +11,12 @@ class Settings(BaseSettings):
 
     # Security
     jwt_secret: str = "decisionlens-development-secret-key-change-in-production-min-32-chars"
+    secret_key: Optional[str] = None
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 720
+
+    # Frontend URL for OAuth redirects, CORS and client links
+    frontend_url: str = "https://ais-dev-cdsjf4nyu3rxyb5jai7lo3-899172124060.asia-northeast1.run.app"
 
     # Database
     database_url: str = "sqlite:///./decisionlens.db"
@@ -29,6 +33,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3001",
         "http://localhost:3002",
         "http://127.0.0.1:3002",
+        "https://ais-dev-cdsjf4nyu3rxyb5jai7lo3-899172124060.asia-northeast1.run.app",
+        "https://ais-pre-cdsjf4nyu3rxyb5jai7lo3-899172124060.asia-northeast1.run.app",
     ]
 
     # AI Provider & Model Configuration (Azure / Gemini / OpenAI)
@@ -151,15 +157,36 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        origins = []
         if isinstance(v, str):
             if v.startswith("[") and v.endswith("]"):
                 import json
                 try:
-                    return json.loads(v)
+                    origins = json.loads(v)
                 except Exception:
                     pass
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+            if not origins:
+                origins = [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            origins = list(v)
+
+        # Always guarantee AI Studio and localhost origins are permitted
+        default_required = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://ais-dev-cdsjf4nyu3rxyb5jai7lo3-899172124060.asia-northeast1.run.app",
+            "https://ais-pre-cdsjf4nyu3rxyb5jai7lo3-899172124060.asia-northeast1.run.app",
+        ]
+        for d in default_required:
+            if d not in origins:
+                origins.append(d)
+        return origins
+
+    def model_post_init(self, __context) -> None:
+        super().model_post_init(__context)
+        # Keep secret key fixed if SECRET_KEY was set in environment
+        if self.secret_key and self.secret_key.strip():
+            self.jwt_secret = self.secret_key.strip()
 
     @property
     def storage_path(self) -> Path:

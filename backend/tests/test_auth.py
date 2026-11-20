@@ -315,3 +315,46 @@ def test_update_profile_unauthorized(client: TestClient):
     assert res.status_code == 401
 
 
+def test_login_and_register_set_httponly_cookie(client: TestClient):
+    """Verify login and register responses set HttpOnly access_token cookie."""
+    # Register
+    email = "cookie_test_user@example.com"
+    pwd = "SecurePassword123!"
+    reg_res = client.post("/api/auth/register", json={"email": email, "password": pwd})
+    assert reg_res.status_code == 201
+    assert "access_token" in reg_res.cookies
+
+    # Login
+    login_res = client.post("/api/auth/login", json={"email": email, "password": pwd})
+    assert login_res.status_code == 200
+    assert "access_token" in login_res.cookies
+
+
+def test_cookie_auth_fallback_on_get_me(client: TestClient, registered_user: dict):
+    """Verify /api/auth/me succeeds with ONLY the HttpOnly access_token cookie (no Authorization header)."""
+    token = registered_user["token"]
+    # Send request with cookies set and NO Authorization header
+    client.cookies.set("access_token", token)
+    res = client.get("/api/auth/me")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["email"] == registered_user["email"]
+    # Clear cookie
+    client.cookies.clear()
+
+
+def test_cors_preflight_for_ai_studio_origin(client: TestClient):
+    """Verify preflight CORS checks succeed for Google Cloud Run AI Studio origin."""
+    ai_studio_origin = "https://ais-dev-cdsjf4nyu3rxyb5jai7lo3-899172124060.asia-northeast1.run.app"
+    headers = {
+        "Origin": ai_studio_origin,
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "Authorization, Content-Type",
+    }
+    res = client.options("/api/auth/me", headers=headers)
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == ai_studio_origin
+    assert res.headers.get("access-control-allow-credentials") == "true"
+
+
+

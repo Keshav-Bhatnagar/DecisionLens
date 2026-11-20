@@ -2,7 +2,7 @@ import logging
 import secrets
 from typing import List, Optional
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -32,8 +32,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
 )
-def register(body: UserRegister, db: Session = Depends(get_db)):
-    """Register a new user account and return a signed JWT token."""
+def register(body: UserRegister, response: Response, db: Session = Depends(get_db)):
+    """Register a new user account and return a signed JWT token with HttpOnly cookie."""
     normalized_email = body.email.lower().strip()
 
     stmt = select(User).where(User.email == normalized_email)
@@ -53,6 +53,15 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = create_token(user.id)
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=2592000,
+    )
     return TokenResponse(
         access_token=token,
         token_type="bearer",
@@ -65,8 +74,8 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
     response_model=TokenResponse,
     summary="User login",
 )
-def login(body: UserLogin, db: Session = Depends(get_db)):
-    """Authenticate user with email and password and return a signed JWT token."""
+def login(body: UserLogin, response: Response, db: Session = Depends(get_db)):
+    """Authenticate user with email and password and return a signed JWT token with HttpOnly cookie."""
     normalized_email = body.email.lower().strip()
 
     stmt = select(User).where(User.email == normalized_email)
@@ -80,6 +89,15 @@ def login(body: UserLogin, db: Session = Depends(get_db)):
         )
 
     token = create_token(user.id)
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=2592000,
+    )
     return TokenResponse(
         access_token=token,
         token_type="bearer",
@@ -150,7 +168,8 @@ def get_oauth_providers(request: Request):
     base_url = settings.supabase_url.rstrip("/") if settings.supabase_url else ""
 
     # Dynamically determine frontend origin for redirect
-    frontend_origin = "http://localhost:3000"
+    # Prioritizes settings.frontend_url if configured, falling back to request Origin / Referer
+    frontend_origin = settings.frontend_url.rstrip("/") if getattr(settings, "frontend_url", None) else "http://localhost:3000"
     if request:
         origin_header = request.headers.get("origin") or request.headers.get("referer")
         if origin_header:
@@ -159,15 +178,17 @@ def get_oauth_providers(request: Request):
             if parsed.scheme and parsed.netloc:
                 frontend_origin = f"{parsed.scheme}://{parsed.netloc}"
 
+    callback_url = f"{frontend_origin}/auth/callback"
+
     google_auth_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth?"
         f"client_id={settings.google_client_id}&"
-        f"redirect_uri={frontend_origin}/auth/callback&"
+        f"redirect_uri={callback_url}&"
         f"response_type=code&"
         f"scope=openid%20email%20profile&"
         f"access_type=offline&"
         f"prompt=select_account"
-    ) if settings.google_client_id else f"{base_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to={frontend_origin}/auth/callback"
+    ) if settings.google_client_id else f"{base_url}/auth/v1/authorize?provider=google&scopes=openid%20email%20profile&redirect_to={callback_url}"
 
     providers: List[OAuthProviderInfo] = [
         OAuthProviderInfo(
@@ -182,14 +203,14 @@ def get_oauth_providers(request: Request):
             name="Microsoft / Azure AD",
             configured=bool(settings.microsoft_client_id),
             client_id=settings.microsoft_client_id or None,
-            auth_url=f"{base_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to={frontend_origin}/auth/callback",
+            auth_url=f"{base_url}/auth/v1/authorize?provider=azure&scopes=openid%20email%20profile&redirect_to={callback_url}",
         ),
         OAuthProviderInfo(
             id="github",
             name="GitHub",
             configured=bool(settings.github_client_id),
             client_id=settings.github_client_id or None,
-            auth_url=f"{base_url}/auth/v1/authorize?provider=github&redirect_to={frontend_origin}/auth/callback",
+            auth_url=f"{base_url}/auth/v1/authorize?provider=github&redirect_to={callback_url}",
         ),
     ]
     return providers
@@ -200,12 +221,18 @@ def get_oauth_providers(request: Request):
     response_model=TokenResponse,
     summary="Authenticate or register user via OAuth provider",
 )
-def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
+def authenticate_oauth(body: OAuthLoginRequest, response: Response, db: Session = Depends(get_db)):
     """Authenticate or register user via Google, GitHub, Microsoft, or Supabase OAuth.
     Supports real token verification or automated dev sandbox simulation.
     """
     valid_providers = {"google", "github", "microsoft", "supabase", "azure"}
     normalized_provider = body.provider.lower().strip()
+
+    default_callback = (
+        f"{settings.frontend_url.rstrip('/')}/auth/callback"
+        if getattr(settings, "frontend_url", None)
+        else "http://localhost:3000/auth/callback"
+    )
 
     # Smart auto-detection if code signature identifies a specific provider
     if body.code:
@@ -230,7 +257,7 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
     # 1. Google Authorization Code Exchange (OAuth callback flow)
     if normalized_provider == "google" and body.code:
         try:
-            redirect_uri = body.redirect_uri or "http://localhost:3000/auth/callback"
+            redirect_uri = body.redirect_uri or default_callback
             token_payload = {
                 "code": body.code,
                 "client_id": settings.google_client_id,
@@ -293,7 +320,7 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
     # 2. Microsoft Azure AD Authorization Code Exchange
     if normalized_provider == "microsoft" and body.code:
         try:
-            redirect_uri = body.redirect_uri or "http://localhost:3000/auth/callback"
+            redirect_uri = body.redirect_uri or default_callback
             token_payload = {
                 "code": body.code,
                 "client_id": settings.microsoft_client_id,
@@ -362,7 +389,7 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
     # 3. GitHub Authorization Code Exchange
     if normalized_provider == "github" and body.code:
         try:
-            redirect_uri = body.redirect_uri or "http://localhost:3000/auth/callback"
+            redirect_uri = body.redirect_uri or default_callback
             token_payload = {
                 "code": body.code,
                 "client_id": settings.github_client_id,
@@ -491,7 +518,7 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
     # 6. Supabase Code Exchange (if PKCE code was returned from Supabase OAuth)
     if (normalized_provider in {"supabase", "azure"} or "supabase" in normalized_provider) and body.code and not resolved_email and settings.supabase_url:
         try:
-            redirect_uri = body.redirect_uri or "http://localhost:3000/auth/callback"
+            redirect_uri = body.redirect_uri or default_callback
             token_url = f"{settings.supabase_url}/auth/v1/token?grant_type=pkce"
             headers = {}
             if settings.supabase_anon_key:
@@ -563,6 +590,15 @@ def authenticate_oauth(body: OAuthLoginRequest, db: Session = Depends(get_db)):
             db.refresh(user)
 
     token = create_token(user.id)
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=2592000,
+    )
     return TokenResponse(
         access_token=token,
         token_type="bearer",

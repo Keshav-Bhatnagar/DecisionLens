@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 import jwt
 
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pwdlib import PasswordHash
 from sqlalchemy.orm import Session
@@ -67,11 +67,19 @@ def decode_token(token: str) -> Dict[str, Any]:
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    """Dependency for securing endpoints with Bearer JWT tokens."""
-    payload = decode_token(credentials.credentials)
+    """Dependency for securing endpoints with Bearer JWT tokens or HttpOnly cookie fallback."""
+    raw_token = (credentials.credentials if credentials else None) or request.cookies.get("access_token")
+    if not raw_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials were not provided",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    payload = decode_token(raw_token)
     user_id_raw = payload.get("sub")
     if not user_id_raw:
         raise HTTPException(
@@ -100,17 +108,14 @@ def get_current_user(
     return user
 
 
-
-
-
-
 def get_current_user_from_header_or_query(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme),
     token: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ) -> User:
-    """Dependency supporting standard Bearer header OR query param token (e.g. for HTML5 audio streaming)."""
-    raw_token = credentials.credentials if credentials else token
+    """Dependency supporting standard Bearer header, query param token, OR HttpOnly cookie fallback."""
+    raw_token = (credentials.credentials if credentials else None) or token or request.cookies.get("access_token")
     if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -51,11 +51,24 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# Configure CORS for frontend connectivity
+# Configure CORS for frontend connectivity (including Google Cloud Run AI Studio previews and Cloudflare tunnels)
+cors_allowed_list = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://ais-dev-cdsjf4nyu3rxyb5jai7lo3-899172124060.asia-northeast1.run.app",
+    "https://ais-pre-cdsjf4nyu3rxyb5jai7lo3-899172124060.asia-northeast1.run.app",
+]
+if isinstance(settings.cors_origins, list):
+    for origin in settings.cors_origins:
+        if origin not in cors_allowed_list:
+            cors_allowed_list.append(origin)
+elif isinstance(settings.cors_origins, str) and settings.cors_origins not in cors_allowed_list:
+    cors_allowed_list.append(settings.cors_origins)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|.*\.trycloudflare\.com)(:\d+)?$",
+    allow_origins=cors_allowed_list,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|.*\.run\.app|.*\.trycloudflare\.com)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
