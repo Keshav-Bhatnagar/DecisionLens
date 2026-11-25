@@ -20,7 +20,11 @@ from app.schemas import (
     SynthesisRequest,
     OverrideRequest,
 )
-from app.services.recommendation import run_decision_synthesis, generate_domain_grounded_roadmap
+from app.services.recommendation import (
+    run_decision_synthesis,
+    generate_domain_grounded_roadmap,
+    validate_and_sanitize_roadmap_for_domain,
+)
 from app.services.report_generator import (
     generate_decision_markdown_report,
     generate_decision_json_report,
@@ -290,46 +294,41 @@ def get_active_roadmap(
         .first()
     )
 
-    # Domain-aware self-healing check for personal, lifestyle, and travel decisions
+    # Domain-aware self-healing check: ensure active roadmap matches decision domain
     domain_val = getattr(decision, "domain", "") or ""
-    title_problem = f"{decision.title or ''} {decision.problem_statement or ''}".lower()
-    is_personal = (
-        domain_val.upper() in ("PERSONAL", "LIFESTYLE", "EDUCATION")
-        or any(k in title_problem for k in ["trip", "vacation", "holiday", "tour", "travel", "flight", "hotel", "manali", "resort", "leave", "personal"])
-    )
+    if domain_val == "AUTO" or not domain_val:
+        from app.services.framework_engine import detect_decision_domain
+        domain_val = detect_decision_domain(decision)
 
-    if is_personal:
-        check_phases = active_record.phases if active_record else (decision.roadmap.get("phases", []) if isinstance(decision.roadmap, dict) else [])
-        phases_str = json.dumps(check_phases).lower()
-        if any(stale in phases_str for stale in ["weeks 1-2", "week 1-2", "weeks 3-5", "due diligence", "contract structuring", "operationalization & performance", "kafka", "microservice", "pgbouncer"]):
-            logger.info("Self-healing stale corporate roadmap for personal decision %s", decision_id)
-            canonical = (decision.recommendation or {}).get("canonical_result") or {}
-            winner_name = canonical.get("winner_option_name") or decision.title or "Trip"
-            critical_gaps = []
-            if decision.gaps and isinstance(decision.gaps, dict):
-                critical_gaps = [g.get("question", "") for g in decision.gaps.get("gaps", []) if isinstance(g, dict)]
+    target_roadmap_data = None
+    if active_record:
+        target_roadmap_data = RoadmapData(
+            title=active_record.title,
+            phases=active_record.phases,
+        )
+    elif decision.roadmap and "phases" in decision.roadmap:
+        target_roadmap_data = RoadmapData.model_validate(decision.roadmap)
 
-            clean_roadmap = generate_domain_grounded_roadmap(
-                domain="PERSONAL",
-                top_option_name=winner_name,
-                critical_gaps=critical_gaps,
-                critical_conditions=[],
-                risks=[],
-                decision_title=decision.title,
-                assumptions=[],
-                force_mock=True,
-            )
-            clean_phases = [p.model_dump() for p in clean_roadmap.phases]
+    if target_roadmap_data:
+        sanitized = validate_and_sanitize_roadmap_for_domain(
+            roadmap=target_roadmap_data,
+            domain=domain_val,
+            decision_title=decision.title or "",
+            problem_statement=decision.problem_statement or "",
+        )
+        if sanitized.phases != target_roadmap_data.phases:
+            logger.info("Self-healed cross-domain contaminated roadmap for decision %s", decision_id)
+            clean_phases = [p.model_dump() for p in sanitized.phases]
             if active_record:
                 active_record.phases = clean_phases
-                active_record.title = clean_roadmap.title
+                active_record.title = sanitized.title
                 flag_modified(active_record, "phases")
             else:
                 active_record = RoadmapRecord(
                     decision_id=decision.id,
                     owner_id=decision.owner_id,
                     version=1,
-                    title=clean_roadmap.title,
+                    title=sanitized.title,
                     phases=clean_phases,
                     is_active=True,
                 )
@@ -337,24 +336,18 @@ def get_active_roadmap(
 
             if isinstance(decision.roadmap, dict):
                 decision.roadmap["phases"] = clean_phases
-                decision.roadmap["title"] = clean_roadmap.title
+                decision.roadmap["title"] = sanitized.title
                 flag_modified(decision, "roadmap")
             if isinstance(decision.recommendation, dict) and "roadmap" in decision.recommendation:
-                decision.recommendation["roadmap"] = clean_roadmap.model_dump()
+                decision.recommendation["roadmap"] = sanitized.model_dump()
                 flag_modified(decision, "recommendation")
 
             db.commit()
-            db.refresh(active_record)
-            return clean_roadmap
+            if active_record:
+                db.refresh(active_record)
+            return sanitized
 
-    if active_record:
-        return RoadmapData(
-            title=active_record.title,
-            phases=active_record.phases,
-        )
-
-    if decision.roadmap and "phases" in decision.roadmap:
-        return RoadmapData.model_validate(decision.roadmap)
+        return target_roadmap_data
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -397,8 +390,20 @@ def update_active_roadmap(
         .first()
     )
 
-    updated_phases = [p.model_dump() for p in payload.phases]
-    updated_title = payload.title or (active_record.title if active_record else "Implementation Roadmap")
+    domain_val = getattr(decision, "domain", "") or "BUSINESS"
+    if domain_val == "AUTO" or not domain_val:
+        from app.services.framework_engine import detect_decision_domain
+        domain_val = detect_decision_domain(decision)
+
+    sanitized = validate_and_sanitize_roadmap_for_domain(
+        roadmap=payload,
+        domain=domain_val,
+        decision_title=decision.title or "",
+        problem_statement=decision.problem_statement or "",
+    )
+
+    updated_phases = [p.model_dump() for p in sanitized.phases]
+    updated_title = sanitized.title or payload.title or (active_record.title if active_record else "Implementation Roadmap")
     kickoff_anchor = payload.start_date or payload.kickoff_date or (decision.roadmap.get("kickoff_date") if isinstance(decision.roadmap, dict) else None)
 
     if active_record:

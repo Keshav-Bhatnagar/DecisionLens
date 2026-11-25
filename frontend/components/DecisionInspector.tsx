@@ -227,6 +227,7 @@ export default function DecisionInspector({
             >
               <option value="draft">Needs Evidence (Draft)</option>
               <option value="evaluating">Under Scrutiny (Evaluating)</option>
+              <option value="conditional">Awaiting Validation (Conditional)</option>
               <option value="decided">Decided (Consensus)</option>
               <option value="archived">Archived</option>
             </select>

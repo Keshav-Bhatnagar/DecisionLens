@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
@@ -100,10 +100,18 @@ def get_folder_precedents(
                     if phase_title:
                         roadmap_phases.append(phase_title.strip())
 
-            # Extract latest real-world outcome review
+            # Extract latest real-world outcome review with explicit chronological ordering
             outcome_info = None
             if hasattr(rec, "outcomes") and rec.outcomes:
-                latest_outcome = rec.outcomes[-1]
+                sorted_outcomes = sorted(
+                    rec.outcomes,
+                    key=lambda o: (
+                        o.created_at or datetime.min.replace(tzinfo=timezone.utc),
+                        getattr(o, "days_since_decision", 0) or 0,
+                        getattr(o, "id", 0) or 0,
+                    ),
+                )
+                latest_outcome = sorted_outcomes[-1]
                 outcome_info = {
                     "implementation_status": latest_outcome.implementation_status,
                     "chosen_option": latest_outcome.chosen_option,

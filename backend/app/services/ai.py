@@ -55,6 +55,7 @@ DecisionLens categorizes decision context into 8 distinct cognitive categories:
 
 <epistemic_standards>
 - STRICT SOURCE GROUNDING: Every extracted point must be backed by a verbatim span from the source input (source_statement, source_spans). Never fabricate claims.
+- NEVER CLASSIFY HEADINGS AS FACTS: Never classify Markdown headings (e.g. '### DECISION TITLE', '### PROBLEM STATEMENT', '### EXTRACTED DOCUMENTS'), section titles, document tags, or prompt boundaries as facts, assumptions, or findings. All extracted findings must be derived strictly from actual user statements, transcripts, notes, and substantive document passages.
 - MANDATORY WHY_CLASSIFIED: Every single item in EVERY category MUST provide a specific `why_classified` field citing the exact metrics, statutes, fallacies, or operational limits found in that statement.
 - PRESERVE MODALITY: Never upgrade "we think X might work" into a proven fact. Preserve hedging words (might, could, likely, expect, estimate).
 - STRUCTURAL DECISION TRAPS: Identify structural fallacies (Sunk Cost Fallacy, Planning Fallacy, Capacity-Architecture Mismatch) in private feedback.
@@ -157,6 +158,98 @@ Return valid JSON adhering strictly to this schema:
   }
 }
 </output_format>"""
+
+
+def is_heading_or_structural_label(text: Any) -> bool:
+    """
+    Return True if text or item is a Markdown heading, section label, or structural marker.
+    Headings and structural labels must NEVER be classified as confirmed facts or findings.
+    """
+    if not text:
+        return True
+    if hasattr(text, "text"):
+        t = str(text.text).strip()
+    elif hasattr(text, "statement"):
+        t = str(text.statement).strip()
+    else:
+        t = str(text).strip()
+
+    if not t:
+        return True
+
+    # Check leading Markdown hashes or ### inside text
+    if t.startswith("#") or "###" in t:
+        return True
+
+    t_clean = re.sub(r"^#{1,6}\s*", "", t).strip()
+    upper = t_clean.upper()
+
+    structural_headers = [
+        "DECISION TITLE",
+        "PROBLEM STATEMENT",
+        "BACKGROUND CONTEXT",
+        "BACKGROUND CONTEXT & NOTES",
+        "VOICE TRANSCRIPT",
+        "REVIEWED VOICE TRANSCRIPT",
+        "RAW VOICE TRANSCRIPT",
+        "CONFIDENTIAL PARTICIPANT INPUTS",
+        "CONFIDENTIAL PARTICIPANT INPUTS (PRIVATE BOT CHAT)",
+        "EXTRACTED DOCUMENTS",
+        "RAW INPUT CONTEXT",
+        "FOLDER MEMORY",
+        "PRIOR FOLDER CONTEXT",
+    ]
+
+    for header in structural_headers:
+        if upper == header or upper.startswith(f"{header}:") or upper.startswith(f"{header}\n"):
+            return True
+
+    # Document container tag e.g. [Document: architecture.pdf]
+    if re.match(r"^\[Document:\s*[^\]]+\]$", t, flags=re.IGNORECASE):
+        return True
+
+    # Prompt tag boundaries
+    if t.startswith("<") and t.endswith(">"):
+        return True
+
+    return False
+
+
+def strip_headings_and_structural_labels(text: str) -> str:
+    """
+    Strip Markdown headings (e.g., ### DECISION TITLE), document headers,
+    and prompt structural markers from text before extracting cognitive items.
+    Ensures headings and metadata tags are never mistaken for user content or facts.
+    """
+    if not text:
+        return ""
+
+    # Remove XML-like tags e.g. <UNTRUSTED_USER_INPUT>
+    cleaned = re.sub(r"</?[A-Z0-9_-]+>", "", text)
+
+    lines = []
+    for line in cleaned.splitlines():
+        trimmed = line.strip()
+        if not trimmed:
+            continue
+        # Check for Markdown headings: #, ##, ###, ####, etc.
+        if re.match(r"^#{1,6}\s+.*$", trimmed) or trimmed.startswith("###"):
+            continue
+        # Check for document tags like [Document: invoice.pdf]
+        if re.match(r"^\[Document:\s*[^\]]+\]$", trimmed, flags=re.IGNORECASE):
+            continue
+        # Check for section boilerplate lines
+        if "Crucial private facts, unspoken concerns" in trimmed:
+            continue
+        # For private chat item prefixes like "- [FACT | Role: Lead | From: Alice | Impact: HIGH] My message"
+        # Extract only the substantive message part
+        if trimmed.startswith("- [") and "]" in trimmed:
+            trimmed = trimmed.split("]", 1)[-1].lstrip(": ").strip()
+
+        if trimmed and not is_heading_or_structural_label(trimmed):
+            lines.append(trimmed)
+
+    return "\n".join(lines)
 
 
 def _make_item(
@@ -493,14 +586,25 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
     else:
         # General non-database decision extraction dynamically grounded in input
-        sentences = [s.strip() for s in re.split(r"[.\n;!?]+", raw_input) if len(s.strip()) > 8]
-        first_span = sentences[0] if sentences else raw_input.strip()[:100]
+        substantive_input = strip_headings_and_structural_labels(raw_input)
+        sentences = [
+            s.strip()
+            for s in re.split(r"[.\n;!?]+", substantive_input)
+            if len(s.strip()) > 8 and not is_heading_or_structural_label(s)
+        ]
+
+        if not sentences and substantive_input.strip():
+            candidate = substantive_input.strip()[:100]
+            if not is_heading_or_structural_label(candidate):
+                sentences = [candidate]
+
+        first_span = sentences[0] if sentences else "Operational decision evaluation"
         second_span = sentences[1] if len(sentences) > 1 else first_span
         third_span = sentences[2] if len(sentences) > 2 else first_span
 
         raw_facts = [
             (
-                f"Context established: {first_span}.",
+                f"Operational decision scope: {first_span.rstrip('.')}.",
                 first_span,
                 "direct_extraction",
                 "confirmed_fact",
@@ -508,25 +612,38 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
                 True,
             )
         ]
-        if "budget" in text_lower or "cost" in text_lower or "$" in text_lower or "₹" in text_lower:
-            budget_match = next(
-                (s for s in sentences if any(w in s.lower() for w in ["budget", "cost", "$", "₹"])),
-                first_span,
-            )
+        if second_span != first_span:
             raw_facts.append(
                 (
-                    f"Budget parameters and cost considerations are active constraints: {budget_match}.",
-                    budget_match,
+                    f"Operational context: {second_span.rstrip('.')}.",
+                    second_span,
                     "direct_extraction",
                     "confirmed_fact",
-                    0.95,
+                    0.92,
                     True,
                 )
             )
 
+        if "budget" in text_lower or "cost" in text_lower or "$" in text_lower or "₹" in text_lower:
+            budget_match = next(
+                (s for s in sentences if any(w in s.lower() for w in ["budget", "cost", "$", "₹"]) and not is_heading_or_structural_label(s)),
+                None,
+            )
+            if budget_match:
+                raw_facts.append(
+                    (
+                        f"Budget parameters and cost considerations are active constraints: {budget_match.rstrip('.')}.",
+                        budget_match,
+                        "direct_extraction",
+                        "confirmed_fact",
+                        0.95,
+                        True,
+                    )
+                )
+
         raw_assumptions = [
             (
-                f"Operating baseline may require ongoing validation: {second_span}.",
+                f"Operating baseline may require ongoing validation: {second_span.rstrip('.')}.",
                 second_span,
                 "explicit_user_inference",
                 "unvalidated_premise",
@@ -537,7 +654,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_feelings = [
             (
-                f"Stakeholders express caution, hesitation, or preference regarding operational disruption: {third_span}.",
+                f"Stakeholders express caution, hesitation, or preference regarding operational disruption: {third_span.rstrip('.')}.",
                 third_span,
                 "direct_extraction",
                 "subjective_preference",
@@ -548,7 +665,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_pros = [
             (
-                f"Addressing core requirements directly supports organizational priorities: {first_span}.",
+                f"Addressing core requirements directly supports organizational priorities: {first_span.rstrip('.')}.",
                 first_span,
                 "normalized_extraction",
                 "confirmed_fact",
@@ -559,7 +676,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_cons = [
             (
-                f"Implementing changes introduces transitional operational friction: {second_span}.",
+                f"Implementing changes introduces transitional operational friction: {second_span.rstrip('.')}.",
                 second_span,
                 "model_inference",
                 "inferred_risk",
@@ -574,11 +691,11 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
                 line_str = line.strip()
                 if line_str.startswith("- [") and ("]:" in line_str or "] " in line_str):
                     content_part = line_str.split("]", 1)[-1].lstrip(": ").strip()
-                    if content_part:
+                    if content_part and not is_heading_or_structural_label(content_part):
                         if "fact" in line_str.lower():
                             raw_facts.append(
                                 (
-                                    f"Confidential fact raised in private chat: {content_part}",
+                                    f"Confidential fact raised in private chat: {content_part.rstrip('.')}.",
                                     content_part,
                                     "direct_extraction",
                                     "confirmed_fact",
@@ -589,7 +706,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
                         else:
                             raw_cons.append(
                                 (
-                                    f"Confidential concern raised in private bot chat: {content_part}",
+                                    f"Confidential concern raised in private bot chat: {content_part.rstrip('.')}.",
                                     content_part,
                                     "direct_extraction",
                                     "inferred_risk",
@@ -600,7 +717,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
 
         raw_mixed = [
             (
-                f"Balancing immediate velocity against thorough verification of unvalidated variables: {third_span}.",
+                f"Balancing immediate velocity against thorough verification of unvalidated variables: {third_span.rstrip('.')}.",
                 third_span,
                 "analytical_derivation",
                 "trade_off",
@@ -644,7 +761,7 @@ def generate_mock_structuring_findings(raw_input: str, language: str = "en") -> 
             ),
         ]
 
-        summary = f"Structuring of core operational decision regarding: {first_span}."
+        summary = f"Structuring of core operational decision regarding: {first_span.rstrip('.')}."
         biases = [
             "Confirmation Bias: Risk of seeking evidence that reinforces initial baseline preferences."
         ]
@@ -744,8 +861,11 @@ def is_external_research_dependent(item_or_text: Any) -> bool:
 def is_grounded_in_user_input(source_stmt: str, raw_input: str) -> bool:
     """
     Validation Rule Step 2: Confirm that the source statement comes from the user's original decision input.
+    Never accepts Markdown headings or structural labels.
     """
     if not source_stmt or not raw_input:
+        return False
+    if is_heading_or_structural_label(source_stmt):
         return False
     source_lower = source_stmt.lower().strip()
     raw_lower = raw_input.lower().strip()
@@ -779,9 +899,16 @@ def validate_stage2_source_boundary(
     2. Confirm that source statement comes from the user's original decision input.
     3. Confirm that the item does not depend on external research.
     4. Confirm that wording does not increase certainty or introduce an unstated claim.
+    5. Confirm that Markdown headings and structural labels are NEVER classified as findings.
 
     If any check fails, return (False, reason) so item is removed from Stage 2.
     """
+    # Step 0: Confirm item and source statement are not Markdown headings or structural labels
+    if is_heading_or_structural_label(text):
+        return False, "Item is a Markdown heading or structural label (headings cannot be findings)"
+    if source_stmt and is_heading_or_structural_label(source_stmt):
+        return False, "Source statement is a Markdown heading or structural label (headings cannot be facts)"
+
     # Step 3: Confirm item does not depend on external research
     if is_external_research_dependent(text) or is_external_research_dependent(source_stmt):
         return False, "Depends on external research or third-party benchmark (violates Step 3)"
@@ -800,13 +927,14 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
     """
     Epistemic validation and sanitization gate applied to all Stage 2 structured findings:
     1. NON-NEGOTIABLE SOURCE BOUNDARY: Purge any items depending on external research, benchmarks, or web outputs.
-    2. Grounding Verification: Remove any items whose supporting source statement is not traceable to user input.
-    3. Demote false contradictions (trade-offs, constraints, differing timelines) to mixed_points.
-    4. Enforce zero contradictions when no mutually incompatible propositions exist.
-    5. Ensure unknowns are phrased as questions/missing evidence, not conclusions.
-    6. Move speculative claims out of facts into assumptions (Step 4 certainty preservation).
-    7. Cleanse amateur psychoanalysis from feelings.
-    8. Synchronize and populate grounded_items metadata across all 8 categories.
+    2. Headings & Structural Labels Purge: Purge any items that are Markdown headings or section titles.
+    3. Grounding Verification: Remove any items whose supporting source statement is not traceable to user input.
+    4. Demote false contradictions (trade-offs, constraints, differing timelines) to mixed_points.
+    5. Enforce zero contradictions when no mutually incompatible propositions exist.
+    6. Ensure unknowns are phrased as questions/missing evidence, not conclusions.
+    7. Move speculative claims out of facts into assumptions (Step 4 certainty preservation).
+    8. Cleanse amateur psychoanalysis from feelings.
+    9. Synchronize and populate grounded_items metadata across all 8 categories.
     """
     raw_lower = raw_input.lower() if raw_input else ""
 
@@ -823,7 +951,13 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
     ]
     for cat in all_categories:
         items = getattr(findings, cat, [])
-        cleaned = [item for item in items if not is_external_research_dependent(item)]
+        cleaned = [
+            item for item in items
+            if not is_external_research_dependent(item)
+            and not is_heading_or_structural_label(item)
+            and "### DECISION TITLE" not in str(item)
+            and not str(item).strip().startswith("###")
+        ]
         setattr(findings, cat, cleaned)
 
     # 2. Sanitize Contradictions
@@ -1008,6 +1142,12 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
         grounded[cat] = synced_items
 
     findings.grounded_items = grounded
+
+    # Sanitize summary if it contains headings or markdown section labels
+    if findings.summary and ("### DECISION TITLE" in findings.summary or "###" in findings.summary):
+        findings.summary = re.sub(r"###\s*[A-Z_ ]+", "", findings.summary).strip()
+        findings.summary = re.sub(r"\s+", " ", findings.summary).strip()
+
     return findings
 
 

@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -20,14 +20,17 @@ from app.schemas import (
     ConfidenceAssessment,
     CounterargumentItem,
     DecisionDomain,
+    DecisionLifecycleStatus,
     DecisionSynthesis,
     ReceiptLineItem,
+    RESOLVED_GAP_STATUSES,
     RiskMitigationItem,
     RoadmapData,
     RoadmapPhase,
     RoadmapTask,
     SupportingEvidenceItem,
     SynthesisRequest,
+    UNRESOLVED_GAP_STATUSES,
 )
 
 logger = logging.getLogger("decisionlens.recommendation")
@@ -185,7 +188,11 @@ def _detect_critical_unknowns(gaps: Dict[str, Any], points: Dict[str, Any]) -> L
         if isinstance(g, dict):
             importance = str(g.get("importance", "")).lower()
             status_val = str(g.get("status", "")).lower()
-            if importance in ("high", "critical") and status_val in ("unanswered", "skipped", "pending"):
+            is_unresolved = (
+                status_val in UNRESOLVED_GAP_STATUSES
+                or (status_val not in RESOLVED_GAP_STATUSES and not g.get("resolved_answer") and not g.get("answer"))
+            )
+            if importance in ("high", "critical") and is_unresolved:
                 critical.append(f"Unresolved High-Importance Gap: {g.get('question', 'Key unknown')}")
 
     if isinstance(points, dict):
@@ -429,35 +436,93 @@ def compute_blunder_shield(
         total_receipt = "₹44.00 Lakh"
 
     elif domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
-        archetype = "PERSONAL_LIFESTYLE"
-        capital = "₹25,000 – ₹75,000"
-        sprints = "3–5 Days Planning"
-        trap = f"Non-refundable booking lock-in, unvetted itinerary friction, or schedule conflict via {runner}"
-        rationale = f"Avoided non-cancellable reservations, unforeseen surge tariffs, and schedule disruption."
-        line_items = [
-            ReceiptLineItem(
-                item_name="Non-Refundable Booking & Cancellation Exposure",
-                category="Direct Travel / Booking Expense",
-                unit_basis="Hotel deposits, transit/flight cancellation penalty clauses",
-                amount_inr="₹18,500",
-                rationale="Avoided non-refundable upfront commitment prior to firm schedule clearance.",
-            ),
-            ReceiptLineItem(
-                item_name="Unplanned Transit & Itinerary Contingency Surge",
-                category="Contingency Budget",
-                unit_basis="Peak surge pricing, last-minute rebooking, and logistics overhead",
-                amount_inr="₹12,000",
-                rationale="Buffered against peak surge rates by locking flexible rates early.",
-            ),
-            ReceiptLineItem(
-                item_name="Schedule Conflict & Opportunity Cost",
-                category="Time & Opportunity Cost",
-                unit_basis="Work conflict, missed personal commitments, or rescheduled dates",
-                amount_inr="₹14,500",
-                rationale="Prevented clashes with critical work and personal deadlines.",
-            ),
-        ]
-        total_receipt = "₹45,000"
+        is_travel = any(k in context_text for k in [
+            "trip", "vacation", "travel", "holiday", "itinerary", "flight", "hotel", "resort",
+            "tour", "tourism", "destination", "booking", "manali", "getaway", "sightseeing"
+        ])
+        has_financial_evidence = any(k in context_text for k in [
+            "₹", "$", "rs.", "rs ", "inr", "usd", "lakh", "crore", "budget", "cost", "price",
+            "fee", "rent", "tuition", "saving", "expense", "down payment", "emi", "expenditure",
+            "deposit", "tariff", "booking amount"
+        ])
+
+        if is_travel:
+            archetype = "PERSONAL_LIFESTYLE"
+            if has_financial_evidence:
+                capital = "₹25,000 – ₹75,000"
+                sprints = "3–5 Days Planning"
+                trap = f"Non-refundable booking lock-in, unvetted itinerary friction, or schedule conflict via {runner}"
+                rationale = "Avoided non-cancellable reservations, unforeseen surge tariffs, and schedule disruption."
+                line_items = [
+                    ReceiptLineItem(
+                        item_name="Non-Refundable Booking & Cancellation Exposure",
+                        category="Direct Travel / Booking Expense",
+                        unit_basis="Hotel deposits, transit/flight cancellation penalty clauses",
+                        amount_inr="₹18,500",
+                        rationale="Avoided non-refundable upfront commitment prior to firm schedule clearance.",
+                    ),
+                    ReceiptLineItem(
+                        item_name="Unplanned Transit & Itinerary Contingency Surge",
+                        category="Contingency Budget",
+                        unit_basis="Peak surge pricing, last-minute rebooking, and logistics overhead",
+                        amount_inr="₹12,000",
+                        rationale="Buffered against peak surge rates by locking flexible rates early.",
+                    ),
+                    ReceiptLineItem(
+                        item_name="Schedule Conflict & Opportunity Cost",
+                        category="Time & Opportunity Cost",
+                        unit_basis="Work conflict, missed personal commitments, or rescheduled dates",
+                        amount_inr="₹14,500",
+                        rationale="Prevented clashes with critical work and personal deadlines.",
+                    ),
+                ]
+                total_receipt = "₹45,000"
+            else:
+                capital = "₹0 (No Financial Risk Quantified)"
+                sprints = "2–3 Days Planning"
+                trap = f"Schedule conflict or unvetted itinerary friction via {runner}"
+                rationale = "No quantifiable direct capital at risk was identified in evidence. Avoided scheduling friction and booking uncertainty."
+                line_items = []
+                total_receipt = "₹0"
+        else:
+            # Non-travel personal/lifestyle decision
+            archetype = "PERSONAL_COMMITMENT" if domain_upper != "EDUCATION" else "EDUCATION_INVESTMENT"
+            if has_financial_evidence:
+                capital = "₹35,000 – ₹1.20 Lakh"
+                sprints = "1–2 Sprints (2–4 Wks)" if domain_upper == "EDUCATION" else "3–7 Days Evaluation"
+                trap = f"Unhedged financial commitment and recurring overhead lock-in with {runner}"
+                rationale = "Shielded personal balance sheet from premature commitment and hidden recurring fees."
+                line_items = [
+                    ReceiptLineItem(
+                        item_name="Upfront Commitment & Initial Expense Exposure",
+                        category="Direct Acquisition / Setup Expense",
+                        unit_basis="Initial non-refundable fee, deposit, or upfront acquisition cost",
+                        amount_inr="₹28,500",
+                        rationale="Avoided upfront expenditure prior to verifying feasibility and baseline alignment.",
+                    ),
+                    ReceiptLineItem(
+                        item_name="Recurring Maintenance & Lifestyle Overhead",
+                        category="Ongoing Operating Drag",
+                        unit_basis="Recurring maintenance, subscription fees, or ongoing servicing burden",
+                        amount_inr="₹15,000",
+                        rationale="Prevented unbudgeted long-term lifestyle carrying costs.",
+                    ),
+                    ReceiptLineItem(
+                        item_name="Opportunity Cost & Emergency Buffer Reserve",
+                        category="Personal Liquidity Reserve",
+                        unit_basis="Opportunity cost of allocated funds against personal contingency buffer",
+                        amount_inr="₹12,500",
+                        rationale="Preserved personal liquidity for higher-priority household needs.",
+                    ),
+                ]
+                total_receipt = "₹56,000"
+            else:
+                capital = "₹0 (Non-Monetary / Insufficient Financial Evidence)"
+                sprints = "2–3 Days Evaluation"
+                trap = f"Commitment friction or misaligned personal trade-offs via {runner}"
+                rationale = "No verified direct capital exposure was identified in the submitted evidence. Preserved time, cognitive bandwidth, and habit consistency."
+                line_items = []
+                total_receipt = "₹0"
 
     elif domain_upper in ("SOFTWARE", "PRODUCT"):
         has_k8s = any(k in context_text for k in ["k8s", "kubernetes", "eks", "gke", "aks", "helm", "service mesh", "istio"])
@@ -645,21 +710,42 @@ def _calculate_timeline_cadence(text_context: str, domain: str) -> dict:
         "quarter", "year", "annual", "multi-year", "capital expansion"
     ]) or domain.upper() in ("REAL_ESTATE", "FINANCE")
 
+    # Check for travel-specific signals
+    is_travel = any(k in lower for k in [
+        "trip", "travel", "vacation", "holiday", "manali", "getaway", "flight", "hotel", "resort", "itinerary"
+    ])
+
     if has_day_signals and not has_long_signals:
-        return {
-            "unit": "Day",
-            "p1_timeline": "Days 1–2",
-            "p2_timeline": "Days 3–5",
-            "p3_timeline": "Travel & Return",
-            "t1_timeline": "Days 1–2",
-            "t2_timeline": "Day 2",
-            "t3_timeline": "Days 3–4",
-            "t4_timeline": "Day 4",
-            "t5_timeline": "Day 5",
-            "t6_timeline": "Travel Horizon",
-            "t7_timeline": "Post-Trip Day 1",
-            "t8_timeline": "Post-Trip Day 2",
-        }
+        if is_travel:
+            return {
+                "unit": "Day",
+                "p1_timeline": "Days 1–2",
+                "p2_timeline": "Days 3–5",
+                "p3_timeline": "Travel & Return",
+                "t1_timeline": "Days 1–2",
+                "t2_timeline": "Day 2",
+                "t3_timeline": "Days 3–4",
+                "t4_timeline": "Day 4",
+                "t5_timeline": "Day 5",
+                "t6_timeline": "Travel Horizon",
+                "t7_timeline": "Post-Trip Day 1",
+                "t8_timeline": "Post-Trip Day 2",
+            }
+        else:
+            return {
+                "unit": "Day",
+                "p1_timeline": "Days 1–2",
+                "p2_timeline": "Days 3–5",
+                "p3_timeline": "Days 6–7",
+                "t1_timeline": "Days 1–2",
+                "t2_timeline": "Day 2",
+                "t3_timeline": "Days 3–4",
+                "t4_timeline": "Day 4",
+                "t5_timeline": "Day 5",
+                "t6_timeline": "Day 6",
+                "t7_timeline": "Day 7",
+                "t8_timeline": "Follow-up Day 8",
+            }
     elif has_long_signals:
         return {
             "unit": "Month",
@@ -903,6 +989,10 @@ def generate_domain_grounded_roadmap(
     legal_role, risk_role, ops_role, exec_role = roles
 
     is_personal_timeline = domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION")
+    is_travel = any(k in f"{decision_title or ''} {top_option_name} {' '.join(critical_gaps or [])} {' '.join(risks or [])}".lower() for k in [
+        "trip", "vacation", "travel", "holiday", "itinerary", "flight", "hotel", "resort",
+        "tour", "tourism", "destination", "booking", "manali", "getaway", "sightseeing"
+    ])
     cadence = _calculate_timeline_cadence(f"{decision_title or ''} {top_option_name}", domain_upper)
     default_p1_timeline = cadence["t1_timeline"]
 
@@ -931,7 +1021,7 @@ def generate_domain_grounded_roadmap(
                         source_type="gap",
                         source_ids=[g],
                         depends_on_gap_ids=[g],
-                        reason="Resolves critical schedule, budget, or booking uncertainties before making non-refundable commitments.",
+                        reason="Resolves critical uncertainties before making non-refundable commitments.",
                     )
                 )
             else:
@@ -953,20 +1043,36 @@ def generate_domain_grounded_roadmap(
                 )
     else:
         if is_personal_timeline:
-            phase1_tasks.append(
-                RoadmapTask(
-                    task_id="task-p1-pers",
-                    title=f"Confirm Calendar Dates, Leave & Feasibility{title_context}",
-                    description=f"Verify participant schedules, workplace leave approvals, and baseline availability for {top_option_name}.",
-                    owner_role=legal_role,
-                    timeline="Days 1–2",
-                    dependencies=[],
-                    success_criteria="Approved calendar dates and aligned participant availability.",
-                    is_completed=False,
-                    source_type="decision_requirement",
-                    reason="Guarantees schedule availability before locking non-refundable reservations.",
+            if is_travel:
+                phase1_tasks.append(
+                    RoadmapTask(
+                        task_id="task-p1-pers",
+                        title=f"Confirm Calendar Dates, Leave & Feasibility{title_context}",
+                        description=f"Verify participant schedules, workplace leave approvals, and baseline availability for {top_option_name}.",
+                        owner_role="You",
+                        timeline="Days 1–2",
+                        dependencies=[],
+                        success_criteria="Approved calendar dates and aligned participant availability.",
+                        is_completed=False,
+                        source_type="decision_requirement",
+                        reason="Guarantees schedule availability before locking non-refundable reservations.",
+                    )
                 )
-            )
+            else:
+                phase1_tasks.append(
+                    RoadmapTask(
+                        task_id="task-p1-pers",
+                        title=f"Verify Personal Feasibility & Constraint Alignment{title_context}",
+                        description=f"Confirm availability, commitment bandwidth, and personal priorities for {top_option_name}.",
+                        owner_role="You",
+                        timeline="Days 1–2",
+                        dependencies=[],
+                        success_criteria="Personal priorities verified and baseline constraints cleared.",
+                        is_completed=False,
+                        source_type="decision_requirement",
+                        reason="Guarantees alignment with personal constraints before allocating resources.",
+                    )
+                )
         elif domain_upper == "REAL_ESTATE":
             phase1_tasks.append(
                 RoadmapTask(
@@ -1047,20 +1153,36 @@ def generate_domain_grounded_roadmap(
         first_asmp = str(assumptions[0]).strip()
         asmp_summary = (first_asmp[:55] + "...") if len(first_asmp) > 55 else first_asmp
         if is_personal_timeline:
-            phase1_tasks.append(
-                RoadmapTask(
-                    task_id="task-p1-asmp",
-                    title=f"Verify Condition: {asmp_summary}",
-                    description=f"Confirm that personal availability and travel conditions remain feasible: '{first_asmp}'.",
-                    owner_role="You",
-                    timeline="Day 2",
-                    dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
-                    success_criteria="Confirmation that schedule, leave approvals, and travel plans are aligned.",
-                    is_completed=False,
-                    source_type="condition",
-                    reason="Prevents last-minute cancellations, non-refundable deposit losses, and schedule disruption.",
+            if is_travel:
+                phase1_tasks.append(
+                    RoadmapTask(
+                        task_id="task-p1-asmp",
+                        title=f"Verify Condition: {asmp_summary}",
+                        description=f"Confirm that personal availability and travel conditions remain feasible: '{first_asmp}'.",
+                        owner_role="You",
+                        timeline="Day 2",
+                        dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
+                        success_criteria="Confirmation that schedule, leave approvals, and travel plans are aligned.",
+                        is_completed=False,
+                        source_type="condition",
+                        reason="Prevents last-minute cancellations, non-refundable deposit losses, and schedule disruption.",
+                    )
                 )
-            )
+            else:
+                phase1_tasks.append(
+                    RoadmapTask(
+                        task_id="task-p1-asmp",
+                        title=f"Verify Condition: {asmp_summary}",
+                        description=f"Validate that personal priorities and baseline conditions hold true: '{first_asmp}'.",
+                        owner_role="You",
+                        timeline="Day 2",
+                        dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
+                        success_criteria="Confirmation that baseline prerequisites and assumptions remain valid.",
+                        is_completed=False,
+                        source_type="condition",
+                        reason="Prevents misaligned commitments and ensures sustainable adoption.",
+                    )
+                )
         else:
             phase1_tasks.append(
                 RoadmapTask(
@@ -1078,20 +1200,36 @@ def generate_domain_grounded_roadmap(
             )
     else:
         if is_personal_timeline:
-            phase1_tasks.append(
-                RoadmapTask(
-                    task_id="task-p1-eval",
-                    title=f"Verify Budget Allocation & Booking Terms{title_context}",
-                    description="Confirm personal budget allowance, refundability conditions, and contingency reserves.",
-                    owner_role=risk_role,
-                    timeline="Day 2",
-                    dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
-                    success_criteria="Budget allocated and non-refundable deposit terms identified.",
-                    is_completed=False,
-                    source_type="risk",
-                    reason="Prevents financial overcommitment prior to finalizing schedule.",
+            if is_travel:
+                phase1_tasks.append(
+                    RoadmapTask(
+                        task_id="task-p1-eval",
+                        title=f"Verify Budget Allocation & Booking Terms{title_context}",
+                        description="Confirm personal budget allowance, refundability conditions, and contingency reserves.",
+                        owner_role="You",
+                        timeline="Day 2",
+                        dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
+                        success_criteria="Budget allocated and non-refundable deposit terms identified.",
+                        is_completed=False,
+                        source_type="risk",
+                        reason="Prevents financial overcommitment prior to finalizing schedule.",
+                    )
                 )
-            )
+            else:
+                phase1_tasks.append(
+                    RoadmapTask(
+                        task_id="task-p1-eval",
+                        title=f"Verify Budget & Commitment Boundaries{title_context}",
+                        description="Confirm personal budget parameters, cancellation/trial terms, and reserve limits.",
+                        owner_role="You",
+                        timeline="Day 2",
+                        dependencies=[phase1_tasks[0].task_id] if phase1_tasks else [],
+                        success_criteria="Budget boundaries and clear exit terms established.",
+                        is_completed=False,
+                        source_type="risk",
+                        reason="Prevents overcommitment prior to finalizing terms.",
+                    )
+                )
         else:
             phase1_tasks.append(
                 RoadmapTask(
@@ -1268,84 +1406,164 @@ def generate_domain_grounded_roadmap(
             ),
         ]
     elif domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
-        phase2_tasks: List[RoadmapTask] = [
-            RoadmapTask(
-                task_id="task-p2-terms",
-                title=f"Lock Core Bookings with Flexible Cancellation Policies for {top_option_name}",
-                description="Secure transit and accommodation reservations prioritizing free cancellation and price-drop protection.",
-                owner_role=legal_role,
-                timeline="Days 3–4",
-                dependencies=[t.task_id for t in phase1_tasks[:1]],
-                success_criteria="Core reservations confirmed with documented cancellation windows.",
-                is_completed=False,
-                source_type="decision_requirement",
-                reason="Protects against unexpected schedule shifts while guaranteeing room and seat availability.",
-            ),
-            RoadmapTask(
-                task_id="task-p2-exec",
-                title="Coordinate Day-by-Day Itinerary & Local Logistics",
-                description="Finalize daily activity routes, transit arrangements, essential permits, and packing checklist.",
-                owner_role=ops_role,
-                timeline="Day 4",
-                dependencies=["task-p2-terms"],
-                success_criteria="Actionable day-to-day itinerary shared with participants.",
-                is_completed=False,
-                source_type="decision_requirement",
-                reason="Ensures smooth logistics and prevents on-the-ground confusion.",
-            ),
-            RoadmapTask(
-                task_id="task-p2-canary",
-                title="Emergency Readiness & Contingency Setup",
-                description="Verify travel insurance coverage, emergency contact access, medical supplies, and contingency cash buffer.",
-                owner_role=risk_role,
-                timeline="Day 5",
-                dependencies=["task-p2-exec"],
-                success_criteria="Emergency kit, contacts, and policy documents readily accessible offline.",
-                is_completed=False,
-                source_type="risk",
-                reason="Mitigates travel disruptions, medical surprises, or transit cancellations.",
-            ),
-        ]
+        if is_travel:
+            phase2_tasks: List[RoadmapTask] = [
+                RoadmapTask(
+                    task_id="task-p2-terms",
+                    title=f"Lock Core Bookings with Flexible Cancellation Policies for {top_option_name}",
+                    description="Secure transit and accommodation reservations prioritizing free cancellation and price-drop protection.",
+                    owner_role="You",
+                    timeline="Days 3–4",
+                    dependencies=[t.task_id for t in phase1_tasks[:1]],
+                    success_criteria="Core reservations confirmed with documented cancellation windows.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Protects against unexpected schedule shifts while guaranteeing room and seat availability.",
+                ),
+                RoadmapTask(
+                    task_id="task-p2-exec",
+                    title="Coordinate Day-by-Day Itinerary & Local Logistics",
+                    description="Finalize daily activity routes, transit arrangements, essential permits, and packing checklist.",
+                    owner_role="You",
+                    timeline="Day 4",
+                    dependencies=["task-p2-terms"],
+                    success_criteria="Actionable day-to-day itinerary shared with participants.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Ensures smooth logistics and prevents on-the-ground confusion.",
+                ),
+                RoadmapTask(
+                    task_id="task-p2-canary",
+                    title="Emergency Readiness & Contingency Setup",
+                    description="Verify travel insurance coverage, emergency contact access, medical supplies, and contingency cash buffer.",
+                    owner_role="You",
+                    timeline="Day 5",
+                    dependencies=["task-p2-exec"],
+                    success_criteria="Emergency kit, contacts, and policy documents readily accessible offline.",
+                    is_completed=False,
+                    source_type="risk",
+                    reason="Mitigates travel disruptions, medical surprises, or transit cancellations.",
+                ),
+            ]
 
-        # Phase 3: Personal Execution & Wrap-up
-        phase3_tasks: List[RoadmapTask] = [
-            RoadmapTask(
-                task_id="task-p3-close",
-                title=f"Execute Itinerary & Track Travel Budget in Real-Time{title_context}",
-                description="Embark on trip, monitor daily spending against the allocated buffer, and adjust activities dynamically.",
-                owner_role=ops_role,
-                timeline="Travel Horizon",
-                dependencies=["task-p2-canary"],
-                success_criteria="Successful travel execution staying within allocated budget boundary.",
-                is_completed=False,
-                source_type="condition",
-                reason="Ensures seamless experience without unbudgeted spending spikes.",
-            ),
-            RoadmapTask(
-                task_id="task-p3-runbook",
-                title="Post-Trip Reconciliation & Return Handover",
-                description="Reconcile shared travel expenses among participants, settle payments, and smoothly resume daily commitments.",
-                owner_role=ops_role,
-                timeline="Post-Trip Day 1",
-                dependencies=["task-p3-close"],
-                success_criteria="All shared expenses reconciled and settled without discrepancies.",
-                is_completed=False,
-                source_type="decision_requirement",
-                reason="Ensures clean closure of commitments and peace of mind.",
-            ),
-            RoadmapTask(
-                task_id="task-p3-gov",
-                title="Personal Retrospective & Learnings",
-                description="Review trip value, lodging quality, and transit convenience to guide future travel planning.",
-                owner_role=exec_role,
-                timeline="Post-Trip Day 2",
-                dependencies=["task-p3-runbook"],
-                success_criteria="Key takeaways documented for future trip planning.",
-                is_completed=False,
-                source_type="decision_requirement",
-                reason="Builds personal decision wisdom and optimizes future leisure investments.",
-            ),
-        ]
+            # Phase 3: Personal Execution & Wrap-up
+            phase3_tasks: List[RoadmapTask] = [
+                RoadmapTask(
+                    task_id="task-p3-close",
+                    title=f"Execute Itinerary & Track Travel Budget in Real-Time{title_context}",
+                    description="Embark on trip, monitor daily spending against the allocated buffer, and adjust activities dynamically.",
+                    owner_role="You",
+                    timeline="Travel Horizon",
+                    dependencies=["task-p2-canary"],
+                    success_criteria="Successful travel execution staying within allocated budget boundary.",
+                    is_completed=False,
+                    source_type="condition",
+                    reason="Ensures seamless experience without unbudgeted spending spikes.",
+                ),
+                RoadmapTask(
+                    task_id="task-p3-runbook",
+                    title="Post-Trip Reconciliation & Return Handover",
+                    description="Reconcile shared travel expenses among participants, settle payments, and smoothly resume daily commitments.",
+                    owner_role="You",
+                    timeline="Post-Trip Day 1",
+                    dependencies=["task-p3-close"],
+                    success_criteria="All shared expenses reconciled and settled without discrepancies.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Ensures clean closure of commitments and peace of mind.",
+                ),
+                RoadmapTask(
+                    task_id="task-p3-gov",
+                    title="Personal Retrospective & Learnings",
+                    description="Review trip value, lodging quality, and transit convenience to guide future travel planning.",
+                    owner_role="You",
+                    timeline="Post-Trip Day 2",
+                    dependencies=["task-p3-runbook"],
+                    success_criteria="Key takeaways documented for future trip planning.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Builds personal decision wisdom and optimizes future leisure investments.",
+                ),
+            ]
+        else:
+            # Grounded execution for non-travel personal/lifestyle/education decisions
+            phase2_tasks: List[RoadmapTask] = [
+                RoadmapTask(
+                    task_id="task-p2-terms",
+                    title=f"Establish Terms & Commitment Boundaries for {top_option_name}",
+                    description="Define non-negotiable boundaries, trial parameters, and expectations before full commitment.",
+                    owner_role="You",
+                    timeline="Days 3–4",
+                    dependencies=[t.task_id for t in phase1_tasks[:1]],
+                    success_criteria="Commitment boundaries and fallback options clearly documented.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Protects against overcommitment and establishes safe reversibility.",
+                ),
+                RoadmapTask(
+                    task_id="task-p2-exec",
+                    title="Initial Rollout & Pilot Implementation",
+                    description=f"Execute initial setup, acquire necessary resources, and integrate {top_option_name} into daily routine.",
+                    owner_role="You",
+                    timeline="Day 4",
+                    dependencies=["task-p2-terms"],
+                    success_criteria="Initial pilot milestone completed and functioning smoothly.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Tests real-world feasibility in a controlled, low-friction manner.",
+                ),
+                RoadmapTask(
+                    task_id="task-p2-canary",
+                    title="Establish Check-in Milestones & Fallback Safety Net",
+                    description="Set up review checkpoints and define exit criteria if alignment falters.",
+                    owner_role="You",
+                    timeline="Day 5",
+                    dependencies=["task-p2-exec"],
+                    success_criteria="Safety net parameters and review dates scheduled.",
+                    is_completed=False,
+                    source_type="risk",
+                    reason="Mitigates sunk-cost traps and provides an easy out if outcomes fall short.",
+                ),
+            ]
+
+            phase3_tasks: List[RoadmapTask] = [
+                RoadmapTask(
+                    task_id="task-p3-close",
+                    title=f"Full Adoption & Daily Routine Integration{title_context}",
+                    description=f"Complete active transition to {top_option_name} and monitor ongoing outcomes against target goals.",
+                    owner_role="You",
+                    timeline="Days 6–7",
+                    dependencies=["task-p2-canary"],
+                    success_criteria="Full integration achieved with consistent day-to-day satisfaction.",
+                    is_completed=False,
+                    source_type="condition",
+                    reason="Formalizes the lifestyle transition and ensures lasting benefit.",
+                ),
+                RoadmapTask(
+                    task_id="task-p3-runbook",
+                    title="Resource & Commitment Reconciliation",
+                    description="Evaluate time, energy, and financial expenditure against plan and settle any outstanding obligations.",
+                    owner_role="You",
+                    timeline="Day 7",
+                    dependencies=["task-p3-close"],
+                    success_criteria="All resources and commitments accounted for without discrepancies.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Ensures peace of mind and clean alignment with personal goals.",
+                ),
+                RoadmapTask(
+                    task_id="task-p3-gov",
+                    title="Personal Retrospective & Long-Term Integration",
+                    description="Review decision impact, personal fulfillment, and document key takeaways for future choices.",
+                    owner_role="You",
+                    timeline="Follow-up Day 8",
+                    dependencies=["task-p3-runbook"],
+                    success_criteria="Key learnings recorded and long-term sustainable routine established.",
+                    is_completed=False,
+                    source_type="decision_requirement",
+                    reason="Builds personal decision-making wisdom for future life choices.",
+                ),
+            ]
     else:
         # Cross-Domain Business & Operational Roadmap (Free from Software Jargon)
         phase2_tasks: List[RoadmapTask] = [
@@ -1428,17 +1646,30 @@ def generate_domain_grounded_roadmap(
         ]
 
     if is_personal_timeline:
-        p1_title = f"Phase 1: Planning, Availability & Budget Alignment for {top_option_name}"
-        p1_timeline = cadence["p1_timeline"]
-        p1_desc = f"Align schedules, verify leave and budget parameters, and resolve critical uncertainties before locking non-refundable commitments to {top_option_name}."
+        if is_travel:
+            p1_title = f"Phase 1: Planning, Availability & Budget Alignment for {top_option_name}"
+            p1_timeline = cadence["p1_timeline"]
+            p1_desc = f"Align schedules, verify leave and budget parameters, and resolve critical uncertainties before locking non-refundable commitments to {top_option_name}."
 
-        p2_title = f"Phase 2: Reservations, Logistics & Preparation for {top_option_name}"
-        p2_timeline = cadence["p2_timeline"]
-        p2_desc = f"Lock cancellable reservations, finalize day-by-day activity logistics, and set up travel emergency buffers for {top_option_name}."
+            p2_title = f"Phase 2: Reservations, Logistics & Preparation for {top_option_name}"
+            p2_timeline = cadence["p2_timeline"]
+            p2_desc = f"Lock cancellable reservations, finalize day-by-day activity logistics, and set up travel emergency buffers for {top_option_name}."
 
-        p3_title = f"Phase 3: Itinerary Execution & Wrap-up for {top_option_name}"
-        p3_timeline = cadence["p3_timeline"]
-        p3_desc = f"Embark on trip, monitor live spending against buffer, reconcile shared expenses, and capture personal learnings."
+            p3_title = f"Phase 3: Itinerary Execution & Wrap-up for {top_option_name}"
+            p3_timeline = cadence["p3_timeline"]
+            p3_desc = f"Embark on trip, monitor live spending against buffer, reconcile shared expenses, and capture personal learnings."
+        else:
+            p1_title = f"Phase 1: Personal Feasibility & Constraint Alignment for {top_option_name}"
+            p1_timeline = cadence["p1_timeline"]
+            p1_desc = f"Evaluate personal priorities, verify constraints, and resolve critical uncertainties before committing to {top_option_name}."
+
+            p2_title = f"Phase 2: Transition Setup & Initial Commitment for {top_option_name}"
+            p2_timeline = cadence["p2_timeline"]
+            p2_desc = f"Establish commitment boundaries, secure necessary resources, and initiate pilot rollout for {top_option_name}."
+
+            p3_title = f"Phase 3: Full Adoption, Integration & Retrospective for {top_option_name}"
+            p3_timeline = cadence["p3_timeline"]
+            p3_desc = f"Complete active integration, evaluate ongoing outcomes, and document personal learnings for {top_option_name}."
     elif domain_upper == "REAL_ESTATE":
         p1_title = f"Phase 1: Title Verification & Encumbrance Clearance for {top_option_name}"
         p1_timeline = cadence["p1_timeline"]
@@ -1816,13 +2047,23 @@ def generate_mock_synthesis(
             claims = r_entry.get("claims", [])
             for c in claims:
                 if isinstance(c, dict):
+                    raw_rel = str(c.get("reliability_label") or c.get("reliability") or "high").lower()
+                    if any(w in raw_rel for w in ["primary", "peer", "official", "high"]):
+                        norm_rel = "high"
+                    elif any(w in raw_rel for w in ["secondary", "medium", "news", "industry"]):
+                        norm_rel = "medium"
+                    elif any(w in raw_rel for w in ["low", "unverified", "forum", "blog", "user"]):
+                        norm_rel = "low"
+                    else:
+                        norm_rel = "high" if "high" in raw_rel else "medium"
+
                     supporting_evidence.append(
                         SupportingEvidenceItem(
                             claim=c.get("claim_text", "Verified research finding"),
                             source_title=c.get("source_title") or r_entry.get("title") or "Verified Web Research",
                             source_url=c.get("source_url") or r_entry.get("url"),
                             evidence_type="research_claim",
-                            reliability=c.get("reliability_label", "high"),
+                            reliability=norm_rel,
                         )
                     )
 
@@ -1830,10 +2071,10 @@ def generate_mock_synthesis(
         supporting_evidence.append(
             SupportingEvidenceItem(
                 claim=str(f),
-                source_title="User-Reported Fact",
+                source_title="User-Reported Statement",
                 source_url=None,
                 evidence_type="user_fact",
-                reliability="high",
+                reliability="medium",  # User-reported: unverified self-report is medium, not externally verified high
             )
         )
 
@@ -1842,10 +2083,36 @@ def generate_mock_synthesis(
             claim=f"'{top_option_name}' achieved Rank #1 in Weighted Decision Matrix with score {canonical_winner_score:.2f}/10.",
             source_title="Deterministic Weighted Decision Matrix",
             source_url=None,
-            evidence_type="framework_metric",
-            reliability="high",
+            evidence_type="framework_metric",  # AI inference
+            reliability="medium",
         )
     )
+
+    # Gather assumptions (low reliability)
+    raw_assumptions = points.get("assumptions", []) if isinstance(points, dict) else []
+    for a in raw_assumptions[:2]:
+        supporting_evidence.append(
+            SupportingEvidenceItem(
+                claim=str(a),
+                source_title="Unverified Operating Assumption",
+                source_url=None,
+                evidence_type="assumption",
+                reliability="low",
+            )
+        )
+
+    # Gather conflicting / unknown points (low reliability)
+    raw_contradictions = points.get("contradictions", []) if isinstance(points, dict) else []
+    for u in raw_contradictions[:1]:
+        supporting_evidence.append(
+            SupportingEvidenceItem(
+                claim=str(u),
+                source_title="Conflicting Evidence Finding",
+                source_url=None,
+                evidence_type="conflicting_or_unknown",
+                reliability="low",
+            )
+        )
 
     # Gather RAG document excerpts
     try:
@@ -1912,6 +2179,14 @@ def generate_mock_synthesis(
 
     decision_title_str = decision.title or "Strategic Dilemma"
 
+    is_travel = any(
+        k in f"{decision_title_str} {top_option_name} {' '.join(critical_unknowns)} {' '.join(str(f) for f in facts)}".lower()
+        for k in [
+            "trip", "vacation", "travel", "holiday", "itinerary", "flight", "hotel", "resort",
+            "tour", "tourism", "destination", "booking", "manali", "getaway", "sightseeing"
+        ]
+    )
+
     continuity_note = ""
     if folder_precedents:
         continuity_note = f" This builds directly upon decisions and verified baseline established in prior folder session '{folder_precedents[-1]['title']}'."
@@ -1921,18 +2196,31 @@ def generate_mock_synthesis(
         synthesis_type = "conditional_next_step"
         if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
             headline = f"Action Plan: '{top_option_name}' (Pending Key Checks)"
-            rec_text = (
-                f"Following evaluation of '{decision_title_str}', '{top_option_name}' "
-                f"emerges as the recommended direction. However, because {len(critical_unknowns) or len(unresolved_gap_ids)} "
-                f"key planning unknown(s) remain open (such as schedule alignment, budget buffer, or reservations), "
-                f"you should complete essential planning checks before making non-refundable commitments."
-                f"{continuity_note}"
-            )
-            conditional_triggers = critical_conditions or [
-                f"Condition A: Verify schedule availability and confirm calendar dates before booking.",
-                f"Condition B: Lock in refundable or free-cancellation options for transit and lodging.",
-                f"Fallback Trigger: If dates or budget exceed limits, consider '{second_option_name}' as a fallback alternative.",
-            ]
+            if is_travel:
+                rec_text = (
+                    f"Following evaluation of '{decision_title_str}', '{top_option_name}' "
+                    f"emerges as the recommended direction. However, because {len(critical_unknowns) or len(unresolved_gap_ids)} "
+                    f"key planning unknown(s) remain open (such as schedule alignment, budget buffer, or reservations), "
+                    f"you should complete essential planning checks before making non-refundable commitments."
+                    f"{continuity_note}"
+                )
+                conditional_triggers = critical_conditions or [
+                    f"Condition A: Verify schedule availability and confirm calendar dates before booking.",
+                    f"Condition B: Lock in refundable or free-cancellation options for transit and lodging.",
+                    f"Fallback Trigger: If dates or budget exceed limits, consider '{second_option_name}' as a fallback alternative.",
+                ]
+            else:
+                rec_text = (
+                    f"Following evaluation of '{decision_title_str}', '{top_option_name}' "
+                    f"emerges as the recommended direction. However, because {len(critical_unknowns) or len(unresolved_gap_ids)} "
+                    f"key unknown(s) remain open, you should verify foundational constraints before finalizing commitments."
+                    f"{continuity_note}"
+                )
+                conditional_triggers = critical_conditions or [
+                    f"Condition A: Verify schedule availability and resource alignment before committing.",
+                    f"Condition B: Establish initial trial period parameters or return/cancellation terms.",
+                    f"Fallback Trigger: If commitment hurdles or budget exceed limits, consider '{second_option_name}' as a fallback alternative.",
+                ]
         else:
             headline = f"Strategic Execution Plan: '{top_option_name}' (Risk-Gated Pre-Commitment)"
             rec_text = (
@@ -2021,7 +2309,7 @@ def generate_mock_synthesis(
                     assumption=str(a),
                     is_verified=False,
                     impact_if_false=(
-                        "Trip dates or itinerary may need to be rescheduled or adjusted."
+                        ("Trip dates or itinerary may need to be rescheduled or adjusted." if is_travel else "Personal routine or implementation timeline may need adjustment.")
                         if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION")
                         else "May require re-evaluating operational timeline or adjusting cost projections by 10-20%."
                     ),
@@ -2029,13 +2317,22 @@ def generate_mock_synthesis(
             )
     else:
         if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
-            assumptions_items.append(
-                AssumptionItem(
-                    assumption="Personal calendar availability, leave approvals, and travel conditions remain stable over the planning horizon.",
-                    is_verified=False,
-                    impact_if_false="Trip dates or itinerary may need to be rescheduled or adjusted.",
+            if is_travel:
+                assumptions_items.append(
+                    AssumptionItem(
+                        assumption="Personal calendar availability, leave approvals, and travel conditions remain stable over the planning horizon.",
+                        is_verified=False,
+                        impact_if_false="Trip dates or itinerary may need to be rescheduled or adjusted.",
+                    )
                 )
-            )
+            else:
+                assumptions_items.append(
+                    AssumptionItem(
+                        assumption="Personal time availability, focus bandwidth, and baseline conditions remain stable over the evaluation horizon.",
+                        is_verified=False,
+                        impact_if_false="Personal routine or implementation timeline may need adjustment.",
+                    )
+                )
         else:
             assumptions_items.append(
                 AssumptionItem(
@@ -2046,29 +2343,54 @@ def generate_mock_synthesis(
             )
 
     if domain_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
-        risks_and_mitigations = [
-            RiskMitigationItem(
-                risk="Unbudgeted travel expenses, surge tariffs, or non-refundable booking forfeiture.",
-                severity="high" if is_conditional else "medium",
-                mitigation="Select refundable bookings, set clear expense limits, and maintain a 20% contingency budget buffer.",
-                contingency_plan="Reschedule itinerary or adjust accommodation tier if unexpected cost spikes arise.",
-            ),
-            RiskMitigationItem(
-                risk="Unexpected schedule conflicts, leave disapproval, or last-minute personal commitments.",
-                severity="medium",
-                mitigation="Lock in calendar leave approvals early and ensure cancellation deadlines are documented.",
-                contingency_plan="Pivot to flexible weekend dates or postpone without deposit forfeit.",
-            ),
-        ]
-        counterarguments = [
-            CounterargumentItem(
-                argument=f"Postponing or choosing '{second_option_name}' avoids spending money and preserves routine.",
-                rebuttal_or_concession=(
-                    f"While delaying saves immediate funds, proceeding with '{top_option_name}' provides essential rejuvenation "
-                    f"and avoids prolonged fatigue. Staged planning protects against financial or schedule risks."
+        if is_travel:
+            risks_and_mitigations = [
+                RiskMitigationItem(
+                    risk="Unbudgeted travel expenses, surge tariffs, or non-refundable booking forfeiture.",
+                    severity="high" if is_conditional else "medium",
+                    mitigation="Select refundable bookings, set clear expense limits, and maintain a 20% contingency budget buffer.",
+                    contingency_plan="Reschedule itinerary or adjust accommodation tier if unexpected cost spikes arise.",
                 ),
-            ),
-        ]
+                RiskMitigationItem(
+                    risk="Unexpected schedule conflicts, leave disapproval, or last-minute personal commitments.",
+                    severity="medium",
+                    mitigation="Lock in calendar leave approvals early and ensure cancellation deadlines are documented.",
+                    contingency_plan="Pivot to flexible weekend dates or postpone without deposit forfeit.",
+                ),
+            ]
+            counterarguments = [
+                CounterargumentItem(
+                    argument=f"Postponing or choosing '{second_option_name}' avoids spending money and preserves routine.",
+                    rebuttal_or_concession=(
+                        f"While delaying saves immediate funds, proceeding with '{top_option_name}' provides essential rejuvenation "
+                        f"and avoids prolonged fatigue. Staged planning protects against financial or schedule risks."
+                    ),
+                ),
+            ]
+        else:
+            risks_and_mitigations = [
+                RiskMitigationItem(
+                    risk=f"Commitment friction or unexpected lifestyle disruption regarding '{top_option_name}'.",
+                    severity="high" if is_conditional else "medium",
+                    mitigation="Establish an initial trial period, define clear boundaries, and maintain personal reserves.",
+                    contingency_plan=f"Re-evaluate or transition to '{second_option_name}' if expectations are not met.",
+                ),
+                RiskMitigationItem(
+                    risk="Unanticipated recurring costs or maintenance overhead exceeding personal budget.",
+                    severity="medium",
+                    mitigation="Verify all recurring commitments upfront and establish strict spending boundaries.",
+                    contingency_plan="Scale back optional features or revert to baseline routine.",
+                ),
+            ]
+            counterarguments = [
+                CounterargumentItem(
+                    argument=f"Choosing '{second_option_name}' or staying with the status quo avoids immediate disruption.",
+                    rebuttal_or_concession=(
+                        f"While remaining unchanged avoids initial effort, proceeding with '{top_option_name}' unlocks "
+                        f"meaningful long-term value. A staged approach ensures reversibility if outcomes diverge."
+                    ),
+                ),
+            ]
     else:
         risks_and_mitigations = [
             RiskMitigationItem(
@@ -2434,10 +2756,42 @@ def execute_hosted_synthesis(
     # Defensive enrichment: Ensure roadmap is populated, valid, and domain-appropriate
     raw_roadmap = parsed.get("roadmap")
     needs_computed_roadmap = False
+    is_travel_decision = any(
+        k in f"{decision.title or ''} {decision.problem_statement or ''}".lower()
+        for k in ["trip", "vacation", "travel", "holiday", "itinerary", "flight", "hotel", "resort", "manali"]
+    )
     if not raw_roadmap or not isinstance(raw_roadmap, dict) or not raw_roadmap.get("phases") or len(raw_roadmap.get("phases", [])) < 3:
         needs_computed_roadmap = True
+    elif domain.upper() in ("SOFTWARE", "PRODUCT", "ENGINEERING"):
+        # Asymmetric check fix: Prevent travel terminology in SOFTWARE / PRODUCT roadmaps
+        roadmap_str = json.dumps(raw_roadmap).lower()
+        travel_jargon = [
+            "itinerary", "hotel booking", "hotel reservation", "transit reservation",
+            "flight reservation", "flight cancellation", "packing checklist",
+            "post-trip", "travel insurance", "resort", "vacation rental"
+        ]
+        if any(jargon in roadmap_str for jargon in travel_jargon):
+            logger.warning("Detected travel contamination in %s roadmap for decision %s. Recomputing domain roadmap.", domain, decision.id)
+            needs_computed_roadmap = True
+    elif domain.upper() in ("BUSINESS", "FINANCE", "REAL_ESTATE", "OPERATIONS"):
+        roadmap_str = json.dumps(raw_roadmap).lower()
+        travel_jargon = [
+            "itinerary", "hotel booking", "transit reservation", "packing checklist",
+            "post-trip", "travel insurance", "resort"
+        ]
+        if any(jargon in roadmap_str for jargon in travel_jargon):
+            logger.warning("Detected travel contamination in %s roadmap for decision %s. Recomputing domain roadmap.", domain, decision.id)
+            needs_computed_roadmap = True
     elif domain.upper() in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
         roadmap_str = json.dumps(raw_roadmap).lower()
+        if not is_travel_decision:
+            travel_jargon = [
+                "hotel booking", "transit reservation", "packing checklist",
+                "post-trip", "travel insurance", "resort"
+            ]
+            if any(jargon in roadmap_str for jargon in travel_jargon):
+                logger.warning("Detected travel contamination in non-travel personal roadmap for decision %s. Recomputing.", decision.id)
+                needs_computed_roadmap = True
         if any(jargon in roadmap_str for jargon in [
             "kafka", "microservice", "pgbouncer", "canary routing", "p99 latency", "api contract",
             "weeks 1-2", "week 1-2", "weeks 3-5", "due diligence", "contract structuring",
@@ -2469,6 +2823,77 @@ def execute_hosted_synthesis(
                             task["owner_role"] = "You"
 
     return DecisionSynthesis.model_validate(parsed)
+
+
+def validate_and_sanitize_roadmap_for_domain(
+    roadmap: Union[RoadmapData, dict],
+    domain: str,
+    decision_title: str = "",
+    problem_statement: str = "",
+) -> RoadmapData:
+    """
+    Validate that roadmap phases and tasks are strictly appropriate for the decision's domain
+    and free from cross-domain contamination:
+    - Zero travel terminology in SOFTWARE, PRODUCT, BUSINESS, or FINANCE decisions.
+    - Zero travel terminology in non-travel PERSONAL decisions.
+    - Zero corporate/tech boilerplate (Kafka, microservice, fiduciary) in PERSONAL decisions.
+    If contamination is detected, regenerates a clean domain-grounded roadmap.
+    """
+    dom_upper = (domain or "").strip().upper()
+    is_travel = any(k in f"{decision_title} {problem_statement}".lower() for k in [
+        "trip", "vacation", "travel", "holiday", "itinerary", "flight", "hotel", "resort", "manali"
+    ])
+
+    if isinstance(roadmap, dict):
+        phases_raw = roadmap.get("phases", [])
+        title_str = roadmap.get("title", "")
+    else:
+        phases_raw = [p.model_dump() for p in roadmap.phases]
+        title_str = roadmap.title
+
+    roadmap_str = json.dumps(phases_raw).lower()
+    contaminated = False
+
+    travel_contaminants = [
+        "hotel booking", "hotel reservation", "transit reservation",
+        "flight reservation", "flight cancellation", "packing checklist",
+        "post-trip", "travel insurance", "resort", "vacation rental"
+    ]
+
+    if dom_upper in ("SOFTWARE", "PRODUCT", "ENGINEERING"):
+        if any(j in roadmap_str for j in travel_contaminants):
+            contaminated = True
+    elif dom_upper in ("BUSINESS", "FINANCE", "REAL_ESTATE", "OPERATIONS"):
+        if any(j in roadmap_str for j in travel_contaminants):
+            contaminated = True
+    elif dom_upper in ("PERSONAL", "LIFESTYLE", "EDUCATION"):
+        if not is_travel and any(j in roadmap_str for j in [
+            "hotel booking", "transit reservation", "packing checklist", "post-trip", "travel insurance"
+        ]):
+            contaminated = True
+        if any(j in roadmap_str for j in [
+            "kafka", "microservice", "pgbouncer", "canary routing", "p99 latency", "api contract"
+        ]):
+            contaminated = True
+
+    if contaminated:
+        logger.warning("Sanitizing contaminated roadmap for domain %s (title: '%s')", dom_upper, decision_title)
+        top_name = title_str.replace("Strategic Execution Roadmap: ", "").strip() or decision_title or "Primary Option"
+        clean = generate_domain_grounded_roadmap(
+            domain=dom_upper,
+            top_option_name=top_name,
+            critical_gaps=[],
+            critical_conditions=[],
+            risks=[],
+            decision_title=decision_title,
+            assumptions=[],
+            force_mock=True,
+        )
+        return clean
+
+    if isinstance(roadmap, dict):
+        return RoadmapData.model_validate(roadmap)
+    return roadmap
 
 
 def run_decision_synthesis(
@@ -2542,6 +2967,14 @@ def run_decision_synthesis(
         RoadmapRecord.is_active.is_(True),
     ).update({"is_active": False})
 
+    # Domain validation before saving generated roadmaps
+    synthesis.roadmap = validate_and_sanitize_roadmap_for_domain(
+        roadmap=synthesis.roadmap,
+        domain=synthesis.domain or decision.domain or "BUSINESS",
+        decision_title=decision.title or "",
+        problem_statement=decision.problem_statement or "",
+    )
+
     new_roadmap = RoadmapRecord(
         decision_id=decision.id,
         owner_id=decision.owner_id,
@@ -2553,12 +2986,19 @@ def run_decision_synthesis(
     )
     db.add(new_roadmap)
 
-    # 3. Update Decision model
+    # 3. Update Decision model with consistent lifecycle status
     rec_dict = synthesis.model_dump()
     rec_dict["is_stale"] = False
     decision.recommendation = rec_dict
     decision.roadmap = synthesis.roadmap.model_dump()
-    decision.status = "decided"
+
+    # Consistent State Lifecycle:
+    # A conditional recommendation must never automatically become a final decision ("decided").
+    # If critical checks or unresolved gaps remain, decision status is "conditional" (Awaiting Validation).
+    if synthesis.decision_status == "CONDITIONAL":
+        decision.status = DecisionLifecycleStatus.CONDITIONAL.value
+    else:
+        decision.status = DecisionLifecycleStatus.DECIDED.value
     decision.fault_lines = {
         "Assumptions": 2,
         "Evidence": 2,

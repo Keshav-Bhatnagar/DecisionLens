@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.models import Decision
 from app.schemas import StructuredFindings
-from app.services.ai import ai_service
+from app.services.ai import (
+    ai_service,
+    is_heading_or_structural_label,
+    strip_headings_and_structural_labels,
+)
 from app.services.folder_context import (
     format_folder_precedents_for_prompt,
     get_folder_precedents,

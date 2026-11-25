@@ -71,7 +71,7 @@ export interface Decision {
   description: string;
   problem_statement: string;
   record_type: "decision" | "meeting" | string;
-  status: "draft" | "evaluating" | "decided" | "archived" | string;
+  status: "draft" | "evaluating" | "conditional" | "decided" | "archived" | string;
   language: string;
   raw_input: string;
   transcript: string;

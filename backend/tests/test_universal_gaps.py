@@ -445,3 +445,153 @@ def test_13_traceability_metadata():
     assert "stage_2_assumption" in gap.derived_from
     assert "degree of schema volatility has not been established" in gap.discovery_reason
     assert gap.question.endswith("?")
+
+
+# ==============================================================================
+# TEST 14 — Domain-Aware Infrastructure Diagnostic Questions (No Customer Funnel)
+# ==============================================================================
+def test_14_cloud_infrastructure_diagnostic_domain_aware_questions():
+    """
+    CRITICAL REGRESSION TEST:
+    For a technical cloud infrastructure diagnostic decision (e.g. latency drop/issue):
+    1. Generates domain-aware infrastructure diagnostic questions:
+       - Component bottleneck localization
+       - Peak traffic / workload variation
+       - Resource utilization / deployment timeline
+       - Mandatory uptime, security, recovery & migration requirements
+    2. NEVER generates generic sales/customer-journey questions:
+       - No customer journey (top-of-funnel traffic/leads, conversion rate, churn)
+       - No customer segment / geographic variation
+    """
+    infra_dec = Decision(
+        id=1401,
+        title="Production Cloud Migration",
+        problem_statement="Evaluating migration of our core Docker microservices to AWS EKS to resolve latency drop and connection issues.",
+        domain="SOFTWARE",
+        domain_source="manual",
+    )
+
+    gaps = generate_universal_decision_gaps(decision=infra_dec)
+    assert len(gaps) >= 3
+
+    combined_text = " ".join([f"{g.title} {g.question}".lower() for g in gaps])
+
+    # 1. Must contain domain-aware infrastructure diagnostic questions
+    assert "which infrastructure component is causing the bottleneck: compute, database, network, storage or application services?" in combined_text
+    assert "does the issue occur during peak traffic, particular workloads or specific database operations?" in combined_text
+    assert "when did resource utilization or latency begin increasing, and what infrastructure changes coincided with it?" in combined_text
+    assert "what are the mandatory uptime, security, recovery and migration requirements" in combined_text
+
+    # 2. Must NEVER generate commercial customer-journey or funnel questions
+    assert "customer journey" not in combined_text
+    assert "top-of-funnel traffic/leads" not in combined_text
+    assert "customer retention/churn" not in combined_text
+    assert "geographic regions, or product lines" not in combined_text
+
+
+# ==============================================================================
+# TEST 15 — Structured Evidence Matching for Indian Rupee & Budget Ceilings
+# ==============================================================================
+def test_15_structured_evidence_matching_inr_budget():
+    """
+    Verify that structured evidence matching recognizes Indian Rupee budget expressions
+    (e.g., '₹15 lakh budget ceiling', 'INR 15,00,000') and suppresses redundant budget gaps.
+    """
+    from app.services.gaps import check_has_budget_evidence
+
+    # Verify unit-level evidence matching
+    assert check_has_budget_evidence("We have an approved ₹15 lakh budget ceiling.", {}) is True
+    assert check_has_budget_evidence("The project has a budget ceiling of INR 15,00,000.", {}) is True
+    assert check_has_budget_evidence("Cloud infrastructure expenditure capped at 25 lakhs.", {}) is True
+    assert check_has_budget_evidence("No financial figures provided anywhere.", {}) is False
+
+    dec_with_inr_budget = Decision(
+        id=1501,
+        title="Cloud Infrastructure Modernization",
+        problem_statement="Choose between AWS and GCP for our compute workloads.",
+        description="We have an approved ₹15 lakh budget ceiling for the annual cloud spend.",
+        domain="SOFTWARE",
+    )
+
+    gaps = generate_universal_decision_gaps(decision=dec_with_inr_budget)
+    combined_questions = " ".join([g.question.lower() for g in gaps])
+
+    # Budget question must be suppressed because budget is already established
+    assert "maximum acceptable cloud infrastructure budget" not in combined_questions
+    assert "maximum acceptable financial investment" not in combined_questions
+
+
+# ==============================================================================
+# TEST 16 — Structured Evidence Matching for Weighted Criteria Lists
+# ==============================================================================
+def test_16_structured_evidence_matching_weighted_criteria():
+    """
+    Verify that structured evidence matching reliably recognizes lists of weighted criteria
+    (e.g., 'Security 25%, Scalability 25% and TCO 20%') and suppresses redundant criteria gaps.
+    """
+    from app.services.gaps import check_has_criteria_evidence
+
+    # Verify unit-level evidence matching
+    assert check_has_criteria_evidence("Selection criteria: Security 25%, Scalability 25% and TCO 20%.", {}) is True
+    assert check_has_criteria_evidence("Evaluated based on Latency 40% and Cost 60%.", {}) is True
+    assert check_has_criteria_evidence("Mandatory SLA of 99.99% and latency target of sub-10ms.", {}) is True
+    assert check_has_criteria_evidence("Just considering various options with no specified criteria.", {}) is False
+
+    dec_with_criteria = Decision(
+        id=1601,
+        title="Database Engine Selection",
+        problem_statement="Choose between PostgreSQL and MongoDB.",
+        description="Selection criteria are weighted as: Security 25%, Scalability 25% and TCO 20%.",
+        domain="SOFTWARE",
+    )
+
+    gaps = generate_universal_decision_gaps(decision=dec_with_criteria)
+    combined_questions = " ".join([g.question.lower() for g in gaps])
+
+    # Criteria question must be suppressed because criteria are already established
+    assert "what are the mandatory uptime slas" not in combined_questions
+    assert "what primary criteria" not in combined_questions
+
+
+# ==============================================================================
+# TEST 17 — Diagnostic & Selection Mode Coordination (Zero Generic Collision)
+# ==============================================================================
+def test_17_mode_coordination_no_generic_collision():
+    """
+    Verify that when a technical decision has both diagnostic traits (drop/bottleneck)
+    and comparative selection traits (AWS vs GCP), the engine:
+    1. Generates technical diagnostic questions.
+    2. Does NOT collide by appending redundant generic customer funnel or criteria questions.
+    """
+    dec_hybrid = Decision(
+        id=1701,
+        title="Microservices Cloud Migration",
+        problem_statement="We face an unexpected infrastructure latency drop and must choose between AWS Aurora and GCP Cloud SQL.",
+        domain="SOFTWARE",
+    )
+
+    gaps = generate_universal_decision_gaps(decision=dec_hybrid)
+    combined_text = " ".join([f"{g.title} {g.question}".lower() for g in gaps])
+
+    # Infrastructure diagnostic questions present
+    assert "which infrastructure component is causing the bottleneck" in combined_text
+    assert "mandatory uptime, security, recovery and migration requirements" in combined_text
+
+    # No generic customer funnel questions
+    assert "customer journey" not in combined_text
+    assert "customer segment" not in combined_text
+    # No duplicate generic criteria question
+    assert "what primary criteria, personal/organizational priorities" not in combined_text
+
+    # Case 2: When component is already specified (database connection pool), component question is suppressed
+    dec_with_component = Decision(
+        id=1702,
+        title="Microservices Cloud Migration",
+        problem_statement="We face a database connection pool drop issue and must choose between AWS Aurora and GCP Cloud SQL.",
+        domain="SOFTWARE",
+    )
+    gaps_comp = generate_universal_decision_gaps(decision=dec_with_component)
+    combined_comp = " ".join([f"{g.title} {g.question}".lower() for g in gaps_comp])
+    assert "which infrastructure component is causing the bottleneck" not in combined_comp
+    assert "does the issue occur during peak traffic" in combined_comp
+

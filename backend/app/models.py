@@ -108,8 +108,10 @@ class Decision(Base):
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     problem_statement: Mapped[str] = mapped_column(Text, default="", nullable=False)
     record_type: Mapped[str] = mapped_column(String(30), default="decision")  # "decision" or "meeting"
-    status: Mapped[str] = mapped_column(String(40), default="draft")  # draft, evaluating, decided, archived
-    domain: Mapped[str] = mapped_column(String(50), default="BUSINESS", nullable=False)  # REAL_ESTATE, FINANCE, SOFTWARE, etc.
+    status: Mapped[str] = mapped_column(String(40), default="draft")  # draft, evaluating, conditional, decided, archived
+    domain: Mapped[str] = mapped_column(String(50), default="AUTO", nullable=False)  # REAL_ESTATE, FINANCE, SOFTWARE, etc.
+    domain_source: Mapped[str] = mapped_column(String(50), default="manual", nullable=True)  # manual, inherited, ai_detected
+    domain_confidence: Mapped[float] = mapped_column(Float, default=1.0, nullable=True)  # 0.0 - 1.0
     language: Mapped[str] = mapped_column(String(10), default="en")  # "en" or "hi"
     raw_input: Mapped[str] = mapped_column(Text, default="", nullable=False)
     transcript: Mapped[str] = mapped_column(Text, default="", nullable=False)
@@ -144,7 +146,8 @@ class Decision(Base):
         "RoadmapRecord", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
     )
     outcomes: Mapped[List["DecisionOutcome"]] = relationship(
-        "DecisionOutcome", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True
+        "DecisionOutcome", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True,
+        order_by="desc(DecisionOutcome.created_at)"
     )
     document_chunks: Mapped[List["DecisionDocumentChunk"]] = relationship(
         "DecisionDocumentChunk", back_populates="decision", cascade="all, delete-orphan", passive_deletes=True

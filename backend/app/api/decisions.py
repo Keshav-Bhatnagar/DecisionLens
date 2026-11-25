@@ -9,11 +9,13 @@ from app.schemas import (
     DecisionCreate,
     DecisionUpdate,
     DecisionResponse,
+    DecisionDomain,
     MemberResponse,
     MeetingTakeawaysRequest,
     MeetingTakeawaysResponse,
 )
 from app.auth import get_current_user, verify_ownership
+from sqlalchemy.orm.attributes import flag_modified
 
 router = APIRouter(prefix="/decisions", tags=["Decisions"])
 
@@ -55,23 +57,54 @@ def create_decision(
     if not clean_title:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Title cannot be empty")
 
-    initial_domain = body.domain or "BUSINESS"
-    if folder.domain and folder.domain != "AUTO" and initial_domain in ("BUSINESS", "", None):
-        initial_domain = folder.domain
+    problem_stmt = (
+        body.problem_statement.strip()
+        if body.problem_statement is not None
+        else clean_title
+    )
+
+    # Domain selection & precedence architecture:
+    # 1. An explicitly selected decision domain must take top precedence over folder domain.
+    # 2. If decision domain is AUTO, None, or empty: classify the decision using title & problem statement.
+    # 3. If text classification is inconclusive/empty, inherit the folder's domain (if not AUTO) as suggestion.
+    user_domain = (body.domain or "").strip().upper()
+    valid_domains = [d.value for d in DecisionDomain]
+
+    if user_domain and user_domain != "AUTO" and user_domain in valid_domains:
+        initial_domain = user_domain
+        domain_source = "manual"
+        domain_confidence = 1.0
+    else:
+        from app.services.framework_engine import classify_text_domain
+        detected_domain, detected_conf = classify_text_domain(
+            title=clean_title,
+            problem_statement=problem_stmt,
+            context_text=body.description or "",
+        )
+        if detected_domain in valid_domains and detected_conf >= 0.5:
+            initial_domain = detected_domain
+            domain_source = "ai_detected"
+            domain_confidence = detected_conf
+        elif folder.domain and folder.domain not in ("AUTO", "") and folder.domain in valid_domains:
+            initial_domain = folder.domain
+            domain_source = "inherited"
+            domain_confidence = 0.75
+        else:
+            initial_domain = detected_domain if detected_domain in valid_domains else "BUSINESS"
+            domain_source = "ai_detected"
+            domain_confidence = detected_conf or 0.5
 
     decision = Decision(
         owner_id=current_user.id,
         folder_id=body.folder_id,
         title=clean_title,
         description=body.description.strip() if body.description else "",
-        problem_statement=(
-            body.problem_statement.strip()
-            if body.problem_statement is not None
-            else clean_title
-        ),
+        problem_statement=problem_stmt,
         record_type=body.record_type or "decision",
         status=body.status or "draft",
         domain=initial_domain,
+        domain_source=domain_source,
+        domain_confidence=domain_confidence,
         language=body.language or "en",
         raw_input="",
         transcript="",
@@ -189,6 +222,34 @@ def update_decision(
                 "Trade-offs": 2,
                 "Alternatives": 2,
             }
+    if body.domain is not None:
+        clean_dom = body.domain.strip().upper()
+        valid_domains = [d.value for d in DecisionDomain]
+        if clean_dom == "AUTO":
+            from app.services.framework_engine import classify_text_domain
+            detected_domain, detected_conf = classify_text_domain(
+                title=decision.title or "",
+                problem_statement=decision.problem_statement or "",
+                context_text=f"{decision.description or ''} {decision.raw_input or ''}",
+            )
+            decision.domain = detected_domain
+            decision.domain_source = "ai_detected"
+            decision.domain_confidence = detected_conf
+        elif clean_dom in valid_domains:
+            decision.domain = clean_dom
+            decision.domain_source = body.domain_source or "manual"
+            decision.domain_confidence = body.domain_confidence or 1.0
+
+        if hasattr(decision, "_detected_domain_cache"):
+            delattr(decision, "_detected_domain_cache")
+        if isinstance(decision.analysis, dict):
+            decision.analysis["domain_metadata"] = {
+                "domain": decision.domain,
+                "source": decision.domain_source,
+                "confidence": decision.domain_confidence,
+            }
+            flag_modified(decision, "analysis")
+
     if body.language is not None:
         decision.language = body.language
     if body.raw_input is not None:

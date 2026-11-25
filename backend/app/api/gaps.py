@@ -84,6 +84,10 @@ def detect_gaps(
         r_copy["is_stale"] = True
         decision.recommendation = r_copy
 
+    # Analysis underway: transition initial draft to evaluating
+    if decision.status == "draft":
+        decision.status = "evaluating"
+
     db.commit()
     db.refresh(decision)
     return resp
@@ -191,6 +195,10 @@ def answer_gap(
         r_copy = dict(decision.recommendation)
         r_copy["is_stale"] = True
         decision.recommendation = r_copy
+
+    # Analysis underway: transition initial draft to evaluating
+    if decision.status == "draft":
+        decision.status = "evaluating"
 
     db.commit()
     db.refresh(decision)
@@ -349,6 +357,10 @@ def research_gap(
         r_copy = dict(decision.recommendation)
         r_copy["is_stale"] = True
         decision.recommendation = r_copy
+
+    # Analysis underway: transition initial draft to evaluating
+    if decision.status == "draft":
+        decision.status = "evaluating"
 
     db.commit()
     db.refresh(decision)

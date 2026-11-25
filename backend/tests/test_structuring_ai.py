@@ -261,3 +261,150 @@ def test_structuring_cross_user_isolation(
         json={"facts": ["Hacked fact"]},
     )
     assert b_patch.status_code == 404
+
+
+def test_markdown_headings_and_decision_title_never_appear_in_structured_findings(
+    client: TestClient, auth_headers: dict
+):
+    """
+    CRITICAL REGRESSION TEST:
+    Verifies that Markdown headings such as '### DECISION TITLE', '### PROBLEM STATEMENT',
+    '### REVIEWED VOICE TRANSCRIPT', or document labels:
+    1. Are stripped before cognitive fact extraction.
+    2. Are NEVER classified as confirmed facts or findings in any category.
+    3. Facts are extracted strictly from substantive user statements, transcripts, and documents.
+    """
+    from app.services.ai import (
+        is_heading_or_structural_label,
+        strip_headings_and_structural_labels,
+        validate_stage2_source_boundary,
+    )
+
+    # 1. Verify unit level heading detection and stripping
+    assert is_heading_or_structural_label("### DECISION TITLE") is True
+    assert is_heading_or_structural_label("### PROBLEM STATEMENT") is True
+    assert is_heading_or_structural_label("### REVIEWED VOICE TRANSCRIPT") is True
+    assert is_heading_or_structural_label("[Document: infrastructure_audit.pdf]") is True
+    assert is_heading_or_structural_label("### CONFIDENTIAL PARTICIPANT INPUTS (PRIVATE BOT CHAT)") is True
+    assert is_heading_or_structural_label("Migrating to AWS EKS cluster to handle 50,000 peak users") is False
+
+    raw_assembled = (
+        "### DECISION TITLE\n"
+        "Production Kubernetes Cluster Migration\n\n"
+        "### PROBLEM STATEMENT\n"
+        "We must evaluate moving our monolithic container workloads from self-hosted Docker to AWS EKS.\n\n"
+        "### BACKGROUND CONTEXT & NOTES\n"
+        "Current cloud budget is strictly capped at $20,000 per month. On-premise servers hit 92% CPU during spikes.\n\n"
+        "### REVIEWED VOICE TRANSCRIPT\n"
+        "Lead SRE said database connection pool exhaustion is our primary reliability bottleneck during traffic spikes.\n\n"
+        "### EXTRACTED DOCUMENTS\n"
+        "[Document: architecture_spec.pdf]\n"
+        "Microservices architecture requires 99.99% uptime across multiple Availability Zones."
+    )
+
+    stripped = strip_headings_and_structural_labels(raw_assembled)
+    assert "### DECISION TITLE" not in stripped
+    assert "### PROBLEM STATEMENT" not in stripped
+    assert "### BACKGROUND CONTEXT & NOTES" not in stripped
+    assert "### REVIEWED VOICE TRANSCRIPT" not in stripped
+    assert "### EXTRACTED DOCUMENTS" not in stripped
+    assert "[Document: architecture_spec.pdf]" not in stripped
+    assert "Production Kubernetes Cluster Migration" in stripped
+    assert "We must evaluate moving our monolithic container workloads" in stripped
+    assert "Lead SRE said database connection pool exhaustion" in stripped
+
+    # Source boundary validation rejects heading
+    is_valid, reason = validate_stage2_source_boundary(
+        text="### DECISION TITLE",
+        source_stmt="### DECISION TITLE",
+        raw_input=raw_assembled,
+        category="facts",
+    )
+    assert is_valid is False
+    assert "heading" in reason.lower()
+
+    # 2. End-to-end API test: Create a realistic decision with assembled headings and structure it
+    folder_res = client.post(
+        "/api/folders",
+        json={"name": "Infrastructure Ops", "description": "Cloud migration evaluations"},
+        headers=auth_headers,
+    )
+    fid = folder_res.json()["id"]
+
+    dec_res = client.post(
+        "/api/decisions",
+        json={
+            "folder_id": fid,
+            "title": "Production Kubernetes Cluster Migration",
+            "problem_statement": "We must evaluate moving our monolithic container workloads from self-hosted Docker to AWS EKS.",
+            "description": "Current cloud budget is strictly capped at $20,000 per month. On-premise servers hit 92% CPU during spikes.",
+            "record_type": "decision",
+            "language": "en",
+        },
+        headers=auth_headers,
+    )
+    did = dec_res.json()["id"]
+
+    client.patch(
+        f"/api/decisions/{did}/transcription/transcript",
+        headers=auth_headers,
+        json={
+            "transcript": "Lead SRE said database connection pool exhaustion is our primary reliability bottleneck during traffic spikes.",
+            "mark_reviewed": True,
+        },
+    )
+
+    res = client.post(
+        f"/api/decisions/{did}/structuring/analyze?force_mock=true",
+        headers=auth_headers,
+    )
+    assert res.status_code == 200
+    data = res.json()
+    findings = data["findings"]
+
+    all_categories = [
+        "facts", "assumptions", "feelings", "pros", "cons",
+        "mixed_points", "contradictions", "unknowns"
+    ]
+
+    # Verify that '### DECISION TITLE' and any markdown headings never appear in any category
+    for cat in all_categories:
+        items = findings.get(cat, [])
+        for item in items:
+            assert "### DECISION TITLE" not in item, (
+                f"Regression! '### DECISION TITLE' found in category '{cat}': {item}"
+            )
+            assert "### PROBLEM STATEMENT" not in item, (
+                f"Regression! '### PROBLEM STATEMENT' found in category '{cat}': {item}"
+            )
+            assert not item.strip().startswith("###"), (
+                f"Regression! Heading found in category '{cat}': {item}"
+            )
+            assert not is_heading_or_structural_label(item), (
+                f"Regression! Structural heading classified as {cat}: {item}"
+            )
+
+    # Verify summary is free of heading markers
+    assert "### DECISION TITLE" not in findings["summary"]
+    assert not findings["summary"].startswith("###")
+
+    # Verify facts are extracted from substantive user statements, not headings
+    facts = findings["facts"]
+    assert len(facts) > 0
+    facts_text = " ".join(facts)
+    assert "### DECISION TITLE" not in facts_text
+    # Facts should ground in actual operational statements
+    assert any(
+        kw in facts_text.lower()
+        for kw in ["kubernetes", "migration", "production", "budget", "20,000", "docker", "eks"]
+    )
+
+    # Verify grounded_items metadata
+    grounded = findings.get("grounded_items", {})
+    for cat, g_items in grounded.items():
+        for g in g_items:
+            assert "### DECISION TITLE" not in g["statement"]
+            assert "### DECISION TITLE" not in g["source_statement"]
+            assert not is_heading_or_structural_label(g["statement"])
+            assert not is_heading_or_structural_label(g["source_statement"])
+

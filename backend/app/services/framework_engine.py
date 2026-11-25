@@ -13,6 +13,7 @@ from app.models import Decision, Folder
 from app.schemas import (
     CanonicalDecisionResult,
     DecisionDomain,
+    DecisionLifecycleStatus,
     DecisionMatrixAnalysis,
     DecisionTreeAnalysis,
     DecisionTreeBranch,
@@ -28,9 +29,11 @@ from app.schemas import (
     MatrixResultOption,
     MatrixScoreItem,
     RecommendedTechnique,
+    RESOLVED_GAP_STATUSES,
     SixHatsAnalysis,
     SWOTAnalysis,
     SWOTItem,
+    UNRESOLVED_GAP_STATUSES,
     WhyStep,
 )
 from app.services.ai import get_llm_client_and_model, call_gemini_direct_rest
@@ -271,7 +274,7 @@ def run_ai_framework_evaluation(
     points_summary = ""
     if structured_points:
         points_summary = (
-            f"\n\n### KNOWN POINTS FROM DECISION STRUCTURING\n"
+            f"\n\n### KNOWN POINTS FROM DECISION STRUCTURING (STAGE 2)\n"
             f"Facts: {json.dumps(structured_points.get('facts', []))}\n"
             f"Pros: {json.dumps(structured_points.get('pros', []))}\n"
             f"Cons: {json.dumps(structured_points.get('cons', []))}\n"
@@ -279,6 +282,49 @@ def run_ai_framework_evaluation(
             f"Unknowns: {json.dumps(structured_points.get('unknowns', []))}\n"
             f"Contradictions: {json.dumps(structured_points.get('contradictions', []))}"
         )
+
+    # Harvest Stage 3 Resolved Gaps and User Answers
+    gaps_lines = []
+    gap_items = (decision.gaps or {}).get("gaps", []) if isinstance(decision.gaps, dict) else []
+    for g in gap_items:
+        if isinstance(g, dict):
+            gid = g.get("id", "")
+            q = g.get("question", "")
+            ans = g.get("resolved_answer") or g.get("answer") or ""
+            status_val = g.get("status", "")
+            affected = g.get("affected_options", [])
+            if ans:
+                gaps_lines.append(
+                    f'- Gap [{gid}] (Status: {status_val}): Question: "{q}" | Affected Options: {affected} | RESOLVED ANSWER: "{ans}"'
+                )
+            elif status_val:
+                gaps_lines.append(
+                    f'- Gap [{gid}] (Status: {status_val}): Question: "{q}" | Affected Options: {affected}'
+                )
+    resolved_gaps_text = "\n".join(gaps_lines) if gaps_lines else "None recorded."
+
+    # Harvest Stage 3 Verified Web Research Findings and Claims
+    research_lines = []
+    res_data = decision.research if isinstance(decision.research, dict) else {}
+    research_entries = res_data.get("research", []) if isinstance(res_data.get("research"), list) else ([res_data] if res_data else [])
+    if not research_entries and isinstance(res_data.get("findings"), list):
+        research_entries = res_data.get("findings", [])
+
+    for r_entry in research_entries:
+        if isinstance(r_entry, dict):
+            r_gap = r_entry.get("gap_id", "")
+            claims = r_entry.get("claims", [])
+            sources = r_entry.get("sources", [])
+            synthesis = r_entry.get("synthesis", "")
+            for c in claims:
+                c_text = c.get("claim_text") if isinstance(c, dict) else str(c)
+                c_src = c.get("source_title") if isinstance(c, dict) else ""
+                c_rel = c.get("reliability_label", "high") if isinstance(c, dict) else "high"
+                research_lines.append(f'- Claim ({c_rel}): "{c_text}" (Source: {c_src}) [Gap: {r_gap}]')
+            if synthesis:
+                research_lines.append(f'- Synthesis [Gap: {r_gap}]: {synthesis}')
+
+    research_text = "\n".join(research_lines) if research_lines else "None recorded."
 
     # 1. Detect candidate options to anchor all models deterministically
     candidate_options = detect_candidate_options(
@@ -295,7 +341,7 @@ def run_ai_framework_evaluation(
     options_anchor_lines = [
         "MANDATORY CANDIDATE OPTIONS TO EVALUATE (Use EXACT names and IDs across Decision Matrix and Decision Tree):"
     ]
-    for idx, opt_name in enumerate(candidate_options[:4]):
+    for idx, opt_name in enumerate(candidate_options[:5]):
         options_anchor_lines.append(f'- ID "opt_{idx+1}": "{opt_name}"')
     options_anchor_text = "\n".join(options_anchor_lines)
 
@@ -312,16 +358,20 @@ def run_ai_framework_evaluation(
 
     user_prompt = (
         f"Deeply evaluate thinking frameworks for the following decision, taking into account "
-        f"all previous meetings, agreements, and domain context from the workspace.\n\n"
+        f"all previous meetings, agreements, resolved gap answers, and verified web research.\n\n"
         f"<WORKSPACE_CONTEXT_AND_PREVIOUS_MEETINGS>\n{workspace_context}\n</WORKSPACE_CONTEXT_AND_PREVIOUS_MEETINGS>\n\n"
         f"<CURRENT_DECISION_CONTEXT>\n{raw_context}{points_summary}\n</CURRENT_DECISION_CONTEXT>\n\n"
+        f"<STAGE_3_RESOLVED_GAPS_AND_USER_ANSWERS>\n{resolved_gaps_text}\n</STAGE_3_RESOLVED_GAPS_AND_USER_ANSWERS>\n\n"
+        f"<STAGE_3_VERIFIED_WEB_RESEARCH_FINDINGS>\n{research_text}\n</STAGE_3_VERIFIED_WEB_RESEARCH_FINDINGS>\n\n"
         f"<ANCHORED_EVALUATION_SPECS>\n{options_anchor_text}\n\n{criteria_anchor_text}\n</ANCHORED_EVALUATION_SPECS>\n\n"
         f"Requested frameworks to evaluate: {json.dumps(selected_frameworks)}\n\n"
         f"CRITICAL INSTRUCTIONS:\n"
         f"1. Generate complete, high-quality, domain-grounded analysis for all requested frameworks (set applicable: true).\n"
-        f"2. Use the EXACT candidate options (opt_1, opt_2, ...) and criteria above for the Decision Matrix.\n"
-        f"3. Criteria weights MUST strictly sum to 100.0%.\n"
-        f"4. Output JSON ONLY matching the required schema."
+        f"2. Explicitly incorporate empirical findings from Stage 3 resolved gap answers and verified research into ratings, pros, cons, and implications.\n"
+        f"3. Use the EXACT candidate options (opt_1, opt_2, ...) and criteria above for the Decision Matrix.\n"
+        f"4. Criteria weights MUST strictly sum to 100.0%.\n"
+        f"5. You MUST evaluate and provide an explicit rating for EVERY (option, criterion) pair. Do not omit any cell in the decision matrix.\n"
+        f"6. Output JSON ONLY matching the required schema."
     )
 
     try:
@@ -385,13 +435,13 @@ DOMAIN_SEMANTIC_PROFILES: Dict[str, str] = {
     DecisionDomain.PERSONAL.value: (
         "Personal lifestyle decisions, travel, vacations, weekend trips, holiday journeys, "
         "health, fitness routines, diet, habits, marriage, relationships, family matters, "
-        "parenting, hobbies, buying a personal vehicle, renting an apartment, home life, "
-        "work-life balance, leisure activities, wellness, and private individual dilemmas."
+        "parenting, hobbies, pets, adopting a dog or cat, rescue animals, buying a personal vehicle, "
+        "renting an apartment, home life, work-life balance, leisure activities, wellness, and private individual dilemmas."
     ),
     DecisionDomain.SOFTWARE.value: (
         "Software engineering, system architecture, choosing tech stacks, programming languages, "
-        "databases, cloud platforms, AWS, GCP, Azure, microservices vs monolith, Kubernetes, "
-        "APIs, DevOps pipelines, containerization, backend services, frontend frameworks, "
+        "databases, cloud platforms, AWS, GCP, Azure, cloud migration, microservices vs monolith, Kubernetes, "
+        "APIs, DevOps pipelines, containerization, backend services, frontend frameworks, infrastructure, "
         "code refactoring, caching, latency optimization, distributed systems, and technical migrations."
     ),
     DecisionDomain.REAL_ESTATE.value: (
@@ -454,52 +504,32 @@ def _get_domain_vectors() -> Dict[str, List[float]]:
     return _DOMAIN_VECTORS_CACHE
 
 
-def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai: bool = True) -> str:
+def classify_text_domain(
+    title: str = "",
+    problem_statement: str = "",
+    context_text: str = "",
+    allow_ai: bool = True,
+) -> Tuple[str, float]:
     """
-    Intelligently classify the decision domain into one of the 9 canonical domains:
+    Intelligently classify arbitrary decision context into one of the 9 canonical domains with confidence:
     REAL_ESTATE, FINANCE, CAREER, EDUCATION, BUSINESS, PRODUCT, SOFTWARE, OPERATIONS, PERSONAL.
 
-    Epistemic Multi-Tier AI Semantic Architecture (Zero Hardcoded Exact-Word Lists):
-    - Tier 0: Explicit domain anchor (from folder or decision.domain if already saved).
+    Epistemic Multi-Tier AI Semantic Architecture:
     - Tier 1: Fast AI Semantic Intent Classifier (Gemini / Azure / OpenAI LLM) with strict 4s timeout.
     - Tier 2: Dense Vector Semantic Similarity (EmbeddingEngine) executing in milliseconds.
     - Memory caching to guarantee zero latency on repeated lookups.
     """
-    # 0. Check if folder has an explicit user-defined domain anchor
-    if hasattr(decision, "folder") and decision.folder and getattr(decision.folder, "domain", None):
-        f_dom = decision.folder.domain
-        if f_dom and f_dom not in ("AUTO", "BUSINESS", ""):
-            return f_dom
+    clean_title = (title or "").strip()
+    clean_prob = (problem_statement or "").strip()
+    clean_ctx = (context_text or "").strip()
 
-    # Check if decision already has an explicit valid domain stored
-    if hasattr(decision, "domain") and decision.domain and decision.domain not in ("", "AUTO", "BUSINESS"):
-        try:
-            return DecisionDomain(decision.domain).value
-        except ValueError:
-            pass
-
-    if hasattr(decision, "_detected_domain_cache") and decision._detected_domain_cache:
-        return decision._detected_domain_cache
-
-    title = (decision.title or "").strip()
-    prob = (decision.problem_statement or "").strip()
-    desc = (decision.description or "").strip()
-    raw = (decision.raw_input or "").strip()
-    transcript = (getattr(decision, "transcript", "") or "").strip()
-    ctx = (context_text or "").strip()
-
-    cache_key = f"{title.lower()}|{prob.lower()}"
+    cache_key = f"{clean_title.lower()}|{clean_prob.lower()}"
     if cache_key in _DOMAIN_QUERY_CACHE:
-        detected = _DOMAIN_QUERY_CACHE[cache_key]
-        decision._detected_domain_cache = detected
-        return detected
+        return _DOMAIN_QUERY_CACHE[cache_key], 0.95
 
-    primary_text = f"{title}. {prob}. {raw}. {desc}. {transcript}".strip()
+    primary_text = f"{clean_title}. {clean_prob}. {clean_ctx}".strip()
     if not primary_text:
-        primary_text = ctx
-
-    if not primary_text:
-        return DecisionDomain.BUSINESS.value
+        return DecisionDomain.BUSINESS.value, 0.5
 
     # Tier 1: Hosted AI Semantic Intent Classifier (Fast LLM with 4s timeout)
     if allow_ai and settings.has_ai_key:
@@ -520,7 +550,7 @@ def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai:
                     "- BUSINESS: Corporate strategy, partnerships, mergers & acquisitions, organizational expansion, market entry.\n\n"
                     "Output JSON strictly as: {\"domain\": \"PERSONAL\" | \"SOFTWARE\" | \"PRODUCT\" | \"REAL_ESTATE\" | \"FINANCE\" | \"CAREER\" | \"EDUCATION\" | \"OPERATIONS\" | \"BUSINESS\", \"confidence\": 0.0-1.0}"
                 )
-                user_content = f"Title: {title}\nProblem: {prob}\nContext: {primary_text[:500]}"
+                user_content = f"Title: {clean_title}\nProblem: {clean_prob}\nContext: {primary_text[:500]}"
                 response = client.chat.completions.create(
                     model=model,
                     messages=[
@@ -535,42 +565,121 @@ def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai:
                 if raw_json:
                     parsed = json.loads(raw_json)
                     detected = (parsed.get("domain") or "").strip().upper()
+                    conf = float(parsed.get("confidence") or 0.9)
                     if detected in [d.value for d in DecisionDomain]:
                         _DOMAIN_QUERY_CACHE[cache_key] = detected
-                        decision._detected_domain_cache = detected
-                        return detected
+                        return detected, conf
         except Exception as exc:
             logger.debug("AI domain classification fallback to dense semantic embeddings: %s", exc)
 
-    # Tier 2: Dense Vector Semantic Similarity (EmbeddingEngine)
+    # Tier 2: Dense Vector Semantic Similarity + Lexical Resonance
     try:
         engine = _get_domain_embedding_engine()
         query_vec = engine.encode(primary_text)
         domain_vecs = _get_domain_vectors()
+        tokens = set(re.findall(r"\b[a-z]{3,}\b", primary_text.lower()))
 
         best_domain = DecisionDomain.BUSINESS.value
-        best_sim = -1.0
+        best_score = -1.0
         for dom, d_vec in domain_vecs.items():
             sim = sum(q * d for q, d in zip(query_vec, d_vec))
-            if sim > best_sim:
-                best_sim = sim
+            prof_tokens = set(re.findall(r"\b[a-z]{3,}\b", DOMAIN_SEMANTIC_PROFILES[dom].lower()))
+            overlap = len(tokens & prof_tokens) / max(len(tokens), 1)
+            score = sim + 0.35 * overlap
+            if score > best_score:
+                best_score = score
                 best_domain = dom
 
-        if best_sim > 0.03:
+        if best_score > 0.03:
             _DOMAIN_QUERY_CACHE[cache_key] = best_domain
-            decision._detected_domain_cache = best_domain
-            return best_domain
+            conf = min(0.95, max(0.60, 0.5 + float(best_score)))
+            return best_domain, conf
     except Exception as exc:
         logger.debug("Dense semantic embedding classification fallback: %s", exc)
 
-    # Tier 3: Check decision model's existing domain attribute
-    if hasattr(decision, "domain") and decision.domain and decision.domain not in ("", "BUSINESS"):
-        try:
-            return DecisionDomain(decision.domain).value
-        except ValueError:
-            pass
+    return DecisionDomain.BUSINESS.value, 0.5
 
-    return DecisionDomain.BUSINESS.value
+
+def detect_decision_domain(decision: Decision, context_text: str = "", allow_ai: bool = True) -> str:
+    """
+    Intelligently classify the decision domain into one of the 9 canonical domains.
+
+    Strict Precedence Architecture:
+    1. Decision's explicit domain takes top precedence over folder domain.
+       If decision.domain is set to a valid domain (and != 'AUTO'), return it immediately.
+    2. If decision.domain is 'AUTO', empty, or unset:
+       Classify the decision using its title, problem statement, raw input, transcript, and context.
+       Save classification source ('ai_detected') and confidence score.
+    3. If classification is inconclusive / text is empty:
+       Check if parent folder has an explicit domain (not 'AUTO'). If so, inherit as suggestion.
+    4. Default fallback: BUSINESS.
+    """
+    if hasattr(decision, "_detected_domain_cache") and decision._detected_domain_cache:
+        return decision._detected_domain_cache
+
+    valid_domains = [d.value for d in DecisionDomain]
+    dec_domain = (getattr(decision, "domain", "") or "").strip().upper()
+
+    # 1. EXPLICIT DECISION DOMAIN PRECEDENCE:
+    # If the user explicitly set a domain on this decision (and it's not AUTO), respect it unconditionally!
+    if dec_domain and dec_domain != "AUTO" and dec_domain in valid_domains:
+        decision._detected_domain_cache = dec_domain
+        return dec_domain
+
+    # 2. DECISION IS 'AUTO' OR EMPTY: Classify the actual decision content
+    title = (getattr(decision, "title", "") or "").strip()
+    prob = (getattr(decision, "problem_statement", "") or "").strip()
+    desc = (getattr(decision, "description", "") or "").strip()
+    raw = (getattr(decision, "raw_input", "") or "").strip()
+    transcript = (getattr(decision, "transcript", "") or "").strip()
+    ctx = (context_text or "").strip()
+
+    primary_text = f"{title}. {prob}. {raw}. {desc}. {transcript}. {ctx}".strip()
+
+    if primary_text:
+        detected_domain, conf = classify_text_domain(
+            title=title,
+            problem_statement=prob,
+            context_text=f"{raw} {desc} {transcript} {ctx}",
+            allow_ai=allow_ai,
+        )
+        if detected_domain in valid_domains and conf >= 0.5:
+            decision.domain = detected_domain
+            decision.domain_source = "ai_detected"
+            decision.domain_confidence = conf
+            decision._detected_domain_cache = detected_domain
+            if hasattr(decision, "analysis") and isinstance(decision.analysis, dict):
+                decision.analysis["domain_metadata"] = {
+                    "domain": detected_domain,
+                    "source": "ai_detected",
+                    "confidence": conf,
+                }
+            return detected_domain
+
+    # 3. FOLDER AS SUGGESTION / FALLBACK:
+    # If decision text is empty/unclassifiable, check parent folder
+    if hasattr(decision, "folder") and decision.folder and getattr(decision.folder, "domain", None):
+        f_dom = decision.folder.domain.strip().upper()
+        if f_dom and f_dom not in ("AUTO", "") and f_dom in valid_domains:
+            decision.domain = f_dom
+            decision.domain_source = "inherited"
+            decision.domain_confidence = 0.75
+            decision._detected_domain_cache = f_dom
+            if hasattr(decision, "analysis") and isinstance(decision.analysis, dict):
+                decision.analysis["domain_metadata"] = {
+                    "domain": f_dom,
+                    "source": "inherited",
+                    "confidence": 0.75,
+                }
+            return f_dom
+
+    # 4. Default fallback
+    fallback_domain = DecisionDomain.BUSINESS.value
+    decision.domain = fallback_domain
+    decision.domain_source = "ai_detected"
+    decision.domain_confidence = 0.5
+    decision._detected_domain_cache = fallback_domain
+    return fallback_domain
 
 
 def build_domain_grounded_criteria(domain: str) -> List[MatrixCriterion]:
@@ -808,6 +917,277 @@ def create_stable_matrix_options(raw_option_names: List[str]) -> List[MatrixOpti
     return options
 
 
+def evaluate_option_criterion_rating(
+    opt: MatrixOption,
+    crit: MatrixCriterion,
+    structured_points: Dict[str, Any],
+    decision_gaps: Optional[Dict[str, Any]] = None,
+    raw_context: str = "",
+    domain: str = "BUSINESS",
+    is_derived: bool = False,
+    research_data: Optional[Dict[str, Any]] = None,
+) -> Tuple[float, str, str, List[str], List[str], List[str]]:
+    """
+    Deterministically and independently evaluate an Option on a specific Criterion.
+    Uses criterion-specific semantic dimensions, domain priors, and verified evidence
+    from structured findings (facts, pros, cons, grounded items), Stage 3 resolved gap answers,
+    and verified web research claims.
+
+    Returns:
+        (score, reason, status, supporting_finding_ids, supporting_gap_ids, supporting_evidence_ids)
+    """
+    crit_text = f"{crit.name} {crit.description or ''}".lower()
+    opt_text = f"{opt.name} {opt.description or ''}".lower()
+
+    # 1. Semantic criterion dimensions
+    is_cost = any(k in crit_text for k in ["cost", "price", "capex", "opex", "budget", "capital", "expense", "tco", "financial", "carrying cost", "working capital", "efficiency"])
+    is_scale = any(k in crit_text for k in ["scale", "scalability", "elasticity", "throughput", "latency", "concurrency", "load", "traffic", "peak", "capacity"])
+    is_reliability = any(k in crit_text for k in ["reliability", "resilience", "availability", "uptime", "fault", "failover", "redundancy", "sla", "outage", "disaster", "spof", "stability"])
+    is_velocity = any(k in crit_text for k in ["velocity", "speed", "feasibility", "timeline", "time-to-market", "implementation", "readiness", "delivery", "effort", "execution"])
+    is_security = any(k in crit_text for k in ["security", "compliance", "audit", "privacy", "governance", "regulatory", "sovereignty", "vulnerability", "risk", "downside", "yield"])
+    is_arch = any(k in crit_text for k in ["architecture", "maintainability", "technical debt", "debt", "decoupling", "lock-in", "vendor lock-in", "cleanliness", "portability", "defensibility"])
+    is_growth = any(k in crit_text for k in ["retention", "activation", "ltv", "monetization", "churn", "growth", "user", "customer", "strategic alignment"])
+
+    # 2. Option archetypes
+    is_cloud = any(k in opt_text for k in ["cloud", "public cloud", "aws", "gcp", "azure", "fargate", "serverless"])
+    is_onprem = any(k in opt_text for k in ["on-prem", "on-premises", "hardware", "datacenter", "bare-metal", "upgrade existing", "retain existing", "status quo", "continue / upgrade", "existing infrastructure"])
+    is_hybrid = any(k in opt_text for k in ["hybrid", "combination", "blend", "composite", "joint venture"])
+    is_build = any(k in opt_text for k in ["build in-house", "custom build", "in-house", "internal build"])
+    is_vendor = any(k in opt_text for k in ["purchase commercial", "vendor", "commercial vendor", "saas", "buy commercial", "outright purchase"])
+
+    # 3. Grounded baseline prior based on domain & option archetype
+    base_prior = 7.0
+    if is_derived:
+        base_prior += 0.4
+
+    if is_cloud:
+        if is_scale:
+            base_prior = 9.0
+        elif is_velocity:
+            base_prior = 8.6
+        elif is_reliability:
+            base_prior = 8.4
+        elif is_cost:
+            base_prior = 5.8
+        elif is_arch:
+            base_prior = 6.6
+        elif is_security:
+            base_prior = 7.5
+    elif is_onprem:
+        if is_cost:
+            base_prior = 8.0
+        elif is_security:
+            base_prior = 8.6
+        elif is_arch:
+            base_prior = 7.2
+        elif is_scale:
+            base_prior = 5.4
+        elif is_velocity:
+            base_prior = 5.6
+        elif is_reliability:
+            base_prior = 6.2
+    elif is_hybrid:
+        if is_scale:
+            base_prior = 7.8
+        elif is_security:
+            base_prior = 8.2
+        elif is_reliability:
+            base_prior = 7.6
+        elif is_cost:
+            base_prior = 6.8
+        elif is_arch:
+            base_prior = 5.8
+        elif is_velocity:
+            base_prior = 6.4
+    elif is_build:
+        if is_arch:
+            base_prior = 8.5
+        elif is_cost:
+            base_prior = 7.0
+        elif is_velocity:
+            base_prior = 5.2
+    elif is_vendor:
+        if is_velocity:
+            base_prior = 8.8
+        elif is_arch:
+            base_prior = 5.6
+        elif is_cost:
+            base_prior = 6.0
+
+    # 4. Extract option and criterion keywords
+    opt_words = {w for w in re.findall(r'[a-zA-Z]{4,}', opt_text) if w not in {"with", "that", "this", "from", "over", "under", "option", "approach", "direction", "setup", "strategy"}}
+    crit_words = {w for w in re.findall(r'[a-zA-Z]{4,}', crit_text) if w not in {"with", "that", "this", "from", "over", "under", "into", "their", "direct", "across", "focus"}}
+
+    if is_cloud:
+        opt_words.update({"cloud", "aws", "gcp", "azure", "fargate", "serverless", "saas"})
+    if is_onprem:
+        opt_words.update({"on-prem", "onprem", "hardware", "datacenter", "colo", "existing", "upgrade", "retain"})
+    if is_hybrid:
+        opt_words.update({"hybrid", "blend", "composite", "joint"})
+
+    # 5. Search structured findings for specific evidence
+    matched_pros: List[str] = []
+    matched_cons: List[str] = []
+    matched_facts: List[str] = []
+    finding_ids: List[str] = []
+    gap_ids: List[str] = []
+
+    # Check grounded items with real IDs if available
+    grounded_items_map = structured_points.get("grounded_items", {}) if isinstance(structured_points, dict) else {}
+    if isinstance(grounded_items_map, dict):
+        for cat, items in grounded_items_map.items():
+            if isinstance(items, list):
+                for item in items:
+                    t = ""
+                    iid = None
+                    if isinstance(item, dict):
+                        t = str(item.get("text") or item.get("statement") or "")
+                        iid = item.get("id")
+                    elif hasattr(item, "text"):
+                        t = str(getattr(item, "text", ""))
+                        iid = getattr(item, "id", None)
+                    t_lower = t.lower()
+                    has_opt = any(w in t_lower for w in opt_words)
+                    has_crit = any(w in t_lower for w in crit_words)
+                    if has_opt and has_crit:
+                        if iid and str(iid) not in finding_ids:
+                            finding_ids.append(str(iid))
+                        if cat == "pros" and t not in matched_pros:
+                            matched_pros.append(t)
+                        elif cat == "cons" and t not in matched_cons:
+                            matched_cons.append(t)
+                        elif cat == "facts" and t not in matched_facts:
+                            matched_facts.append(t)
+
+    # Check raw lists: pros, cons, facts
+    raw_pros = structured_points.get("pros", []) if isinstance(structured_points, dict) else []
+    for p in raw_pros:
+        p_str = p.get("text", "") if isinstance(p, dict) else str(p)
+        p_lower = p_str.lower()
+        if any(w in p_lower for w in opt_words) and any(w in p_lower for w in crit_words):
+            if p_str not in matched_pros:
+                matched_pros.append(p_str)
+            if isinstance(p, dict) and p.get("id") and str(p["id"]) not in finding_ids:
+                finding_ids.append(str(p["id"]))
+
+    raw_cons = structured_points.get("cons", []) if isinstance(structured_points, dict) else []
+    for c in raw_cons:
+        c_str = c.get("text", "") if isinstance(c, dict) else str(c)
+        c_lower = c_str.lower()
+        if any(w in c_lower for w in opt_words) and any(w in c_lower for w in crit_words):
+            if c_str not in matched_cons:
+                matched_cons.append(c_str)
+            if isinstance(c, dict) and c.get("id") and str(c["id"]) not in finding_ids:
+                finding_ids.append(str(c["id"]))
+
+    raw_facts = structured_points.get("facts", []) if isinstance(structured_points, dict) else []
+    for f in raw_facts:
+        f_str = f.get("text", "") if isinstance(f, dict) else str(f)
+        f_lower = f_str.lower()
+        if any(w in f_lower for w in opt_words) and any(w in f_lower for w in crit_words):
+            if f_str not in matched_facts:
+                matched_facts.append(f_str)
+            if isinstance(f, dict) and f.get("id") and str(f["id"]) not in finding_ids:
+                finding_ids.append(str(f["id"]))
+
+    evidence_ids: List[str] = []
+
+    # Check Stage 3 gaps and user-resolved answers
+    cost_terms = ["cost", "budget", "expense", "tco", "capex", "opex", "pricing", "spend", "egress", "financial", "capital"]
+    scale_rel_terms = ["scale", "scaling", "scalability", "latency", "throughput", "sla", "uptime", "failover", "availability", "resilience", "redundancy", "performance", "recovery"]
+
+    gap_items = (decision_gaps.get("gaps", []) if isinstance(decision_gaps, dict) else []) or []
+    for g in gap_items:
+        if isinstance(g, dict):
+            gid = g.get("id")
+            q_text = str(g.get("question", "")).lower()
+            ans_text = str(g.get("resolved_answer") or g.get("answer") or "").lower()
+            affected = [str(x).lower() for x in g.get("affected_options", [])]
+
+            affects_opt = (any(w in opt_text for w in affected) or any(w in affected for w in opt_words) or not affected)
+            if affects_opt:
+                q_or_ans = f"{q_text} {ans_text}"
+                crit_match = (
+                    any(w in q_or_ans for w in crit_words)
+                    or (is_cost and any(w in q_or_ans for w in cost_terms))
+                    or ((is_scale or is_reliability) and any(w in q_or_ans for w in scale_rel_terms))
+                )
+
+                if crit_match:
+                    if gid and str(gid) not in gap_ids:
+                        gap_ids.append(str(gid))
+                    if ans_text:
+                        has_neg = any(w in ans_text for w in ["cannot", "not", "delay", "expensive", "risk", "exceed", "limit", "fail", "slow", "high cost", "deficit"])
+                        has_pos = any(w in ans_text for w in ["verified", "approved", "complies", "sufficient", "fast", "low cost", "within budget", "sub-minute", "supported", "guaranteed", "99.999%"])
+                        if has_pos and not has_neg:
+                            matched_pros.append(f"Stage 3 Resolved Gap ({gid}): {ans_text[:120]}")
+                        elif has_neg and not has_pos:
+                            matched_cons.append(f"Stage 3 Resolved Gap ({gid}): {ans_text[:120]}")
+                        else:
+                            matched_facts.append(f"Stage 3 Resolved Gap ({gid}): {ans_text[:120]}")
+
+    # Check Stage 3 verified web research findings & claims
+    if research_data and isinstance(research_data, dict):
+        res_entries = research_data.get("research", []) if isinstance(research_data.get("research"), list) else ([research_data] if research_data else [])
+        if not res_entries and isinstance(research_data.get("findings"), list):
+            res_entries = research_data.get("findings", [])
+
+        for r_entry in res_entries:
+            if isinstance(r_entry, dict):
+                r_gap = r_entry.get("gap_id")
+                claims = r_entry.get("claims", [])
+                for c in claims:
+                    c_dict = c if isinstance(c, dict) else {"claim_text": str(c)}
+                    c_claim = str(c_dict.get("claim_text", "")).lower()
+                    c_id = str(c_dict.get("id") or (f"res_{r_gap}" if r_gap else "res_claim"))
+
+                    has_opt_c = any(w in c_claim for w in opt_words) or not opt_words
+                    has_crit_c = (
+                        any(w in c_claim for w in crit_words)
+                        or (is_cost and any(w in c_claim for w in cost_terms))
+                        or ((is_scale or is_reliability) and any(w in c_claim for w in scale_rel_terms))
+                    )
+
+                    if has_opt_c and has_crit_c:
+                        if c_id not in evidence_ids:
+                            evidence_ids.append(c_id)
+
+                        has_neg_c = any(w in c_claim for w in ["limit", "slow", "vulnerable", "delay", "outage", "expensive", "fail", "bottleneck"])
+                        has_pos_c = any(w in c_claim for w in ["99.999%", "low latency", "sla guaranteed", "automated", "scalable", "high performance", "cost effective", "resilient"])
+
+                        if has_pos_c and not has_neg_c:
+                            matched_pros.append(f"Verified Research Claim: {c_claim[:120]}")
+                        elif has_neg_c and not has_pos_c:
+                            matched_cons.append(f"Verified Research Claim: {c_claim[:120]}")
+                        else:
+                            matched_facts.append(f"Verified Research Claim: {c_claim[:120]}")
+
+    # 6. Calculate deterministic score adjustment
+    pos_boost = 0.5 * len(matched_pros)
+    neg_penalty = 0.6 * len(matched_cons)
+    fact_boost = 0.2 * len(matched_facts)
+    final_score = base_prior + pos_boost - neg_penalty + fact_boost
+    final_score = max(1.5, min(9.5, round(final_score, 1)))
+
+    has_specific_evidence = bool(matched_pros or matched_cons or matched_facts or finding_ids or gap_ids or evidence_ids)
+
+    if has_specific_evidence:
+        status = "justified"
+        reason = (
+            f"{opt.name} scores {final_score:.1f}/10 on {crit.name} based on verified findings: "
+            f"{len(matched_pros)} supporting pros, {len(matched_cons)} operational trade-offs, and {len(matched_facts)} factual metrics."
+        )
+    else:
+        status = "insufficient_evidence"
+        reason = (
+            f"No verified evidence found evaluating {opt.name} on {crit.name}; "
+            f"rated {final_score:.1f}/10 based on domain baseline and requires empirical verification."
+        )
+        finding_ids = []
+
+    return final_score, reason, status, finding_ids, gap_ids, evidence_ids
+
+
 def build_grounded_ratings(
     options: List[MatrixOption],
     criteria: List[MatrixCriterion],
@@ -815,61 +1195,52 @@ def build_grounded_ratings(
     decision_gaps: Optional[Dict[str, Any]] = None,
     raw_context: str = "",
     domain: str = "BUSINESS",
+    research_data: Optional[Dict[str, Any]] = None,
 ) -> List[MatrixScoreItem]:
     """
-    Build ratings with rigorous provenance: every rating includes a clear reason,
-    linked supporting finding/fact IDs, gap IDs, and evidence IDs.
+    Build ratings with rigorous provenance: every rating evaluates the option and criterion
+    independently based on criterion-specific evidence and domain baseline priors.
+    Never fabricates synthetic finding or evidence IDs.
     Calculations are strictly deterministic.
     """
     ratings: List[MatrixScoreItem] = []
-    facts = structured_points.get("facts", []) if isinstance(structured_points, dict) else []
-    gap_items = (decision_gaps.get("gaps", []) if isinstance(decision_gaps, dict) else []) or []
-    
-    gap_map: Dict[str, List[str]] = {}
-    for g in gap_items:
-        if isinstance(g, dict):
-            gid = g.get("id", "")
-            for opt in g.get("affected_options", []):
-                gap_map.setdefault(str(opt).lower(), []).append(gid)
 
     for i, opt in enumerate(options):
-        opt_gaps = gap_map.get(opt.name.lower(), [])
         is_derived = (opt.origin == "derived")
-        
+
         for j, crit in enumerate(criteria):
-            crit_name = crit.name.lower()
-            
-            opt_lower = opt.name.lower()
-            opt_keywords = [w for w in opt_lower.replace("(", " ").replace(")", " ").split() if len(w) > 3]
+            (
+                score,
+                reason,
+                status,
+                finding_ids,
+                gap_ids,
+                evidence_ids,
+            ) = evaluate_option_criterion_rating(
+                opt=opt,
+                crit=crit,
+                structured_points=structured_points,
+                decision_gaps=decision_gaps,
+                raw_context=raw_context,
+                domain=domain,
+                is_derived=is_derived,
+                research_data=research_data,
+            )
 
-            pos_matches = sum(1 for p in structured_points.get("pros", []) if any(w in str(p).lower() for w in opt_keywords))
-            neg_matches = sum(1 for c in structured_points.get("cons", []) if any(w in str(c).lower() for w in opt_keywords))
-            fact_matches = sum(1 for f in facts if any(w in str(f).lower() for w in opt_keywords))
-
-            base_score = 7.5 + (0.35 * pos_matches) - (0.35 * neg_matches) + (0.15 * fact_matches)
-            if is_derived:
-                base_score += 0.4
-            base_score = max(3.0, min(9.5, base_score))
-            reason = f"{opt.name} evaluated on {crit.name} based on verified operational capabilities and constraints."
-            status = "justified"
-
-            finding_ids = [f"fact_{k+1}" for k in range(min(2, len(facts)))]
-            evidence_ids = [f"ev_{i+1}_{j+1}"]
-            
             ratings.append(
                 MatrixScoreItem(
                     option_id=opt.id,
                     criterion_id=crit.id,
-                    rating=round(base_score, 2),
+                    rating=score,
                     notes=reason,
                     reason=reason,
                     supporting_finding_ids=finding_ids,
-                    supporting_gap_ids=opt_gaps,
+                    supporting_gap_ids=gap_ids,
                     supporting_evidence_ids=evidence_ids,
                     status=status,
                 )
             )
-            
+
     return ratings
 
 
@@ -900,7 +1271,11 @@ def build_canonical_decision_result(
         if isinstance(g, dict):
             importance = str(g.get("importance", "")).lower()
             status_val = str(g.get("status", "")).lower()
-            if importance in ("high", "critical") and status_val in ("unanswered", "pending", "skipped"):
+            is_unresolved = (
+                status_val in UNRESOLVED_GAP_STATUSES
+                or (status_val not in RESOLVED_GAP_STATUSES and not g.get("resolved_answer") and not g.get("answer"))
+            )
+            if importance in ("high", "critical") and is_unresolved:
                 gid = g.get("id", f"gap_{len(unresolved_gaps)+1}")
                 unresolved_gaps.append(gid)
                 q = g.get("question", "Unknown factor")
@@ -913,6 +1288,20 @@ def build_canonical_decision_result(
             if any(k in u_str for k in ("title", "zoning", "compliance", "tco", "budget", "feeder road", "due diligence", "legal")):
                 unresolved_gaps.append(f"unknown_{i+1}")
                 critical_conditions.append(f"Condition: Complete due diligence regarding '{u}' before closing.")
+
+    # Check for unrated AI pairs that were marked insufficient_evidence
+    opt_map = {o.id: o.name for o in options}
+    crit_map = {c.id: c.name for c in criteria}
+    for r in ratings:
+        if r.status == "insufficient_evidence" and "[unrated in ai output]" in (r.reason or "").lower():
+            opt_label = opt_map.get(r.option_id, r.option_id)
+            crit_label = crit_map.get(r.criterion_id, r.criterion_id)
+            gid = f"unrated_ai_{r.option_id}_{r.criterion_id}"
+            if gid not in unresolved_gaps:
+                unresolved_gaps.append(gid)
+                critical_conditions.append(
+                    f"Condition: Rating for '{opt_label}' on '{crit_label}' was unrated by AI and has insufficient evidence. Verify with empirical benchmarks before execution."
+                )
 
     decision_status = "CONDITIONAL" if len(unresolved_gaps) > 0 else "READY"
     if not critical_conditions and decision_status == "CONDITIONAL":
@@ -1193,9 +1582,12 @@ def detect_candidate_options(
     """
     Extract candidate options by uniting:
     1. affected_options harvested from Stage 3 Gaps (highest fidelity)
-    2. Architectural or platform keywords in raw context / problem statement
-    3. Structured points (mixed_points, contradictions)
+    2. Candidate options from Structured Points (Stage 2)
+    3. Explicit lists or comparisons in problem statement / context (numbered lists, vs blocks, triage)
+    4. Explicit status quo / existing setup extraction
+    5. Architectural or platform keywords in raw context / problem statement
     Deduplicates options case-insensitively while preserving natural capitalization.
+    Preserves all explicit alternatives supplied by the user.
     """
     options: List[str] = []
 
@@ -1221,16 +1613,60 @@ def detect_candidate_options(
                     if clean_name and clean_name.lower() not in {existing.lower() for existing in options}:
                         options.append(clean_name)
 
-    # Priority 3: Dynamic extraction from problem statement (e.g., "X vs Y" or "Choose between X and Y")
-    combined_prompt = f"{problem_statement} {context_text}"
-    vs_matches = re.findall(r'([A-Za-z0-9][A-Za-z0-9\s\-_]{2,35})\s+(?:vs\.?|versus)\s+([A-Za-z0-9][A-Za-z0-9\s\-_]{2,35})', combined_prompt, re.IGNORECASE)
-    for m1, m2 in vs_matches:
-        o1 = re.sub(r'^(?:should\s+we\s+|choose\s+between\s+|decide\s+between\s+|evaluating\s+|select\s+)', '', m1, flags=re.IGNORECASE).strip()
-        o2 = re.sub(r'^(?:or\s+)', '', m2, flags=re.IGNORECASE).strip()
-        if o1 and len(o1) > 2 and o1.lower() not in {existing.lower() for existing in options}:
-            options.append(o1.strip().title() if o1.islower() else o1.strip())
-        if o2 and len(o2) > 2 and o2.lower() not in {existing.lower() for existing in options}:
-            options.append(o2.strip().title() if o2.islower() else o2.strip())
+    # Priority 3: Dynamic extraction from problem statement and context
+    combined_prompt = f"{problem_statement}\n{context_text}"
+
+    # 3a. Explicit numbered or bulleted options (e.g. "1. Option A\n2. Option B\n3. Option C" or "Option 1: ...")
+    numbered_matches = re.findall(
+        r'(?:^|\n)\s*(?:[1-9]\.|\([1-9]\)|[1-9]\)|(?:Option|Alternative)\s+[A-Za-z0-9]+[:\-]|\-\s*(?:Option|Alternative)\s+[A-Za-z0-9]+[:\-])\s*([^\n\r]{3,65})',
+        combined_prompt,
+        re.MULTILINE
+    )
+    for item in numbered_matches:
+        clean_item = re.sub(r'^(?:should\s+we\s+|choose\s+between\s+|decide\s+between\s+|evaluating\s+|select\s+)', '', item, flags=re.IGNORECASE).strip()
+        clean_item = clean_item.rstrip(".,;")
+        if len(clean_item) > 2 and clean_item.lower() not in {existing.lower() for existing in options}:
+            options.append(clean_item.strip().title() if clean_item.islower() else clean_item.strip())
+
+    # 3b. Multi-way comparisons with "vs" or "versus" (e.g. "X vs Y vs Z" or "X vs. Y")
+    vs_blocks = re.findall(r'([A-Za-z0-9][A-Za-z0-9\s\-_]{2,35}(?:\s+(?:vs\.?|versus)\s+[A-Za-z0-9][A-Za-z0-9\s\-_]{2,35})+)', combined_prompt, re.IGNORECASE)
+    for block in vs_blocks:
+        parts = re.split(r'\s+(?:vs\.?|versus)\s+', block, flags=re.IGNORECASE)
+        for p in parts:
+            clean_p = re.sub(r'^(?:should\s+we\s+|choose\s+between\s+|decide\s+between\s+|evaluating\s+|select\s+|or\s+)', '', p, flags=re.IGNORECASE).strip()
+            if clean_p and len(clean_p) > 2 and clean_p.lower() not in {existing.lower() for existing in options}:
+                options.append(clean_p.strip().title() if clean_p.islower() else clean_p.strip())
+
+    # 3c. "choose between X, Y, or Z" / "from X to Y or Z"
+    tri_matches = re.findall(
+        r'(?:between|from|either|evaluating)\s+([A-Za-z0-9][A-Za-z0-9\s\-_]{2,35}),\s+([A-Za-z0-9][A-Za-z0-9\s\-_]{2,35}),?\s+(?:or|and|to)\s+([A-Za-z0-9][A-Za-z0-9\s\-_]{2,35})',
+        combined_prompt,
+        re.IGNORECASE
+    )
+    for o1, o2, o3 in tri_matches:
+        for o in (o1, o2, o3):
+            clean_o = re.sub(r'^(?:should\s+we\s+|choose\s+between\s+|decide\s+between\s+|evaluating\s+|select\s+|or\s+)', '', o, flags=re.IGNORECASE).strip()
+            if clean_o and len(clean_o) > 2 and clean_o.lower() not in {existing.lower() for existing in options}:
+                options.append(clean_o.strip().title() if clean_o.islower() else clean_o.strip())
+
+    # 3d. Explicit Status Quo / Existing Setup recognition
+    has_status_quo_text = any(
+        sq in combined_prompt.lower()
+        for sq in [
+            "continue with existing", "upgrade existing", "retain existing", "keep existing",
+            "current on-prem", "current on-premises", "existing on-prem", "existing infrastructure",
+            "status quo", "stay with current", "maintain existing", "continue or upgrade"
+        ]
+    )
+    has_status_quo_opt = any(
+        any(sq in opt.lower() for sq in ["existing", "status quo", "maintain", "retain", "continue"])
+        for opt in options
+    )
+    if has_status_quo_text and not has_status_quo_opt:
+        if any(w in combined_prompt.lower() for w in ["cloud", "infrastructure", "on-prem", "hardware", "datacenter"]):
+            options.append("Continue / Upgrade Existing On-Premises Infrastructure")
+        else:
+            options.append("Maintain Existing Setup (Status Quo)")
 
     # Priority 4: Check for specific architectural or platform options in text keywords
     text = f"{context_text} {problem_statement}"
@@ -1239,8 +1675,13 @@ def detect_candidate_options(
     detected_text_opts: List[str] = []
     if "microservices" in text_lower or "monolith" in text_lower:
         detected_text_opts = ["Microservices Architecture", "Modular Monolith Architecture"]
-    elif "cloud" in text_lower and ("on-premise" in text_lower or "hybrid" in text_lower):
-        detected_text_opts = ["Public Cloud Deployment", "Hybrid On-Premises Setup"]
+    elif "cloud" in text_lower and ("on-premise" in text_lower or "hybrid" in text_lower or "on-prem" in text_lower or "infrastructure" in text_lower or "datacenter" in text_lower):
+        # Includes all 3 alternatives: Cloud, Hybrid, and On-Premises status quo
+        detected_text_opts = [
+            "Public Cloud Deployment",
+            "Hybrid On-Premises Setup",
+            "Continue / Upgrade Existing On-Premises Infrastructure",
+        ]
     elif "postgres" in text_lower or "mongodb" in text_lower:
         detected_text_opts = ["Relational DB (PostgreSQL)", "Document DB (MongoDB)"]
     elif "option a" in text_lower or "option 1" in text_lower:
@@ -1260,6 +1701,14 @@ def detect_candidate_options(
             detected_text_opts = [f"Direct Path: {clean_stmt}", "Alternative Phased Mitigation"]
         else:
             detected_text_opts = ["Option A: Primary Direction", "Option B: Phased Approach"]
+
+    # Union with deduplication (case-insensitive) - preserves all explicit user options
+    for opt in detected_text_opts:
+        clean_opt = str(opt).strip()
+        if clean_opt and clean_opt.lower() not in {existing.lower() for existing in options}:
+            options.append(clean_opt)
+
+    return options
 
     # Union with deduplication (case-insensitive)
     for opt in detected_text_opts:
@@ -1824,7 +2273,7 @@ def run_decision_matrix_module(
     if custom_options:
         options = custom_options
     elif len(detected_opts) >= 2:
-        options = create_stable_matrix_options(detected_opts[:4])
+        options = create_stable_matrix_options(detected_opts[:5])
     else:
         if domain == DecisionDomain.REAL_ESTATE.value:
             opt_names = ["Direct Outright Purchase", "Structured Buyout", "Joint Venture Land Bank Hybrid"]
@@ -1848,6 +2297,7 @@ def run_decision_matrix_module(
             decision_gaps=decision.gaps,
             raw_context=raw_context,
             domain=domain,
+            research_data=decision.research,
         )
 
     # 5. Execute deterministic calculation engine
@@ -2018,75 +2468,51 @@ def run_decision_tree_module(
         )
 
     detected_opts = detect_candidate_options(raw_context, structured_points, decision.problem_statement, decision.gaps)
-    opt_a_label = detected_opts[0] if len(detected_opts) > 0 else "Strategy A: Cloud Migration"
-    opt_b_label = detected_opts[1] if len(detected_opts) > 1 else "Strategy B: Maintain & Optimize"
+    opt_list = detected_opts[:4] if len(detected_opts) >= 2 else ["Strategy A: Cloud Migration", "Strategy B: Maintain & Optimize"]
 
     # Invariant: Do NOT invent probabilities!
     # Probabilities are marked None unless user explicitly provided them.
+    branches = []
+    for idx, opt_label in enumerate(opt_list):
+        letter = chr(ord('a') + idx)
+        branches.append(
+            DecisionTreeBranch(
+                branch_id=f"br_opt_{letter}",
+                label=opt_label,
+                probability=None,  # Invariant: Never invented!
+                is_probability_estimated=False,
+                payoff=None,
+                outcome_description=f"Pursue strategic option: {opt_label}.",
+                sub_branches=[
+                    DecisionTreeBranch(
+                        branch_id=f"br_{letter}_success",
+                        label="Smooth Adoption & Low Friction",
+                        probability=None,  # None: User must specify
+                        is_probability_estimated=False,
+                        payoff=round(85.0 - (idx * 5.0), 1),
+                        payoff_unit="Utility Points",
+                        outcome_description=f"High operational agility and favorable implementation under {opt_label}.",
+                    ),
+                    DecisionTreeBranch(
+                        branch_id=f"br_{letter}_friction",
+                        label="Migration Delays & Budget Overrun",
+                        probability=None,  # None: User must specify
+                        is_probability_estimated=False,
+                        payoff=round(40.0 - (idx * 5.0), 1),
+                        payoff_unit="Utility Points",
+                        outcome_description=f"Extended timeline and increased transition expenditures under {opt_label}.",
+                    ),
+                ],
+            )
+        )
+
     nodes = [
         DecisionTreeNode(
             node_id="node_root",
             node_type="decision",
             label=f"Strategic Choice: {decision.title}",
             description="Primary fork between candidate implementation options.",
-            branches=[
-                DecisionTreeBranch(
-                    branch_id="br_opt_a",
-                    label=opt_a_label,
-                    probability=None,  # Invariant: Never invented!
-                    is_probability_estimated=False,
-                    payoff=None,
-                    outcome_description="Pursue modernized decoupled architecture.",
-                    sub_branches=[
-                        DecisionTreeBranch(
-                            branch_id="br_a_success",
-                            label="Smooth Adoption & Low Friction",
-                            probability=None,  # None: User must specify
-                            is_probability_estimated=False,
-                            payoff=85.0,
-                            payoff_unit="Utility Points",
-                            outcome_description="High operational agility with minimal migration delays.",
-                        ),
-                        DecisionTreeBranch(
-                            branch_id="br_a_friction",
-                            label="Migration Delays & Budget Overrun",
-                            probability=None,  # None: User must specify
-                            is_probability_estimated=False,
-                            payoff=40.0,
-                            payoff_unit="Utility Points",
-                            outcome_description="Extended timeline and increased transition expenditures.",
-                        ),
-                    ],
-                ),
-                DecisionTreeBranch(
-                    branch_id="br_opt_b",
-                    label=opt_b_label,
-                    probability=None,  # Invariant: Never invented!
-                    is_probability_estimated=False,
-                    payoff=None,
-                    outcome_description="Pursue conservative low-cost optimization.",
-                    sub_branches=[
-                        DecisionTreeBranch(
-                            branch_id="br_b_success",
-                            label="Cost Savings Realized",
-                            probability=None,
-                            is_probability_estimated=False,
-                            payoff=70.0,
-                            payoff_unit="Utility Points",
-                            outcome_description="Immediate preservation of capital and operational stability.",
-                        ),
-                        DecisionTreeBranch(
-                            branch_id="br_b_limits",
-                            label="Capacity Ceilings Hit Early",
-                            probability=None,
-                            is_probability_estimated=False,
-                            payoff=30.0,
-                            payoff_unit="Utility Points",
-                            outcome_description="Premature saturation requiring emergency re-architecture.",
-                        ),
-                    ],
-                ),
-            ],
+            branches=branches,
         )
     ]
 
@@ -2164,6 +2590,9 @@ def run_framework_analysis(
     five_whys = None
     decision_tree = None
     summary_insights: List[str] = []
+
+    domain = detect_decision_domain(decision, raw_context)
+    decision.domain = domain
 
     # Classify decision intent and assemble tailored methodology ensemble
     def_rec_techniques, def_rationale, applicability_map = classify_decision_methodology_ensemble(
@@ -2353,15 +2782,40 @@ def run_framework_analysis(
 
                     # Ensure all (opt_id, crit_id) pairs have ratings
                     existing_pairs = {(r.option_id, r.criterion_id) for r in raw_ratings}
+                    missing_pair_count = 0
                     for opt in raw_options:
                         for crit in raw_criteria:
                             if (opt.id, crit.id) not in existing_pairs:
+                                missing_pair_count += 1
+                                (
+                                    g_score,
+                                    g_reason,
+                                    g_status,
+                                    f_ids,
+                                    g_ids,
+                                    ev_ids,
+                                ) = evaluate_option_criterion_rating(
+                                    opt=opt,
+                                    crit=crit,
+                                    structured_points=structured_points,
+                                    decision_gaps=decision.gaps,
+                                    raw_context=raw_context,
+                                    domain=domain,
+                                    is_derived=(opt.origin == "derived"),
+                                    research_data=decision.research,
+                                )
+                                # An omitted rating in AI output must never silently pass as verified
                                 raw_ratings.append(
                                     MatrixScoreItem(
                                         option_id=opt.id,
                                         criterion_id=crit.id,
-                                        rating=6.0,
-                                        reason="Baseline neutral evaluation",
+                                        rating=g_score,
+                                        reason=f"[UNRATED IN AI OUTPUT] {g_reason}",
+                                        notes="Model response omitted this cell; evaluated via domain-grounded fallback.",
+                                        supporting_finding_ids=f_ids,
+                                        supporting_gap_ids=g_ids,
+                                        supporting_evidence_ids=ev_ids,
+                                        status="insufficient_evidence",
                                     )
                                 )
 
@@ -2374,6 +2828,13 @@ def run_framework_analysis(
                         scale_max=10.0,
                     )
 
+                    sensitivity_note_text = f"Deterministic ranking based on {len(raw_criteria)} weighted criteria."
+                    if missing_pair_count > 0:
+                        sensitivity_note_text += (
+                            f" Warning: {missing_pair_count} option-criterion pair(s) were unrated in the model response "
+                            f"and evaluated via fallback (flagged as insufficient_evidence)."
+                        )
+
                     parsed_matrix = DecisionMatrixAnalysis(
                         applicable=True,
                         inapplicability_reason=None,
@@ -2385,7 +2846,7 @@ def run_framework_analysis(
                         results=results,
                         winner_option_id=winner_id,
                         winner_option_name=winner_name,
-                        sensitivity_notes=f"Deterministic ranking based on {len(raw_criteria)} weighted criteria.",
+                        sensitivity_notes=sensitivity_note_text,
                     )
             except Exception as e:
                 logger.warning(f"Failed to parse AI Decision Matrix: {e}", exc_info=True)
@@ -2559,6 +3020,10 @@ def run_framework_analysis(
         "summary_insights": summary_insights,
     }
     decision.analysis = analysis_dict
+
+    # Analysis underway: transition from draft to evaluating
+    if decision.status == DecisionLifecycleStatus.DRAFT.value:
+        decision.status = DecisionLifecycleStatus.EVALUATING.value
 
     # Mark downstream recommendation stale if it already exists
     if decision.recommendation and isinstance(decision.recommendation, dict):

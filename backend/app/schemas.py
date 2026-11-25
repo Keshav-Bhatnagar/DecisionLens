@@ -18,6 +18,41 @@ class DecisionDomain(str, Enum):
     PERSONAL = "PERSONAL"
 
 
+class DecisionLifecycleStatus(str, Enum):
+    """
+    Consistent state lifecycle across DecisionLens:
+    - draft: Initial decision setup, inputs being gathered
+    - evaluating: Analysis underway (structuring, gaps, framework matrix)
+    - conditional: Critical checks remain / awaiting validation (conditional recommendation)
+    - decided: Final decision approved (conclusive recommendation accepted)
+    - archived: Decision no longer active / superseded
+    """
+    DRAFT = "draft"
+    EVALUATING = "evaluating"
+    CONDITIONAL = "conditional"
+    DECIDED = "decided"
+    ARCHIVED = "archived"
+
+
+# Central gap status definitions for consistent cross-stage interpretation
+UNRESOLVED_GAP_STATUSES = {
+    "pending",
+    "unanswered",
+    "skipped",
+    "research_queued",
+    "unresolved_research",
+    "failed_research",
+    "blocked",
+}
+
+RESOLVED_GAP_STATUSES = {
+    "answered",
+    "researched",
+    "research_completed",
+    "resolved",
+}
+
+
 # ==========================================
 # User & Auth Schemas
 # ==========================================
@@ -158,9 +193,14 @@ class DecisionBase(BaseModel):
     description: Optional[str] = ""
     problem_statement: Optional[str] = ""
     record_type: Optional[str] = Field("decision", description="'decision' or 'meeting'")
-    status: Optional[str] = Field("draft", description="'draft', 'evaluating', 'decided', or 'archived'")
+    status: Optional[str] = Field(
+        DecisionLifecycleStatus.DRAFT.value,
+        description="'draft' (initial), 'evaluating' (underway), 'conditional' (awaiting validation), 'decided' (approved), or 'archived'",
+    )
     language: Optional[str] = Field("en", description="'en' or 'hi'")
-    domain: Optional[str] = Field("BUSINESS", description="Decision domain (e.g. REAL_ESTATE, FINANCE, SOFTWARE)")
+    domain: Optional[str] = Field("AUTO", description="Decision domain (e.g. AUTO, REAL_ESTATE, FINANCE, SOFTWARE)")
+    domain_source: Optional[str] = Field(default="manual", description="'manual', 'inherited', or 'ai_detected'")
+    domain_confidence: Optional[float] = Field(default=1.0, description="Confidence score between 0.0 and 1.0")
 
 
 class DecisionCreate(DecisionBase):
@@ -176,6 +216,8 @@ class DecisionUpdate(BaseModel):
     status: Optional[str] = None
     language: Optional[str] = None
     domain: Optional[str] = None
+    domain_source: Optional[str] = None
+    domain_confidence: Optional[float] = None
     raw_input: Optional[str] = None
     fault_lines: Optional[Dict[str, int]] = None
 
@@ -196,6 +238,8 @@ class DecisionResponse(DecisionBase):
     analysis: Dict[str, Any]
     recommendation: Dict[str, Any]
     roadmap: Dict[str, Any]
+    domain_source: Optional[str] = Field(default="manual", description="'manual', 'inherited', or 'ai_detected'")
+    domain_confidence: Optional[float] = Field(default=1.0, description="Confidence score 0.0-1.0")
     created_at: datetime
     updated_at: datetime
 
@@ -949,7 +993,10 @@ class SupportingEvidenceItem(BaseModel):
     claim: str = Field(..., description="The factual claim supporting the synthesis")
     source_title: Optional[str] = Field(None, description="Actual cited source title (never invented)")
     source_url: Optional[str] = Field(None, description="Source URL if from research")
-    evidence_type: str = Field("user_fact", description="'user_fact', 'research_claim', or 'framework_metric'")
+    evidence_type: str = Field(
+        "user_fact",
+        description="'user_fact' (user-reported), 'document_excerpt' (uploaded document), 'research_claim' (externally verified), 'assumption', 'framework_metric' (AI inference), or 'conflicting_or_unknown'",
+    )
     reliability: Optional[str] = Field(None, description="'high', 'medium', or 'low'")
 
 

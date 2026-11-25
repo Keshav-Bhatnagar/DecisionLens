@@ -213,6 +213,7 @@ export default function PortfolioPage() {
             {[
               { id: "ALL", label: "All" },
               { id: "decided", label: "Decided" },
+              { id: "conditional", label: "Conditional" },
               { id: "evaluating", label: "Scrutiny" },
               { id: "draft", label: "Draft" },
             ].map((st) => (

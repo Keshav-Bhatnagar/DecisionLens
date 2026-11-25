@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from reportlab.lib.pagesizes import A4, letter
@@ -20,6 +20,24 @@ from reportlab.pdfgen import canvas
 
 from app.models import Decision, Attachment
 from app.config import settings
+
+
+def format_decision_status_metadata(status: Optional[str]) -> Tuple[str, str, str]:
+    """
+    Format decision status metadata consistently across report formats:
+    Returns (status_label, adr_governance_status, status_badge_color_hex)
+    """
+    raw_status = (status or "evaluating").lower()
+    if raw_status == "conditional":
+        return "CONDITIONAL (Awaiting Validation)", "PROVISIONAL (Awaiting Validation Clearance)", "#B45309"
+    elif raw_status == "decided":
+        return "DECIDED", "ACCEPTED (Active CI Guardrail)", "#166534"
+    elif raw_status == "evaluating":
+        return "EVALUATING", "PROPOSED (Pending Clearance)", "#1D4ED8"
+    elif raw_status == "archived":
+        return "ARCHIVED", "ARCHIVED (Superseded)", "#6B7280"
+    else:
+        return "DRAFT", "PROPOSED (Pending Clearance)", "#4B5563"
 
 
 def generate_decision_markdown_report(decision: Decision) -> str:
@@ -36,7 +54,7 @@ def generate_decision_markdown_report(decision: Decision) -> str:
     roadmap = decision.roadmap or {}
 
     now_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
-    status_str = decision.status.upper() if decision.status else "EVALUATING"
+    status_str, adr_status, _ = format_decision_status_metadata(decision.status)
     confidence_score = rec.get("confidence_assessment", {}).get("score", 0.85)
     conf_pct = int(confidence_score * 100) if isinstance(confidence_score, (int, float)) else 85
     synthesis_type = rec.get("synthesis_type", "recommendation")
@@ -348,8 +366,6 @@ def generate_decision_markdown_report(decision: Decision) -> str:
                 "risk_reduction_rationale": "Avoided unbudgeted rewrite toil, licensing traps, and operational drag.",
             }
 
-    adr_status = "ACCEPTED (Active CI Guardrail)" if decision.status == "decided" else "PROPOSED (Pending Clearance)"
-
     lines.extend([
         "### 🛡️ Capital at Risk & Blunder Shield (Executive ROI & Sunk-Cost Protection)",
         "| Metric | Protected Impact | Strategic Governance Rationale |",
@@ -474,6 +490,37 @@ def generate_decision_markdown_report(decision: Decision) -> str:
                             lines.append(f"  - *Success Criteria:* {task.get('success_criteria')}")
                 lines.append("")
 
+    if getattr(decision, "outcomes", None):
+        sorted_outcomes = sorted(decision.outcomes, key=lambda x: (x.created_at or datetime.min.replace(tzinfo=timezone.utc), x.id))
+        lines.extend([
+            "## 7. Stage 6: Outcome Realization & Continuous Learning",
+            "",
+            "| Review # | Milestone | Implementation Status | Chosen Path | Utility Rating | Alignment |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- |",
+        ])
+        for idx, o in enumerate(sorted_outcomes, 1):
+            status_badge = o.implementation_status.replace("_", " ").title()
+            tool_rec = "Aligned" if o.would_recommend_tool else "Pivoted"
+            lines.append(
+                f"| #{idx} | Day {o.days_since_decision} Check-in | {status_badge} | {o.chosen_option} | **{o.utility_rating}/10** | {tool_rec} |"
+            )
+        lines.append("")
+
+        for idx, o in enumerate(sorted_outcomes, 1):
+            lines.append(f"### Milestone Review #{idx} ({o.days_since_decision}-Day Check-in)")
+            if o.what_worked_well:
+                lines.append(f"- **What Worked Well:** {o.what_worked_well}")
+            if o.lessons_learned:
+                lines.append(f"- **Key Lessons Learned:** {o.lessons_learned}")
+            if o.unexpected_challenges:
+                lines.append(f"- **Unexpected Challenges Encountered:**")
+                for ch in o.unexpected_challenges:
+                    lines.append(f"  - {ch}")
+            if o.predicted_vs_actual and isinstance(o.predicted_vs_actual, dict):
+                p_items = [f"{k.replace('_', ' ').title()}: {'Yes' if v else 'No'}" for k, v in o.predicted_vs_actual.items()]
+                lines.append(f"- **Execution Variance (Predicted vs Actual):** {', '.join(p_items)}")
+            lines.append("")
+
     lines.extend([
         "---",
         "",
@@ -511,6 +558,24 @@ def generate_decision_json_report(decision: Decision) -> Dict[str, Any]:
         "final_synthesis": decision.recommendation or {},
         "active_roadmap": decision.roadmap or {},
         "snapshots_count": len(decision.snapshots) if decision.snapshots else 0,
+        "outcomes": [
+            {
+                "id": o.id,
+                "implementation_status": o.implementation_status,
+                "chosen_option": o.chosen_option,
+                "utility_rating": o.utility_rating,
+                "predicted_vs_actual": o.predicted_vs_actual or {},
+                "unexpected_challenges": o.unexpected_challenges or [],
+                "what_worked_well": o.what_worked_well or "",
+                "lessons_learned": o.lessons_learned or "",
+                "would_recommend_tool": o.would_recommend_tool,
+                "days_since_decision": o.days_since_decision,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+                "updated_at": o.updated_at.isoformat() if o.updated_at else None,
+            }
+            for o in (sorted(decision.outcomes, key=lambda x: (x.created_at or datetime.min.replace(tzinfo=timezone.utc), x.id)) if getattr(decision, "outcomes", None) else [])
+        ],
+        "outcomes_count": len(decision.outcomes) if getattr(decision, "outcomes", None) else 0,
         "exported_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -575,7 +640,8 @@ def generate_decision_latex_report(decision: Decision) -> str:
     roadmap = decision.roadmap or {}
 
     now_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
-    status_str = escape_latex(decision.status.upper() if decision.status else "EVALUATING")
+    raw_stat, adr_status_latex, _ = format_decision_status_metadata(decision.status)
+    status_str = escape_latex(raw_stat)
     domain_str = escape_latex(decision.domain or "BUSINESS")
     title_escaped = escape_latex(decision.title)
     rec_title = escape_latex(rec.get("headline", "Strategic Recommendation & Roadmap"))
@@ -937,7 +1003,6 @@ def generate_decision_latex_report(decision: Decision) -> str:
     sprints_saved = escape_latex(str(latex_shield.get("developer_sprints_saved", "6 Sprints")))
     trap_blocked = escape_latex(str(latex_shield.get("prevented_fatal_trap", "Premature Complexity")))
     rationale_txt = escape_latex(str(latex_shield.get("risk_reduction_rationale", "Protected capital & velocity.")))
-    adr_status_latex = "ACCEPTED (Active CI Guardrail)" if decision.status == "decided" else "PROPOSED (Pending Clearance)"
 
     lines.extend([
         r"\subsection{Capital at Risk \& Blunder Shield Protection}",
@@ -1039,6 +1104,30 @@ def generate_decision_latex_report(decision: Decision) -> str:
                             if t_crit:
                                 lines.append(f"\\\\ \\textit{{Exit Criteria:}} {t_crit}")
                     lines.append(r"\end{itemize}")
+
+    if getattr(decision, "outcomes", None):
+        sorted_outcomes = sorted(decision.outcomes, key=lambda x: (x.created_at or datetime.min.replace(tzinfo=timezone.utc), x.id))
+        lines.extend([
+            r"\section{Stage 6: Outcome Realization \& Continuous Learning}",
+            r"\begin{tcolorbox}[colback=CardSurface, colframe=SteelBlue, arc=1.5mm, boxrule=0.8pt, title={\textbf{Empirical Post-Decision Reviews}}]",
+            r"\begin{tabularx}{\linewidth}{@{} l X l r @{}}",
+            r"\textbf{Milestone} & \textbf{Status \& Option Chosen} & \textbf{Utility} & \textbf{Alignment} \\ \hline",
+        ])
+        for idx, o in enumerate(sorted_outcomes, 1):
+            st_clean = escape_latex(o.implementation_status.replace("_", " ").title())
+            opt_clean = escape_latex(o.chosen_option)
+            align_txt = "Aligned" if o.would_recommend_tool else "Pivoted"
+            lines.append(
+                f"Day {o.days_since_decision} & {st_clean} --- {opt_clean} & \\textbf{{{o.utility_rating}/10}} & {align_txt} \\\\"
+            )
+        lines.extend([
+            r"\end{tabularx}",
+            r"\end{tcolorbox}",
+            r"\vspace{0.5em}",
+        ])
+        for idx, o in enumerate(sorted_outcomes, 1):
+            if o.lessons_learned:
+                lines.append(f"\\noindent\\textbf{{Day {o.days_since_decision} Lessons:}} {escape_latex(o.lessons_learned)} \\\\[3pt]")
 
     lines.extend([
         "",
@@ -1294,7 +1383,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     story: List[Flowable] = []
 
     now_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
-    status_str = (decision.status or "EVALUATING").upper()
+    status_str, adr_status_pdf, stat_color = format_decision_status_metadata(decision.status)
     domain_str = (decision.domain or "BUSINESS").upper()
     conf_score = rec.get("confidence_assessment", {}).get("score", 0.85)
     conf_pct = int(conf_score * 100) if isinstance(conf_score, (int, float)) else 85
@@ -1312,7 +1401,7 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     top_bar = Table([
         [
             Paragraph(f"<b>{banner_subtitle}</b> &nbsp;&bull;&nbsp; <font color='#5A6275'>Verified Epistemic Evidence</font>", kicker_style),
-            Paragraph(f"<b>STATUS:</b> <font color=\"#166534\"><b>{escape_xml(status_str)}</b></font>", ParagraphStyle("BStat", parent=kicker_style, alignment=2)),
+            Paragraph(f"<b>STATUS:</b> <font color=\"{stat_color}\"><b>{escape_xml(status_str)}</b></font>", ParagraphStyle("BStat", parent=kicker_style, alignment=2)),
         ]
     ], colWidths=[360, 123])
     top_bar.setStyle(TableStyle([
@@ -1703,7 +1792,6 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
     p_sprints = escape_xml(str(pdf_shield.get("developer_sprints_saved", "6 Sprints")))
     p_trap = escape_xml(str(pdf_shield.get("prevented_fatal_trap", "Premature Complexity")))
     p_rationale = escape_xml(str(pdf_shield.get("risk_reduction_rationale", "Avoided toil & risk.")))
-    adr_status_pdf = "ACCEPTED (Active CI Guardrail)" if decision.status == "decided" else "PROPOSED (Pending Clearance)"
 
     story.append(Paragraph("<b>Capital at Risk &amp; Blunder Shield (Executive ROI Assurance):</b>", h2_style))
     shield_rows = [
@@ -1871,6 +1959,47 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
                             task_txt += f"<br/><font color=\"#2F5D8F\">Exit Criteria: {t_crit}</font>"
                         story.append(Paragraph(task_txt, bullet_style))
                 story.append(Spacer(1, 3))
+
+    # Section 7: Stage 6 Continuous Learning & Outcomes
+    if getattr(decision, "outcomes", None):
+        sorted_outcomes = sorted(decision.outcomes, key=lambda x: (x.created_at or datetime.min.replace(tzinfo=timezone.utc), x.id))
+        story.append(BookmarkFlowable("sec_outcomes", "7. Outcome Realization & Continuous Learning", 0))
+        story.append(Paragraph('<a name="sec_outcomes"/><b>7. Stage 6: Outcome Realization &amp; Continuous Learning</b>', h1_style))
+        story.append(HRFlowable(width="100%", thickness=0.4, color=COLOR_STEEL, spaceBefore=1, spaceAfter=4))
+        story.append(Paragraph("<b>Empirical Retrospective &amp; Organizational Learning:</b>", h2_style))
+
+        o_rows = [[
+            Paragraph("<b>Milestone</b>", table_header),
+            Paragraph("<b>Implementation Status &amp; Option</b>", table_header),
+            Paragraph("<b>Utility</b>", table_header),
+            Paragraph("<b>Lessons Learned</b>", table_header),
+        ]]
+        for o in sorted_outcomes:
+            st_clean = escape_xml(o.implementation_status.replace("_", " ").title())
+            opt_clean = escape_xml(o.chosen_option)
+            rating_txt = f"{o.utility_rating}/10"
+            lessons_txt = escape_xml(o.lessons_learned or o.what_worked_well or "Aligned with strategic projections.")
+            o_rows.append([
+                Paragraph(f"Day {o.days_since_decision}", table_cell),
+                Paragraph(f"<b>{st_clean}</b><br/>{opt_clean}", table_cell),
+                Paragraph(f"<b>{rating_txt}</b>", table_cell),
+                Paragraph(lessons_txt, table_cell),
+            ])
+
+        o_table = Table(o_rows, colWidths=[65, 140, 50, 244])
+        o_table.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 1.2, COLOR_NAVY),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.6, COLOR_NAVY),
+            ('LINEBELOW', (0, -1), (-1, -1), 1.2, COLOR_NAVY),
+            ('BACKGROUND', (0, 0), (-1, 0), COLOR_PAGE),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_SURFACE, colors.white]),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(o_table)
+        story.append(Spacer(1, 5))
 
     doc.build(story, canvasmaker=NumberedCanvas)
     return buf.getvalue()

@@ -234,3 +234,62 @@ def test_document_rag_service():
     # Clean up
     doc_rag.delete_decision_index(decision_id=999)
     assert not doc_rag.has_indexed_documents(decision_id=999)
+
+
+def test_rag_answer_question_respects_domain_and_excludes_unrelated_tech_standards():
+    from app.services.rag.answer import answer_question
+    from app.services.rag.document_rag import get_document_rag_service
+
+    class MockAttachment:
+        def __init__(self, id, name, text):
+            self.id = id
+            self.original_name = name
+            self.extracted_text = text
+
+    att = MockAttachment(
+        10,
+        "property_zoning.txt",
+        "Parcel 402 is zoned R-3 for residential multi-family housing with an FSI limit of 2.2. "
+        "Title deed verification confirms zero existing encumbrances or pending litigation."
+    )
+
+    doc_rag = get_document_rag_service()
+    doc_rag.index_attachments(decision_id=1001, attachments=[att])
+
+    # 1. Real Estate domain: must NOT inject software standards
+    res_re = answer_question(
+        decision_id=1001,
+        question="What is the zoning and title status of the land parcel?",
+        decision_title="Land Acquisition for Development",
+        domain="REAL_ESTATE",
+        include_tech_standards=True,
+    )
+    for c in res_re.get("citations", []):
+        meta = c.get("metadata", {})
+        assert meta.get("domain") != "software"
+        assert meta.get("document_name") != "Technical Architecture & Cloud Standards"
+
+    # 2. Personal domain: must NOT inject software standards
+    res_pers = answer_question(
+        decision_id=1001,
+        question="Should I adopt a dog or cat given my apartment schedule?",
+        decision_title="Pet Adoption Decision",
+        domain="PERSONAL",
+        include_tech_standards=True,
+    )
+    for c in res_pers.get("citations", []):
+        meta = c.get("metadata", {})
+        assert meta.get("domain") != "software"
+
+    # 3. Software domain: software standards are permitted when relevant
+    res_sw = answer_question(
+        decision_id=1001,
+        question="What database connection pooling and sharding guidelines apply?",
+        decision_title="Microservice Database Architecture",
+        domain="SOFTWARE",
+        include_tech_standards=True,
+    )
+    assert any(c.get("metadata", {}).get("domain") == "software" for c in res_sw.get("citations", [])) or len(res_sw.get("citations", [])) >= 1
+
+    doc_rag.delete_decision_index(decision_id=1001)
+

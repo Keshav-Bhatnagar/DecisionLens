@@ -176,6 +176,7 @@ export default function DashboardPage() {
     const rawGaps = d.gaps as { gaps?: unknown[] } | undefined;
     const gapCount = Array.isArray(rawGaps?.gaps) ? rawGaps.gaps.length : 0;
     if (d.status === "decided") return "DECIDED";
+    if (d.status === "conditional") return "NEEDS_EVIDENCE";
     if (d.status === "evaluating" && gapCount > 0) return "NEEDS_EVIDENCE";
     if (d.status === "evaluating") return "UNDER_SCRUTINY";
     if (d.status === "ready") return "READY_TO_DECIDE";

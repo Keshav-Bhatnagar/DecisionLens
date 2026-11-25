@@ -1,4 +1,5 @@
 import pytest
+import re
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -878,6 +879,388 @@ def test_personal_lifestyle_domain_synthesis_free_from_tech_jargon(
     assert "audit operational readiness" not in all_reasons_and_desc
     assert "premature capital allocation" not in all_reasons_and_desc
     assert "empirical benchmark data" not in all_reasons_and_desc
+
+
+def test_technical_decision_in_personal_folder_domain_precedence(
+    client: TestClient, auth_headers: dict, test_user: User, db_session: Session
+):
+    """
+    Verify that:
+    1. An explicitly selected decision domain (SOFTWARE) takes precedence over a parent folder (PERSONAL).
+    2. An AUTO decision domain correctly classifies technical content ('Should we migrate production
+       infrastructure to the cloud?') as SOFTWARE rather than blindly inheriting folder domain.
+    3. The resulting Blunder Shield is CLOUD_MIGRATION (not PERSONAL_LIFESTYLE), with zero travel line items.
+    4. The generated roadmap contains software canary/cutover steps and zero hotel/transit/itinerary items.
+    """
+    from app.services.framework_engine import detect_decision_domain
+    from app.services.recommendation import compute_blunder_shield, generate_mock_synthesis, validate_and_sanitize_roadmap_for_domain
+
+    # Create a folder explicitly set to PERSONAL
+    personal_folder = Folder(
+        name="Personal Life",
+        description="Everyday personal decisions",
+        domain="PERSONAL",
+        owner_id=test_user.id,
+    )
+    db_session.add(personal_folder)
+    db_session.commit()
+    db_session.refresh(personal_folder)
+
+    # 1. Explicit domain precedence test
+    explicit_tech_dec = Decision(
+        title="Should we migrate production infrastructure to AWS cloud?",
+        problem_statement="Evaluating migration of our core Docker microservices from on-prem to AWS EKS.",
+        domain="SOFTWARE",
+        domain_source="manual",
+        domain_confidence=1.0,
+        owner_id=test_user.id,
+        folder_id=personal_folder.id,
+    )
+    explicit_tech_dec.folder = personal_folder
+
+    detected_explicit = detect_decision_domain(explicit_tech_dec)
+    assert detected_explicit == "SOFTWARE", (
+        f"Explicit decision domain SOFTWARE was overridden by folder domain {personal_folder.domain}!"
+    )
+
+    # 2. AUTO classification test inside personal folder
+    auto_tech_dec = Decision(
+        title="Should we migrate production infrastructure to the cloud?",
+        problem_statement="Deciding whether to move monolithic database and services to managed cloud kubernetes.",
+        domain="AUTO",
+        domain_source="manual",
+        owner_id=test_user.id,
+        folder_id=personal_folder.id,
+    )
+    auto_tech_dec.folder = personal_folder
+
+    detected_auto = detect_decision_domain(auto_tech_dec)
+    assert detected_auto == "SOFTWARE", (
+        f"AUTO decision with technical dilemma was wrongly classified as {detected_auto} instead of SOFTWARE!"
+    )
+    assert auto_tech_dec.domain_source == "ai_detected"
+    assert auto_tech_dec.domain_confidence >= 0.5
+
+    # 3. Blunder Shield validation: Must NOT generate travel shield
+    shield = compute_blunder_shield(
+        domain=detected_explicit,
+        top_option_name="Migrate to AWS EKS",
+        runner_up_name="Remain On-Premises",
+        decision_title=explicit_tech_dec.title,
+        problem_statement=explicit_tech_dec.problem_statement,
+        facts=["Current infrastructure runs on 12 bare-metal servers.", "Annual hosting cost is ₹45 Lakh."],
+        decision_id=801,
+    )
+    assert shield.receipt is not None
+    assert shield.receipt.decision_type in ("CLOUD_MIGRATION", "ARCHITECTURE_REWRITE", "KUBERNETES_MICROSERVICES")
+    assert shield.receipt.decision_type != "PERSONAL_LIFESTYLE"
+
+    shield_items = [i.item_name for i in shield.receipt.line_items]
+    for item in shield_items:
+        assert "Hotel" not in item
+        assert "Booking" not in item
+        assert "Transit" not in item
+        assert "Travel" not in item
+        assert "Cancellation Exposure" not in item
+
+    # 4. Roadmap validation: Must generate technical canary/cutover and zero travel tasks
+    explicit_tech_dec.domain = "SOFTWARE"
+    db_session.add_all([explicit_tech_dec, auto_tech_dec])
+    db_session.commit()
+    db_session.refresh(explicit_tech_dec)
+
+    synth = generate_mock_synthesis(explicit_tech_dec)
+    assert synth.domain == "SOFTWARE"
+
+    all_roadmap_text = " ".join(
+        f"{t.title} {t.description}" for p in synth.roadmap.phases for t in p.tasks
+    ).lower()
+    banned_travel_terms = [
+        "hotel", "transit", "itinerary", "packing checklist", "post-trip",
+        "travel insurance", "resort", "flight cancellation"
+    ]
+    for term in banned_travel_terms:
+        assert term not in all_roadmap_text, f"Found unexpected travel term '{term}' in SOFTWARE roadmap!"
+
+    # 5. Symmetric validator test: Travel contamination in software roadmap must be sanitized
+    sanitized_roadmap = validate_and_sanitize_roadmap_for_domain(
+        roadmap=synth.roadmap,
+        domain="SOFTWARE",
+        decision_title=explicit_tech_dec.title,
+    )
+    assert sanitized_roadmap is not None
+    assert all("hotel" not in t.title.lower() for p in sanitized_roadmap.phases for t in p.tasks)
+
+
+def test_non_travel_personal_decision_free_from_travel_jargon(
+    client: TestClient, auth_headers: dict, test_user: User, test_folder: Folder, db_session: Session
+):
+    """
+    Verify that a non-travel PERSONAL decision (e.g. adopting a rescue dog or lifestyle habit):
+    1. Is classified under PERSONAL.
+    2. Does NOT generate travel tasks (no hotel bookings, transit, packing, flight cancellation).
+    3. With no financial evidence provided, returns ₹0 / no quantified capital at risk rather
+       than inventing ₹45,000 in travel bookings.
+    4. All tasks have owner_role == 'You'.
+    """
+    from app.services.framework_engine import detect_decision_domain
+    from app.services.recommendation import compute_blunder_shield, generate_mock_synthesis
+
+    pet_dec = Decision(
+        title="Should I adopt a rescue dog?",
+        problem_statement="Deciding whether my schedule, living space, and daily routine can support adopting a rescue dog.",
+        domain="PERSONAL",
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+    )
+    db_session.add(pet_dec)
+    db_session.commit()
+    db_session.refresh(pet_dec)
+
+    detected = detect_decision_domain(pet_dec)
+    assert detected == "PERSONAL"
+
+    # Blunder shield with zero financial facts: must not invent ₹45,000 travel expense
+    shield_no_money = compute_blunder_shield(
+        domain="PERSONAL",
+        top_option_name="Adopt Rescue Dog",
+        runner_up_name="Wait 6 Months",
+        decision_title=pet_dec.title,
+        problem_statement=pet_dec.problem_statement,
+        facts=["Apartment is pet-friendly.", "Work-from-home schedule allows 3 daily walks."],
+        decision_id=802,
+    )
+    assert shield_no_money.receipt is not None
+    assert shield_no_money.receipt.total_capital_at_risk == "₹0"
+    assert "0" in shield_no_money.capital_at_risk_saved
+    assert len(shield_no_money.receipt.line_items) == 0
+
+    # Roadmap synthesis: must be personal commitment/lifestyle, zero travel tasks
+    synth = generate_mock_synthesis(pet_dec)
+    assert synth.domain == "PERSONAL"
+
+    all_roadmap_text = " ".join(
+        f"{t.title} {t.description}" for p in synth.roadmap.phases for t in p.tasks
+    ).lower()
+    banned_travel_terms = [
+        "hotel", "transit", "itinerary", "packing checklist", "post-trip",
+        "travel insurance", "resort", "flight cancellation", "booking cancellation"
+    ]
+    for term in banned_travel_terms:
+        assert not re.search(r"\b" + re.escape(term) + r"\b", all_roadmap_text), (
+            f"Found unexpected travel term '{term}' in non-travel personal decision!"
+        )
+
+    # Verify task owner is strictly "You"
+    for p in synth.roadmap.phases:
+        for t in p.tasks:
+            assert t.owner_role == "You"
+
+
+def test_evidence_model_distinguishes_reliability_and_provenance(
+    test_user: User, test_folder: Folder, db_session: Session
+):
+    """
+    Verify that the evidence model distinguishes:
+    - User-reported facts: reliability is 'medium', source_title is 'User-Reported Statement'.
+    - Externally verified research claims: reliability is 'high'/'medium' based on source tier.
+    - Assumptions: reliability is 'low'.
+    - AI / framework metrics: reliability is 'medium'.
+    - Conflicting or unknown claims: reliability is 'low'.
+    """
+    from app.services.recommendation import generate_mock_synthesis
+
+    decision = Decision(
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+        title="Production Database Architecture",
+        problem_statement="Should we migrate to Aurora PostgreSQL or maintain existing RDS instance?",
+        domain="SOFTWARE",
+        points={
+            "facts": ["Database currently serves 5,000 queries per second."],
+            "assumptions": ["Traffic will double over the next 12 months."],
+            "contradictions": ["DevOps claims 99.99% is required while Product specifies 99.9%."],
+        },
+        research={
+            "research": [
+                {
+                    "gap_id": "gap_aurora_sla",
+                    "title": "AWS Aurora Official Documentation",
+                    "url": "https://aws.amazon.com/rds/aurora/sla/",
+                    "claims": [
+                        {
+                            "id": "claim_aurora_1",
+                            "claim_text": "AWS Aurora Multi-Region guarantees 99.999% availability.",
+                            "source_title": "AWS Aurora SLA Specification",
+                            "source_url": "https://aws.amazon.com/rds/aurora/sla/",
+                            "reliability_label": "primary_source",
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+    db_session.add(decision)
+    db_session.commit()
+    db_session.refresh(decision)
+
+    decision.analysis = {
+        "canonical_result": {
+            "decision_id": decision.id,
+            "winner_option_id": "OPT_001",
+            "winner_option_name": "AWS Aurora Multi-Region",
+            "winner_score": 8.7,
+            "winner_rank": 1,
+            "results": [
+                {"option_name": "AWS Aurora Multi-Region", "option_id": "OPT_001", "weighted_score": 8.7, "normalized_score": 87.0, "rank": 1},
+                {"option_name": "Maintain Existing RDS", "option_id": "OPT_002", "weighted_score": 6.8, "normalized_score": 68.0, "rank": 2},
+            ],
+        }
+    }
+
+    synth = generate_mock_synthesis(decision)
+    evidence = synth.supporting_evidence
+
+    # 1. User-reported fact: must be 'medium' reliability, NOT 'high'
+    user_fact = next((e for e in evidence if e.evidence_type == "user_fact"), None)
+    assert user_fact is not None
+    assert user_fact.reliability == "medium"
+    assert "User-Reported" in user_fact.source_title
+
+    # 2. Externally verified research claim: must be 'high' reliability from primary source
+    research_claim = next((e for e in evidence if e.evidence_type == "research_claim"), None)
+    assert research_claim is not None
+    assert research_claim.reliability == "high"
+    assert "AWS Aurora" in research_claim.source_title
+
+    # 3. AI / framework metric: must be 'medium' reliability
+    framework_metric = next((e for e in evidence if e.evidence_type == "framework_metric"), None)
+    assert framework_metric is not None
+    assert framework_metric.reliability == "medium"
+
+    # 4. Assumption: must be 'low' reliability
+    assumption_ev = next((e for e in evidence if e.evidence_type == "assumption"), None)
+    assert assumption_ev is not None
+    assert assumption_ev.reliability == "low"
+
+    # 5. Conflicting / unknown: must be 'low' reliability
+    conflict_ev = next((e for e in evidence if e.evidence_type == "conflicting_or_unknown"), None)
+    assert conflict_ev is not None
+    assert conflict_ev.reliability == "low"
+
+
+def test_conditional_synthesis_saves_conditional_status_not_decided(
+    test_user: User, test_folder: Folder, db_session: Session
+):
+    """
+    State Lifecycle Invariant:
+    A conditional recommendation must NEVER automatically set decision.status to 'decided'.
+    When critical unknowns remain (e.g. unresolved research or pending gaps), decision.status
+    must be set to 'conditional' (Awaiting Validation).
+    """
+    from app.services.recommendation import run_decision_synthesis
+    from app.schemas import DecisionLifecycleStatus
+
+    decision = Decision(
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+        title="Production Cloud Migration",
+        problem_statement="Should we migrate production databases to AWS Aurora?",
+        domain="SOFTWARE",
+        status="evaluating",
+        points={
+            "facts": ["Current utilization is 85%."],
+            "unknowns": ["Compliance certification timeline for regional data center is unvetted."],
+        },
+        gaps={
+            "gaps": [
+                {
+                    "id": "gap_egress_sla",
+                    "question": "What is the certified data egress cost ceiling?",
+                    "importance": "critical",
+                    "status": "unresolved_research",  # Failed / unresolved web research attempt
+                    "affected_options": ["AWS Aurora"],
+                }
+            ]
+        },
+        analysis={
+            "decision_matrix": {
+                "results": [
+                    {"option_name": "AWS Aurora", "option_id": "OPT_001", "weighted_score": 8.4, "rank": 1},
+                    {"option_name": "On-Premises", "option_id": "OPT_002", "weighted_score": 6.2, "rank": 2},
+                ]
+            }
+        },
+    )
+    db_session.add(decision)
+    db_session.commit()
+    db_session.refresh(decision)
+
+    synthesis = run_decision_synthesis(decision, db_session, force_mock=True)
+
+    # 1. Synthesis output must be CONDITIONAL
+    assert synthesis.decision_status == "CONDITIONAL"
+
+    # 2. Decision record status in database must be 'conditional', NOT 'decided'
+    db_session.refresh(decision)
+    assert decision.status == DecisionLifecycleStatus.CONDITIONAL.value
+    assert decision.status != "decided"
+
+
+def test_unresolved_research_treated_as_critical_unknown(
+    test_user: User, test_folder: Folder
+):
+    """
+    Verify that both _detect_critical_unknowns and build_canonical_decision_result
+    recognize 'unresolved_research' so that failed research is not mistaken for resolved truth.
+    """
+    from app.services.recommendation import _detect_critical_unknowns
+    from app.services.framework_engine import build_canonical_decision_result
+    from app.schemas import MatrixOption, MatrixCriterion, MatrixResultOption
+
+    gaps = {
+        "gaps": [
+            {
+                "id": "gap_sec_audit",
+                "question": "Has SOC2 Type II audit been completed?",
+                "importance": "critical",
+                "status": "unresolved_research",
+            }
+        ]
+    }
+    unknowns = _detect_critical_unknowns(gaps=gaps, points={})
+    assert len(unknowns) >= 1
+    assert "SOC2 Type II" in unknowns[0]
+
+    mock_dec = Decision(
+        id=999,
+        owner_id=test_user.id,
+        folder_id=test_folder.id,
+        title="Security Vendor Selection",
+        gaps=gaps,
+        points={},
+    )
+    canonical = build_canonical_decision_result(
+        decision=mock_dec,
+        criteria=[MatrixCriterion(id="c1", name="Security", weight=100.0)],
+        options=[
+            MatrixOption(id="o1", name="Vendor A"),
+            MatrixOption(id="o2", name="Vendor B"),
+        ],
+        ratings=[],
+        results=[
+            MatrixResultOption(option_id="o1", option_name="Vendor A", weighted_score=8.0, normalized_score=80.0, rank=1),
+            MatrixResultOption(option_id="o2", option_name="Vendor B", weighted_score=7.0, normalized_score=70.0, rank=2),
+        ],
+        winner_id="o1",
+        winner_name="Vendor A",
+        domain="SOFTWARE",
+    )
+    assert canonical.decision_status == "CONDITIONAL"
+    assert "gap_sec_audit" in canonical.unresolved_critical_gap_ids
+
+
+
 
 
 

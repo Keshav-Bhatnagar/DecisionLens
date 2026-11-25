@@ -204,6 +204,126 @@ def sanitize_gap_precision(question: str, context_text: str) -> str:
     return q
 
 
+def check_has_budget_evidence(text: str, points: dict) -> bool:
+    """
+    Structured evidence matcher for budget, financial boundaries, and cost ceilings.
+    Matches Indian Rupees (₹, Lakh, Crore, INR, Rs), USD ($), EUR (€), GBP (£),
+    as well as semantic cost caps and budget figures.
+    """
+    text_lower = text.lower()
+
+    # Currency symbols & codes followed or preceded by numbers / units
+    # e.g., ₹15 lakh, ₹20,000, $15k/month, €50,000, £10,000, 15 lakhs, 2 crores, INR 15,00,000
+    currency_pattern = r"(?:[₹$€£]|inr|rs\.?|rupees?|usd|dollars?|eur|euros?|gbp|pounds?)\s*[\d,]+(?:\.\d+)?\s*(?:k|m|lakhs?|crores?|million|billion)?"
+    if re.search(currency_pattern, text_lower):
+        return True
+
+    # Number followed by currency units: e.g. "15 lakh", "2 crore", "50k/month"
+    unit_pattern = r"\b\d+[\d,]*\s*(?:lakhs?|crores?|k/month|usd|inr|rupees)\b"
+    if re.search(unit_pattern, text_lower):
+        return True
+
+    # Semantic phrases with ceiling/cap/limit/budget
+    budget_semantic_patterns = [
+        r"\b(?:budget|cost|capital|expenditure|spending)\s*(?:is|of|capped|ceiling|limit|max|allowance|allocated|restricted|bound)\b",
+        r"\b(?:budget|cost|spending|capital)\s*(?:ceiling|cap|limit|constraint|estimate)\b",
+        r"\b(?:capped at|limit of|maximum of|ceiling of)\s*(?:[₹$€£]|inr|rs)?\s*[\d,]+",
+        r"\b(?:annual budget|monthly limit|per month|cost limit|tuition of|expenditure cap|allocated capital)\b",
+        r"\bbudget parameters and cost considerations\b",
+        r"\bcloud budget: limited to\b",
+    ]
+    if any(re.search(pat, text_lower) for pat in budget_semantic_patterns):
+        return True
+
+    # Check Stage 2 structured facts
+    stage2_facts = points.get("facts", []) if isinstance(points, dict) else []
+    for f in stage2_facts:
+        f_lower = str(f).lower()
+        if any(term in f_lower for term in ["budget", "cost constraint", "capital at risk", "spending limit", "ceiling"]):
+            if any(curr in f_lower for curr in ["₹", "$", "€", "£", "inr", "rs", "lakh", "crore", "dollar", "limit", "capped", "constraint"]):
+                return True
+
+    return False
+
+
+def check_has_criteria_evidence(text: str, points: dict) -> bool:
+    """
+    Structured evidence matcher for evaluative criteria, weighted priorities,
+    SLAs, and non-negotiable requirements.
+    Recognizes lists of weighted percentages (e.g. Security 25%, Scalability 25%, TCO 20%),
+    explicit SLA thresholds, and priority matrices.
+    """
+    text_lower = text.lower()
+
+    # Explicit percentage weighting lists: e.g. "Security 25%, Scalability 25% and TCO 20%" or "40% weight, 60% weight"
+    # Matches integer percentages (excluding availability like 99.999%) associated with criteria or distinct weights
+    weighted_pct_matches = re.findall(
+        r"\b(?:security|scalability|tco|cost|performance|latency|uptime|reliability|velocity|maintainability|quality|criteria|weight|priority|importance)\s*[:=]?\s*\d{1,3}%",
+        text_lower,
+    )
+    if len(weighted_pct_matches) >= 2 or re.search(r"\b\d{1,3}%\s*(?:weight|priority|importance|allocation)\b", text_lower):
+        return True
+
+    # Check for general list of 2 or more distinct integer percentages in the context of criteria/evaluation
+    if any(term in text_lower for term in ["criteria", "weight", "priority", "evaluat", "scoring", "matrix"]):
+        int_percentages = set(re.findall(r"(?<!\.)\b\d{1,2}%\b", text_lower))
+        if len(int_percentages) >= 2:
+            return True
+
+    # Operational SLAs / Technical Metric Targets
+    sla_patterns = [
+        r"\b(?:sla of|latency target|conversion target|success metric|passing criteria|non-negotiable requirement)\b",
+        r"\b(?:sla|slo)\s*(?:of|target|requirement|standard|guarantee)\b",
+        r"\b(?:sub-\d+ms|\d+\s*ms latency|latency sla|uptime sla of)\b",
+    ]
+    if any(re.search(pat, text_lower) for pat in sla_patterns):
+        return True
+
+    # Explicit decision criteria / evaluation matrix mentions
+    criteria_semantic_patterns = [
+        r"\b(?:evaluative|evaluation|scoring|decision|selection|success)\s+(?:criteria|metrics?|factors?|matrix|weights?|framework)\b",
+        r"\b(?:criteria|priorities|requirements)\s+(?:are|include|weighted|defined|established|specified)\b",
+        r"\b(?:weighted criteria|weighted scoring|decision matrix criteria)\b",
+    ]
+    if any(re.search(pat, text_lower) for pat in criteria_semantic_patterns):
+        return True
+
+    # Check Stage 2 structured facts and pros for criteria definition
+    stage2_facts = points.get("facts", []) if isinstance(points, dict) else []
+    for f in stage2_facts:
+        f_lower = str(f).lower()
+        if any(kw in f_lower for kw in ["weighted criteria", "evaluation criteria", "latency sla of", "uptime sla of", "selection criteria"]):
+            return True
+
+    return False
+
+
+def check_has_component_bottleneck_evidence(text: str) -> bool:
+    """Check if the user or structured facts already identified the specific infrastructure component causing bottlenecks."""
+    text_lower = text.lower()
+    component_patterns = [
+        r"\b(?:database connection pool|connection starvation|query latency|db cluster)\b",
+        r"\b(?:cpu utilization|cpu load|cpu spike|9\d% cpu|compute capacity)\b",
+        r"\b(?:memory leak|oom|out of memory|ram exhaustion)\b",
+        r"\b(?:disk i/o|storage latency|disk throughput|iops)\b",
+        r"\b(?:network bandwidth|egress cost|ingress latency|packet drop|dns resolution)\b",
+        r"\b(?:microservice|payments service|auth service|worker queue|kafka cluster|redis cache)\b",
+    ]
+    return any(re.search(pat, text_lower) for pat in component_patterns)
+
+
+def check_has_workload_variation_evidence(text: str) -> bool:
+    """Check if traffic surge, burst, or workload conditions are already specified."""
+    text_lower = text.lower()
+    workload_patterns = [
+        r"\b(?:peak traffic|traffic spikes?|exam periods?|black friday|surge|high concurrency)\b",
+        r"\b\d+k?\s*concurrent users\b",
+        r"\b(?:batch processing|nightly batch|checkout surge|read/write ratio|burst traffic)\b",
+        r"\b(?:during peak|under load|load testing|traffic benchmark)\b",
+    ]
+    return any(re.search(pat, text_lower) for pat in workload_patterns)
+
+
 def generate_universal_decision_gaps(
     decision: Decision,
     origin_reason: Optional[str] = None,
@@ -231,6 +351,32 @@ def generate_universal_decision_gaps(
             return f"{origin_reason} ({reason_label})"
         return f"Universal Gap Engine ({reason_label})"
 
+    # Domain classification
+    domain = "BUSINESS"
+    if decision is not None:
+        try:
+            from app.services.framework_engine import detect_decision_domain
+            domain = detect_decision_domain(decision, db=db)
+        except Exception:
+            domain = getattr(decision, "domain", "BUSINESS") or "BUSINESS"
+
+    is_technical_infra = (
+        domain in {"SOFTWARE"}
+        or any(kw in full_text_lower for kw in [
+            "infrastructure", "cloud migration", "kubernetes", "docker", "microservice",
+            "microservices", "aws eks", "eks", "aws", "gcp", "azure", "database connection",
+            "connection pool", "latency", "compute", "server", "cluster", "on-prem",
+            "devops", "sre", "migration to the cloud", "cloud infrastructure"
+        ])
+    )
+    is_product = (
+        domain in {"PRODUCT"}
+        or any(kw in full_text_lower for kw in [
+            "product feature", "user flow", "onboarding", "ux", "ui", "engagement", "churn"
+        ])
+    ) and not is_technical_infra
+    is_personal = (domain in {"PERSONAL"}) and not is_technical_infra
+
     # 1. Gather Stage 2 structured cognitive points
     points = decision.points if isinstance(decision.points, dict) else {}
     stage2_facts = points.get("facts", [])
@@ -245,7 +391,7 @@ def generate_universal_decision_gaps(
 
     # A. Explicit colon lists: e.g. "platform: PostgreSQL or MongoDB", "options: A, B", "candidates: X, Y"
     colon_m = re.search(
-        r'(?:options|candidates|alternatives|platform|technologies|vendors|choices|cars|database|between two [a-z]+)[:\s]+([A-Za-z0-9\s\-]+?)\s+(?:and|or|vs\.?|versus)\s+([A-Za-z0-9\s\-]+?)(?:[.,;\n]|$)',
+        r'(?:options|candidates|alternatives|platform|technologies|vendors|choices|cars|database|between two [a-z]+)\s*:\s*([A-Za-z0-9\s\-]+?)\s+(?:and|or|vs\.?|versus)\s+([A-Za-z0-9\s\-]+?)(?:[.,;\n]|$)',
         full_text,
         re.IGNORECASE,
     )
@@ -292,10 +438,27 @@ def generate_universal_decision_gaps(
             o1, o2 = offer_m.group(1).strip(), offer_m.group(2).strip()
             extracted_options = [o1, o2]
 
+    # E. "migrate from X to Y or Z"
+    if not extracted_options:
+        migrate_m = re.search(
+            r'(?:migrate from|migrating from|moving from)\s+([A-Za-z0-9\s\-]+?)\s+to\s+([A-Za-z0-9\s\-]+?)(?:\s+(?:or|and)\s+([A-Za-z0-9\s\-]+?))?(?:[.,;\n]|\s+to\s+sustain|\s+to\s+support|$)',
+            full_text,
+            re.IGNORECASE,
+        )
+        if migrate_m:
+            src = migrate_m.group(1).strip()
+            t1 = migrate_m.group(2).strip()
+            t2 = (migrate_m.group(3) or "").strip()
+            if t2:
+                extracted_options = [t1, t2]
+            elif t1 and src:
+                extracted_options = [src, t1]
+
     # 3. Classify Reasoning Mode(s)
     is_diagnosis = any(w in full_text_lower for w in [
         "why", "falling", "drop", "dropped", "declining", "low sales", "diagnose",
-        "investigate", "cause", "issue", "bug", "delayed", "underperforming", "churning"
+        "investigate", "cause", "issue", "bug", "delayed", "underperforming", "churning",
+        "bottleneck", "outage", "slow", "starvation", "exhaustion"
     ])
     is_timing = any(w in full_text_lower for w in [
         "when", "launch date", "launch timing", "release date", "timing", "schedule",
@@ -317,25 +480,25 @@ def generate_universal_decision_gaps(
         "buy or rent", "between", "decide between", "college", "car", "database"
     ]) or bool(extracted_options) or (not is_diagnosis and not is_timing and not is_strategy)
 
-    # 4. Check what evidence is ALREADY established (Sufficiency & Non-Redundancy Filters)
-    has_budget = any(pat in all_evidence_lower for pat in [
-        "budget is", "budget of", "$", "dollar", "per month", "monthly limit", "annual budget",
-        "cost limit", "tuition of", "expenditure cap", "allocated capital"
-    ])
+    # 4. Check what evidence is ALREADY established using structured evidence matchers
+    has_budget = check_has_budget_evidence(all_evidence_lower, points)
+    has_criteria = check_has_criteria_evidence(all_evidence_lower, points)
+    has_component_bottleneck = check_has_component_bottleneck_evidence(all_evidence_lower)
+    has_workload_breakdown = check_has_workload_variation_evidence(all_evidence_lower)
+
     has_timeline = any(pat in all_evidence_lower for pat in [
         "by q", "deadline is", "target launch date", "launching in", "weeks remaining",
-        "scheduled for", "must complete by"
-    ])
-    has_criteria = any(pat in all_evidence_lower for pat in [
-        "sla of", "latency target", "conversion target", "success metric", "passing criteria",
-        "non-negotiable requirement"
-    ])
+        "scheduled for", "must complete by", "target date", "cutover date", "go-live date"
+    ]) or bool(re.search(r"\bby (?:end of|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})\b", all_evidence_lower))
+
+    has_onset_timeline = any(pat in all_evidence_lower for pat in [
+        "started last month", "since the pricing update", "after version", "began in", "coincided with",
+        "over the past", "during the last"
+    ]) or bool(re.search(r"\b(?:started|began|since|after|coincided with)\s+(?:last|the release|the update|the deployment|v\d+)\b", all_evidence_lower))
+
     has_funnel_breakdown = any(pat in all_evidence_lower for pat in [
         "traffic is steady", "conversion rate dropped", "cart abandonment", "churn rate increased",
-        "funnel data indicates"
-    ])
-    has_onset_timeline = any(pat in all_evidence_lower for pat in [
-        "started last month", "since the pricing update", "after version", "began in", "coincided with"
+        "funnel data indicates", "top-of-funnel", "checkout funnel"
     ])
     has_target_segment = any(pat in all_evidence_lower for pat in [
         "target segment is", "focusing on enterprise", "mid-market niche", "primary audience is"
@@ -350,7 +513,8 @@ def generate_universal_decision_gaps(
         "zero p0 bugs", "beta signoff", "qa passed", "load testing verified"
     ])
     has_cohort_analysis = any(pat in all_evidence_lower for pat in [
-        "customer segment", "cohort", "channel breakdown", "concentrated in", "across all cohorts", "enterprise customers"
+        "customer segment", "cohort", "channel breakdown", "concentrated in", "across all cohorts", "enterprise customers",
+        "mobile vs desktop", "ios vs android"
     ])
     has_competitor_intel = any(pat in all_evidence_lower for pat in [
         "competitor capabilities", "competitor intelligence", "moats", "blind spots", "pricing structures", "competitor strengths"
@@ -359,84 +523,301 @@ def generate_universal_decision_gaps(
         "benchmark", "empirical", "performance metrics", "tested against", "benchmarked", "published throughput", "operations per second"
     ])
     has_operational = any(pat in all_evidence_lower for pat in [
-        "team expertise", "operational experience", "maintenance capacity", "internal engineering team", "experience managing", "operational skills", "operational comfort"
+        "team expertise", "operational experience", "maintenance capacity", "internal engineering team", "experience managing", "operational skills", "operational comfort", "sre team"
     ])
 
     gap_counter = 1
+    opt_names = extracted_options[:3]
+    decision_subject = (title or problem or "this decision").strip(" ?.:")
 
-    # 5. Dynamically construct candidate gaps by reasoning mode
+    # 5. Dynamically construct candidate gaps by reasoning mode and domain
     if is_diagnosis:
         # Diagnostic Problem: Identify missing evidence to isolate root causes without premature declaration
         origin_tag = _get_origin("Diagnostic Analysis Mode")
 
-        if not has_funnel_breakdown:
-            gaps.append(
-                GapItem(
-                    id=f"gap_{gap_counter}",
-                    title="Funnel Stage Drop-Off Identification",
-                    question="Across which specific stage of the customer journey (top-of-funnel traffic/leads, conversion rate, or customer retention/churn) is the primary decline occurring?",
-                    reason="Pinpointing the exact point of customer drop-off is required to distinguish whether the root cause is marketing volume, conversion friction, or product dissatisfaction.",
-                    gap_type="EVIDENCE",
-                    importance="critical",
-                    priority_score=gap_counter,
-                    affected_options=[],
-                    affected_dimensions=["funnel_conversion", "acquisition_traffic", "retention"],
-                    recommended_resolution_method="ask_user",
-                    status="pending",
-                    source_origin=origin_tag,
-                    derived_from=["decision_context", "diagnostic_requirement"],
-                    materiality_reason="Determines which organizational domain (marketing, sales, or product) must be examined, preventing wasted resources on non-failing funnel stages.",
-                    created_at=now_str,
-                    updated_at=now_str,
+        if is_technical_infra:
+            # Technical Infrastructure Diagnostic Strategy
+            if not has_component_bottleneck:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Infrastructure Component Bottleneck Identification",
+                        question="Which infrastructure component is causing the bottleneck: compute, database, network, storage or application services?",
+                        reason="Pinpointing the constrained infrastructure layer is required to determine whether architectural remediation requires database optimization, horizontal compute scaling, or network reconfiguration.",
+                        gap_type="EVIDENCE",
+                        importance="critical",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["infrastructure_bottleneck", "compute_capacity", "database_performance"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "infrastructure_diagnostic"],
+                        materiality_reason="Isolates the failing architectural layer to prevent misallocating engineering effort or provisioning unnecessary infrastructure.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
                 )
-            )
-            gap_counter += 1
+                gap_counter += 1
 
-        if not has_onset_timeline:
-            gaps.append(
-                GapItem(
-                    id=f"gap_{gap_counter}",
-                    title="Symptom Onset Timeline & Coinciding Events",
-                    question="When exactly did the performance decline begin, and what internal changes (e.g. pricing, product releases, campaign shifts) or external events coincided with the onset?",
-                    reason="Establishing temporal correlation is necessary to identify potential trigger events without prematurely asserting causation.",
-                    gap_type="CAUSAL",
-                    importance="high",
-                    priority_score=gap_counter,
-                    affected_options=[],
-                    affected_dimensions=["temporal_onset", "pricing_changes", "product_updates"],
-                    recommended_resolution_method="ask_user",
-                    status="pending",
-                    source_origin=origin_tag,
-                    derived_from=["decision_context", "diagnostic_requirement"],
-                    materiality_reason="Isolates internal and external event correlations, narrowing candidate causes to those chronologically preceding the decline.",
-                    created_at=now_str,
-                    updated_at=now_str,
+            if not has_workload_breakdown:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Workload Surge & Traffic Variation",
+                        question="Does the issue occur during peak traffic, particular workloads or specific database operations?",
+                        reason="Clarifying whether performance degradation is continuous or tied to bursty user workloads isolates capacity limits from systemic application faults.",
+                        gap_type="EVIDENCE",
+                        importance="high",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["traffic_peaks", "workload_profile", "burst_concurrency"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "infrastructure_diagnostic"],
+                        materiality_reason="Distinguishes peak burst starvation from baseline code inefficiency to size target cloud scaling rules accurately.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
                 )
-            )
-            gap_counter += 1
+                gap_counter += 1
 
-        if not has_cohort_analysis:
-            gaps.append(
-                GapItem(
-                    id=f"gap_{gap_counter}",
-                    title="Customer Segment & Cohort Variation",
-                    question="Is the performance decline concentrated in specific customer segments, geographic regions, or product lines, or is it observed uniformly across all cohorts?",
-                    reason="Determining cohort distribution clarifies whether the issue is localized to a particular audience segment or represents a widespread structural failure.",
-                    gap_type="EVIDENCE",
-                    importance="high",
-                    priority_score=gap_counter,
-                    affected_options=[],
-                    affected_dimensions=["customer_segmentation", "cohort_analysis", "channel_breakdown"],
-                    recommended_resolution_method="ask_user",
-                    status="pending",
-                    source_origin=origin_tag,
-                    derived_from=["decision_context", "diagnostic_requirement"],
-                    materiality_reason="Prevents implementing broad global changes when the problem may be restricted to a single failing segment or channel.",
-                    created_at=now_str,
-                    updated_at=now_str,
+            if not has_onset_timeline:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Resource Utilization Timeline & Deployment Correlation",
+                        question="When did resource utilization or latency begin increasing, and what infrastructure changes coincided with it?",
+                        reason="Establishing temporal correlation between latency spikes, CPU exhaustion, or pool starvation and recent deployments or infrastructure changes narrows root causes.",
+                        gap_type="CAUSAL",
+                        importance="high",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["temporal_onset", "deployment_changes", "resource_utilization"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "infrastructure_diagnostic"],
+                        materiality_reason="Isolates historical trigger events to prevent migrating broken configurations into target cloud environments.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
                 )
-            )
-            gap_counter += 1
+                gap_counter += 1
+
+            if not has_criteria:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Mandatory Uptime, Security & Migration Requirements",
+                        question="What are the mandatory uptime, security, recovery and migration requirements?",
+                        reason="Establishes non-negotiable architectural constraints (e.g. 99.99% SLA, recovery RTO/RPO targets, compliance) needed to evaluate candidate infrastructure architectures.",
+                        gap_type="REQUIREMENT",
+                        importance="critical",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["uptime_sla", "security_compliance", "migration_cutover"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "infrastructure_diagnostic"],
+                        materiality_reason="Prevents selecting cloud architectures that fail statutory compliance, disaster recovery objectives, or availability SLAs.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
+
+        elif is_product:
+            # Product Performance Diagnostic Strategy
+            if not has_funnel_breakdown:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="User Flow Drop-Off & Feature Friction",
+                        question="Across which specific user workflow (onboarding, search discovery, checkout, or core feature interaction) is the primary friction or drop occurring?",
+                        reason="Pinpointing user interaction bottlenecks clarifies whether friction is caused by UX usability, cognitive load, or feature confusion.",
+                        gap_type="EVIDENCE",
+                        importance="critical",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["user_workflow", "feature_friction", "conversion_drop"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "product_diagnostic"],
+                        materiality_reason="Prevents redesigning functional stages when user drop is localized to a single interaction point.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
+
+            if not has_cohort_analysis:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="User Segment & Platform Variation",
+                        question="Is the underperformance concentrated in specific user tiers, operating systems, or device platforms, or is it observed uniformly across all cohorts?",
+                        reason="Clarifies whether product friction is platform-specific (e.g. mobile Safari bug) or an audience-wide product-market mismatch.",
+                        gap_type="EVIDENCE",
+                        importance="high",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["user_segmentation", "platform_variation", "device_cohorts"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "product_diagnostic"],
+                        materiality_reason="Prevents broad product changes when the issue is confined to a specific client platform or user tier.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
+
+            if not has_onset_timeline:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Engagement Decline Timeline & Release Correlation",
+                        question="When did the user engagement decline begin, and what recent UX updates, feature releases, or policy changes coincided with it?",
+                        reason="Correlating engagement shifts with product deployment timelines isolates whether regressions were introduced by recent releases.",
+                        gap_type="CAUSAL",
+                        importance="high",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["temporal_onset", "release_correlation", "engagement_shifts"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "product_diagnostic"],
+                        materiality_reason="Narrows potential root causes to releases and experiments immediately preceding the engagement drop.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
+
+        elif is_personal:
+            # Personal / Lifestyle Diagnostic Strategy
+            if not has_operational:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Personal Routine & Boundary Constraint Identification",
+                        question="Which specific daily routine, health boundary, financial commitment, or personal relationship is experiencing friction or constraint?",
+                        reason="Clarifying personal constraints ensures lifestyle decisions respect individual bandwidth and non-negotiables.",
+                        gap_type="EVIDENCE",
+                        importance="critical",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["personal_boundaries", "lifestyle_bandwidth", "commitments"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "personal_diagnostic"],
+                        materiality_reason="Prevents committing to unsustainable personal obligations.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
+
+            if not has_timeline:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Lifestyle Timeline & Coinciding Milestones",
+                        question="What upcoming personal milestones, lease renewals, or career deadlines constrain the timing of this decision?",
+                        reason="Identifies life events that dictate acceptable timing.",
+                        gap_type="TEMPORAL",
+                        importance="high",
+                        priority_score=gap_counter,
+                        affected_options=opt_names,
+                        affected_dimensions=["personal_milestones", "lease_deadlines", "family_timing"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "personal_diagnostic"],
+                        materiality_reason="Prevents missing hard personal deadlines.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
+
+        else:
+            # Commercial / Business Diagnosis Strategy (e.g. Sales Drop, Revenue Decline)
+            if not has_funnel_breakdown:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Funnel Stage Drop-Off Identification",
+                        question="Across which specific stage of the customer journey (top-of-funnel traffic/leads, conversion rate, or customer retention/churn) is the primary decline occurring?",
+                        reason="Pinpointing the exact point of customer drop-off is required to distinguish whether the root cause is marketing volume, conversion friction, or product dissatisfaction.",
+                        gap_type="EVIDENCE",
+                        importance="critical",
+                        priority_score=gap_counter,
+                        affected_options=[],
+                        affected_dimensions=["funnel_conversion", "acquisition_traffic", "retention"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "diagnostic_requirement"],
+                        materiality_reason="Determines which organizational domain (marketing, sales, or product) must be examined, preventing wasted resources on non-failing funnel stages.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
+
+            if not has_onset_timeline:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Symptom Onset Timeline & Coinciding Events",
+                        question="When exactly did the performance decline begin, and what internal changes (e.g. pricing, product releases, campaign shifts) or external events coincided with the onset?",
+                        reason="Establishing temporal correlation is necessary to identify potential trigger events without prematurely asserting causation.",
+                        gap_type="CAUSAL",
+                        importance="high",
+                        priority_score=gap_counter,
+                        affected_options=[],
+                        affected_dimensions=["temporal_onset", "pricing_changes", "product_updates"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "diagnostic_requirement"],
+                        materiality_reason="Isolates internal and external event correlations, narrowing candidate causes to those chronologically preceding the decline.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
+
+            if not has_cohort_analysis:
+                gaps.append(
+                    GapItem(
+                        id=f"gap_{gap_counter}",
+                        title="Customer Segment & Cohort Variation",
+                        question="Is the performance decline concentrated in specific customer segments, geographic regions, or product lines, or is it observed uniformly across all cohorts?",
+                        reason="Determining cohort distribution clarifies whether the issue is localized to a particular audience segment or represents a widespread structural failure.",
+                        gap_type="EVIDENCE",
+                        importance="high",
+                        priority_score=gap_counter,
+                        affected_options=[],
+                        affected_dimensions=["customer_segmentation", "cohort_analysis", "channel_breakdown"],
+                        recommended_resolution_method="ask_user",
+                        status="pending",
+                        source_origin=origin_tag,
+                        derived_from=["decision_context", "diagnostic_requirement"],
+                        materiality_reason="Prevents implementing broad global changes when the problem may be restricted to a single failing segment or channel.",
+                        created_at=now_str,
+                        updated_at=now_str,
+                    )
+                )
+                gap_counter += 1
 
     elif is_timing:
         # Timing Problem: Focus on readiness criteria, temporal windows, and execution dependencies
@@ -584,19 +965,24 @@ def generate_universal_decision_gaps(
             gap_counter += 1
 
     # 5. Selection & Comparative Decision Mode
-    # Handles education, career, personal, consumer, business, and technical selection identically without domain checklists
+    # If is_diagnosis was already processed, only supplement missing boundary constraints or benchmarks
+    # without re-asking generic criteria questions!
     if is_selection or (not is_diagnosis and not is_timing and not is_strategy):
         origin_tag = _get_origin("Universal Selection & Comparative Engine")
         opt_names = extracted_options[:3]
         decision_subject = (title or problem or "this decision").strip(" ?.:")
 
-        # Dimension A: Evaluative Criteria & Priority Weighting
-        if not has_criteria:
+        # Dimension A: Evaluative Criteria & Priority Weighting (only if not already queried in diagnostic mode)
+        if not has_criteria and not is_diagnosis:
+            if is_technical_infra:
+                q_text = f"What are the mandatory uptime SLAs, security compliance standards, latency targets, and priority weightings that will determine the winning alternative for '{decision_subject}'?"
+            else:
+                q_text = f"What primary criteria, personal/organizational priorities, and non-negotiable success factors will determine the winning alternative for '{decision_subject}'?"
             gaps.append(
                 GapItem(
                     id=f"gap_{gap_counter}",
                     title="Primary Evaluative Criteria & Success Priorities",
-                    question=f"What primary criteria, personal/organizational priorities, and non-negotiable success factors will determine the winning alternative for '{decision_subject}'?",
+                    question=q_text,
                     reason="Without explicit evaluative criteria and priority weighting, competing alternatives cannot be objectively scored or compared against the decision-maker's actual requirements.",
                     gap_type="REQUIREMENT",
                     importance="critical",
@@ -616,11 +1002,15 @@ def generate_universal_decision_gaps(
 
         # Dimension B: Boundary Constraints (Financial, Operational, or Geographic Limits)
         if not has_budget:
+            if is_technical_infra:
+                b_q = f"What is the maximum acceptable cloud infrastructure budget, monthly cost ceiling, or migration expenditure cap for '{decision_subject}'?"
+            else:
+                b_q = f"What is the maximum acceptable financial investment, cost ceiling, or non-negotiable boundary constraint for '{decision_subject}'?"
             gaps.append(
                 GapItem(
                     id=f"gap_{gap_counter}",
                     title="Boundary Constraints & Feasibility Limits",
-                    question=f"What is the maximum acceptable financial investment, cost ceiling, or non-negotiable boundary constraint for '{decision_subject}'?",
+                    question=b_q,
                     reason="Establishes a firm feasibility boundary to eliminate alternatives that require excessive spending or violate fundamental constraints.",
                     gap_type="CONSTRAINT",
                     importance="high",
@@ -640,11 +1030,15 @@ def generate_universal_decision_gaps(
 
         # Dimension C: Empirical Comparative Evidence & Verified Trade-Offs (when candidate options exist)
         if extracted_options and len(extracted_options) >= 2 and not has_benchmarks:
+            if is_technical_infra:
+                c_q = f"What are the published specifications, verified empirical latency/throughput benchmarks, and documented architectural trade-offs between {' and '.join(extracted_options[:2])}?"
+            else:
+                c_q = f"What are the published specifications, verified empirical metrics, and documented trade-offs between {' and '.join(extracted_options[:2])} across key decision factors?"
             gaps.append(
                 GapItem(
                     id=f"gap_{gap_counter}",
                     title="Empirical Comparative Evidence & Verified Trade-Offs",
-                    question=f"What are the published specifications, verified empirical metrics, and documented trade-offs between {' and '.join(extracted_options[:2])} across key decision factors?",
+                    question=c_q,
                     reason="Gathers objective external evidence and verified data points to validate alternative claims rather than relying on unverified assumptions.",
                     gap_type="COMPARATIVE",
                     importance="high",
@@ -662,13 +1056,17 @@ def generate_universal_decision_gaps(
             )
             gap_counter += 1
 
-        # Dimension D: Long-Term Feasibility & Execution Bandwidth
-        if not has_operational:
+        # Dimension D: Long-Term Feasibility & Execution Bandwidth (only if not already queried in diagnostic mode)
+        if not has_operational and not is_diagnosis:
+            if is_technical_infra:
+                f_q = f"What ongoing SRE operational effort, cluster maintenance overhead, and engineering team capacity are required to sustain the selected alternative for '{decision_subject}' long-term?"
+            else:
+                f_q = f"What ongoing operational effort, maintenance overhead, or personal lifestyle adjustments are required to sustain the selected alternative for '{decision_subject}' long-term?"
             gaps.append(
                 GapItem(
                     id=f"gap_{gap_counter}",
                     title="Long-Term Feasibility & Execution Bandwidth",
-                    question=f"What ongoing operational effort, maintenance overhead, or personal lifestyle adjustments are required to sustain the selected alternative for '{decision_subject}' long-term?",
+                    question=f_q,
                     reason="Determines whether the ongoing operational demands, personal capacity, or maintenance overhead of the chosen alternative are sustainable over time.",
                     gap_type="OPERATIONAL",
                     importance="medium",

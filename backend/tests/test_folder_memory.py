@@ -263,3 +263,78 @@ def test_semantic_precedent_ranking(db_session: Session, registered_user: dict):
     precedents = get_folder_precedents(current_decision, db=db_session, limit=1)
     assert len(precedents) == 1
     assert "PostgreSQL" in precedents[0]["title"]
+
+
+def test_folder_precedents_outcome_explicit_ordering(db_session: Session, registered_user: dict):
+    """
+    Verify that folder memory explicitly orders outcomes chronologically before
+    selecting the latest outcome, rather than relying on arbitrary list index order.
+    """
+    from app.models import DecisionOutcome
+
+    user_id = registered_user["user"].id
+    folder = Folder(name="Platform Infrastructure", owner_id=user_id)
+    db_session.add(folder)
+    db_session.commit()
+    db_session.refresh(folder)
+
+    now = datetime.now(timezone.utc)
+
+    # Historical decision with multiple outcomes
+    past_dec = Decision(
+        owner_id=user_id,
+        folder_id=folder.id,
+        title="Deploy Redis Cluster",
+        problem_statement="Evaluate Redis caching deployment",
+        created_at=now - timedelta(days=60),
+    )
+    db_session.add(past_dec)
+    db_session.commit()
+    db_session.refresh(past_dec)
+
+    # 1. 30-day review (older)
+    outcome_30d = DecisionOutcome(
+        decision_id=past_dec.id,
+        owner_id=user_id,
+        implementation_status="implemented_as_recommended",
+        chosen_option="Redis Cluster 3-Node",
+        utility_rating=7,
+        days_since_decision=30,
+        lessons_learned="Initial memory limits were tight.",
+        created_at=now - timedelta(days=30),
+    )
+    # 2. 60-day review (latest)
+    outcome_60d = DecisionOutcome(
+        decision_id=past_dec.id,
+        owner_id=user_id,
+        implementation_status="implemented_as_recommended",
+        chosen_option="Redis Cluster 6-Node",
+        utility_rating=9,
+        days_since_decision=60,
+        lessons_learned="Scaling to 6 nodes eliminated failover latency spikes completely.",
+        created_at=now - timedelta(days=1),
+    )
+
+    db_session.add(outcome_30d)
+    db_session.add(outcome_60d)
+    db_session.commit()
+
+    # Current decision in same folder
+    current_dec = Decision(
+        owner_id=user_id,
+        folder_id=folder.id,
+        title="Deploy Memcached or Expand Redis",
+        problem_statement="Should we add Memcached or scale existing Redis?",
+        created_at=now,
+    )
+    db_session.add(current_dec)
+    db_session.commit()
+    db_session.refresh(current_dec)
+
+    precedents = get_folder_precedents(current_dec, db=db_session, limit=1)
+    assert len(precedents) == 1
+    assert precedents[0]["outcome_info"] is not None
+    # Must pick the 60-day outcome (utility rating 9, 6-node), NOT the older 30-day one
+    assert precedents[0]["outcome_info"]["utility_rating"] == 9
+    assert "6 nodes" in precedents[0]["outcome_info"]["lessons_learned"]
+

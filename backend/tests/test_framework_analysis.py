@@ -560,3 +560,260 @@ def test_curated_methodology_ensemble_recommendation(client: TestClient, auth_he
     assert data["methodology_rationale"] is not None
     assert len(data["methodology_rationale"]) > 15
 
+
+def test_cloud_detection_preserves_third_alternative_status_quo():
+    """Verify that cloud infrastructure detection generates all 3 alternatives including status quo."""
+    from app.services.framework_engine import detect_candidate_options
+
+    # Case 1: Generic cloud vs on-premise inquiry
+    options = detect_candidate_options(
+        context_text="Evaluating whether to migrate our core production infrastructure to the cloud or stay on-premise.",
+        structured_points={},
+        problem_statement="Should we migrate production infrastructure to the cloud?",
+        decision_gaps=None,
+    )
+    assert len(options) >= 3
+    assert "Public Cloud Deployment" in options
+    assert "Hybrid On-Premises Setup" in options
+    assert "Continue / Upgrade Existing On-Premises Infrastructure" in options
+
+    # Case 2: Explicit 3 alternatives supplied in problem statement
+    explicit_statement = (
+        "Should we migrate production infrastructure to the cloud?\n"
+        "1. Full Public Cloud Migration\n"
+        "2. Hybrid Cloud Deployment\n"
+        "3. Upgrade Existing On-Premises Infrastructure"
+    )
+    explicit_options = detect_candidate_options(
+        context_text="",
+        structured_points={},
+        problem_statement=explicit_statement,
+        decision_gaps=None,
+    )
+    assert len(explicit_options) >= 3
+    assert any("Public Cloud" in opt for opt in explicit_options)
+    assert any("Hybrid" in opt for opt in explicit_options)
+    assert any("Existing" in opt or "On-Premises" in opt for opt in explicit_options)
+
+
+def test_mock_rating_engine_scores_criteria_independently():
+    """
+    Verify mock rating engine evaluates each criterion independently:
+    - Public Cloud gets higher Scalability than Cost (due to egress fees/variable opex).
+    - Ratings vary across Security, Cost, Scalability, and Reliability rather than returning identical base scores.
+    - No fabricated synthetic IDs like fact_1 or ev_1_1.
+    """
+    from app.services.framework_engine import (
+        build_domain_grounded_criteria,
+        create_stable_matrix_options,
+        build_grounded_ratings,
+    )
+    from app.schemas import DecisionDomain
+
+    criteria = build_domain_grounded_criteria(DecisionDomain.SOFTWARE.value)
+    options = create_stable_matrix_options([
+        "Public Cloud Deployment",
+        "Hybrid On-Premises Setup",
+        "Continue / Upgrade Existing On-Premises Infrastructure",
+    ])
+
+    structured_points = {
+        "pros": [
+            "Public Cloud provides automated auto-scaling and elastic throughput for peak loads.",
+            "On-Premises provides predictable hardware depreciation with zero monthly bandwidth egress fees.",
+        ],
+        "cons": [
+            "Public Cloud has variable monthly opex with unpredictable data egress bandwidth billing.",
+            "On-Premises has 6-month hardware procurement lead times limiting elastic scalability.",
+        ],
+        "facts": [
+            "Current on-premises servers are 80% utilized.",
+        ],
+    }
+
+    ratings = build_grounded_ratings(
+        options=options,
+        criteria=criteria,
+        structured_points=structured_points,
+        raw_context="Infrastructure migration evaluation",
+        domain=DecisionDomain.SOFTWARE.value,
+    )
+
+    # 1. Verify no fake synthetic IDs (no 'fact_1' or 'ev_1_1')
+    for r in ratings:
+        for fid in r.supporting_finding_ids:
+            assert not fid.startswith("fact_"), f"Synthetic ID '{fid}' found in supporting_finding_ids"
+        for eid in r.supporting_evidence_ids:
+            assert not eid.startswith("ev_"), f"Synthetic ID '{eid}' found in supporting_evidence_ids"
+
+    # 2. Verify independent criteria scoring: Cloud Scalability vs Cloud Cost
+    cloud_ratings = {r.criterion_id: r for r in ratings if r.option_id == "OPT_001"}
+    cloud_scale = cloud_ratings["crit_sw_scale"]
+    cloud_cost = cloud_ratings["crit_sw_cost"]
+
+    # Scalability should be noticeably higher than Cost for Public Cloud
+    assert cloud_scale.rating > cloud_cost.rating
+    assert cloud_scale.rating >= 8.5
+    assert cloud_cost.rating <= 6.5
+
+    # 3. Verify On-Premises scores differently: Cost higher than Scalability
+    onprem_ratings = {r.criterion_id: r for r in ratings if r.option_id == "OPT_003"}
+    onprem_scale = onprem_ratings["crit_sw_scale"]
+    onprem_cost = onprem_ratings["crit_sw_cost"]
+
+    assert onprem_cost.rating > onprem_scale.rating
+    assert onprem_cost.rating >= 7.5
+    assert onprem_scale.rating <= 6.0
+
+
+def test_missing_ai_ratings_not_silently_six(client: TestClient, auth_headers: dict, test_decision_id: int):
+    """
+    Verify that when AI decision matrix response omits an option-criterion rating:
+    - It does NOT silently become a verified 6.0.
+    - Missing cells are flagged with status='insufficient_evidence' and [UNRATED IN AI OUTPUT].
+    - Matrix sensitivity notes include a clear warning about unrated pairs.
+    """
+    import json
+    from unittest.mock import patch
+
+    # Mock AI response with an intentionally missing rating for OPT_002 on crit_sw_cost
+    mock_ai_payload = {
+        "recommended_framework": "decision_matrix",
+        "methodology_rationale": "Multi-criteria trade-off comparison.",
+        "recommended_techniques": [
+            {
+                "framework_id": "decision_matrix",
+                "role": "primary_evaluation",
+                "role_label": "Primary Decision Matrix",
+                "validation_reason": "Evaluates architectural trade-offs.",
+                "priority": 1,
+            }
+        ],
+        "decision_matrix": {
+            "applicable": True,
+            "inapplicability_reason": None,
+            "criteria": [
+                {"id": "crit_sw_scale", "name": "Scalability & Reliability", "weight": 50.0, "description": "Scale"},
+                {"id": "crit_sw_cost", "name": "Infrastructure & TCO", "weight": 50.0, "description": "Cost"},
+            ],
+            "options": [
+                {"id": "opt_1", "name": "Public Cloud Deployment", "description": "Cloud"},
+                {"id": "opt_2", "name": "On-Premises Infrastructure", "description": "On-Prem"},
+            ],
+            # Note: Omit (opt_2, crit_sw_cost) entirely!
+            "ratings": [
+                {"option_id": "opt_1", "criterion_id": "crit_sw_scale", "rating": 9.0, "reason": "Elastic"},
+                {"option_id": "opt_1", "criterion_id": "crit_sw_cost", "rating": 5.5, "reason": "Opex"},
+                {"option_id": "opt_2", "criterion_id": "crit_sw_scale", "rating": 5.0, "reason": "Fixed"},
+            ],
+        },
+    }
+
+    with patch("app.services.framework_engine.run_ai_framework_evaluation", return_value=mock_ai_payload):
+        res = client.post(
+            f"/api/decisions/{test_decision_id}/analysis",
+            headers=auth_headers,
+            json={"selected_frameworks": ["decision_matrix"], "force_mock": False},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        matrix = data["decision_matrix"]
+        assert matrix is not None
+
+        # Find the omitted rating: (opt_2, crit_sw_cost)
+        omitted_rating = next(
+            (r for r in matrix["ratings"] if r["option_id"] == "opt_2" and r["criterion_id"] == "crit_sw_cost"),
+            None,
+        )
+        assert omitted_rating is not None
+        # It must NOT be a silent verified 6.0
+        assert omitted_rating["status"] == "insufficient_evidence"
+        assert "[UNRATED IN AI OUTPUT]" in omitted_rating["reason"]
+
+        # Sensitivity notes must warn the user
+        assert "Warning" in matrix["sensitivity_notes"]
+        assert "unrated in the model response" in matrix["sensitivity_notes"]
+
+
+def test_stage4_incorporates_resolved_gaps_and_research_evidence():
+    """
+    Verify that Stage 4 receives resolved gap answers and verified research claims:
+    - In fallback scoring, resolved gap answers and research claims directly influence criterion ratings.
+    - gap_ids and research evidence_ids are preserved in ratings provenance.
+    - Stage 2 structured points remain immutable.
+    """
+    from app.services.framework_engine import (
+        build_domain_grounded_criteria,
+        create_stable_matrix_options,
+        build_grounded_ratings,
+    )
+    from app.schemas import DecisionDomain
+
+    criteria = build_domain_grounded_criteria(DecisionDomain.SOFTWARE.value)
+    options = create_stable_matrix_options([
+        "Public Cloud Deployment",
+        "Hybrid On-Premises Setup",
+        "Continue / Upgrade Existing On-Premises Infrastructure",
+    ])
+
+    structured_points = {
+        "facts": ["Current datacenter utilization is 85%."],
+        "pros": ["Public Cloud offers auto-scaling."],
+        "cons": ["Public Cloud has unpredictable bandwidth egress costs."],
+    }
+    points_before = dict(structured_points)
+
+    decision_gaps = {
+        "gaps": [
+            {
+                "id": "gap_egress_budget",
+                "question": "What is the annual egress budget cap?",
+                "status": "answered",
+                "resolved_answer": "Annual egress bandwidth budget is capped at ₹15 lakh with 99.999% SLA approved.",
+                "affected_options": ["Public Cloud Deployment"],
+            }
+        ]
+    }
+
+    research_data = {
+        "research": [
+            {
+                "gap_id": "gap_egress_budget",
+                "claims": [
+                    {
+                        "id": "claim_sla_benchmark",
+                        "claim_text": "Verified public cloud multi-region latency is under 30ms with 99.999% SLA guaranteed.",
+                        "source_title": "Official Cloud SLA Documentation",
+                        "reliability_label": "primary_source",
+                    }
+                ]
+            }
+        ]
+    }
+
+    ratings = build_grounded_ratings(
+        options=options,
+        criteria=criteria,
+        structured_points=structured_points,
+        decision_gaps=decision_gaps,
+        raw_context="Core production infrastructure evaluation",
+        domain=DecisionDomain.SOFTWARE.value,
+        research_data=research_data,
+    )
+
+    # 1. Verify Stage 2 structured points were NOT mutated
+    assert structured_points == points_before
+
+    # 2. Verify that resolved gap and research claims influenced Public Cloud ratings and IDs
+    cloud_ratings = {r.criterion_id: r for r in ratings if r.option_id == "OPT_001"}
+    cloud_scale = cloud_ratings["crit_sw_scale"]
+    cloud_cost = cloud_ratings["crit_sw_cost"]
+
+    # Gap answer and research claim were cited in provenance
+    assert "gap_egress_budget" in cloud_cost.supporting_gap_ids or "gap_egress_budget" in cloud_scale.supporting_gap_ids
+    assert "claim_sla_benchmark" in cloud_scale.supporting_evidence_ids
+    assert cloud_scale.status == "justified"
+    assert cloud_scale.rating >= 9.0
+
+
+

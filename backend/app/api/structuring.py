@@ -67,6 +67,10 @@ def analyze_inputs(
         r_copy["is_stale"] = True
         decision.recommendation = r_copy
 
+    # Analysis underway: transition initial draft to evaluating
+    if decision.status == "draft":
+        decision.status = "evaluating"
+
     db.commit()
     db.refresh(decision)
 
@@ -188,6 +192,10 @@ def update_structured_findings(
         r_copy = dict(decision.recommendation)
         r_copy["is_stale"] = True
         decision.recommendation = r_copy
+
+    # Analysis underway: transition initial draft to evaluating
+    if decision.status == "draft":
+        decision.status = "evaluating"
 
     db.commit()
     db.refresh(decision)

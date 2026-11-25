@@ -168,26 +168,56 @@ def answer_question(
         best = excerpts[0].get("score", 0.0)
         excerpts = [e for e in excerpts if e.get("score", 0.0) >= best * 0.55] or excerpts[:1]
 
-    # Incorporate authoritative Technical Architecture & Cloud Standards when relevant
+    # Incorporate authoritative Domain Standards (Technical, Real Estate, Finance, Business, etc.) when relevant
     if include_tech_standards:
         from app.services.rag.domain_rag import get_domain_rag_service
-        from app.services.rag.router import DomainType
-        domain_rag = get_domain_rag_service()
-        tech_hits = domain_rag.retrieve_domain_blind_spots(DomainType.SOFTWARE, question, top_k=2)
-        for h in tech_hits:
-            if h.get("score", 0.0) >= 0.28:
-                excerpts.append(
-                    {
-                        "id": str(h.get("id", "tech_std")),
-                        "content": h.get("content", ""),
-                        "score": float(h.get("score", 0.0)),
-                        "metadata": {
-                            "document_name": "Technical Architecture & Cloud Standards",
-                            "attachment_id": None,
-                            "domain": "software",
-                        },
+        from app.services.rag.router import DomainType, classify_decision_domain
+
+        target_domain: Optional[DomainType] = None
+        if domain:
+            d_norm = domain.strip().lower()
+            if d_norm in ("personal", "lifestyle"):
+                target_domain = None  # Do NOT inject enterprise/software standards into personal decisions
+            else:
+                for dt in DomainType:
+                    if dt.value == d_norm or dt.name.lower() == d_norm:
+                        target_domain = dt
+                        break
+                if not target_domain:
+                    alias_map = {
+                        "real estate": DomainType.REAL_ESTATE,
+                        "tech": DomainType.SOFTWARE,
+                        "engineering": DomainType.SOFTWARE,
+                        "it": DomainType.SOFTWARE,
+                        "education": DomainType.CAREER,
                     }
-                )
+                    target_domain = alias_map.get(d_norm)
+        elif decision_title or question:
+            classified_dt, conf = classify_decision_domain(f"{decision_title} {question}")
+            if classified_dt != DomainType.GENERAL and conf >= 0.33:
+                target_domain = classified_dt
+
+        if target_domain:
+            domain_rag = get_domain_rag_service()
+            tech_hits = domain_rag.retrieve_domain_blind_spots(target_domain, question, top_k=2)
+            if target_domain == DomainType.SOFTWARE:
+                doc_label = "Technical Architecture & Cloud Standards"
+            else:
+                doc_label = f"{target_domain.value.replace('_', ' ').title()} Industry Standards & Architecture"
+            for h in tech_hits:
+                if h.get("score", 0.0) >= 0.28:
+                    excerpts.append(
+                        {
+                            "id": str(h.get("id", f"{target_domain.value}_std")),
+                            "content": h.get("content", ""),
+                            "score": float(h.get("score", 0.0)),
+                            "metadata": {
+                                "document_name": doc_label,
+                                "attachment_id": None,
+                                "domain": target_domain.value,
+                            },
+                        }
+                    )
 
     status = rag.get_index_status(decision_id)
 

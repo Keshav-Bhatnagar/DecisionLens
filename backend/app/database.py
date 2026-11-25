@@ -108,6 +108,8 @@ def init_db() -> None:
         try:
             with engine.connect() as conn:
                 conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS fault_lines JSONB DEFAULT '{}'::jsonb;"))
+                conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS domain_source VARCHAR(50) DEFAULT 'manual';"))
+                conn.execute(text("ALTER TABLE decisions ADD COLUMN IF NOT EXISTS domain_confidence FLOAT DEFAULT 1.0;"))
                 conn.commit()
         except Exception as exc:
             logger.debug(f"Postgres incremental column check skipped: {exc}")
@@ -142,7 +144,11 @@ def init_db() -> None:
                 if "points_reviewed" not in decision_cols:
                     conn.execute(text("ALTER TABLE decisions ADD COLUMN points_reviewed BOOLEAN DEFAULT 0;"))
                 if "domain" not in decision_cols:
-                    conn.execute(text("ALTER TABLE decisions ADD COLUMN domain VARCHAR(50) DEFAULT 'BUSINESS';"))
+                    conn.execute(text("ALTER TABLE decisions ADD COLUMN domain VARCHAR(50) DEFAULT 'AUTO';"))
+                if "domain_source" not in decision_cols:
+                    conn.execute(text("ALTER TABLE decisions ADD COLUMN domain_source VARCHAR(50) DEFAULT 'manual';"))
+                if "domain_confidence" not in decision_cols:
+                    conn.execute(text("ALTER TABLE decisions ADD COLUMN domain_confidence FLOAT DEFAULT 1.0;"))
                 if "fault_lines" not in decision_cols:
                     conn.execute(text("ALTER TABLE decisions ADD COLUMN fault_lines JSON DEFAULT '{}';"))
 
