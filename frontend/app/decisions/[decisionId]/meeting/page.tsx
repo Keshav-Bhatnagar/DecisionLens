@@ -778,7 +778,6 @@ export default function StandaloneMeetingPage({
                 : "text-[#5c5549] dark:text-[#a89f91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
             }`}
           >
-            <Video className="w-3.5 h-3.5" />
             <span>In-App Live Call</span>
           </button>
         </div>
@@ -803,10 +802,8 @@ export default function StandaloneMeetingPage({
             disabled={isGeneratingTakeaways}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F5F1E8] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2C2723] border border-[#cfc7b2] dark:border-[#38332C] rounded-lg transition-colors cursor-pointer"
           >
-            {isGeneratingTakeaways ? (
+            {isGeneratingTakeaways && (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
             )}
             <span>Takeaways</span>
           </button>
@@ -893,7 +890,6 @@ export default function StandaloneMeetingPage({
                   />
                   {!remotePeerConnected && (
                     <div className="flex flex-col items-center justify-center text-center p-4 text-[#A89F91] space-y-2.5">
-                      <Users className="w-8 h-8 opacity-40 text-[#D4AA50]" />
                       <p className="text-xs font-sans max-w-[200px]">
                         Waiting for colleagues to join this room...
                       </p>
@@ -1009,7 +1005,6 @@ export default function StandaloneMeetingPage({
               <div className="flex items-center gap-2">
                 {isCapturingAudio || isInCall ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 animate-pulse">
-                    <Radio className="w-3.5 h-3.5" />
                     Transcribing
                   </span>
                 ) : (
@@ -1062,7 +1057,6 @@ export default function StandaloneMeetingPage({
             {/* DPDP Act 2023 Consent & In-Memory Encryption Banner */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-[#F5F1E8] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] font-mono">
               <div className="flex items-center gap-2 text-[#5c5549] dark:text-[#a89f91]">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>
                   <strong>DPDP Act 2023 Compliant:</strong> Voice processed ephemeral in-memory. Zero retention of raw recordings without consent.
                 </span>
@@ -1109,7 +1103,6 @@ export default function StandaloneMeetingPage({
             {/* Transcript Card Header */}
             <div className="flex items-center justify-between px-5 h-12 border-b border-[#cfc7b2] dark:border-[#38332C] shrink-0 bg-[#E5DEC9]/40 dark:bg-[#1A1816]/40">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
                   Live Deliberation Transcript
                 </span>
@@ -1136,7 +1129,6 @@ export default function StandaloneMeetingPage({
             <div className="p-5 flex-1 overflow-y-auto space-y-3 font-newsreader text-base text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
               {!liveCapturedText && !liveInterimText ? (
                 <div className="h-full flex flex-col items-center justify-center text-center py-12 text-[#5c5549] dark:text-[#a89f91] space-y-2">
-                  <Volume2 className="w-8 h-8 opacity-40 text-[#7a4e10] dark:text-[#D4AA50]" />
                   <p className="font-sans text-sm max-w-sm">
                     No speech recorded yet. Start live mic capture, tab audio, or in-app call to transcribe your meeting discussion.
                   </p>
@@ -1383,7 +1375,6 @@ export default function StandaloneMeetingPage({
             <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50]">
-                  <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-playfair font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">

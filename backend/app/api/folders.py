@@ -6,7 +6,12 @@ from sqlalchemy import select, func
 from app.database import get_db
 from app.models import User, Folder, Decision, FolderMember
 from app.schemas import FolderCreate, FolderUpdate, FolderResponse, MemberResponse, MemberCreate
-from app.auth import get_current_user, verify_ownership
+from app.auth import (
+    get_current_user,
+    verify_ownership,
+    get_accessible_folder_ids,
+    verify_folder_access,
+)
 
 router = APIRouter(prefix="/folders", tags=["Folders"])
 
@@ -48,12 +53,15 @@ def list_folders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all folders belonging to the authenticated user with decision counts."""
-    # Query folders with decision count in a single query
+    """List all folders owned by or shared with the authenticated user."""
+    accessible_ids = get_accessible_folder_ids(db, current_user)
+    if not accessible_ids:
+        return []
+
     stmt = (
         select(Folder, func.count(Decision.id).label("decision_count"))
         .outerjoin(Decision, Decision.folder_id == Folder.id)
-        .where(Folder.owner_id == current_user.id)
+        .where(Folder.id.in_(accessible_ids))
         .group_by(Folder.id)
         .order_by(Folder.created_at.desc())
     )
@@ -78,12 +86,12 @@ def get_folder(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Retrieve details for a single folder, strictly enforcing user ownership."""
+    """Retrieve details for a single folder for owner or invited collaborators."""
     folder = db.get(Folder, folder_id)
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    verify_ownership(folder.owner_id, current_user.id, resource_name="Folder")
+    verify_folder_access(db, folder, current_user)
 
     # Count decisions in this folder
     count = db.scalar(
@@ -173,18 +181,20 @@ def list_folder_members(
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    verify_ownership(folder.owner_id, current_user.id, resource_name="Folder")
+    verify_folder_access(db, folder, current_user)
 
     # Fetch explicitly added members
     members = db.query(FolderMember).filter(FolderMember.folder_id == folder_id).all()
+
+    owner_user = db.get(User, folder.owner_id) or current_user
 
     # The Owner is always member #1
     owner_member = MemberResponse(
         id=0,
         folder_id=folder.id,
         user_id=folder.owner_id,
-        email=current_user.email,
-        display_name=current_user.display_name or current_user.email.split("@")[0],
+        email=owner_user.email,
+        display_name=owner_user.display_name or owner_user.email.split("@")[0],
         role="owner",
         authority_role="Lead Architect",
         status="active",
@@ -194,7 +204,7 @@ def list_folder_members(
     response_list = [owner_member]
     for m in members:
         # Avoid duplicate owner if already in DB
-        if m.user_id == folder.owner_id or m.email.lower() == current_user.email.lower():
+        if m.user_id == folder.owner_id or m.email.lower() == owner_user.email.lower():
             continue
         response_list.append(MemberResponse.model_validate(m))
 
@@ -218,11 +228,12 @@ def add_folder_member(
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    verify_ownership(folder.owner_id, current_user.id, resource_name="Folder")
+    verify_folder_access(db, folder, current_user, require_editor=True)
 
+    owner_user = db.get(User, folder.owner_id)
     email_clean = body.email.strip().lower()
-    if email_clean == current_user.email.lower():
-        raise HTTPException(status_code=400, detail="Owner is already an active member of this workspace")
+    if email_clean == current_user.email.lower() or (owner_user and email_clean == owner_user.email.lower()):
+        raise HTTPException(status_code=400, detail="User is already an active member of this workspace")
 
     # Check if already added
     existing = db.query(FolderMember).filter(

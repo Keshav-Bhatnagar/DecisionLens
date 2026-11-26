@@ -224,7 +224,6 @@ export default function AutoPilotModal({
           <div className="px-6 py-5 border-b border-[#D9D2C3] bg-[#F5F1E8] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-[#26211b] text-[#FCFBF8] flex items-center justify-center font-bold">
-                <Sparkles className="w-4 h-4 text-[#F5F1E8]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -259,7 +258,6 @@ export default function AutoPilotModal({
             {/* Explanatory Banner */}
             <div className="p-4 rounded-xl border border-[#D9D2C3] bg-[#F5F1E8]/70 text-xs text-[#7a7264] leading-relaxed flex items-start gap-3">
               <div className="p-1.5 bg-[#FCFBF8] border border-[#D9D2C3] rounded-md shrink-0 text-[#26211b]">
-                <Sparkles className="w-3.5 h-3.5" />
               </div>
               <div>
                 <p className="font-semibold text-[#26211b] mb-0.5">
@@ -300,7 +298,6 @@ export default function AutoPilotModal({
                         </div>
                       ) : step.status === "error" ? (
                         <div className="w-6 h-6 rounded-md bg-red-100 text-red-700 flex items-center justify-center">
-                          <ShieldAlert className="w-4 h-4" />
                         </div>
                       ) : (
                         <div className="w-6 h-6 rounded-md bg-[#D9D2C3] text-[#7a7264] flex items-center justify-center text-[14px] font-mono font-bold">
@@ -426,7 +423,6 @@ export default function AutoPilotModal({
                 onClick={runAutoPilot}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#26211b] text-[#FCFBF8] hover:bg-[#253252] shadow-sm transition cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5" />
                 <span>Start Auto-Pilot Pipeline</span>
               </button>
             )}

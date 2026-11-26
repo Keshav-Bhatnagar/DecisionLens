@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   DecisionSynthesis,
   RoadmapData,
@@ -204,6 +205,7 @@ export default function SynthesisPanel({
   const [newPriorityInput, setNewPriorityInput] = useState("");
   const [showPriorities, setShowPriorities] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showVersionMenu, setShowVersionMenu] = useState(false);
 
   // New task inline creation state
   const [addingTaskPhaseId, setAddingTaskPhaseId] = useState<string | null>(null);
@@ -416,6 +418,16 @@ export default function SynthesisPanel({
     return d === "PERSONAL" || d === "LIFESTYLE" || d === "EDUCATION";
   }, [displaySynthesis?.domain]);
 
+  const hasOnlyPlaceholderOptions = useMemo(() => {
+    const alts = displaySynthesis?.alternatives_considered || [];
+    if (alts.length === 0) return true;
+    const hasPlaceholderAlt = alts.some(
+      (a) => a.name === "Alternative Option" || a.name === "Primary Strategy"
+    );
+    const hasDoubleProceed = /Proceed with 'Proceed with /i.test(displaySynthesis?.headline || "");
+    return hasPlaceholderAlt || hasDoubleProceed;
+  }, [displaySynthesis]);
+
   // FinOps Calibrator Multipliers & Logic
   type GeoKey = "INDIA" | "US" | "EUROPE" | "SEA";
   type ScaleKey = "STARTUP" | "GROWTH" | "ENTERPRISE";
@@ -460,16 +472,8 @@ export default function SynthesisPanel({
   }
 
   const calibratedBlunderShield = useMemo(() => {
-    const domain = (displaySynthesis?.domain || "SOFTWARE").toUpperCase();
-    const baseLow = domain === "REAL_ESTATE" ? 15000000 : domain === "FINANCE" ? 8500000 : 4500000;
-    const baseHigh = domain === "REAL_ESTATE" ? 28000000 : domain === "FINANCE" ? 14000000 : 6500000;
-
-    const bs = displaySynthesis?.blunder_shield || {
-      capital_at_risk_saved: `${formatAmountInr(baseLow)} – ${formatAmountInr(baseHigh)}`,
-      developer_sprints_saved: "6 Sprints (12 Wks)",
-      prevented_fatal_trap: "Premature Complexity & Architecture Sprawl",
-      risk_reduction_rationale: "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments.",
-    };
+    if (!displaySynthesis?.blunder_shield) return null;
+    const bs = displaySynthesis.blunder_shield;
 
     if (!isCalibrated) return bs;
 
@@ -539,13 +543,19 @@ export default function SynthesisPanel({
       };
     } else {
       const parts = bs.capital_at_risk_saved.split(/[–—\-]|to/i).map((p) => p.trim()).filter(Boolean);
-      const rawLow = parts.length >= 2 ? (parseAmountInr(parts[0]) || baseLow) : baseLow;
-      const rawHigh = parts.length >= 2 ? (parseAmountInr(parts[1]) || baseHigh) : baseHigh;
+      const parsedLow = parts.length >= 1 ? parseAmountInr(parts[0]) : 0;
+      const parsedHigh = parts.length >= 2 ? parseAmountInr(parts[1]) : 0;
 
-      const combinedFactor = (teamMult * geoMult * 0.70) + (scaleMult * 0.30);
-      const calLow = Math.round(rawLow * combinedFactor);
-      const calHigh = Math.round(rawHigh * combinedFactor);
-      calibratedCapitalRange = `${formatAmountInr(calLow)} – ${formatAmountInr(calHigh)}`;
+      if (parsedLow > 0 && parsedHigh > 0) {
+        const combinedFactor = (teamMult * geoMult * 0.70) + (scaleMult * 0.30);
+        const calLow = Math.round(parsedLow * combinedFactor);
+        const calHigh = Math.round(parsedHigh * combinedFactor);
+        calibratedCapitalRange = `${formatAmountInr(calLow)} – ${formatAmountInr(calHigh)}`;
+      } else if (parsedLow > 0) {
+        const combinedFactor = (teamMult * geoMult * 0.70) + (scaleMult * 0.30);
+        const mid = Math.round(parsedLow * combinedFactor);
+        calibratedCapitalRange = `${formatAmountInr(Math.round(mid * 0.85))} – ${formatAmountInr(Math.round(mid * 1.15))}`;
+      }
     }
 
     const devWeeksSaved = Math.round(12 * (customTeamSize / 5));
@@ -744,60 +754,140 @@ jobs:
     <div className="space-y-6">
       {/* Editorial Header & Action Bar */}
       <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-5 shadow-2xs space-y-4 font-courier">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-none bg-[#7a4e10] dark:bg-[#D4AA50]"></span>
+              <span className="w-2.5 h-2.5 rounded-none bg-[#7a4e10] dark:bg-[#D4AA50] shrink-0"></span>
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
                 STAGE 03 / FINAL REPORT & EXECUTIVE VERDICT
               </span>
             </div>
-            <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mt-0.5">
+            <h2 className="font-newsreader text-2xl sm:text-[26px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mt-0.5 leading-snug">
               Boardroom Decision Memo & Execution Roadmap
             </h2>
-            <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] font-courier mt-0.5">
+            <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] font-courier mt-1 max-w-2xl">
               Synthesized from cognitive findings, resolved information gaps, and multi-criteria stress testing.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
             {snapshots.length > 0 && (
-              <select
-                className="text-xs bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none px-2.5 py-1.5 font-mono text-[#1d1d1b] dark:text-[#F0EAE1] focus:outline-none"
-                value={viewingSnapshot?.id || ""}
-                onChange={(e) =>
-                  handleSelectSnapshot(Number(e.target.value) || 0)
-                }
-              >
-                <option value="">
-                  Active Version (v{synthesis?.version || 1})
-                </option>
-                {snapshots.map((snap) => (
-                  <option key={snap.id} value={snap.id}>
-                    v{snap.version}: {snap.headline.slice(0, 32)}...
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowVersionMenu(!showVersionMenu);
+                    setShowActionsMenu(false);
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-md text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span>
+                    {viewingSnapshot
+                      ? `Snapshot v${viewingSnapshot.version}`
+                      : `Active Version (v${synthesis?.version || 1})`}
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50] transition-transform duration-150 ${
+                      showVersionMenu ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                <AnimatePresence>
+                  {showVersionMenu && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowVersionMenu(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                        transition={{ duration: 0.14 }}
+                        className="absolute right-0 top-full mt-1.5 w-72 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md shadow-xl z-50 py-1 font-courier text-xs divide-y divide-[#cfc7b2]/40 dark:divide-[#38332C]/40"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSelectSnapshot(0);
+                            setShowVersionMenu(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] flex items-center justify-between gap-2 cursor-pointer ${
+                            !viewingSnapshot
+                              ? "bg-[#E5DEC9]/70 dark:bg-[#221F1C] font-bold text-[#1d1d1b] dark:text-[#D4AA50]"
+                              : "text-[#1d1d1b] dark:text-[#F0EAE1]"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2 truncate">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            <span>Active Version (v{synthesis?.version || 1})</span>
+                          </span>
+                          {!viewingSnapshot && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </button>
+                        {snapshots.map((snap) => {
+                          const isSelected = viewingSnapshot?.id === snap.id;
+                          return (
+                            <button
+                              key={snap.id}
+                              type="button"
+                              onClick={() => {
+                                handleSelectSnapshot(snap.id);
+                                setShowVersionMenu(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] flex items-center justify-between gap-2 cursor-pointer ${
+                                isSelected
+                                  ? "bg-[#E5DEC9]/70 dark:bg-[#221F1C] font-bold text-[#1d1d1b] dark:text-[#D4AA50]"
+                                  : "text-[#4f4b40] dark:text-[#A89F91]"
+                              }`}
+                            >
+                              <span className="truncate">
+                                v{snap.version}: {snap.headline}
+                              </span>
+                              {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             {/* Consolidated Actions & Export Dropdown Button */}
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowActionsMenu(!showActionsMenu)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-bold text-xs uppercase tracking-wider rounded-none transition-colors cursor-pointer"
+                onClick={() => {
+                  setShowActionsMenu(!showActionsMenu);
+                  setShowVersionMenu(false);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold text-xs rounded-md transition-colors cursor-pointer whitespace-nowrap"
               >
                 <span>Actions & Export</span>
-                <ChevronDown className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50] transition-transform duration-150 ${
+                    showActionsMenu ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
-              {showActionsMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowActionsMenu(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-1 w-60 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-lg z-50 py-1 font-courier text-xs divide-y divide-[#cfc7b2]/40 dark:divide-[#38332C]/40">
+              <AnimatePresence>
+                {showActionsMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowActionsMenu(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                      transition={{ duration: 0.14 }}
+                      className="absolute right-0 top-full mt-1.5 w-60 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md shadow-xl z-50 py-1 font-courier text-xs divide-y divide-[#cfc7b2]/40 dark:divide-[#38332C]/40"
+                    >
                     {!viewingSnapshot && (
                       <button
                         type="button"
@@ -807,7 +897,6 @@ jobs:
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer"
                       >
-                        <Sliders className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
                         <span>{priorities.length > 0 ? `Priorities (${priorities.length})` : "Set Priorities"}</span>
                       </button>
                     )}
@@ -823,45 +912,20 @@ jobs:
                           className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer"
                         >
                           <Copy className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-                          <span>{copiedADR ? "Copied ADR!" : "Copy Boardroom ADR"}</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleDownloadGitADR();
-                            setShowActionsMenu(false);
-                          }}
-                          disabled={downloadingGitADR}
-                          className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                        >
-                          <FileCode className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-                          <span>{downloadingGitADR ? "Exporting..." : "Export Git ADR (.md)"}</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleDownloadCIGuard();
-                            setShowActionsMenu(false);
-                          }}
-                          disabled={downloadingCIGuard}
-                          className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-                          <span>{downloadingCIGuard ? "Exporting..." : "CI Drift Guard (.yml)"}</span>
+                          <span>{copiedADR ? "Copied Summary!" : "Copy Summary"}</span>
                         </button>
                       </>
                     )}
-                  </div>
-                </>
-              )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
 
             <button
               onClick={handleRunSynthesis}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] font-bold text-xs uppercase tracking-wider rounded-none transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] font-semibold text-xs rounded-md transition-colors disabled:opacity-50 cursor-pointer shadow-sm whitespace-nowrap"
             >
               {loading ? (
                 <>
@@ -870,7 +934,6 @@ jobs:
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#181614]" />
                   <span>{synthesis ? "Re-Synthesize Memo" : "Generate Final Synthesis"}</span>
                 </>
               )}
@@ -989,7 +1052,6 @@ jobs:
           {displaySynthesis.is_stale && (
             <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-between text-amber-900 dark:text-amber-200 text-xs">
               <div className="flex items-center gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
                 <div>
                   <strong className="block font-bold">Upstream Analysis Updated</strong>
                   <span>Problem framing, evidence findings, or matrix weights have changed since this synthesis was produced.</span>
@@ -1008,7 +1070,7 @@ jobs:
           {/* ========================================================================= */}
           {/* 1. EXECUTIVE VERDICT & BOARDROOM ADR HEADER (Hero Card)                   */}
           {/* ========================================================================= */}
-          <div className="bg-paper-surface border border-border rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xs">
+          <div className="bg-paper-surface border border-border rounded-md p-6 sm:p-7 space-y-5 shadow-2xs">
             {/* Top Meta Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
               <div className="flex items-center gap-2 flex-wrap">
@@ -1040,6 +1102,7 @@ jobs:
             </div>
 
             {/* Headline & Recommendation Body */}
+            {!hasOnlyPlaceholderOptions && (
             <div>
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent block mb-1">
                 EXECUTIVE VERDICT & DIRECTIVE
@@ -1051,14 +1114,15 @@ jobs:
                 {displaySynthesis.recommendation_text}
               </p>
             </div>
+            )}
 
             {/* ========================================================================= */}
             {/* 1.5. CAPITAL AT RISK & BLUNDER SHIELD (Munshi Procurement & ROI Proof)   */}
             {/* ========================================================================= */}
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-5 space-y-3.5 transition-all">
+            {displaySynthesis.blunder_shield && (
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-5 space-y-3.5 transition-all">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                     {isPersonalDomain ? "Financial Risk & Commitment Shield" : "Executive ROI & Sunk-Cost Shield"}
                   </span>
@@ -1081,7 +1145,6 @@ jobs:
                         }`}
                         title="Calibrate headcount, geography rate card, and cloud scale tier"
                       >
-                        <Sliders className="w-3 h-3" />
                         <span>{isCalibratorOpen ? "Hide Calibrator" : "Calibrate FinOps Assumptions"}</span>
                       </button>
                       <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -1102,7 +1165,6 @@ jobs:
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 pb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <Sliders className="w-3.5 h-3.5 text-accent" />
                         <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-ink">
                           FinOps Baseline Calibrator
                         </h4>
@@ -1128,7 +1190,6 @@ jobs:
                     <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
                       <div className="flex items-center justify-between text-xs font-mono">
                         <span className="font-bold text-ink flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5 text-accent" />
                           <span>Squad Headcount</span>
                         </span>
                         <span className="px-2 py-0.5 rounded bg-paper-surface border border-border font-bold text-accent text-xs">
@@ -1159,7 +1220,6 @@ jobs:
                     <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
                       <div className="flex items-center justify-between text-xs font-mono">
                         <span className="font-bold text-ink flex items-center gap-1.5">
-                          <Globe className="w-3.5 h-3.5 text-accent" />
                           <span>Market Rate Card</span>
                         </span>
                         <span className="text-[14px] text-muted font-bold">
@@ -1336,7 +1396,6 @@ jobs:
                     className="flex items-center justify-between w-full text-left text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 transition-colors py-1 cursor-pointer"
                   >
                     <span className="flex items-center gap-1.5">
-                      <Receipt className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       <span>
                         {showReceipt
                           ? "Hide Itemized Breakdown"
@@ -1423,15 +1482,15 @@ jobs:
                 </div>
               )}
             </div>
+            )}
 
             {/* ========================================================================= */}
             {/* 2. MANDATORY DUE DILIGENCE CLEARANCE SPIKES (The Kisan Gate)              */}
             {/* ========================================================================= */}
             {/* Mandatory Pre-Commitment Gated Spikes */}
-            {displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
+            {!hasOnlyPlaceholderOptions && displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
               <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/60 space-y-3">
                 <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-800 dark:text-amber-400 shrink-0" />
                   <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-950 dark:text-amber-200">
                     Mandatory Pre-Commitment Due Diligence Spikes (Clear Before Merging)
                   </h4>
@@ -1449,6 +1508,18 @@ jobs:
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Guardrail Banner when Stage 1 inputs have no real competing options */}
+            {hasOnlyPlaceholderOptions && (
+              <div className="p-4 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200 space-y-1">
+                <p className="font-mono font-bold uppercase tracking-wider">
+                  No Competing Decision Options Detected
+                </p>
+                <p className="leading-relaxed">
+                  Your Stage 1 transcript or notes did not present concrete competing options or trade-offs to compare. Synthetic alternative objections and placeholder roadmap tasks have been hidden. Add explicit options and constraints in Stage 1, then click <strong>Re-Synthesize Memo</strong>.
+                </p>
               </div>
             )}
 
@@ -1481,10 +1552,11 @@ jobs:
                   <UserCheck className="w-3.5 h-3.5 text-accent" />
                   <span>Human Sovereignty: AI advises, leadership decides. You hold final fiduciary authority.</span>
                 </div>
+                {!hasOnlyPlaceholderOptions && (
                 <button
                   type="button"
                   onClick={() => {
-                    const defaultOther = displaySynthesis.alternatives_considered.find((a: any) => !a.is_recommended)?.name || "Microservices (Kafka/Go)";
+                    const defaultOther = displaySynthesis.alternatives_considered.find((a: any) => !a.is_recommended)?.name || "";
                     setSelectedOverrideOption(defaultOther);
                     setIsOverrideModalOpen(true);
                   }}
@@ -1492,6 +1564,7 @@ jobs:
                 >
                   <span>Override Winner / Choose Alternative</span>
                 </button>
+                )}
               </div>
             )}
           </div>
@@ -1499,57 +1572,79 @@ jobs:
           {/* ========================================================================= */}
           {/* EXECUTIVE DOSSIER TABS (Eliminates Lengthy Scrolling & Cognitive Overload) */}
           {/* ========================================================================= */}
-          <div className="sticky top-12 z-20 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md py-2 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-center justify-between gap-3 font-courier">
-            <div className="inline-flex items-center p-1 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none gap-1">
+          <div className="sticky top-[100px] z-10 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md py-2.5 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-center justify-between gap-3 font-courier">
+            <div className="inline-flex items-center p-1 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md gap-1 overflow-x-auto max-w-full">
               <button
                 type="button"
                 onClick={() => setActiveTab("memo")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "memo"
-                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    ? "text-[#F4F0E6] dark:text-[#181614]"
                     : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                 }`}
               >
-                <FileText className="w-3.5 h-3.5" />
-                <span>1. Boardroom Memo & Alignment</span>
+                {activeTab === "memo" && (
+                  <motion.span
+                    layoutId="synthesisActiveTab"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    className="absolute inset-0 bg-[#1d1d1b] dark:bg-[#D4AA50] rounded-md shadow-2xs"
+                  />
+                )}
+                <span className="relative z-10 whitespace-nowrap">1. Boardroom Memo & Alignment</span>
               </button>
 
+              {!hasOnlyPlaceholderOptions && (
               <button
                 type="button"
                 onClick={() => setActiveTab("roadmap")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "roadmap"
-                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    ? "text-[#F4F0E6] dark:text-[#181614]"
                     : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                 }`}
               >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>2. Execution Roadmap</span>
+                {activeTab === "roadmap" && (
+                  <motion.span
+                    layoutId="synthesisActiveTab"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    className="absolute inset-0 bg-[#1d1d1b] dark:bg-[#D4AA50] rounded-md shadow-2xs"
+                  />
+                )}
+                <span className="relative z-10 whitespace-nowrap">2. Execution Roadmap</span>
                 {displayRoadmap && (
-                  <span className={`text-[14px] px-1.5 py-0.2 rounded-none font-courier ${
+                  <span className={`relative z-10 text-[11px] px-1.5 py-0.5 rounded-md font-courier whitespace-nowrap shrink-0 ${
                     activeTab === "roadmap" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
                   }`}>
                     {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)} tasks
                   </span>
                 )}
               </button>
+              )}
 
               <button
                 type="button"
                 onClick={() => setActiveTab("audit")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "audit"
-                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] shadow-2xs"
+                    ? "text-[#F4F0E6] dark:text-[#181614]"
                     : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                 }`}
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>3. Trade-Offs & Epistemic Audit</span>
-                <span className={`text-[14px] px-1.5 py-0.2 rounded-none font-courier ${
-                  activeTab === "audit" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
-                }`}>
-                  {displaySynthesis.alternatives_considered.length} alts
-                </span>
+                {activeTab === "audit" && (
+                  <motion.span
+                    layoutId="synthesisActiveTab"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    className="absolute inset-0 bg-[#1d1d1b] dark:bg-[#D4AA50] rounded-md shadow-2xs"
+                  />
+                )}
+                <span className="relative z-10 whitespace-nowrap">{hasOnlyPlaceholderOptions ? "2. Epistemic Audit" : "3. Trade-Offs & Epistemic Audit"}</span>
+                {!hasOnlyPlaceholderOptions && (
+                  <span className={`relative z-10 text-[11px] px-1.5 py-0.5 rounded-md font-courier whitespace-nowrap shrink-0 ${
+                    activeTab === "audit" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
+                  }`}>
+                    {displaySynthesis.alternatives_considered.length} alts
+                  </span>
+                )}
               </button>
             </div>
 
@@ -1568,15 +1663,15 @@ jobs:
 
           {/* TAB 1: BOARDROOM MEMO & ALIGNMENT */}
           {activeTab === "memo" && (
-            <div className="space-y-6 animate-in fade-in duration-150">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start animate-in fade-in duration-150">
+              <div className="xl:col-span-8 space-y-6">
               {/* ========================================================================= */}
               {/* 3. DYNAMIC OBJECTIONS & RESOLUTION LEDGER                                 */}
               {/* ========================================================================= */}
-              {displaySynthesis.counterarguments && displaySynthesis.counterarguments.length > 0 ? (
-                <div className="bg-paper-surface border border-border rounded-none p-6 space-y-4 shadow-2xs">
+              {!hasOnlyPlaceholderOptions && displaySynthesis.counterarguments && displaySynthesis.counterarguments.length > 0 ? (
+                <div className="bg-paper-surface border border-border rounded-md p-6 space-y-4 shadow-2xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border pb-2">
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-accent" />
                       <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
                         KEY OBJECTIONS & NEGOTIATED RESOLUTIONS
                       </h3>
@@ -1615,7 +1710,6 @@ jobs:
                 <div className="bg-paper-surface border border-border rounded-none p-6 space-y-4 shadow-2xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border pb-2">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-accent" />
                       <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
                         KEY RISKS & PROACTIVE SAFEGUARDS
                       </h3>
@@ -1681,6 +1775,108 @@ jobs:
                   </button>
                 </div>
               </div>
+              </div>
+
+              {/* Right Sticky Executive Vitals Rail (Fills desktop whitespace with live decision telemetry) */}
+              <aside className="xl:col-span-4 xl:sticky xl:top-28 space-y-4">
+                <div className="bg-paper-surface border border-border rounded-md p-5 space-y-4 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-border pb-2.5">
+                    <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
+                      Decision Vitals
+                    </h3>
+                    <span className="font-mono text-[11px] text-muted uppercase">
+                      v{displaySynthesis.version}
+                    </span>
+                  </div>
+
+                  {/* Gauntlet Score & Confidence */}
+                  {displaySynthesis.canonical_result && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-muted uppercase">Gauntlet Score</span>
+                        <span className="font-bold text-ink">
+                          {displaySynthesis.canonical_result.winner_score.toFixed(1)} / 10
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-paper-sidebar border border-border rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: `${Math.min(100, Math.max(0, displaySynthesis.canonical_result.winner_score * 10))}%`,
+                          }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
+                          className="h-full bg-[#7a4e10] dark:bg-[#D4AA50]"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Telemetry Grid */}
+                  <div className="grid grid-cols-2 gap-2.5 pt-1 font-mono">
+                    <div className="p-3 bg-paper-sidebar border border-border rounded-md">
+                      <span className="text-[10px] uppercase text-muted block">Posture</span>
+                      <span className={`text-xs font-bold uppercase mt-0.5 block ${isConditional ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                        {isConditional ? "Conditional" : "Ready"}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-paper-sidebar border border-border rounded-md">
+                      <span className="text-[10px] uppercase text-muted block">Alternatives</span>
+                      <span className="text-xs font-bold text-ink mt-0.5 block">
+                        {displaySynthesis.alternatives_considered.length} Evaluated
+                      </span>
+                    </div>
+                    <div className="p-3 bg-paper-sidebar border border-border rounded-md">
+                      <span className="text-[10px] uppercase text-muted block">Evidence</span>
+                      <span className="text-xs font-bold text-ink mt-0.5 block">
+                        {displaySynthesis.supporting_evidence.length} Citations
+                      </span>
+                    </div>
+                    <div className="p-3 bg-paper-sidebar border border-border rounded-md">
+                      <span className="text-[10px] uppercase text-muted block">Roadmap</span>
+                      <span className="text-xs font-bold text-ink mt-0.5 block">
+                        {displayRoadmap
+                          ? `${displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)} Tasks`
+                          : "0 Tasks"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Confidence Assessment Summary */}
+                  {displaySynthesis.confidence_assessment && (
+                    <div className="pt-2 border-t border-border space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="text-muted uppercase">Confidence</span>
+                        <span className="font-bold uppercase text-ink">
+                          {displaySynthesis.confidence_assessment.level} ({Math.round((displaySynthesis.confidence_assessment.score || 0) * 100)}%)
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted leading-relaxed">
+                        {displaySynthesis.confidence_assessment.rationale}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Quick Jump Actions */}
+                  <div className="pt-2 border-t border-border flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("roadmap")}
+                      className="w-full py-2 px-3 text-xs font-mono font-bold uppercase tracking-wider bg-paper-sidebar hover:border-accent border border-border text-ink rounded-md flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <span>Open Execution Roadmap</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-accent" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("audit")}
+                      className="w-full py-2 px-3 text-xs font-mono font-bold uppercase tracking-wider bg-paper-sidebar hover:border-accent border border-border text-ink rounded-md flex items-center justify-between transition-colors cursor-pointer"
+                    >
+                      <span>Inspect Epistemic Audit</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-accent" />
+                    </button>
+                  </div>
+                </div>
+              </aside>
             </div>
           )}
 
@@ -1702,12 +1898,16 @@ jobs:
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {displaySynthesis.alternatives_considered.map((alt, idx) => (
-                <div
+                <motion.div
                   key={idx}
-                  className={`rounded-xl p-4 border flex flex-col justify-between transition-colors ${
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, delay: idx * 0.06 }}
+                  whileHover={{ y: -3 }}
+                  className={`rounded-xl p-4 border flex flex-col justify-between transition-shadow hover:shadow-md ${
                     alt.is_recommended
-                      ? "bg-paper-sidebar border-accent/80 shadow-xs"
-                      : "bg-paper-surface border-border"
+                      ? "bg-[#EDE7D6]/80 dark:bg-[#221F1C] border-[#7a4e10] dark:border-[#D4AA50] shadow-xs"
+                      : "bg-[#F4F0E6]/60 dark:bg-[#181614] border-[#cfc7b2] dark:border-[#38332C]"
                   }`}
                 >
                   <div className="space-y-3">
@@ -1716,11 +1916,11 @@ jobs:
                         {alt.name}
                       </h4>
                       {alt.is_recommended ? (
-                        <span className="px-2 py-0.5 rounded text-[14px] font-mono uppercase font-bold bg-accent text-paper-surface">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-mono uppercase font-bold bg-[#7a4e10] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] shrink-0">
                           Selected
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-[14px] font-mono uppercase bg-paper-sidebar text-muted border border-border">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-paper-sidebar text-muted border border-border shrink-0">
                           Alternative
                         </span>
                       )}
@@ -1730,15 +1930,15 @@ jobs:
                       {alt.description}
                     </p>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <div>
-                        <span className="text-[14px] font-mono uppercase font-bold text-emerald-700 block mb-1">
+                        <span className="text-[11px] font-mono uppercase font-bold text-[#2E6F4E] dark:text-[#7FB08E] block mb-1">
                           Operational Advantages
                         </span>
-                        <ul className="text-xs text-ink space-y-0.5">
+                        <ul className="text-xs text-ink space-y-1">
                           {alt.pros.map((p, pIdx) => (
                             <li key={pIdx} className="flex items-start gap-1.5">
-                              <span className="text-emerald-700 font-bold">+</span>
+                              <span className="text-[#2E6F4E] dark:text-[#7FB08E] font-bold">+</span>
                               <span className="leading-snug">{p}</span>
                             </li>
                           ))}
@@ -1746,13 +1946,13 @@ jobs:
                       </div>
 
                       <div>
-                        <span className="text-[14px] font-mono uppercase font-bold text-rose-700 block mb-1">
-                          Downsides & Operational Drag
+                        <span className="text-[11px] font-mono uppercase font-bold text-[#8C4A27] dark:text-[#D99B78] block mb-1">
+                          Downsides &amp; Operational Drag
                         </span>
-                        <ul className="text-xs text-ink space-y-0.5">
+                        <ul className="text-xs text-ink space-y-1">
                           {alt.cons.map((c, cIdx) => (
                             <li key={cIdx} className="flex items-start gap-1.5">
-                              <span className="text-rose-700 font-bold">-</span>
+                              <span className="text-[#8C4A27] dark:text-[#D99B78] font-bold">&minus;</span>
                               <span className="leading-snug">{c}</span>
                             </li>
                           ))}
@@ -1763,12 +1963,12 @@ jobs:
 
                   <div className="pt-3 border-t border-border mt-3 space-y-1 text-xs">
                     {alt.why_not_recommended && (
-                      <p className="text-[15px] text-amber-900 bg-amber-50/60 p-2 rounded border border-amber-200/60">
-                        <strong className="font-bold">Why Deprioritized:</strong> {alt.why_not_recommended}
+                      <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] bg-[#EDE7D6]/70 dark:bg-[#221F1C] p-2.5 rounded border border-[#cfc7b2] dark:border-[#38332C] leading-relaxed">
+                        <strong className="font-bold text-ink">Why Deprioritized:</strong> {alt.why_not_recommended}
                       </p>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -1952,7 +2152,6 @@ jobs:
         /* Empty State */
         <div className="bg-paper-surface border border-border rounded-2xl p-10 sm:p-14 text-center space-y-4 shadow-2xs">
           <div className="w-12 h-12 rounded-xl bg-paper-sidebar border border-border mx-auto flex items-center justify-center text-accent">
-            <Sparkles className="w-6 h-6" />
           </div>
           <div className="max-w-md mx-auto space-y-1.5">
             <h3 className="font-newsreader text-2xl font-normal text-ink">
@@ -1974,7 +2173,6 @@ jobs:
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4 text-accent" />
                 <span>Generate Executive Synthesis & Roadmap</span>
               </>
             )}

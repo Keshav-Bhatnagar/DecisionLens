@@ -105,8 +105,8 @@ export default function Sidebar({
         ]);
         setFolders(folderData);
         setDecisions(decisionData);
-        if (folderData.length > 0 && newDecisionFolderId === "") {
-          setNewDecisionFolderId(folderData[0].id);
+        if (folderData.length > 0) {
+          setNewDecisionFolderId((prev) => (prev === "" ? folderData[0].id : prev));
         }
       } else {
         setFolders([]);
@@ -119,7 +119,7 @@ export default function Sidebar({
     } finally {
       setLoading(false);
     }
-  }, [newDecisionFolderId]);
+  }, []);
 
   useEffect(() => {
     loadSidebarData();
@@ -243,13 +243,17 @@ export default function Sidebar({
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Header: Antique Magnifying Lens Logo + Actions */}
-        <div className="h-14 px-4 border-b border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-between shrink-0 bg-[#E5DEC9] dark:bg-[#1C1917]">
-          <div className="flex items-center gap-2.5 overflow-hidden">
+        <div
+          className={`h-14 border-b border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-between shrink-0 bg-[#E5DEC9] dark:bg-[#1C1917] ${
+            !isExpanded ? "px-1.5 gap-0.5" : "px-4"
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0 shrink-0">
             <BrandLogo
               href="/dashboard"
               theme={theme}
               showWordmark={isExpanded}
-              iconSizeClass="w-[44px] h-[44px]"
+              iconSizeClass={!isExpanded ? "w-7 h-7" : "w-[44px] h-[44px]"}
             />
           </div>
 
@@ -257,7 +261,9 @@ export default function Sidebar({
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="hidden lg:flex items-center justify-center w-7 h-7 rounded-[4px] text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/50 dark:hover:bg-[#38332C]/60 transition-colors"
+            className={`hidden lg:flex items-center justify-center rounded-[4px] text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/50 dark:hover:bg-[#38332C]/60 transition-colors shrink-0 ${
+              !isExpanded ? "w-6 h-7" : "w-7 h-7"
+            }`}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -304,7 +310,7 @@ export default function Sidebar({
                 setShowNewDecisionModal(true);
                 closeMobile();
               }}
-              className="w-full py-2.5 px-3 rounded-sm bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] font-bold text-[14px] uppercase tracking-wider flex items-center justify-center gap-2 transition-colors focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs"
+              className="w-full py-2.5 px-3 rounded-sm bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] font-bold text-[15px] uppercase tracking-wider flex items-center justify-center gap-2 transition-colors focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs"
               title="Challenge a new decision"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -320,7 +326,9 @@ export default function Sidebar({
             <Link
               href="/dashboard"
               onClick={closeMobile}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[15px] transition-colors ${
+              className={`flex items-center py-2 rounded-sm text-[15px] transition-colors ${
+                !isExpanded ? "justify-center px-0" : "gap-2.5 px-2.5"
+              } ${
                 pathname === "/dashboard"
                   ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
@@ -336,7 +344,9 @@ export default function Sidebar({
             <Link
               href="/portfolio"
               onClick={closeMobile}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[15px] transition-colors ${
+              className={`flex items-center py-2 rounded-sm text-[15px] transition-colors ${
+                !isExpanded ? "justify-center px-0" : "gap-2.5 px-2.5"
+              } ${
                 pathname === "/portfolio"
                   ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
@@ -352,7 +362,9 @@ export default function Sidebar({
             <Link
               href="/profile"
               onClick={closeMobile}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[15px] transition-colors ${
+              className={`flex items-center py-2 rounded-sm text-[15px] transition-colors ${
+                !isExpanded ? "justify-center px-0" : "gap-2.5 px-2.5"
+              } ${
                 pathname === "/profile"
                   ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
@@ -401,7 +413,7 @@ export default function Sidebar({
             {isExpanded && (
               <div className="space-y-0.5">
                 {folders.length === 0 ? (
-                  <p className="text-[14px] font-courier text-[#97907e] px-2.5 py-1">
+                  <p className="text-[15px] font-courier text-[#97907e] px-2.5 py-1">
                     No workspaces yet
                   </p>
                 ) : (
@@ -465,11 +477,6 @@ export default function Sidebar({
                                     title={d.title}
                                   >
                                     <div className="flex items-center gap-1.5 truncate min-w-0">
-                                      {isMeeting ? (
-                                        <Video className="w-3.5 h-3.5 text-[#443a30] dark:text-[#d9c69a] shrink-0" />
-                                      ) : (
-                                        <Compass className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
-                                      )}
                                       <span className="truncate font-newsreader text-[15px]">{d.title}</span>
                                     </div>
                                     <span
@@ -496,8 +503,8 @@ export default function Sidebar({
             )}
           </div>
 
-          {/* RECENT Section: Up to 3 recent decisions */}
-          {isExpanded && decisions.length > 0 && (
+          {/* RECENT Section: Up to 3 other recent decisions */}
+          {isExpanded && decisions.some((d) => d.id !== activeDecisionId) && (
             <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 space-y-1">
               <div className="px-2.5 mb-1 pt-1">
                 <span className="font-courier text-[15px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-[0.08em]">
@@ -505,7 +512,10 @@ export default function Sidebar({
                 </span>
               </div>
               <div className="space-y-1">
-                {decisions.slice(0, 3).map((d) => (
+                {decisions
+                  .filter((d) => d.id !== activeDecisionId)
+                  .slice(0, 3)
+                  .map((d) => (
                   <Link
                     key={d.id}
                     href={`/decisions/${d.id}`}

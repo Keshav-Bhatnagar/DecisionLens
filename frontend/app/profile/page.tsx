@@ -453,7 +453,6 @@ export default function ProfilePage() {
             <div className="pt-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-[14px] uppercase font-mono tracking-wider text-[var(--ink-secondary)] flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
                   Portfolio Cadence &amp; Epistemic Throughput
                 </span>
                 <span className="text-[15px] font-mono text-[var(--ink-secondary)]">
@@ -572,7 +571,6 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-[var(--accent)]" />
                   <h2 className="text-lg font-newsreader font-bold text-[var(--ink)]">
                     Deliberation Calibration &amp; Acoustic Engine
                   </h2>
@@ -594,7 +592,6 @@ export default function ProfilePage() {
               <div className="p-5 rounded-xl bg-[var(--bg-page)] border border-[var(--border)] space-y-5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[var(--ink)] uppercase tracking-wider flex items-center gap-1.5">
-                    <Volume2 className="w-3.5 h-3.5 text-[var(--accent)]" />
                     Speech Transcription Target
                   </span>
                   <span className="text-[14px] font-mono text-[var(--accent)] font-semibold">
@@ -720,7 +717,6 @@ export default function ProfilePage() {
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-[var(--accent)]" />
                           <span className="text-xs font-bold text-[var(--ink)]">
                             Deep Epistemic Gauntlet (Recommended)
                           </span>
@@ -753,7 +749,6 @@ export default function ProfilePage() {
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-cyan-500" />
                           <span className="text-xs font-bold text-[var(--ink)]">
                             Express Strategic Pilot
                           </span>
@@ -848,7 +843,6 @@ export default function ProfilePage() {
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-6 sm:p-8 space-y-6 transition-all duration-300">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-[var(--accent)]" />
                 <h2 className="text-base font-newsreader font-bold text-[var(--ink)]">
                   Data Sovereignty &amp; Cryptographic Export
                 </h2>

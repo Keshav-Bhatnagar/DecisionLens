@@ -32,17 +32,6 @@ def assemble_decision_input_context(
     sections = []
     sources = []
 
-    # 1. Check for cross-meeting / folder memory precedents
-    if db is not None and decision.folder_id:
-        precedents = get_folder_precedents(decision, db)
-        if precedents:
-            precedents_block = format_folder_precedents_for_prompt(precedents)
-            if precedents_block:
-                sections.append(precedents_block)
-                sources.append(
-                    f"Folder Memory ({len(precedents)} Prior Record{'s' if len(precedents) > 1 else ''})"
-                )
-
     if decision.title:
         sections.append(f"### DECISION TITLE\n{decision.title.strip()}")
 
@@ -101,6 +90,22 @@ def assemble_decision_input_context(
     if not sections and decision.raw_input:
         sections.append(f"### RAW INPUT CONTEXT\n{decision.raw_input.strip()}")
         sources.append("Raw Input")
+
+    # Secondary reference: cross-meeting / folder memory precedents (placed AFTER primary inputs)
+    if db is not None and decision.folder_id:
+        precedents = get_folder_precedents(decision, db)
+        if precedents:
+            precedents_block = format_folder_precedents_for_prompt(precedents)
+            if precedents_block:
+                sections.append(
+                    "### SECONDARY REFERENCE ONLY (PRIOR FOLDER RECORDS)\n"
+                    "Only reference these if directly relevant to the current decision's transcript/notes above; "
+                    "do NOT replace or override the current decision's topic with unrelated prior records.\n\n"
+                    + precedents_block
+                )
+                sources.append(
+                    f"Folder Memory ({len(precedents)} Prior Record{'s' if len(precedents) > 1 else ''})"
+                )
 
     aggregated_text = "\n\n".join(sections).strip()
     source_summary = ", ".join(sources) if sources else "None"

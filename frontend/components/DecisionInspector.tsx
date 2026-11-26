@@ -112,7 +112,6 @@ export default function DecisionInspector({
       {/* 1. Header Bar */}
       <div className="flex items-center justify-between p-3.5 border-b border-[#cfc7b2] dark:border-[#38332C] bg-[#E5DEC9] dark:bg-[#1C1917]">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
           <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#1d1d1b] dark:text-[#F0EAE1]">
             Deliberation Dossier
           </span>
@@ -149,7 +148,6 @@ export default function DecisionInspector({
               className="px-3 py-2.5 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
               title="Run end-to-end deliberation pipeline autonomously"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300 dark:text-[#181614]" />
               <span>Auto-Pilot</span>
             </button>
 
@@ -261,7 +259,6 @@ export default function DecisionInspector({
                     : "bg-[#F4F0E6] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C]"
                 }`}
               >
-                <Video className="w-3.5 h-3.5" />
                 <span>Meeting</span>
               </button>
             </div>

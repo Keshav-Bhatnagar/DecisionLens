@@ -113,14 +113,23 @@ def get_decision_synthesis(
         domain = getattr(decision, "domain", None) or analysis_data.get("domain") or "BUSINESS"
         winner_name = rec_dict.get("canonical_result", {}).get("winner_option_name") or rec_dict.get("headline") or "Primary Strategy"
         alts = rec_dict.get("alternatives_considered", [])
+        runner_up_name = next(
+            (
+                a.get("name")
+                for a in alts
+                if isinstance(a, dict) and not a.get("is_recommended") and a.get("name")
+            ),
+            None,
+        )
         risks = [r.get("risk") if isinstance(r, dict) else str(r) for r in rec_dict.get("risks_and_mitigations", [])]
         shield_obj = compute_blunder_shield(
             domain=domain,
             top_option_name=winner_name,
-            alternatives=alts,
             risks=risks,
-            decision_id=decision.id,
+            runner_up_name=runner_up_name,
+            decision_title=decision.title,
             problem_statement=decision.problem_statement or decision.title,
+            decision_id=decision.id,
         )
         rec_dict["blunder_shield"] = shield_obj.model_dump()
         decision.recommendation = rec_dict

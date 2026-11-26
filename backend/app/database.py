@@ -56,6 +56,10 @@ else:
     engine_kwargs["max_overflow"] = 20
     engine_kwargs["pool_recycle"] = 300
     engine_kwargs["pool_pre_ping"] = False  # Avoid 450ms WAN roundtrip ping on every request
+    if db_url.startswith("postgresql+psycopg://"):
+        # Disable server-side prepared statements in psycopg3 so PgBouncer / Supabase
+        # transaction poolers (:6543) never hit DuplicatePreparedStatement (_pg3_0).
+        engine_kwargs["connect_args"] = {"prepare_threshold": None}
 
 engine = create_engine(db_url, **engine_kwargs)
 

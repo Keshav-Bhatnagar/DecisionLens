@@ -117,7 +117,6 @@ export default function PrivateBotChatPanel({
     <div className="flex flex-col h-full bg-[#FCFBF8] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm shadow-xs font-courier">
       {/* Privacy Notice Banner */}
       <div className="p-3.5 bg-[#EDE7D6] dark:bg-[#221F1C] border-b border-[#cfc7b2] dark:border-[#38332C] flex items-start gap-2.5">
-        <Shield className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0 mt-0.5" />
         <div className="text-[13px] leading-snug">
           <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
             Psychological Safety Portal • 100% Confidential
@@ -213,7 +212,6 @@ export default function PrivateBotChatPanel({
                 <div className="flex flex-col items-start">
                   <div className="max-w-[88%] bg-[#FCFBF8] dark:bg-[#1C1917] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] p-2.5 rounded-sm space-y-1">
                     <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
-                      <Sparkles className="w-3 h-3" />
                       DecisionLens Bot Response
                     </div>
                     <p className="text-[12px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">

@@ -131,14 +131,15 @@ Your job is to separate technical decision signals from off-topic distractions a
 CONTEXT: The meeting is intended to evaluate and make a technical/engineering decision (architecture, technology stack, cloud pricing, scalability, performance, security, operational constraints).
 
 INPUT: A list of numbered meeting dialogue segments.
-OUTPUT: A JSON object classifying each segment:
+OUTPUT: A JSON object classifying each segment (and optionally repairing phonetic Hinglish/ASR typos):
 {
   "classifications": [
     {
       "index": 1,
       "is_distraction": true | false,
       "reason": "Technical requirement" | "Social banter" | "Off-topic lunch discussion" | "Mic check",
-      "category": "technical" | "off_topic"
+      "category": "technical" | "off_topic",
+      "cleaned_text": "Clean Romanized Hinglish/English version of the segment with phonetic ASR errors repaired (omit or keep exact if already clean)."
     }
   ]
 }
@@ -146,17 +147,18 @@ OUTPUT: A JSON object classifying each segment:
 RULES:
 1. KEEP (is_distraction=false): Any statement about architecture, code, cloud costs, databases, performance, timelines, engineering trade-offs, security, testing, or action items.
 2. DISCARD (is_distraction=true): Small talk, food orders, weekend chat, sports, weather, unrelated project gossip, pure mic checks.
-3. When in doubt on a technical point, KEEP it. Never discard a technical trade-off."""
+3. When in doubt on a technical point, KEEP it. Never discard a technical trade-off.
+4. For kept segments with phonetic Hinglish or Indian-accent ASR typos (or Devanagari fragments), repair them cleanly into natural Romanized Hinglish/English in "cleaned_text" without inventing new facts or numbers."""
 
 
-def _llm_classify_segments(
+def _llm_classify_and_repair_segments(
     segments: List[Tuple[Optional[str], str]],
     decision_title: str = "",
     decision_context: str = "",
-) -> Optional[List[bool]]:
+) -> Optional[Tuple[List[bool], Dict[int, str]]]:
     """
-    Use LLM to classify segments when available.
-    Returns list of booleans: True if segment is distraction, False if relevant.
+    Use LLM to classify segments and optionally repair phonetic Hinglish/ASR typos.
+    Returns (is_distraction_list, {zero_based_idx: repaired_text}) when available.
     """
     from app.services.ai import call_gemini_direct_rest, get_llm_client_and_model
 
@@ -164,7 +166,7 @@ def _llm_classify_segments(
     if client is None:
         return None
 
-    # Limit to batches of 30 segments to avoid prompt overflow
+    # Limit to batches of 40 segments to avoid prompt overflow
     segment_texts = []
     for idx, (speaker, content) in enumerate(segments, start=1):
         spk_label = f"{speaker}: " if speaker else ""
@@ -198,27 +200,41 @@ def _llm_classify_segments(
             )
             content = response.choices[0].message.content
 
-        # Parse JSON classifications
         clean = (content or "").strip()
         if clean.startswith("```"):
             clean = re.sub(r"^```(?:json)?|```$", "", clean, flags=re.MULTILINE).strip()
         data = json.loads(clean)
         classifications = data.get("classifications", [])
-        
-        # Build index mapping
+
         distraction_map = {}
+        repaired_map: Dict[int, str] = {}
         for c in classifications:
             idx = int(c.get("index", 0))
-            is_dist = bool(c.get("is_distraction", False))
-            distraction_map[idx] = is_dist
+            distraction_map[idx] = bool(c.get("is_distraction", False))
+            repaired = (c.get("cleaned_text") or "").strip()
+            if idx >= 1 and repaired:
+                repaired_map[idx - 1] = repaired
 
-        results = []
-        for i in range(1, len(segments) + 1):
-            results.append(distraction_map.get(i, False))
-        return results
+        results = [distraction_map.get(i, False) for i in range(1, len(segments) + 1)]
+        return results, repaired_map
     except Exception as exc:
         logger.warning(f"LLM meeting distraction classification failed: {exc}. Using heuristic classifier.")
         return None
+
+
+def _llm_classify_segments(
+    segments: List[Tuple[Optional[str], str]],
+    decision_title: str = "",
+    decision_context: str = "",
+) -> Optional[List[bool]]:
+    """
+    Use LLM to classify segments when available.
+    Returns list of booleans: True if segment is distraction, False if relevant.
+    """
+    res = _llm_classify_and_repair_segments(
+        segments, decision_title=decision_title, decision_context=decision_context
+    )
+    return res[0] if res is not None else None
 
 
 def filter_meeting_distractions(
@@ -254,10 +270,13 @@ def filter_meeting_distractions(
         )
 
     llm_classifications: Optional[List[bool]] = None
+    repaired_texts: Dict[int, str] = {}
     if not force_heuristics and len(transcript) > 100:
-        llm_classifications = _llm_classify_segments(
+        llm_res = _llm_classify_and_repair_segments(
             segments, decision_title=decision_title, decision_context=decision_context
         )
+        if llm_res is not None:
+            llm_classifications, repaired_texts = llm_res
 
     kept_lines: List[str] = []
     removed_tangents: List[Dict[str, Any]] = []
@@ -287,7 +306,8 @@ def filter_meeting_distractions(
                 }
             )
         else:
-            line = f"{speaker}: {content}" if speaker else content
+            final_text = repaired_texts.get(i) or content
+            line = f"{speaker}: {final_text}" if speaker else final_text
             kept_lines.append(line)
 
     total_count = len(segments)

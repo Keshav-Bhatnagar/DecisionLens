@@ -145,10 +145,8 @@ export default function ScribeCompanionPage({
             disabled={isGeneratingTakeaways}
             className="px-2 py-0.5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] text-[#7a4e10] dark:text-[#D4AA50] text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 transition-colors cursor-pointer"
           >
-            {isGeneratingTakeaways ? (
+            {isGeneratingTakeaways && (
               <Loader2 className="w-2.5 h-2.5 animate-spin" />
-            ) : (
-              <Sparkles className="w-2.5 h-2.5" />
             )}
             <span>Takeaways</span>
           </button>

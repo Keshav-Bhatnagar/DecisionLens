@@ -459,7 +459,6 @@ export default function ReportExportModal({
                             : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
                         }`}
                       >
-                        <BookOpen className="w-3 h-3" />
                         <span>Reading view</span>
                       </button>
                       <button

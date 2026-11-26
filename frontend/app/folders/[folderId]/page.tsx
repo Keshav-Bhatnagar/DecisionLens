@@ -632,23 +632,23 @@ export default function FolderDetailPage({
                   </div>
                 </div>
 
-                {/* Right side: ONE primary + NEW DECISION button and delete button */}
+                {/* Right side: ONE primary New decision button and delete button */}
                 <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-end">
                   <button
                     type="button"
                     onClick={handleOpenCreateModal}
-                    className="px-5 py-3 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold font-courier uppercase tracking-wider rounded-none transition-colors flex items-center gap-2"
+                    className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-semibold font-courier rounded-md transition-colors flex items-center gap-2 cursor-pointer"
                     title="Start challenging a new decision (Shortcut: N)"
                   >
                     <span>＋</span>
-                    <span>NEW DECISION</span>
+                    <span>New decision</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleDeleteFolder}
                     title="Delete workspace"
-                    className="p-3 text-[#97907e] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
+                    className="p-2.5 text-[#97907e] hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-md transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -658,63 +658,63 @@ export default function FolderDetailPage({
 
             {/* B) TOOLBAR (1px dark top rule, 1px light bottom rule) */}
             <div className="border-t border-[#1d1d1b]/70 dark:border-[#38332C] border-b border-[#cfc7b2] dark:border-[#38332C]/70 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 font-courier">
-              {/* Left: Filter tabs (Active = black with cream text; inactive = plain mono text without box) */}
+              {/* Left: Filter tabs */}
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-none" role="tablist">
                 <button
                   type="button"
                   role="tab"
                   aria-selected={statusFilter === "all"}
                   onClick={() => setStatusFilter("all")}
-                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-none ${
+                  className={`px-3 py-1.5 text-xs font-semibold transition-colors rounded-md cursor-pointer ${
                     statusFilter === "all"
                       ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                       : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                   }`}
                 >
-                  ALL ({counts.all})
+                  All ({counts.all})
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={statusFilter === "scrutiny"}
                   onClick={() => setStatusFilter("scrutiny")}
-                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-none ${
+                  className={`px-3 py-1.5 text-xs font-semibold transition-colors rounded-md cursor-pointer ${
                     statusFilter === "scrutiny"
                       ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                       : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                   }`}
                 >
-                  UNDER SCRUTINY ({counts.scrutiny})
+                  Under scrutiny ({counts.scrutiny})
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={statusFilter === "evidence"}
                   onClick={() => setStatusFilter("evidence")}
-                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-none ${
+                  className={`px-3 py-1.5 text-xs font-semibold transition-colors rounded-md cursor-pointer ${
                     statusFilter === "evidence"
                       ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                       : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                   }`}
                 >
-                  NEEDS EVIDENCE ({counts.evidence})
+                  Needs evidence ({counts.evidence})
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={statusFilter === "decided"}
                   onClick={() => setStatusFilter("decided")}
-                  className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-none ${
+                  className={`px-3 py-1.5 text-xs font-semibold transition-colors rounded-md cursor-pointer ${
                     statusFilter === "decided"
                       ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                       : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                   }`}
                 >
-                  DECIDED ({counts.decided})
+                  Decided ({counts.decided})
                 </button>
               </div>
 
-              {/* Right: Search input & INDEX / BOARD toggle */}
+              {/* Right: Search input & Index / Board toggle */}
               <div className="flex items-center gap-3 self-end md:self-auto">
                 <div className="relative w-48 sm:w-56">
                   <Search className="w-3.5 h-3.5 text-[#97907e] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -722,9 +722,9 @@ export default function FolderDetailPage({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="SEARCH"
+                    placeholder="Search decisions..."
                     aria-label="Search decisions by title"
-                    className="w-full pl-8 pr-7 py-1.5 text-xs font-courier uppercase tracking-wider bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
+                    className="w-full pl-8 pr-7 py-1.5 text-xs font-courier bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:outline-none transition-colors"
                   />
                   {searchQuery && (
                     <button
@@ -738,28 +738,28 @@ export default function FolderDetailPage({
                   )}
                 </div>
 
-                <div className="flex items-center border border-[#cfc7b2] dark:border-[#38332C]">
+                <div className="flex items-center border border-[#cfc7b2] dark:border-[#38332C] rounded-md overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setViewMode("index")}
-                    className={`px-3 py-1.5 text-xs font-courier font-bold uppercase tracking-wider transition-colors ${
+                    className={`px-3 py-1.5 text-xs font-courier font-semibold transition-colors cursor-pointer ${
                       viewMode === "index"
                         ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                         : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C]"
                     }`}
                   >
-                    INDEX
+                    Index
                   </button>
                   <button
                     type="button"
                     onClick={() => setViewMode("board")}
-                    className={`px-3 py-1.5 text-xs font-courier font-bold uppercase tracking-wider transition-colors ${
+                    className={`px-3 py-1.5 text-xs font-courier font-semibold transition-colors cursor-pointer ${
                       viewMode === "board"
                         ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                         : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C]"
                     }`}
                   >
-                    BOARD
+                    Board
                   </button>
                 </div>
               </div>

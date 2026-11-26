@@ -88,8 +88,8 @@ export default function DashboardPage() {
         ]);
         setFolders(folderData);
         setDecisions(decisionData);
-        if (folderData.length > 0 && challengeFolderId === "") {
-          setChallengeFolderId(folderData[0].id);
+        if (folderData.length > 0) {
+          setChallengeFolderId((prev) => (prev === "" ? folderData[0].id : prev));
         }
       } else {
         setFolders([]);
@@ -102,7 +102,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [challengeFolderId]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -209,7 +209,27 @@ export default function DashboardPage() {
         />
       </Suspense>
 
-      {!currentUser && !loading ? (
+      {loading ? (
+        /* Loading Skeleton */
+        <div className="space-y-8 sm:space-y-10 font-courier animate-pulse">
+          <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4">
+            <div className="h-9 w-48 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm" />
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-36 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm" />
+              <div className="h-9 w-44 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm" />
+            </div>
+          </div>
+          <div className="h-24 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-52 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm"
+              />
+            ))}
+          </div>
+        </div>
+      ) : !currentUser ? (
         /* Unauthenticated State */
         <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm p-8 sm:p-12 text-center max-w-[620px] mx-auto my-12 transition-colors font-courier">
           <h2 className="font-newsreader text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mb-2 tracking-tight">
@@ -221,7 +241,7 @@ export default function DashboardPage() {
           <div>
             <Link
               href="/auth"
-              className="inline-block px-6 py-2.5 bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-sm text-xs font-bold uppercase tracking-wider transition-colors"
+              className="inline-block px-6 py-2.5 bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-sm text-[15px] font-bold uppercase tracking-wider transition-colors"
             >
               Sign in to DecisionLens
             </Link>
@@ -230,24 +250,34 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-8 sm:space-y-10 font-courier text-[#1d1d1b] dark:text-[#F0EAE1]">
           {/* HEADER: Workspaces */}
-          <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-4 transition-colors">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#cfc7b2] dark:border-[#38332C] pb-4 transition-colors">
             <h1 className="font-newsreader text-[32px] sm:text-[38px] font-normal tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1]">
               Workspaces
             </h1>
 
-            <button
-              type="button"
-              onClick={() => setShowCreateFolderModal(true)}
-              className="px-4 py-2 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold font-courier uppercase tracking-wider rounded-sm transition-colors shadow-2xs flex items-center gap-1.5"
-            >
-              <Plus className="w-3.5 h-3.5 text-[#EFEADF] dark:text-[#181614]" />
-              <span>New Workspace</span>
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowCreateFolderModal(true)}
+                className="px-3.5 py-2 bg-transparent hover:bg-[#EDE7D6] text-[#1d1d1b] border border-[#cfc7b2] dark:border-[#38332C] dark:text-[#F0EAE1] dark:hover:bg-[#221F1C] text-[15px] font-semibold font-courier rounded-md transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New workspace</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowChallengeModal(true)}
+                className="px-4 py-2 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[15px] font-semibold font-courier rounded-md transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Challenge a decision</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* STATS ROW: Editorial Ledger Box */}
           {activeFoldersCount > 0 && (
-            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-sm py-4 px-6 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#cfc7b2] dark:divide-[#38332C] transition-colors shadow-xs">
+            <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-lg py-4 px-6 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#cfc7b2] dark:divide-[#38332C] transition-colors shadow-xs">
               <div className="py-2 sm:py-0 sm:px-4 first:pl-0">
                 <div className="font-newsreader text-[32px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] leading-tight">
                   {activeFoldersCount}
@@ -291,19 +321,20 @@ export default function DashboardPage() {
             <div className="space-y-6">
               {/* Search Bar */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-courier">
-                <div className="relative flex-1 max-w-md">
+                <div className="relative flex-1 max-w-lg">
                   <Search className="w-4 h-4 text-[#97907e] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search workspaces by name or description..."
-                    className="w-full pl-9 pr-8 py-2 text-[15px] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
+                    className="w-full pl-9 pr-8 py-2 text-[15px] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#443a30] dark:focus:border-[#D4AA50] focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none transition-colors"
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery("")}
+                      aria-label="Clear workspace search"
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#97907e] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -311,7 +342,7 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                <div className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
+                <div className="text-[15px] text-[#4f4b40] dark:text-[#A89F91]">
                   Showing <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">{filteredFolders.length}</strong> of {folders.length} {folders.length === 1 ? "workspace" : "workspaces"}
                 </div>
               </div>
@@ -331,7 +362,7 @@ export default function DashboardPage() {
                       <Link
                         key={f.id}
                         href={`/folders/${f.id}`}
-                        className="group bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] hover:border-[#443a30] dark:hover:border-[#D4AA50] rounded-sm p-6 flex flex-col justify-between transition-all focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs hover:shadow-md"
+                        className="group bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] hover:border-[#443a30] dark:hover:border-[#D4AA50] rounded-lg p-6 flex flex-col justify-between transition-all focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs hover:shadow-md"
                       >
                         <div className="space-y-3">
                           <div className="flex items-start justify-between gap-3">
@@ -354,19 +385,20 @@ export default function DashboardPage() {
                                 Recent decisions:
                               </span>
                               {workspaceDecisions.slice(0, 3).map((d) => (
-                                <div
+                                <button
                                   key={d.id}
+                                  type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();
                                     router.push(`/decisions/${d.id}`);
                                   }}
-                                  className="flex items-center justify-between text-xs font-courier text-[#1d1d1b] dark:text-[#F0EAE1] truncate hover:text-[#443a30] dark:hover:text-[#D4AA50] transition-colors py-0.5 cursor-pointer group/item"
+                                  className="w-full text-left flex items-center justify-between gap-2 text-[15px] font-courier text-[#1d1d1b] dark:text-[#F0EAE1] truncate hover:text-[#443a30] dark:hover:text-[#D4AA50] transition-colors py-0.5 cursor-pointer group/item"
                                   title={`Open decision: ${d.title}`}
                                 >
                                   <span className="truncate pr-2 group-hover/item:underline">• {d.title}</span>
                                   <span
-                                    className={`text-[15px] uppercase px-1.5 py-0.2 rounded-xs font-bold shrink-0 ${
+                                    className={`text-[15px] tracking-wider uppercase px-1.5 py-0.5 rounded-xs font-bold shrink-0 ${
                                       d.status === "decided"
                                         ? "text-emerald-700 dark:text-emerald-400 bg-emerald-100/60 dark:bg-emerald-950/40"
                                         : "text-[#7a4e10] dark:text-[#D4AA50]"
@@ -374,7 +406,7 @@ export default function DashboardPage() {
                                   >
                                     {d.status === "draft" ? "needs evidence" : d.status || "scrutiny"}
                                   </span>
-                                </div>
+                                </button>
                               ))}
                               {workspaceDecisions.length > 3 && (
                                 <span className="text-[14px] font-courier text-[#97907e] block pt-0.5">
@@ -406,12 +438,12 @@ export default function DashboardPage() {
               <h2 className="font-newsreader text-3xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mb-2">
                 No workspaces yet
               </h2>
-              <p className="text-xs font-courier text-[#4f4b40] dark:text-[#A89F91] max-w-md mx-auto mb-6 leading-relaxed">
+              <p className="text-[15px] font-courier text-[#4f4b40] dark:text-[#A89F91] max-w-md mx-auto mb-6 leading-relaxed">
                 Create a workspace to start organizing and evaluating your strategic decisions.
               </p>
               <button
                 onClick={() => setShowCreateFolderModal(true)}
-                className="px-6 py-3 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-sm text-xs font-bold font-courier uppercase tracking-wider transition-colors shadow-xs"
+                className="px-6 py-3 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-sm text-[15px] font-bold font-courier uppercase tracking-wider transition-colors shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5 inline mr-1.5" />
                 <span>Create Workspace</span>

@@ -128,6 +128,21 @@ class OAuthProviderInfo(BaseModel):
     auth_url: Optional[str] = None
 
 
+def _validate_password_strength(v: str) -> str:
+    """Validate password complexity requirements."""
+    if len(v) < 8:
+        raise ValueError("Password must be at least 8 characters long.")
+    if not re.search(r"[A-Z]", v):
+        raise ValueError("Password must contain at least one uppercase letter.")
+    if not re.search(r"[a-z]", v):
+        raise ValueError("Password must contain at least one lowercase letter.")
+    if not re.search(r"\d", v):
+        raise ValueError("Password must contain at least one digit.")
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>\-_=+[\]/\\`~]", v):
+        raise ValueError("Password must contain at least one special character.")
+    return v
+
+
 class UserChangePassword(BaseModel):
     current_password: str
     new_password: str = Field(
@@ -139,17 +154,30 @@ class UserChangePassword(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_password_complexity(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters long.")
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter.")
-        if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter.")
-        if not re.search(r"\d", v):
-            raise ValueError("Password must contain at least one digit.")
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>\-_=+[\]/\\`~]", v):
-            raise ValueError("Password must contain at least one special character.")
-        return v
+        return _validate_password_strength(v)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    reset_url: Optional[str] = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=10)
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        description="Password must be at least 8 characters long",
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        return _validate_password_strength(v)
 
 
 # ==========================================
@@ -1399,6 +1427,8 @@ class GoogleMeetBotSessionResponse(BaseModel):
     private_chat_token: str
     private_chat_url: Optional[str] = None
     private_message_count: int = 0
+    runner_note: Optional[str] = None
+    audio_chunks_received: int = 0
     created_at: datetime
     updated_at: datetime
 

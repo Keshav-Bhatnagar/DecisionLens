@@ -280,18 +280,27 @@ def finish_bot_session_and_analyze(
     now = datetime.now(timezone.utc)
     session.status = "completed"
     session.ended_at = now
+    db.commit()
 
     raw_text = session.raw_transcript.strip()
 
-    # 1. Distraction filtering
-    filter_res = filter_meeting_distractions(
-        transcript=raw_text,
-        decision_title=decision.title or "",
-        decision_context=decision.problem_statement or decision.description or "",
-        force_heuristics=force_mock,
-    )
-    session.cleaned_transcript = filter_res.cleaned_transcript
-    final_transcript = filter_res.cleaned_transcript or raw_text
+    # 1. Distraction filtering (skip LLM call if transcript is empty)
+    if raw_text:
+        filter_res = filter_meeting_distractions(
+            transcript=raw_text,
+            decision_title=decision.title or "",
+            decision_context=decision.problem_statement or decision.description or "",
+            force_heuristics=force_mock,
+        )
+        session.cleaned_transcript = filter_res.cleaned_transcript
+        final_transcript = filter_res.cleaned_transcript or raw_text
+        tangents_count = len(filter_res.removed_tangents)
+        signal_ratio = filter_res.signal_ratio
+    else:
+        session.cleaned_transcript = ""
+        final_transcript = ""
+        tangents_count = 0
+        signal_ratio = 1.0
 
     # 2. Update decision transcript
     decision.transcript = final_transcript
@@ -323,14 +332,16 @@ def finish_bot_session_and_analyze(
     db.refresh(session)
     db.refresh(decision)
 
-    # 4. Trigger AI Structuring across transcript + private inputs
+    # 4. Trigger AI Structuring across transcript + private inputs (only when content exists)
     structured_findings = None
-    try:
-        findings, _ = run_decision_structuring(decision=decision, db=db, force_mock=force_mock)
-        structured_findings = findings
-    except Exception as exc:
-        logger.warning("Auto-structuring after meeting failed (%s). Continuing.", exc)
+    if final_transcript or private_inputs:
+        try:
+            findings, _ = run_decision_structuring(decision=decision, db=db, force_mock=force_mock)
+            structured_findings = findings
+        except Exception as exc:
+            logger.warning("Auto-structuring after meeting failed (%s). Continuing.", exc)
 
+    meta = session.metadata_json or {}
     session_response = GoogleMeetBotSessionResponse(
         id=session.id,
         decision_id=session.decision_id,
@@ -348,6 +359,8 @@ def finish_bot_session_and_analyze(
         private_chat_token=session.private_chat_token,
         private_chat_url=f"/meet-chat/{session.private_chat_token}",
         private_message_count=len(private_inputs),
+        runner_note=meta.get("runner_note"),
+        audio_chunks_received=int(meta.get("audio_chunks_received") or 0),
         created_at=session.created_at,
         updated_at=session.updated_at,
     )
@@ -355,8 +368,8 @@ def finish_bot_session_and_analyze(
     return BotFinishAndAnalyzeResponse(
         session=session_response,
         transcript=final_transcript,
-        tangents_filtered_count=len(filter_res.removed_tangents),
-        signal_ratio=filter_res.signal_ratio,
+        tangents_filtered_count=tangents_count,
+        signal_ratio=signal_ratio,
         private_inputs_count=len(private_inputs),
         structured_findings=structured_findings,
         message="Google Meet session completed and DecisionLens cognitive analysis executed successfully.",

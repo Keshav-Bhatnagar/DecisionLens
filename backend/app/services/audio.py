@@ -9,7 +9,7 @@ import urllib.request
 import uuid
 import base64
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import certifi
 from fastapi import HTTPException, status
@@ -622,6 +622,121 @@ def transcribe_audio_azure_speech(
         return full_text
 
 
+_FASTER_WHISPER_MODEL = None
+
+
+def transcribe_pcm_array(
+    audio_float32: Any,
+    language: str = "en",
+    model_size: str = "base",
+) -> str:
+    """Transcribe a 16kHz mono float32 numpy array directly via cached faster-whisper."""
+    global _FASTER_WHISPER_MODEL
+    from faster_whisper import WhisperModel
+
+    if _FASTER_WHISPER_MODEL is None:
+        logger.info("Loading local faster-whisper '%s' model (int8 CPU)...", model_size)
+        _FASTER_WHISPER_MODEL = WhisperModel(
+            model_size,
+            device="cpu",
+            compute_type="int8",
+            cpu_threads=min(6, os.cpu_count() or 4),
+        )
+
+    # Allow automatic en/hi code-switching (Hinglish) unless explicitly locked to Hindi
+    tx_lang = "hi" if language == "hi" else None
+    segments, info = _FASTER_WHISPER_MODEL.transcribe(
+        audio_float32,
+        language=tx_lang,
+        condition_on_previous_text=False,
+        vad_filter=True,
+        vad_parameters={"threshold": 0.25, "min_silence_duration_ms": 300},
+        beam_size=1,
+    )
+    if tx_lang is None and getattr(info, "language", None) not in ("en", "hi"):
+        # Prevent Urdu/other script hallucinations on Indian accents & Hinglish
+        fallback_lang = "hi" if getattr(info, "language", None) in ("ur", "pa", "bn", "mr", "gu") else "en"
+        segments, _ = _FASTER_WHISPER_MODEL.transcribe(
+            audio_float32,
+            language=fallback_lang,
+            condition_on_previous_text=False,
+            vad_filter=True,
+            vad_parameters={"threshold": 0.25, "min_silence_duration_ms": 300},
+            beam_size=1,
+        )
+    text = " ".join(seg.text.strip() for seg in segments if seg.text and seg.text.strip())
+    if not text.strip():
+        import numpy as np
+
+        rms = float(np.sqrt(np.mean(np.square(audio_float32)))) if len(audio_float32) else 0.0
+        if rms >= 0.002:
+            segments_raw, _ = _FASTER_WHISPER_MODEL.transcribe(
+                audio_float32,
+                language=tx_lang or "en",
+                condition_on_previous_text=False,
+                vad_filter=False,
+                beam_size=1,
+            )
+            text = " ".join(seg.text.strip() for seg in segments_raw if seg.text and seg.text.strip())
+    return clean_noise_tokens(text)
+
+
+def transcribe_audio_faster_whisper(
+    audio_path: Path,
+    language: str = "en",
+    model_size: str = "base",
+) -> str:
+    """
+    Local zero-quota speech-to-text using faster-whisper (CTranslate2 int8 CPU).
+    Decodes audio via FFmpeg to 16kHz mono PCM float32 to avoid PyAV version mismatches.
+    """
+    global _FASTER_WHISPER_MODEL
+    import numpy as np
+    from faster_whisper import WhisperModel
+
+    if _FASTER_WHISPER_MODEL is None:
+        logger.info("Loading local faster-whisper '%s' model (int8 CPU)...", model_size)
+        _FASTER_WHISPER_MODEL = WhisperModel(
+            model_size,
+            device="cpu",
+            compute_type="int8",
+            cpu_threads=min(6, os.cpu_count() or 4),
+        )
+
+    ffmpeg_bin = get_ffmpeg_binary()
+    audio_input: Any = str(audio_path)
+    if ffmpeg_bin:
+        cmd = [
+            ffmpeg_bin,
+            "-nostdin",
+            "-threads", "0",
+            "-i", str(audio_path),
+            "-f", "s16le",
+            "-ac", "1",
+            "-acodec", "pcm_s16le",
+            "-ar", "16000",
+            "-",
+        ]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+        if proc.returncode == 0 and proc.stdout:
+            audio_input = np.frombuffer(proc.stdout, np.int16).flatten().astype(np.float32) / 32768.0
+        else:
+            logger.warning(
+                "FFmpeg PCM decode failed (rc=%s): %s",
+                proc.returncode,
+                proc.stderr.decode("utf-8", errors="ignore")[:200],
+            )
+
+    segments, _ = _FASTER_WHISPER_MODEL.transcribe(
+        audio_input,
+        language=language if language in SUPPORTED_LANGUAGES else "en",
+        vad_filter=True,
+        beam_size=1,
+    )
+    text = " ".join(seg.text.strip() for seg in segments if seg.text and seg.text.strip())
+    return clean_noise_tokens(text)
+
+
 def transcribe_audio_file(
     audio_path: Path,
     language: str = "en",
@@ -650,7 +765,7 @@ def transcribe_audio_file(
         logger.info(f"Using mock transcription for testing (language={norm_lang}, force_mock=True)")
         return get_mock_transcript(norm_lang)
 
-    # Tier 1: IIT Madras / AI4Bharat IndicASR (IndicWhisper - Indian Accents & Hinglish)
+    # Tier 1A: IIT Madras / AI4Bharat IndicASR (IndicWhisper - Indian Accents & Hinglish)
     if getattr(settings, "indic_asr_enabled", True) and getattr(settings, "indic_asr_endpoint", "").strip():
         try:
             indic_text = transcribe_audio_indic_asr(
@@ -663,11 +778,23 @@ def transcribe_audio_file(
             if indic_text and indic_text.strip():
                 logger.info("Successfully transcribed audio via IIT Madras AI4Bharat IndicASR (%d chars)", len(indic_text))
                 return indic_text.strip()
-            logger.info("AI4Bharat IndicASR returned empty. Cascading to Tier 2 (Gemini / Azure)...")
+            logger.info("AI4Bharat IndicASR returned empty. Cascading to Tier 1B (local faster-whisper)...")
         except Exception as exc:
-            logger.warning("AI4Bharat IndicASR tier failed (%s). Cascading to Tier 2...", exc)
+            logger.warning("AI4Bharat IndicASR tier failed (%s). Cascading to Tier 1B...", exc)
 
-    # Tier 2A: Google Gemini 3.5 Flash Multimodal Audio (Fast 2-4s, low token cost)
+    # Tier 1B: Local faster-whisper (Primary Zero-Quota / Zero-Cost Offline CPU STT)
+    try:
+        logger.info("Attempting Tier 1B local faster-whisper transcription (language=%s)...", norm_lang)
+        fw_text = transcribe_audio_faster_whisper(audio_path, language=norm_lang)
+        if fw_text and fw_text.strip():
+            logger.info("Successfully transcribed audio via local faster-whisper (%d chars)", len(fw_text))
+            return fw_text.strip()
+        # VAD detected silence / no audible speech; return "" without burning cloud quota
+        return ""
+    except Exception as exc:
+        logger.warning("Tier 1B local faster-whisper failed (%s). Falling back to Tier 2 (Gemini / Azure).", exc)
+
+    # Tier 2A: Google Gemini Multimodal Audio (Cloud Fallback)
     gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
     if gemini_key:
         try:

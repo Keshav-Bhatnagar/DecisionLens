@@ -5,34 +5,34 @@
 @tailwind utilities;
 
 :root {
-  /* Signature Printed Dossier (Light / Cream Parchment) */
-  --bg-page: #F5F1E8;
-  --bg-surface: #FCFBF8;
-  --bg-sidebar: #EFEADF;
+  /* Signature Printed Dossier (Light / Warm Vellum Parchment — Zero Stark White) */
+  --bg-page: #F2ECE0;
+  --bg-surface: #EDE5D5;
+  --bg-sidebar: #E5DEC9;
   --ink: #26211B;
   --ink-secondary: #6E655A;
   --ink-tertiary: #97907E;
   --accent: #8F6E2A;
   --accent-hover: #75581F;
-  --border: #D9D2C3;
+  --border: #CFC7B2;
   --radius-sm: 2px;
   --radius-md: 4px;
 
   /* Aliases for compatibility */
-  --page-bg: #F5F1E8;
-  --surface: #FCFBF8;
+  --page-bg: #F2ECE0;
+  --surface: #EDE5D5;
   --text-primary: #26211B;
   --text-secondary: #6E655A;
   --text-tertiary: #97907E;
-  --border-subtle: #D9D2C3;
+  --border-subtle: #CFC7B2;
 
-  --background: #F5F1E8;
+  --background: #F2ECE0;
   --foreground: #26211B;
-  --card: #FCFBF8;
+  --card: #EDE5D5;
   --card-foreground: #26211B;
   --ring: #8F6E2A;
   --primary: #26211B;
-  --primary-foreground: #FFFFFF;
+  --primary-foreground: #F2ECE0;
 }
 
 .dark {

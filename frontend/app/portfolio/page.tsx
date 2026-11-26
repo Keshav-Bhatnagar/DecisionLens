@@ -3,25 +3,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
-import Portfolio3DCanvas from "@/components/Portfolio3DCanvas";
 import { getDecisions, getFolders, Decision, Folder } from "@/lib/api";
-import {
-  Compass,
-  LayoutGrid,
-  Sparkles,
-  ArrowRight,
-  Filter,
-  CheckCircle2,
-  Clock,
-  FileText,
-  Layers,
-  ChevronRight,
-  X,
-  ExternalLink,
-  Target,
-  Shield,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, Filter } from "lucide-react";
 
 export default function PortfolioPage() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
@@ -31,10 +14,6 @@ export default function PortfolioPage() {
   // Filters
   const [selectedDomain, setSelectedDomain] = useState<string>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
-  const [viewMode, setViewMode] = useState<"3d" | "ledger">("3d");
-
-  // Selected Decision for Inspector
-  const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
 
   const loadPortfolioData = useCallback(async () => {
     setLoading(true);
@@ -89,47 +68,12 @@ export default function PortfolioPage() {
         {/* Header Hero */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
           <div>
-            <div className="flex items-center gap-2.5">
-              <span className="p-1.5 rounded-lg bg-[var(--bg-surface)] text-[var(--accent)] border border-[var(--border)] shadow-2xs">
-                <Compass className="w-5 h-5" />
-              </span>
-              <h1 className="text-xl sm:text-2xl font-serif font-bold text-[var(--ink)] tracking-tight">
-                Strategic Decision Portfolio
-              </h1>
-            </div>
+            <h1 className="text-xl sm:text-2xl font-serif font-bold text-[var(--ink)] tracking-tight">
+              Strategic Decision Portfolio
+            </h1>
             <p className="text-xs text-[var(--ink-secondary)] mt-1 max-w-xl leading-relaxed">
-              Spatial multi-domain intelligence across all organizational bets, risks, and consensus mandates.
+              Multi-domain executive ledger across all organizational deliberations, risks, and consensus mandates.
             </p>
-          </div>
-
-          {/* View Mode Toggle: 3D Constellation vs Ledger */}
-          <div className="flex items-center gap-2 self-start md:self-center">
-            <div className="inline-flex rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-1 shadow-2xs text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setViewMode("3d")}
-                className={`px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 ${
-                  viewMode === "3d"
-                    ? "bg-[var(--accent)] text-white font-bold shadow-xs"
-                    : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>3D Constellation</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("ledger")}
-                className={`px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 ${
-                  viewMode === "ledger"
-                    ? "bg-[var(--accent)] text-white font-bold shadow-xs"
-                    : "text-[var(--ink-secondary)] hover:text-[var(--ink)]"
-                }`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Executive Ledger</span>
-              </button>
-            </div>
           </div>
         </div>
 
@@ -239,13 +183,12 @@ export default function PortfolioPage() {
             <div className="text-center space-y-2">
               <div className="animate-spin w-8 h-8 border-3 border-[var(--accent)] border-t-transparent rounded-full mx-auto" />
               <p className="text-xs text-[var(--ink-secondary)]">
-                Constructing 3D Strategic Decision Constellation...
+                Loading Strategic Decision Portfolio...
               </p>
             </div>
           </div>
         ) : filteredDecisions.length === 0 ? (
           <div className="p-12 text-center bg-[var(--bg-surface)] rounded-3xl border border-[var(--border)] space-y-3">
-            <Compass className="w-10 h-10 text-[var(--ink-secondary)] mx-auto opacity-50" />
             <h3 className="text-base font-serif font-bold text-[var(--ink)]">
               No matching decisions found
             </h3>
@@ -261,79 +204,6 @@ export default function PortfolioPage() {
             >
               Reset Filters
             </button>
-          </div>
-        ) : viewMode === "3d" ? (
-          /* 3D Spatial Constellation Canvas Stage */
-          <div className="relative">
-            <Portfolio3DCanvas
-              decisions={filteredDecisions}
-              selectedDecisionId={selectedDecision?.id}
-              onSelectDecision={(d) => setSelectedDecision(d)}
-              className="w-full h-[560px] sm:h-[620px] bg-[var(--bg-surface)] border border-[var(--border)] shadow-xs rounded-3xl"
-            />
-
-            {/* Quick Peek Drawer for Clicked Node */}
-            {selectedDecision && (
-              <div className="absolute top-4 right-4 max-w-sm w-full z-40 bg-[var(--bg-surface)] text-[var(--ink)] border border-[var(--border)] shadow-2xl rounded-2xl p-5 animate-fadeIn backdrop-blur-md">
-                <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[14px] font-mono uppercase text-[var(--ink-secondary)]">
-                      Decision #{selectedDecision.id}
-                    </span>
-                    <span
-                      className={`text-[15px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                        selectedDecision.status === "decided"
-                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                          : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-                      }`}
-                    >
-                      {selectedDecision.status}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setSelectedDecision(null)}
-                    className="p-1 rounded-lg text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--bg-page)]"
-                    title="Close"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="space-y-3 py-3">
-                  <h3 className="text-sm font-serif font-bold text-[var(--ink)] leading-snug">
-                    {selectedDecision.title}
-                  </h3>
-
-                  {selectedDecision.problem_statement && (
-                    <p className="text-xs text-[var(--ink-secondary)] leading-relaxed line-clamp-3">
-                      {selectedDecision.problem_statement}
-                    </p>
-                  )}
-
-                  {selectedDecision.domain && (
-                    <div className="flex items-center gap-2 text-[15px] text-[var(--ink-secondary)]">
-                      <span className="font-semibold text-[var(--ink)]">Domain:</span>
-                      <span className="px-2 py-0.5 rounded bg-[var(--bg-page)] border border-[var(--border)] font-mono text-[14px]">
-                        {selectedDecision.domain}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
-                  <span className="text-[14px] text-[var(--ink-secondary)]">
-                    Created {new Date(selectedDecision.created_at).toLocaleDateString()}
-                  </span>
-                  <Link
-                    href={`/decisions/${selectedDecision.id}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent)] hover:opacity-90 text-white text-xs font-bold transition shadow-xs"
-                  >
-                    <span>Open Dossier</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-            )}
           </div>
         ) : (
           /* Executive Ledger Grid View */

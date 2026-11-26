@@ -294,3 +294,49 @@ def test_folder_and_decision_allowed_members(client: TestClient, user_a: dict):
     # Verify collaborator is removed
     updated_m = client.get(f"/api/folders/{folder_id}/members", headers=headers).json()
     assert len(updated_m) == 1
+
+
+def test_collaborator_sees_shared_folder_decision_and_meeting(client: TestClient, user_a: dict, user_b: dict):
+    """When User A adds User B as a collaborator, User B sees the folder, decision, and Meet bot sessions."""
+    headers_a = {"Authorization": f"Bearer {user_a['token']}"}
+    headers_b = {"Authorization": f"Bearer {user_b['token']}"}
+
+    # User A creates folder, decision, and dispatches Meet bot
+    f_res = client.post("/api/folders", headers=headers_a, json={"name": "Shared Strategy"})
+    assert f_res.status_code == 201
+    folder_id = f_res.json()["id"]
+
+    d_res = client.post(
+        "/api/decisions",
+        headers=headers_a,
+        json={"folder_id": folder_id, "title": "Shared Meet Decision"},
+    )
+    assert d_res.status_code == 201
+    decision_id = d_res.json()["id"]
+
+    bot_res = client.post(
+        f"/api/decisions/{decision_id}/bot/join-meet",
+        headers=headers_a,
+        json={"meet_url": "https://meet.google.com/abc-defg-hij"},
+    )
+    assert bot_res.status_code == 201
+    session_id = bot_res.json()["id"]
+
+    # Before invite: User B cannot see the folder, decision, or bot session
+    assert client.get(f"/api/decisions/{decision_id}", headers=headers_b).status_code == 404
+
+    # User A adds User B as editor collaborator
+    invite_res = client.post(
+        f"/api/folders/{folder_id}/members",
+        headers=headers_a,
+        json={"email": user_b["user"].email, "role": "editor", "authority_role": "DevOps / SRE"},
+    )
+    assert invite_res.status_code == 201
+
+    # After invite: User B sees folder, decision, and active Google Meet bot session
+    assert any(f["id"] == folder_id for f in client.get("/api/folders", headers=headers_b).json())
+    assert any(d["id"] == decision_id for d in client.get("/api/decisions", headers=headers_b).json())
+    assert client.get(f"/api/decisions/{decision_id}", headers=headers_b).status_code == 200
+    sessions_b = client.get(f"/api/decisions/{decision_id}/bot/sessions", headers=headers_b)
+    assert sessions_b.status_code == 200
+    assert any(s["id"] == session_id for s in sessions_b.json())

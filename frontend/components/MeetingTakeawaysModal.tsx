@@ -80,7 +80,6 @@ export default function MeetingTakeawaysModal({
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b]"
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
               <span>Executive Memo</span>
             </button>
             <button

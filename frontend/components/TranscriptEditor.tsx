@@ -251,7 +251,6 @@ export default function TranscriptEditor({
       {/* Header and Status Badges */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#cfc7b2]/70 dark:border-[#38332C]/70">
         <div className="flex items-center gap-2.5">
-          <FileText className="w-5 h-5 text-[#7a4e10] dark:text-[#D4AA50]" />
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
@@ -288,7 +287,6 @@ export default function TranscriptEditor({
         <div className="p-4 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-3 font-courier rounded-none">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50]" />
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] block">
                   Participant Authority & Role Mapping
@@ -419,7 +417,6 @@ export default function TranscriptEditor({
             </>
           ) : (
             <>
-              <ShieldCheck className="w-3.5 h-3.5" />
               <span>Verify & Save Transcript</span>
             </>
           )}

@@ -379,7 +379,6 @@ export default function RoadmapVisualizer({
                 }`}
                 title="Sprint Checklist View"
               >
-                <Layers className="w-3.5 h-3.5" />
                 <span>Sprint List</span>
               </button>
             </div>
@@ -427,7 +426,6 @@ export default function RoadmapVisualizer({
                 {stats.pending}
               </span>
             </div>
-            <Clock className="w-5 h-5 text-[#7a4e10] dark:text-[#D4AA50]" />
           </div>
 
           {/* Gaps Addressed */}
@@ -946,7 +944,6 @@ export default function RoadmapVisualizer({
                         : "bg-[#EDE7D6] dark:bg-[#181614] text-[#57534e] border-[#cfc7b2]"
                     }`}
                   >
-                    <Clock className="w-3.5 h-3.5" />
                     <span>In Progress / Todo</span>
                   </button>
                 </div>

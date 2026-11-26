@@ -406,7 +406,6 @@ export default function AudioRecorder({
         {/* FFmpeg Enhancement Toggle */}
         <div>
           <label className="block font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] mb-2 flex items-center gap-1.5">
-            <Sliders className="w-3.5 h-3.5" />
             Audio Enhancement Pipeline
           </label>
           <label className="flex items-start gap-2.5 p-2 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] cursor-pointer hover:border-[#7a4e10] dark:hover:border-[#D4AA50] transition-colors rounded-none">
@@ -676,7 +675,6 @@ export default function AudioRecorder({
             </>
           ) : (
             <>
-              <Sparkles className="w-3.5 h-3.5 text-[#D4AA50] dark:text-[#181614]" />
               <span>Transcribe Voice Audio</span>
             </>
           )}

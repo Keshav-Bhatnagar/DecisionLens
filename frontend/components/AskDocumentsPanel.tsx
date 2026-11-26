@@ -75,7 +75,6 @@ function SourcePassage({ citation, onClose }: { citation: RagCitation; onClose: 
       <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-[#EADFC6] dark:border-[#38332C]">
         <span className="flex items-center gap-1 min-w-0 text-[14px] font-bold text-[#443a30] dark:text-[#E8E2D2]">
           <span className="font-mono text-[#7a4e10] dark:text-[#D4AA50]">[{citation.index}]</span>
-          <FileText className="w-3 h-3 shrink-0 text-[#97907e]" />
           <span className="truncate">{citation.document_name}</span>
         </span>
         <button type="button" onClick={onClose} aria-label="Close source" className="text-[#97907e] hover:text-[#24211D] dark:hover:text-[#E8E2D2]">
@@ -93,7 +92,6 @@ function ThinkingShimmer() {
   return (
     <div className="p-2.5 bg-[#FBF6EA] dark:bg-[#1E1B17] border border-[#E4D6B6] dark:border-[#38332C] space-y-1.5" aria-live="polite">
       <div className="flex items-center gap-1.5 text-[14px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
-        <Sparkles className="w-3 h-3 animate-pulse" />
         Reading your documents
       </div>
       {[92, 78, 54].map((w) => (
@@ -196,7 +194,6 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
         }}
         className="group flex items-center gap-1 bg-[#FBF8F1] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] focus-within:border-[#7a4e10] dark:focus-within:border-[#D4AA50] transition-colors"
       >
-        <Sparkles className="w-3 h-3 ml-2 shrink-0 text-[#7a4e10] dark:text-[#D4AA50]" />
         <input
           ref={inputRef}
           type="text"

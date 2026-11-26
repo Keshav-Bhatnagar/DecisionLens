@@ -1201,7 +1201,7 @@ def detect_decision_gaps(
             if provider == "gemini":
                 # Primary execution: native Gemini REST endpoint with candidate models for high reliability
                 gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
-                candidate_models = [model, "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
+                candidate_models = [model, "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemma-4-31b-it", "gemini-3.5-flash"]
                 unique_candidates = []
                 for m in candidate_models:
                     if m and m not in unique_candidates:
@@ -1246,7 +1246,7 @@ def detect_decision_gaps(
                             logger.warning("Azure gap detection failed (%s). Attempting Gemini fallback...", azure_err)
                             try:
                                 content = call_gemini_direct_rest(
-                                    model="gemini-3.5-flash",
+                                    model="gemini-3.5-flash-lite",
                                     system_prompt=GAP_DETECTION_SYSTEM_PROMPT,
                                     user_prompt=user_prompt,
                                     api_key=gemini_key,

@@ -14,7 +14,13 @@ from app.schemas import (
     MeetingTakeawaysRequest,
     MeetingTakeawaysResponse,
 )
-from app.auth import get_current_user, verify_ownership
+from app.auth import (
+    get_current_user,
+    verify_ownership,
+    get_accessible_folder_ids,
+    verify_folder_access,
+    verify_decision_access,
+)
 from sqlalchemy.orm.attributes import flag_modified
 
 router = APIRouter(prefix="/decisions", tags=["Decisions"])
@@ -133,15 +139,25 @@ def list_decisions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List decisions for the authenticated user, optionally filtered by folder."""
-    stmt = select(Decision).where(Decision.owner_id == current_user.id)
+    """List decisions for the authenticated user (including shared workspaces), optionally filtered by folder."""
+    accessible_folder_ids = get_accessible_folder_ids(db, current_user)
+    from sqlalchemy import or_
+
+    if accessible_folder_ids:
+        stmt = select(Decision).where(
+            or_(
+                Decision.owner_id == current_user.id,
+                Decision.folder_id.in_(accessible_folder_ids),
+            )
+        )
+    else:
+        stmt = select(Decision).where(Decision.owner_id == current_user.id)
 
     if folder_id is not None:
-        # Verify folder ownership to prevent probing
         folder = db.get(Folder, folder_id)
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
-        verify_ownership(folder.owner_id, current_user.id, resource_name="Folder")
+        verify_folder_access(db, folder, current_user)
         stmt = stmt.where(Decision.folder_id == folder_id)
 
     stmt = stmt.order_by(Decision.created_at.desc())
@@ -173,7 +189,7 @@ def get_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     return attach_folder_seq(decision, db)
 
@@ -300,7 +316,7 @@ def list_decision_members(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     from app.api.folders import list_folder_members
     return list_folder_members(folder_id=decision.folder_id, db=db, current_user=current_user)

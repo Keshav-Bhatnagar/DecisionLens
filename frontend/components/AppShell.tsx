@@ -132,9 +132,9 @@ export default function AppShell({
         }`}
       >
         {/* Calm Contextual Topbar: Breadcrumbs + User Info + Aperture Theme Shutter */}
-        <header className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-xs border-b border-[#cfc7b2] dark:border-[#38332C] px-4 sm:px-6 h-14 flex items-center justify-between transition-colors duration-200">
+        <header className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-xs border-b border-[#cfc7b2] dark:border-[#38332C] px-4 sm:px-6 h-14 flex items-center justify-between gap-4 transition-colors duration-200">
           {/* Left: Mobile Menu & Breadcrumbs */}
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
             {/* Mobile Hamburger Button */}
             <button
               type="button"

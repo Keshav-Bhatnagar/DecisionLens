@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, verify_decision_access
 from app.database import get_db
 from app.models import Decision, GoogleMeetBotSession, MeetingPrivateInput, User
 from app.schemas import (
@@ -24,6 +24,7 @@ from app.services.meeting_bot import (
     ingest_speech_chunk,
     validate_google_meet_url,
 )
+from app.services.meet_runner import start_meet_bot_background, stop_meet_bot
 
 logger = logging.getLogger("decisionlens.api.meeting_bot")
 
@@ -37,6 +38,7 @@ def _to_session_response(session: GoogleMeetBotSession, db: Session) -> GoogleMe
         .where(MeetingPrivateInput.decision_id == session.decision_id)
     ) or 0
 
+    meta = session.metadata_json or {}
     return GoogleMeetBotSessionResponse(
         id=session.id,
         decision_id=session.decision_id,
@@ -54,6 +56,8 @@ def _to_session_response(session: GoogleMeetBotSession, db: Session) -> GoogleMe
         private_chat_token=session.private_chat_token,
         private_chat_url=f"/meet-chat/{session.private_chat_token}",
         private_message_count=msg_count,
+        runner_note=meta.get("runner_note"),
+        audio_chunks_received=int(meta.get("audio_chunks_received") or 0),
         created_at=session.created_at,
         updated_at=session.updated_at,
     )
@@ -79,7 +83,7 @@ def join_google_meet(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     is_valid, _, _ = validate_google_meet_url(req.meet_url)
     if not is_valid:
@@ -101,6 +105,13 @@ def join_google_meet(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
+    start_meet_bot_background(
+        session_id=session.id,
+        meet_url=session.meet_url,
+        bot_name=session.bot_name,
+        language=session.language,
+    )
+
     return _to_session_response(session, db)
 
 
@@ -118,7 +129,7 @@ def list_bot_sessions(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     stmt = (
         select(GoogleMeetBotSession)
@@ -144,7 +155,7 @@ def get_bot_session(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     session = db.get(GoogleMeetBotSession, session_id)
     if not session or session.decision_id != decision_id:
@@ -169,7 +180,7 @@ def stream_speech(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     session = db.get(GoogleMeetBotSession, session_id)
     if not session or session.decision_id != decision_id:
@@ -255,7 +266,7 @@ def get_private_chat_messages(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     stmt = (
         select(MeetingPrivateInput)
@@ -302,11 +313,13 @@ def finish_meeting_and_analyze(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     session = db.get(GoogleMeetBotSession, session_id)
     if not session or session.decision_id != decision_id:
         raise HTTPException(status_code=404, detail="Bot session not found")
+
+    stop_meet_bot(session_id)
 
     result = finish_bot_session_and_analyze(
         db=db,

@@ -56,10 +56,11 @@ EXECUTIVE MANDATE & WRITING GUIDELINES:
    - If critical gaps are resolved and foundational facts are validated:
      Set "synthesis_type": "recommendation", "status": "READY", with an explicit green light for execution.
 
-3. WINNER FIDELITY (ABSOLUTE RULE):
+3. WINNER FIDELITY & ANTI-FABRICATION (ABSOLUTE RULE):
    - You MUST recommend the canonical winner option identified in the context.
    - In "alternatives_considered", mark the canonical winner as "is_recommended": true and all other options as "is_recommended": false.
    - For alternative options, articulate genuine strategic trade-offs and provide a clear, respectful "why_not_recommended" explanation.
+   - EPISTEMIC GROUNDING GUARDRAIL: Never fabricate INR/USD cost savings, payroll burn, or fake competing options when the source context has no financial/cost figures or competing alternatives. Omit "blunder_shield" (set null) if no cost, budget, scale, or architectural risk figures exist in the input.
 
 4. TIMELY CALCULATED ROADMAP & DOMAIN-AWARE OWNERSHIP (ZERO HARDCODING):
    - Analyze the decision dilemma, domain, and constraints to calculate the natural operational cadence:
@@ -203,6 +204,23 @@ def _detect_critical_unknowns(gaps: Dict[str, Any], points: Dict[str, Any]) -> L
                 critical.append(f"Key Unknown: {u}")
 
     return critical
+
+
+def _has_financial_or_scale_stakes(
+    decision_title: Optional[str] = None,
+    problem_statement: Optional[str] = None,
+    top_option_name: Optional[str] = None,
+    runner_up_name: Optional[str] = None,
+    facts: Optional[List[str]] = None,
+) -> bool:
+    """Return True only when the decision context contains explicit monetary/cost figures or cloud/infra spend stakes."""
+    text = f"{decision_title or ''} {problem_statement or ''} {top_option_name or ''} {runner_up_name or ''} {' '.join(str(f) for f in (facts or []))}".lower()
+    explicit_money_or_spend = (
+        "cost", "budget", "price", "pricing", "salary", "payroll", "revenue", "lakh", "crore",
+        "roi", "$", "₹", "inr", "usd", "billing", "spend", "fee", "kafka", "kubernetes",
+        "k8s", "aws", "azure", "gcp", "build vs buy", "microservices", "monolith", "migration",
+    )
+    return any(m in text for m in explicit_money_or_spend)
 
 
 def compute_blunder_shield(
@@ -2442,16 +2460,24 @@ def generate_mock_synthesis(
         force_mock=True,
     )
 
-    blunder_shield = compute_blunder_shield(
-        domain=domain,
-        top_option_name=top_option_name,
-        risks=[r.risk for r in risks_and_mitigations],
-        runner_up_name=second_option_name,
+    blunder_shield = None
+    if _has_financial_or_scale_stakes(
         decision_title=decision.title,
         problem_statement=decision.problem_statement,
+        top_option_name=top_option_name,
+        runner_up_name=second_option_name,
         facts=facts,
-        decision_id=decision.id,
-    )
+    ):
+        blunder_shield = compute_blunder_shield(
+            domain=domain,
+            top_option_name=top_option_name,
+            risks=[r.risk for r in risks_and_mitigations],
+            runner_up_name=second_option_name,
+            decision_title=decision.title,
+            problem_statement=decision.problem_statement,
+            facts=facts,
+            decision_id=decision.id,
+        )
 
     return DecisionSynthesis(
         decision_id=decision.id,
@@ -2738,9 +2764,16 @@ def execute_hosted_synthesis(
     if canonical_winner_name not in parsed.get("headline", ""):
         parsed["headline"] = f"Strategic Execution: '{canonical_winner_name}' (Rank #{canonical_winner_rank}, Score: {canonical_winner_score:.2f}/10)"
 
-    # Defensive enrichment: Ensure blunder_shield is populated and valid
+    # Defensive enrichment: Populate blunder_shield only when financial/scale stakes exist
     raw_shield = parsed.get("blunder_shield")
-    if not raw_shield or not isinstance(raw_shield, dict) or not raw_shield.get("capital_at_risk_saved"):
+    has_stakes = _has_financial_or_scale_stakes(
+        decision_title=decision.title,
+        problem_statement=decision.problem_statement,
+        top_option_name=canonical_winner_name,
+        runner_up_name=matrix_results[1].get("option_name") if len(matrix_results) >= 2 else None,
+        facts=points.get("facts", []),
+    )
+    if has_stakes and (not raw_shield or not isinstance(raw_shield, dict) or not raw_shield.get("capital_at_risk_saved")):
         computed_shield = compute_blunder_shield(
             domain=domain,
             top_option_name=canonical_winner_name,
@@ -2752,6 +2785,8 @@ def execute_hosted_synthesis(
             decision_id=decision.id,
         )
         parsed["blunder_shield"] = computed_shield.model_dump()
+    elif not has_stakes:
+        parsed["blunder_shield"] = None
 
     # Defensive enrichment: Ensure roadmap is populated, valid, and domain-appropriate
     raw_roadmap = parsed.get("roadmap")

@@ -16,10 +16,20 @@ from app.schemas import (
     UserUpdateProfile,
     TokenResponse,
     UserChangePassword,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    ResetPasswordRequest,
     OAuthLoginRequest,
     OAuthProviderInfo,
 )
-from app.auth import hash_password, verify_password, create_token, get_current_user
+from app.auth import (
+    hash_password,
+    verify_password,
+    create_token,
+    create_password_reset_token,
+    verify_password_reset_token,
+    get_current_user,
+)
 
 logger = logging.getLogger("decisionlens.auth")
 
@@ -156,6 +166,82 @@ def change_password(
     db.refresh(current_user)
 
     return {"message": "Password changed successfully"}
+
+
+def _resolve_frontend_origin(request: Optional[Request]) -> str:
+    """Resolve frontend origin from request Origin/Referer or settings.frontend_url."""
+    frontend_origin = (
+        settings.frontend_url.rstrip("/")
+        if getattr(settings, "frontend_url", None)
+        else "http://localhost:3000"
+    )
+    if request:
+        origin_header = request.headers.get("origin") or request.headers.get("referer")
+        if origin_header:
+            from urllib.parse import urlparse
+
+            parsed = urlparse(origin_header)
+            if parsed.scheme and parsed.netloc:
+                frontend_origin = f"{parsed.scheme}://{parsed.netloc}"
+    return frontend_origin
+
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+    summary="Generate a password reset link (dev-local link in non-production)",
+)
+def forgot_password(
+    body: ForgotPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Generate a 15-minute password reset link. Returns reset_url locally in non-production."""
+    normalized_email = body.email.lower().strip()
+    user = db.query(User).filter(User.email == normalized_email).first()
+
+    reset_url: Optional[str] = None
+    is_prod = getattr(settings, "environment", "development").lower() == "production"
+    if user and not is_prod:
+        token = create_password_reset_token(user.id, user.email, expires_minutes=15)
+        frontend_origin = _resolve_frontend_origin(request)
+        reset_url = f"{frontend_origin}/auth/reset-password?token={token}"
+
+    return ForgotPasswordResponse(
+        message="If an account with that email exists, a password reset link has been generated.",
+        reset_url=reset_url,
+    )
+
+
+@router.post(
+    "/reset-password",
+    summary="Reset password using a signed reset token",
+)
+def reset_password(
+    body: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """Verify a password-reset token and update the user's password."""
+    payload = verify_password_reset_token(body.token)
+    user_id_raw = payload.get("sub")
+    try:
+        user_id = int(user_id_raw)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid password reset token",
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    return {"message": "Password reset successfully. You can now sign in."}
 
 
 @router.get(

@@ -30,6 +30,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import {
+  analyzeDecisionInputs,
   detectGaps,
   getGaps,
   answerGap,
@@ -161,6 +162,7 @@ export default function GapResolutionPanel({
     setError(null);
     setSuccessMsg(null);
     try {
+      await analyzeDecisionInputs(decisionId);
       const res = await detectGaps(decisionId, false);
       updateStateFromResponse(res);
       setSuccessMsg(
@@ -397,26 +399,26 @@ export default function GapResolutionPanel({
     switch (importance) {
       case "critical":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
             Critical Blocker
           </span>
         );
       case "high":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-semibold uppercase tracking-wider bg-orange-50 text-orange-800 border border-orange-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider bg-orange-500/10 dark:bg-orange-500/15 text-orange-800 dark:text-orange-300 border border-orange-500/30">
             High Impact
           </span>
         );
       case "medium":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-medium uppercase tracking-wider bg-paper-sidebar text-ink-secondary border border-border">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-medium uppercase tracking-wider bg-paper-sidebar text-ink-secondary border border-border">
             Tactical
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[14px] font-mono text-ink-secondary border border-border">
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-mono text-ink-secondary border border-border">
             Low
           </span>
         );
@@ -428,35 +430,31 @@ export default function GapResolutionPanel({
     switch (status) {
       case "answered":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
             Grounded Fact
           </span>
         );
       case "researched":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold uppercase tracking-wider bg-sky-50 text-sky-800 border border-sky-300">
-            <Globe className="w-3 h-3 text-sky-600" />
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-sky-500/10 dark:bg-sky-500/15 text-sky-800 dark:text-sky-300 border border-sky-500/30">
             Empirically Audited
           </span>
         );
       case "skipped":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-semibold uppercase tracking-wider bg-stone-100 text-stone-700 border border-stone-300">
-            <AlertTriangle className="w-3 h-3 text-stone-500" />
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider bg-paper-sidebar text-ink-secondary border border-border">
             Known Risk
           </span>
         );
       case "research_queued":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-semibold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-300">
-            <Clock className="w-3 h-3 text-amber-600" />
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider bg-amber-500/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
             Research Queued
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 text-amber-800 border border-amber-300/80">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider bg-amber-500/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
             Pending Resolution
           </span>
         );
@@ -468,30 +466,29 @@ export default function GapResolutionPanel({
     switch (consensus) {
       case "corroborated":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[15px] font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            CORROBORATED BENCHMARK {isVerified && <Check className="w-3 h-3 text-emerald-700 inline ml-0.5" />}
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
+            CORROBORATED BENCHMARK {isVerified && <Check className="w-3 h-3 text-emerald-500 inline ml-0.5" />}
           </span>
         );
       case "conflicting_evidence":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[15px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-amber-500/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
             CONFLICTING EVIDENCE / DIVERGENT METRICS
           </span>
         );
       case "unsupported":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[15px] font-mono font-bold bg-rose-50 text-rose-900 border border-rose-300">
-            <X className="w-3.5 h-3.5 text-rose-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-rose-500/10 dark:bg-rose-500/15 text-rose-800 dark:text-rose-300 border border-rose-500/30">
+            <X className="w-3.5 h-3.5 text-rose-500" />
             FALSIFIED / UNSUPPORTED CLAIM
           </span>
         );
       case "single_source":
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[15px] font-mono font-bold bg-sky-50 text-sky-900 border border-sky-300">
-            <Info className="w-3.5 h-3.5 text-sky-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-sky-500/10 dark:bg-sky-500/15 text-sky-800 dark:text-sky-300 border border-sky-500/30">
+            <Info className="w-3.5 h-3.5 text-sky-500" />
             SINGLE SOURCE {isVerified ? "(Primary Source Verified)" : "(Uncorroborated)"}
           </span>
         );
@@ -587,7 +584,6 @@ export default function GapResolutionPanel({
             </>
           ) : (
             <>
-              <Sparkles className="w-3.5 h-3.5 text-accent group-hover:scale-110 transition" />
               {gaps.length > 0 ? "Re-Audit Information Gaps" : "Run Epistemic Gap Audit"}
             </>
           )}
@@ -637,7 +633,6 @@ export default function GapResolutionPanel({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-amber-500/5 border border-amber-300/60 shadow-2xs">
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-lg bg-amber-500/10 text-accent shrink-0">
-              <Zap className="w-4 h-4 text-accent" />
             </span>
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
@@ -673,7 +668,6 @@ export default function GapResolutionPanel({
                   </>
                 ) : (
                   <>
-                    <Globe className="w-3.5 h-3.5" />
                     <span>Auto-Resolve Web Gaps ({pendingWebGaps.length})</span>
                   </>
                 )}
@@ -694,7 +688,6 @@ export default function GapResolutionPanel({
                   </>
                 ) : (
                   <>
-                    <Layers className="w-3.5 h-3.5 text-accent" />
                     <span>Accept Secondary Bundle ({secondaryPendingGaps.length})</span>
                   </>
                 )}
@@ -706,14 +699,14 @@ export default function GapResolutionPanel({
 
       {/* Alerts */}
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 space-y-2 animate-in fade-in">
+        <div className="p-4 bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 rounded-xl text-xs text-rose-800 dark:text-rose-200 space-y-2 animate-in fade-in">
           <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
             <div className="flex-1 font-medium">{error}</div>
             <button
               type="button"
               onClick={() => setError(null)}
-              className="text-rose-500 hover:text-rose-700"
+              className="text-rose-500 hover:text-rose-400"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -729,7 +722,6 @@ export default function GapResolutionPanel({
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ink text-paper-surface hover:opacity-90 rounded-lg text-xs font-semibold shadow-xs transition-all"
               >
-                <Sparkles className="w-3.5 h-3.5 text-accent" />
                 Retry with Deterministic Test Provider
               </button>
             </div>
@@ -738,8 +730,8 @@ export default function GapResolutionPanel({
       )}
 
       {successMsg && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2.5 animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-xl text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2.5 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
           <span className="font-medium">{successMsg}</span>
         </div>
       )}
@@ -769,7 +761,6 @@ export default function GapResolutionPanel({
                 : "text-ink-secondary hover:text-ink"
             }`}
           >
-            <Globe className="w-3.5 h-3.5 text-sky-600" />
             <span>Empirical Web Research ({researchedCount + researchQueuedCount})</span>
           </button>
 
@@ -782,7 +773,6 @@ export default function GapResolutionPanel({
                 : "text-ink-secondary hover:text-ink"
             }`}
           >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             <span>Audited Facts ({answeredCount + researchedCount})</span>
           </button>
 
@@ -820,7 +810,6 @@ export default function GapResolutionPanel({
               disabled={isDetecting}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink text-paper-surface hover:opacity-90 rounded-xl text-xs font-semibold shadow-xs transition-all"
             >
-              <Sparkles className="w-3.5 h-3.5 text-accent" />
               Run Epistemic Gap Audit Now
             </button>
           </div>
@@ -855,35 +844,26 @@ export default function GapResolutionPanel({
                     {getImportanceBadge(gap.importance)}
                     {getStatusBadge(gap.status)}
 
-                    <span className="text-[15px] font-mono text-ink-secondary flex items-center gap-1.5 px-2 py-0.5 rounded bg-paper-sidebar border border-border">
-                      {gap.recommended_resolution_method === "web_research" ? (
-                        <>
-                          <Globe className="w-3 h-3 text-sky-600" />
-                          <span>Empirical Web Research</span>
-                        </>
-                      ) : (
-                        <>
-                          <User className="w-3 h-3 text-accent" />
-                          <span>Executive Decision</span>
-                        </>
-                      )}
+                    <span className="text-[11px] font-mono text-ink-secondary px-2 py-0.5 rounded bg-paper-sidebar border border-border">
+                      {gap.recommended_resolution_method === "web_research"
+                        ? "Empirical Web Research"
+                        : "Executive Decision"}
                     </span>
 
                     {gap.derived_from?.includes("domain_guideline") && (
                       <span
                         title="Flagged with help from the expert guide for this kind of decision"
-                        className="text-[15px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded bg-[#F3E7CC] text-[#7a4e10] border border-[#D9C08A] dark:bg-[#D4AA50]/15 dark:text-[#D4AA50] dark:border-[#D4AA50]/40"
+                        className="text-[11px] font-semibold px-2 py-0.5 rounded bg-[#F3E7CC] text-[#7a4e10] border border-[#D9C08A] dark:bg-[#D4AA50]/15 dark:text-[#D4AA50] dark:border-[#D4AA50]/40"
                       >
-                        <BookOpen className="w-3 h-3" />
                         From domain guide
                       </span>
                     )}
                   </div>
 
                   {gap.affected_options && gap.affected_options.length > 0 && (
-                    <div className="flex items-center gap-1.5 text-[15px] font-mono text-ink-secondary">
-                      <span className="text-accent uppercase text-[14px] font-bold">Stakes on:</span>
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center flex-wrap gap-1.5 text-[11px] font-mono text-ink-secondary">
+                      <span className="text-accent uppercase font-bold">Stakes on:</span>
+                      <div className="flex items-center flex-wrap gap-1">
                         {gap.affected_options.map((opt, i) => (
                           <span key={i} className="px-2 py-0.5 rounded bg-paper-sidebar border border-border text-ink font-semibold">
                             {opt}
@@ -895,145 +875,131 @@ export default function GapResolutionPanel({
                 </div>
 
                 {/* Core Question / Claim */}
-                <div className="space-y-1">
-                  <h3 className="text-lg sm:text-xl font-serif font-bold text-ink leading-snug">
+                <div className="pl-3 border-l-2 border-accent/70">
+                  <h3 className="text-base sm:text-lg font-serif font-bold text-ink leading-snug">
                     {gap.question}
                   </h3>
                 </div>
 
-                {/* Part 1: The Strategic Stakes (Why this matters) */}
-                <div className="p-4 rounded-xl bg-paper-sidebar/70 border border-border space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-mono font-bold text-accent uppercase tracking-wider">
-                    <AlertTriangle className="w-3.5 h-3.5 text-accent" />
-                    <span>The Strategic Stakes & Downstream Impact</span>
-                  </div>
-                  <p className="text-xs text-ink leading-relaxed font-sans">
-                    {gap.reason || "This unknown represents a foundational constraint that directly dictates downstream architectural feasibility and financial risk."}
-                  </p>
-                  {gap.source_spans && gap.source_spans.length > 0 && (
-                    <div className="pt-2 text-[15px] font-mono text-ink-secondary border-t border-border/50">
-                      <span className="text-[14px] uppercase text-accent font-bold mr-1.5">Evidence Origin:</span>
-                      <span className="italic text-ink">&ldquo;{gap.source_spans[0]}&rdquo;</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Part 2: Verified Empirical Evidence & Benchmarks (Transparent Receipts) */}
-                <div className="p-4 rounded-xl bg-paper-sidebar/40 border border-border space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-mono font-bold text-sky-800 uppercase tracking-wider">
-                      <Globe className="w-3.5 h-3.5 text-sky-600" />
-                      <span>Verified Evidence & Transparent Receipts</span>
-                    </div>
-
-                    {finding && (
-                      <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-900 border border-sky-300">
-                        {finding.sources?.length || 0} Sources Corroborated
-                      </span>
-                    )}
-                  </div>
-
-                  {finding ? (
-                    <div className="space-y-2.5">
-                      <p className="text-xs text-ink leading-relaxed font-sans bg-paper-surface p-3.5 rounded-lg border border-border">
-                        {finding.synthesis}
+                {/* Scannable Key Pointers (Stakes, Evidence, & Decision) */}
+                <ul className="space-y-2.5 text-xs font-sans">
+                  {/* Pointer 1: Strategic Stakes */}
+                  <li className="p-3 rounded-lg bg-paper-sidebar/60 border border-border/80 space-y-1">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-accent block">
+                      • Key Impact
+                    </span>
+                    <p className="text-ink leading-relaxed pl-2.5">
+                      {gap.reason || "Foundational constraint that directly dictates downstream feasibility and financial risk."}
+                    </p>
+                    {gap.source_spans && gap.source_spans.length > 0 && (
+                      <p className="text-[11px] font-mono text-ink-secondary pt-1 pl-2.5">
+                        <span className="text-accent font-bold uppercase mr-1">Origin:</span>
+                        <span className="italic text-ink">&ldquo;{gap.source_spans[0]}&rdquo;</span>
                       </p>
+                    )}
+                  </li>
 
-                      {/* Verified Claims */}
-                      {finding.claims && finding.claims.length > 0 && (
-                        <div className="space-y-1 pt-1">
-                          {finding.claims.map((clm, idx) => (
-                            <div
-                              key={idx}
-                              className="text-[15px] font-mono bg-paper-surface p-2 rounded border border-border flex items-start justify-between gap-2"
-                            >
-                              <span className="text-ink">{clm.claim}</span>
-                              <span className="text-[14px] text-accent shrink-0 uppercase font-bold">
-                                {clm.evidence_type} ({clm.sources_count} sources)
-                              </span>
+                  {/* Pointer 2: Empirical Evidence & Receipts */}
+                  <li className="p-3 rounded-lg bg-paper-sidebar/40 border border-border/80 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                        • Verified Evidence &amp; Receipts
+                      </span>
+                      {finding && (
+                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30">
+                          {finding.sources?.length || 0} Sources
+                        </span>
+                      )}
+                    </div>
+
+                    {finding ? (
+                      <div className="space-y-2 pl-2.5">
+                          <p className="text-ink leading-relaxed bg-paper-surface p-2.5 rounded border border-border">
+                            {finding.synthesis}
+                          </p>
+                          {finding.claims && finding.claims.length > 0 && (
+                            <ul className="space-y-1 pl-3 list-disc marker:text-accent">
+                              {finding.claims.map((clm, idx) => (
+                                <li key={idx} className="text-xs text-ink">
+                                  <span>{clm.claim}</span>{" "}
+                                  <span className="text-[11px] font-mono text-accent font-bold uppercase">
+                                    [{clm.evidence_type} • {clm.sources_count} src]
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {finding.sources && finding.sources.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                              {finding.sources.map((src, idx) => (
+                                <a
+                                  key={idx}
+                                  href={src.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-paper-surface border border-border text-[11px] font-mono text-sky-700 dark:text-sky-300 hover:border-sky-500 transition"
+                                >
+                                  <span className="truncate max-w-[200px]">{src.source_title || src.url}</span>
+                                  <ExternalLink className="w-3 h-3 shrink-0 opacity-70" />
+                                </a>
+                              ))}
                             </div>
-                          ))}
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-ink-secondary">
+                          <span>No external benchmark receipts queried yet.</span>
+                          <button
+                            type="button"
+                            onClick={() => handleExecuteResearch(gap, false)}
+                            disabled={isWorking}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-700 hover:bg-sky-600 disabled:opacity-50 text-white rounded-md text-[11px] font-mono font-semibold shrink-0 transition cursor-pointer"
+                          >
+                            {isWorking ? (
+                              <>
+                                <RotateCw className="w-3 h-3 animate-spin" />
+                                <span>Querying...</span>
+                              </>
+                            ) : (
+                              <span>Retrieve External Receipts</span>
+                            )}
+                          </button>
                         </div>
                       )}
-
-                      {/* Clickable Transparent Sources */}
-                      {finding.sources && finding.sources.length > 0 && (
-                        <div className="space-y-1.5 pt-1">
-                          <span className="text-[14px] font-mono uppercase text-ink-secondary block">
-                            Direct Primary Sources (Click to verify with your own eyes):
-                          </span>
-                          <div className="flex flex-wrap gap-2">
-                            {finding.sources.map((src, idx) => (
-                              <a
-                                key={idx}
-                                href={src.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-paper-surface border border-border text-[15px] font-mono text-sky-800 hover:text-ink hover:border-sky-500 transition group"
-                              >
-                                <Globe className="w-3 h-3 text-sky-600" />
-                                <span className="font-semibold">{src.source_title || src.url}</span>
-                                <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-ink-secondary bg-paper-surface p-3 rounded-lg border border-border">
-                      <span>No external benchmark receipts queried yet for this specific parameter.</span>
-                      <button
-                        type="button"
-                        onClick={() => handleExecuteResearch(gap, false)}
-                        disabled={isWorking}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-sky-700 hover:bg-sky-800 disabled:opacity-50 text-paper-surface rounded-lg text-xs font-semibold shrink-0 transition"
-                      >
-                        {isWorking ? (
-                          <>
-                            <RotateCw className="w-3 h-3 animate-spin" />
-                            <span>Querying Receipts...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Search className="w-3 h-3" />
-                            <span>Retrieve External Receipts</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  </li>
+                </ul>
 
                 {/* Part 3: Structured Executive Decision Scenarios (No Blank Page Paralysis!) */}
-                <div className="space-y-3 pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-accent" />
-                      <span>Executive Guidance & Resolution Scenarios</span>
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[11px] font-mono font-bold text-ink uppercase tracking-wider">
+                      Executive Guidance &amp; Resolution
                     </span>
 
                     {gap.status === "answered" && gap.answer && (
-                      <span className="text-[15px] font-mono text-emerald-800 font-semibold">
-                        Grounded: &ldquo;{gap.answer.slice(0, 40)}...&rdquo;
+                      <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                        Grounded: &ldquo;{gap.answer.slice(0, 40)}{gap.answer.length > 40 ? "..." : ""}&rdquo;
                       </span>
                     )}
                   </div>
 
                   {gap.status === "answered" && gap.answer && !isActionOpen ? (
-                    <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-0.5">
-                        <span className="text-[14px] font-mono uppercase text-emerald-800 font-bold block">
-                          Audited Human Decision:
-                        </span>
-                        <p className="text-xs text-emerald-950 font-medium">
-                          {gap.answer}
-                        </p>
+                    <div className="p-3 rounded-lg bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <div className="space-y-0.5">
+                          <span className="text-[11px] font-mono uppercase text-emerald-700 dark:text-emerald-300 font-bold block">
+                            Audited Human Decision
+                          </span>
+                          <p className="text-xs text-ink font-medium">
+                            {gap.answer}
+                          </p>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => openAskMe(gap)}
-                        className="text-xs font-mono text-emerald-800 underline hover:text-emerald-950 shrink-0"
+                        className="text-xs font-mono text-emerald-700 dark:text-emerald-300 underline hover:opacity-80 shrink-0 cursor-pointer"
                       >
                         Change Guidance
                       </button>
@@ -1079,7 +1045,6 @@ export default function GapResolutionPanel({
                             onClick={() => (isActionOpen ? closeActionBox() : openAskMe(gap))}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-paper-surface text-ink hover:bg-paper-sidebar border border-border transition"
                           >
-                            <User className="w-3 h-3 text-accent" />
                             <span>{isActionOpen && actionType === "ask_me" ? "Close Custom Input" : "Type Exact Constraint / Figure"}</span>
                           </button>
 
@@ -1143,7 +1108,6 @@ export default function GapResolutionPanel({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <span className="p-2 rounded-xl bg-amber-500/10 text-accent shrink-0 mt-0.5">
-                    <Layers className="w-5 h-5 text-accent" />
                   </span>
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1269,7 +1233,6 @@ export default function GapResolutionPanel({
           <div className="space-y-1">
             {pendingCount > 0 ? (
               <div className="flex items-center gap-2 text-xs font-mono text-amber-800">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>
                   <strong>{pendingCount} Critical Blockers remain ungrounded.</strong> Advancing will penalize option risk scores.
                 </span>

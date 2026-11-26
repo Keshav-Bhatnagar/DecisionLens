@@ -126,7 +126,6 @@ export default function PublicMeetChatPage({
     return (
       <div className="min-h-screen bg-[#F5F1E8] dark:bg-[#181614] flex items-center justify-center p-4 font-courier">
         <div className="max-w-md w-full bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] p-6 text-center space-y-3">
-          <AlertTriangle className="w-8 h-8 text-rose-600 mx-auto" />
           <h2 className="font-newsreader text-xl font-bold">Link Not Available</h2>
           <p className="text-[13px] text-[#6e655a] dark:text-[#A89F91]">{errorMsg}</p>
         </div>
@@ -141,7 +140,6 @@ export default function PublicMeetChatPage({
         <div className="p-5 bg-[#EDE7D6] dark:bg-[#1C1917] border-b border-[#cfc7b2] dark:border-[#38332C] space-y-2">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-[#7a4e10] dark:text-[#D4AA50] text-[12px] font-bold uppercase tracking-wider">
-              <Shield className="w-4 h-4" />
               DecisionLens Confidential Meeting Portal
             </div>
             <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
@@ -253,7 +251,6 @@ export default function PublicMeetChatPage({
                   <div className="flex flex-col items-start">
                     <div className="max-w-[90%] bg-[#FCFBF8] dark:bg-[#221F1C] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] p-3 rounded-sm space-y-1">
                       <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
-                        <Sparkles className="w-3.5 h-3.5" />
                         DecisionLens Bot Reply
                       </div>
                       <p className="text-[12px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">

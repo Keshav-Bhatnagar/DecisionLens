@@ -15,8 +15,6 @@ import WorkflowStepper, { WorkflowStage } from "@/components/WorkflowStepper";
 import ReportExportModal from "@/components/ReportExportModal";
 import SpeechDictationButton from "@/components/SpeechDictationButton";
 import LiveMeetingRoom from "@/components/LiveMeetingRoom";
-import AutoPilotModal from "@/components/AutoPilotModal";
-import DecisionInspector from "@/components/DecisionInspector";
 import {
   getDecision,
   updateDecision,
@@ -55,6 +53,7 @@ import {
   Sparkles,
   Loader2,
   ChevronRight,
+  Video,
 } from "lucide-react";
 
 export default function DecisionDetailPage({
@@ -87,12 +86,12 @@ export default function DecisionDetailPage({
   const [workflowStage, setWorkflowStage] = useState<WorkflowStage>("ingestion");
   const [viewMode, setViewMode] = useState<"step" | "all">("step");
   const [viewTrack, setViewTrack] = useState<"express" | "deep">("deep");
-  const [ingestionTab, setIngestionTab] = useState<"meeting" | "voice" | "docs" | "context">("context");
+  const [ingestionTab, setIngestionTab] = useState<"meeting" | "voice" | "docs" | "context">("meeting");
+  const [showDocsDrawer, setShowDocsDrawer] = useState(false);
+  const [showAudioDrawer, setShowAudioDrawer] = useState(false);
   const [stageManuallySelected, setStageManuallySelected] = useState(false);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [showAutoPilotModal, setShowAutoPilotModal] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [showWhyBreakdown, setShowWhyBreakdown] = useState(false);
   const [whySubTab, setWhySubTab] = useState<"frameworks" | "facts">("frameworks");
   const [pipelineLoadingMessage, setPipelineLoadingMessage] = useState<string | null>(null);
@@ -152,20 +151,10 @@ export default function DecisionDetailPage({
   const handleAdvanceToGaps = async () => {
     try {
       await handleSave();
-      const hasPoints =
-        decision?.points && typeof decision.points === "object" && Object.keys(decision.points).length > 0;
-      const hasGaps = Array.isArray(decision?.gaps)
-        ? decision.gaps.length > 0
-        : Boolean(decision?.gaps && typeof decision.gaps === "object" && Object.keys(decision.gaps).length > 0);
-
-      if (!hasPoints) {
-        setPipelineLoadingMessage("Structuring dilemma inputs & cognitive facts...");
-        await analyzeDecisionInputs(decisionId);
-      }
-      if (!hasGaps) {
-        setPipelineLoadingMessage("Detecting critical unknowns & information gaps...");
-        await detectGaps(decisionId);
-      }
+      setPipelineLoadingMessage("Structuring dilemma inputs & cognitive facts...");
+      await analyzeDecisionInputs(decisionId);
+      setPipelineLoadingMessage("Detecting critical unknowns & information gaps...");
+      await detectGaps(decisionId);
       await loadData(true);
       handleSelectStage("gaps");
     } catch (err: unknown) {
@@ -206,29 +195,6 @@ export default function DecisionDetailPage({
       setPipelineLoadingMessage(null);
     }
   };
-
-  // Keyboard shortcut 'I' to toggle inspector
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      if ((e.key === "i" || e.key === "I") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault();
-        setInspectorOpen((prev) => !prev);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   const loadData = useCallback(async (silent: boolean = false) => {
     if (!silent) setLoading(true);
@@ -358,26 +324,32 @@ export default function DecisionDetailPage({
       activeFolderId={folder?.id}
       breadcrumbs={[
         ...(folder ? [{ label: folder.name, href: `/folders/${folder.id}` }] : []),
-        { label: decision?.title ? `#${sequenceDisplay}: ${decision.title}` : "Decision Analysis", href: `/decisions/${decisionId}` },
-        { label: currentPrimaryIdx === 0 ? "Stage 1: Input & Evidence" : currentPrimaryIdx === 1 ? "Stage 2: Unknowns & Gaps" : "Stage 3: Final Report" },
+        { label: decision?.title ? `#${sequenceDisplay}: ${decision.title}` : "Decision Analysis" },
       ]}
       actions={
-        <button
-          type="button"
-          onClick={() => setInspectorOpen((prev) => !prev)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-courier font-bold uppercase tracking-wider rounded-none border transition-colors cursor-pointer ${
-            inspectorOpen
-              ? "bg-[#7a4e10] text-[#F4F0E6] border-[#7a4e10] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50]"
-              : "bg-[#EDE7D6] hover:bg-[#E5DEC9] text-[#1d1d1b] border-[#cfc7b2] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] dark:text-[#F0EAE1] dark:border-[#38332C]"
-          }`}
-          title="Toggle Deliberation Dossier Inspector [I]"
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Inspector</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE5D5] hover:bg-[#EDE7D6] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] transition-colors cursor-pointer disabled:opacity-50"
+            title="Save changes"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>{savedSuccess ? "Saved" : saving ? "Saving..." : "Save"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="p-1.5 rounded-md border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE5D5] hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 dark:bg-[#221F1C] dark:hover:bg-rose-950/30 dark:hover:text-rose-400 text-[#6e655a] dark:text-[#A89F91] transition-colors cursor-pointer"
+            title="Delete decision"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       }
       onRefresh={loadData}
-      maxWidthClass="max-w-[1560px]"
+      maxWidthClass="max-w-7xl"
     >
       {error ? (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-700 text-sm flex items-center justify-between">
@@ -395,7 +367,7 @@ export default function DecisionDetailPage({
             </button>
             <Link
               href="/dashboard"
-              className="text-xs font-semibold px-3 py-1.5 bg-white border border-red-200 rounded-lg hover:bg-red-100"
+              className="text-xs font-semibold px-3 py-1.5 bg-[#EDE5D5] border border-red-200 rounded-lg hover:bg-red-100"
             >
               Back to Dashboard
             </Link>
@@ -403,8 +375,8 @@ export default function DecisionDetailPage({
         </div>
       ) : loading ? (
         <div className="space-y-6 animate-pulse">
-          <div className="h-20 bg-white rounded-2xl border border-slate-200" />
-          <div className="h-96 bg-white rounded-2xl border border-slate-200" />
+          <div className="h-20 bg-[#EDE5D5] rounded-2xl border border-slate-200" />
+          <div className="h-96 bg-[#EDE5D5] rounded-2xl border border-slate-200" />
         </div>
       ) : decision ? (
         <div className="flex flex-col xl:flex-row items-start gap-6 pt-1">
@@ -419,16 +391,6 @@ export default function DecisionDetailPage({
                     {folder?.name ? `${folder.name} / ` : ""}#{sequenceDisplay} • {recordType === "meeting" ? "MEETING DELIBERATION" : "DECISION DELIBERATION"}
                   </span>
                 </div>
-
-                {/* Mobile / Tablet Quick Inspector Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setInspectorOpen((prev) => !prev)}
-                  className="xl:hidden inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-courier font-bold uppercase tracking-wider rounded-none border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1]"
-                >
-                  <Layers className="w-3 h-3" />
-                  <span>{inspectorOpen ? "Hide Details" : "Details"}</span>
-                </button>
               </div>
 
               {/* Large Inline Editable Title */}
@@ -442,32 +404,34 @@ export default function DecisionDetailPage({
                 className="w-full font-newsreader text-[28px] sm:text-[36px] font-normal leading-tight tracking-tight text-[#1d1d1b] dark:text-[#F0EAE1] bg-transparent border-0 border-b border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
               />
 
-              {/* Core Dilemma Secondary Inline Editable Line */}
-              <div className="flex items-center gap-2 pt-0.5">
-                <span className="font-courier text-[15px] uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
-                  Core Dilemma:
-                </span>
-                <input
-                  type="text"
-                  value={problemStatement}
-                  onChange={(e) => setProblemStatement(e.target.value)}
-                  placeholder="Refine specific technical dilemma or architectural tension..."
-                  className="flex-1 font-newsreader text-sm text-[#4f4b40] dark:text-[#C5BDB0] italic bg-transparent border-0 border-b border-dashed border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
-                />
-              </div>
+              {/* Core Dilemma Secondary Inline Editable Line (hidden when identical to title) */}
+              {problemStatement.trim().toLowerCase() !== title.trim().toLowerCase() && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  <span className="font-courier text-[15px] uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
+                    Core Dilemma:
+                  </span>
+                  <input
+                    type="text"
+                    value={problemStatement}
+                    onChange={(e) => setProblemStatement(e.target.value)}
+                    placeholder="Refine the specific dilemma or tension..."
+                    className="flex-1 font-newsreader text-sm text-[#4f4b40] dark:text-[#C5BDB0] italic bg-transparent border-0 border-b border-dashed border-transparent hover:border-[#cfc7b2] dark:hover:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-0 px-0 py-0.5 transition-colors outline-none"
+                  />
+                </div>
+              )}
             </div>
 
 
 
-            {/* 3-Milestone Streamlined Workflow Navigation (No Hectic Stepper) */}
+            {/* Quiet Underline Stage Bar */}
             <div
               id="deep-audit-section"
               ref={stepContentRef}
-              className="sticky top-0 z-30 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md pt-2 pb-2 -mx-2 px-2 sm:-mx-4 sm:px-4 border-b border-[#cfc7b2] dark:border-[#38332C] shadow-2xs transition-all font-courier"
+              className="sticky top-14 z-20 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md border-b border-[#cfc7b2] dark:border-[#38332C] transition-all font-courier"
             >
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-2 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C]">
-                <nav className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto" aria-label="Deliberation stages">
-                  {primaryStages.map((stage, idx) => {
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <nav className="flex items-center gap-4 sm:gap-6 overflow-x-auto scrollbar-none" aria-label="Deliberation stages">
+                  {primaryStages.map((stage) => {
                     const isActive =
                       stage.id === "ingestion"
                         ? workflowStage === "ingestion"
@@ -487,61 +451,34 @@ export default function DecisionDetailPage({
                         : Boolean(decision?.recommendation && "headline" in decision.recommendation);
 
                     return (
-                      <React.Fragment key={stage.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectStage(stage.id)}
-                          className={`flex-1 sm:flex-initial inline-flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer ${
-                            isActive
-                              ? "bg-[#1d1d1b] text-[#F4F0E6] border-[#1d1d1b] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50] shadow-2xs"
-                              : "bg-[#F4F0E6] text-[#4f4b40] dark:bg-[#181614] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                          }`}
-                        >
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded-none font-mono ${
-                              isActive
-                                ? "bg-[#38332C] text-[#F4F0E6] dark:bg-[#181614] dark:text-[#D4AA50]"
-                                : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
-                            }`}
-                          >
-                            {stage.number}
-                          </span>
-                          <span>{stage.label}</span>
-                          {isComplete && (
-                            <CheckCircle2
-                              className={`w-3.5 h-3.5 shrink-0 ${
-                                isActive ? "text-emerald-400 dark:text-emerald-900" : "text-emerald-600 dark:text-emerald-400"
-                              }`}
-                            />
-                          )}
-                        </button>
-                        {idx < primaryStages.length - 1 && (
-                          <ChevronRight className="w-3.5 h-3.5 text-[#97907e] hidden sm:inline shrink-0" />
+                      <button
+                        key={stage.id}
+                        type="button"
+                        onClick={() => handleSelectStage(stage.id)}
+                        className={`inline-flex items-center gap-2 py-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+                          isActive
+                            ? "border-[#7a4e10] dark:border-[#D4AA50] text-[#1d1d1b] dark:text-[#F0EAE1]"
+                            : "border-transparent text-[#6e655a] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                        }`}
+                      >
+                        <span className="text-[11px] font-mono text-[#7a4e10] dark:text-[#D4AA50]">
+                          {stage.number}
+                        </span>
+                        <span>{stage.label}</span>
+                        {isComplete && (
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                         )}
-                      </React.Fragment>
+                      </button>
                     );
                   })}
                 </nav>
 
-                <div className="flex items-center gap-2 text-[11px] text-[#4f4b40] dark:text-[#A89F91] self-end sm:self-center">
-                  {pipelineLoadingMessage ? (
-                    <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold animate-pulse">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>{pipelineLoadingMessage}</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50] animate-pulse" />
-                      <span>
-                        {workflowStage === "ingestion"
-                          ? "Stage 1: Input & Evidence"
-                          : workflowStage === "gaps"
-                          ? "Stage 2: Unknowns & Gaps"
-                          : "Stage 3: Final Report & Insights"}
-                      </span>
-                    </span>
-                  )}
-                </div>
+                {pipelineLoadingMessage && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-semibold pb-2 sm:pb-0 animate-pulse">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>{pipelineLoadingMessage}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -551,309 +488,279 @@ export default function DecisionDetailPage({
               {(viewMode === "all" || workflowStage === "ingestion") && (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   {/* Context & Reference Data (Optional) */}
-                  <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-l-4 border-[#cfc7b2] border-l-[#7a4e10] dark:border-[#38332C] dark:border-l-[#D4AA50] rounded-none p-6 sm:p-7 shadow-2xs space-y-5 transition-colors">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <h2 className="font-newsreader text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
-                          Supporting Evidence & Context{" "}
-                          <span className="font-courier text-xs text-[#97907e] dark:text-[#A89F91] uppercase tracking-wider">
-                            (Optional)
-                          </span>
-                        </h2>
-                      </div>
-                      <p className="text-xs font-courier text-[#4f4b40] dark:text-[#A89F91] mt-1">
-                        Your decision dilemma is framed above. Choose any source below to provide technical specifications, constraints, or meeting audio:
+                  <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-5 sm:p-6 shadow-2xs space-y-5 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                      <h2 className="font-newsreader text-xl sm:text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                        Supporting Evidence & Context{" "}
+                        <span className="font-sans text-xs text-[#97907e] dark:text-[#A89F91]">
+                          (Optional)
+                        </span>
+                      </h2>
+                      <p className="text-xs text-[#6e655a] dark:text-[#A89F91]">
+                        Add meeting audio, notes, or files to sharpen the analysis
                       </p>
                     </div>
 
-                    {/* 3 Clear, Mutually-Exclusive Modality Selector Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-courier">
-                      {/* Option 1: Written Notes */}
+                    {/* 2-Card Primary Intake Selector */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <button
                         type="button"
-                        onClick={() => setIngestionTab("context")}
-                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
-                          ingestionTab === "context"
-                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
-                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
+                        onClick={() => setIngestionTab("meeting")}
+                        className={`p-4 text-left rounded-md transition-all duration-200 cursor-pointer space-y-1.5 hover:-translate-y-0.5 ${
+                          ingestionTab === "meeting"
+                            ? "bg-[#EDE7D6] text-[#1d1d1b] dark:bg-[#24201C] dark:text-[#F0EAE1] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm"
+                            : "bg-[#F4F0E6]/60 text-[#1d1d1b] dark:bg-[#181614] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C]"
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5" />
-                            Written Notes
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold">
+                            Google Meet Autonomous Bot
                           </span>
-                          {description.trim() ? (
-                            <span
-                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
-                                ingestionTab === "context"
-                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
-                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
-                              }`}
-                            >
-                              Filled
-                            </span>
-                          ) : null}
+                          <span
+                            className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                              ingestionTab === "meeting"
+                                ? "bg-[#7a4e10] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                                : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
+                            }`}
+                          >
+                            Primary Intake
+                          </span>
                         </div>
-                        <p className="text-[15px] opacity-75 leading-snug">
-                          Add stakeholders, deadlines, budget limits, or known constraints.
+                        <p className="text-xs leading-relaxed text-[#4f4b40] dark:text-[#A89F91]">
+                          Joins your Google Meet call, transcribes discussions live, and captures confidential inputs.
                         </p>
                       </button>
 
-                      {/* Option 2: Attach Specs */}
                       <button
                         type="button"
-                        onClick={() => setIngestionTab("docs")}
-                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
-                          ingestionTab === "docs"
-                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
-                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
+                        onClick={() => {
+                          if (ingestionTab === "meeting") setIngestionTab("context");
+                        }}
+                        className={`p-4 text-left rounded-md transition-all duration-200 cursor-pointer space-y-1.5 hover:-translate-y-0.5 ${
+                          ingestionTab !== "meeting"
+                            ? "bg-[#EDE7D6] text-[#1d1d1b] dark:bg-[#24201C] dark:text-[#F0EAE1] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm"
+                            : "bg-[#F4F0E6]/60 text-[#1d1d1b] dark:bg-[#181614] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C]"
                         }`}
                       >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                            <Paperclip className="w-3.5 h-3.5" />
-                            Attach Specs
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold">
+                            Written Notes & Context
                           </span>
-                          {attachments.length > 0 ? (
+                          {(description.trim() || attachments.length > 0 || decision.transcript) && (
                             <span
-                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
-                                ingestionTab === "docs"
+                              className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                                ingestionTab !== "meeting"
                                   ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
                                   : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
                               }`}
                             >
-                              {attachments.length} {attachments.length === 1 ? "doc" : "docs"}
+                              Active
                             </span>
-                          ) : null}
+                          )}
                         </div>
-                        <p className="text-[15px] opacity-75 leading-snug">
-                          Upload architectural diagrams, PRDs, RFCs, or benchmark data.
-                        </p>
-                      </button>
-
-                      {/* Option 3: Voice & Call Sync */}
-                      <button
-                        type="button"
-                        onClick={() => setIngestionTab("voice")}
-                        className={`p-4 text-left border rounded-none transition-all cursor-pointer ${
-                          ingestionTab === "voice" || ingestionTab === "meeting"
-                            ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50] shadow-sm"
-                            : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50]"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                            <Mic className="w-3.5 h-3.5" />
-                            Voice & Meetings
-                          </span>
-                          {Boolean(decision.transcript) ? (
-                            <span
-                              className={`text-[14px] font-bold uppercase px-1.5 py-0.2 rounded-none ${
-                                ingestionTab === "voice" || ingestionTab === "meeting"
-                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
-                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
-                              }`}
-                            >
-                              Transcribed
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="text-[15px] opacity-75 leading-snug">
-                          Record spoken notes, upload an audio file, or sync a live meeting call.
+                        <p
+                          className={`text-xs leading-relaxed ${
+                            ingestionTab !== "meeting"
+                              ? "text-[#E5DEC9] dark:text-[#221F1C]"
+                              : "text-[#6e655a] dark:text-[#A89F91]"
+                          }`}
+                        >
+                          Add dilemma constraints, attach specs, or record voice memos in one composer.
                         </p>
                       </button>
                     </div>
 
                     {/* Active Expanded Context Area */}
                     <div className="pt-2">
-                      {/* Active Panel 1: Written Notes */}
-                      {ingestionTab === "context" && (
-                        <div className="space-y-3 animate-in fade-in duration-150">
-                          <div className="flex items-center justify-between">
-                            <label className="font-courier text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
-                              Background Notes, Constraints & Deadlines:
-                            </label>
-                            <SpeechDictationButton
-                              onTranscript={(text) =>
-                                setDescription((prev) => (prev ? `${prev} ${text}` : text))
+                      {/* Unified Notes, Docs & Voice Composer */}
+                      {ingestionTab !== "meeting" && (
+                        <div className="space-y-4 animate-in fade-in duration-150">
+                          <div className="bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md overflow-hidden">
+                            <textarea
+                              value={description}
+                              onChange={(e) => setDescription(e.target.value)}
+                              rows={4}
+                              placeholder={
+                                recordType === "meeting"
+                                  ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
+                                  : "Add background notes, constraints, budget limits, or deadlines..."
                               }
-                              title="Dictate background notes"
+                              className="w-full text-base font-newsreader bg-transparent p-4 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:outline-none leading-relaxed resize-y"
                             />
+                            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 font-courier">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowDocsDrawer((v) => !v)}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold border rounded-md cursor-pointer transition-colors ${
+                                    showDocsDrawer || ingestionTab === "docs"
+                                      ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50]"
+                                      : "bg-[#EDE5D5] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                                  }`}
+                                  title="Attach PDF, DOCX, TXT, or Markdown files"
+                                >
+                                  <Paperclip className="w-3.5 h-3.5" />
+                                  <span>Attach docs{attachments.length > 0 ? ` (${attachments.length})` : ""}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAudioDrawer((v) => !v)}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold border rounded-md cursor-pointer transition-colors ${
+                                    showAudioDrawer || ingestionTab === "voice"
+                                      ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50]"
+                                      : "bg-[#EDE5D5] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                                  }`}
+                                  title="Record a voice memo or upload an audio file"
+                                >
+                                  <Mic className="w-3.5 h-3.5" />
+                                  <span>Voice / Audio{decision.transcript ? " (Ready)" : ""}</span>
+                                </button>
+                              </div>
+
+                              <SpeechDictationButton
+                                onTranscript={(text) =>
+                                  setDescription((prev) => (prev ? `${prev} ${text}` : text))
+                                }
+                                title="Dictate directly into notes"
+                              />
+                            </div>
                           </div>
-                          <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={4}
-                            placeholder={
-                              recordType === "meeting"
-                                ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
-                                : "Add initial notes, key stakeholders, technical constraints, budget limits, or known deadlines..."
-                            }
-                            className="w-full text-base font-newsreader bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] focus:ring-1 focus:ring-[#7a4e10] focus:outline-none transition-colors leading-relaxed"
-                          />
-                        </div>
-                      )}
 
-                      {/* Active Panel 2: Reference Docs */}
-                      {ingestionTab === "docs" && (
-                        <div className="space-y-5 animate-in fade-in duration-150">
-                          <FileUploader
-                            decisionId={decisionId}
-                            onUploadSuccess={(att) => {
-                              setAttachments([att, ...attachments]);
-                              loadData();
-                            }}
-                          />
+                          {/* Inline Attach Docs Drawer */}
+                          {(showDocsDrawer || ingestionTab === "docs" || attachments.length > 0) && (
+                            <div className="space-y-4">
+                              {(showDocsDrawer || ingestionTab === "docs") && (
+                                <FileUploader
+                                  decisionId={decisionId}
+                                  onUploadSuccess={(att) => {
+                                    setAttachments([att, ...attachments]);
+                                    loadData();
+                                  }}
+                                />
+                              )}
 
-                          {/* Attachments List with Extracted Text Preview */}
-                          {attachments.length > 0 && (
-                            <div className="space-y-3 pt-2">
-                              <h3 className="text-xs font-courier font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
-                                Uploaded Attachments ({attachments.length})
-                              </h3>
-                              {attachments.map((att) => {
-                                const isExpanded = expandedAttachmentId === att.id;
-                                const wordCount = att.extracted_text
-                                  ? att.extracted_text.split(/\s+/).filter(Boolean).length
-                                  : 0;
+                              {attachments.length > 0 && (
+                                <div className="space-y-3">
+                                  <h3 className="text-xs font-courier font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                                    Attached Documents ({attachments.length})
+                                  </h3>
+                                  {attachments.map((att) => {
+                                    const isExpanded = expandedAttachmentId === att.id;
+                                    const wordCount = att.extracted_text
+                                      ? att.extracted_text.split(/\s+/).filter(Boolean).length
+                                      : 0;
 
-                                return (
-                                  <div
-                                    key={att.id}
-                                    className="border border-[#cfc7b2] dark:border-[#38332C] rounded-none overflow-hidden bg-[#F4F0E6] dark:bg-[#181614] transition-colors"
-                                  >
-                                    <div className="p-4 flex items-center justify-between gap-4">
-                                      <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-9 h-9 rounded-none bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
-                                          <FileText className="w-4 h-4" />
-                                        </div>
-                                        <div className="min-w-0 font-courier">
-                                          <p className="text-sm font-bold text-[#1d1d1b] dark:text-[#F0EAE1] truncate">
-                                            {att.original_name}
-                                          </p>
-                                          <div className="flex items-center gap-2 text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
-                                            <span>{formatFileSize(att.file_size)}</span>
-                                            <span>•</span>
-                                            <span>{wordCount} words extracted</span>
-                                            <span>•</span>
-                                            <span>{new Date(att.created_at).toLocaleDateString()}</span>
+                                    return (
+                                      <div
+                                        key={att.id}
+                                        className="border border-[#cfc7b2] dark:border-[#38332C] rounded-none overflow-hidden bg-[#F4F0E6] dark:bg-[#181614] transition-colors"
+                                      >
+                                        <div className="p-3.5 flex items-center justify-between gap-4">
+                                          <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-8 h-8 rounded-none bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
+                                            </div>
+                                            <div className="min-w-0 font-courier">
+                                              <p className="text-sm font-bold text-[#1d1d1b] dark:text-[#F0EAE1] truncate">
+                                                {att.original_name}
+                                              </p>
+                                              <div className="flex items-center gap-2 text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+                                                <span>{formatFileSize(att.file_size)}</span>
+                                                <span>•</span>
+                                                <span>{wordCount} words extracted</span>
+                                                <span>•</span>
+                                                <span>{new Date(att.created_at).toLocaleDateString()}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center gap-2 shrink-0 font-courier">
+                                            <button
+                                              type="button"
+                                              onClick={() => setExpandedAttachmentId(isExpanded ? null : att.id)}
+                                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] rounded-none transition-colors"
+                                            >
+                                              {isExpanded ? (
+                                                <>
+                                                  Hide Text <ChevronUp className="w-3.5 h-3.5" />
+                                                </>
+                                              ) : (
+                                                <>
+                                                  View Text <ChevronDown className="w-3.5 h-3.5" />
+                                                </>
+                                              )}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleDeleteAttachment(att.id)}
+                                              title="Delete document"
+                                              className="p-1.5 text-[#97907e] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
                                           </div>
                                         </div>
-                                      </div>
 
-                                      <div className="flex items-center gap-2 shrink-0 font-courier">
-                                        <button
-                                          type="button"
-                                          onClick={() => setExpandedAttachmentId(isExpanded ? null : att.id)}
-                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] rounded-none transition-colors"
-                                        >
-                                          {isExpanded ? (
-                                            <>
-                                              Hide Text <ChevronUp className="w-3.5 h-3.5" />
-                                            </>
-                                          ) : (
-                                            <>
-                                              View Extracted Text <ChevronDown className="w-3.5 h-3.5" />
-                                            </>
-                                          )}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleDeleteAttachment(att.id)}
-                                          title="Delete document"
-                                          className="p-1.5 text-[#97907e] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    </div>
+                                        {isExpanded && (
+                                          <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border-t border-[#cfc7b2] dark:border-[#38332C] space-y-3 font-courier">
+                                            <div className="flex items-center justify-between text-xs text-[#4f4b40] dark:text-[#A89F91]">
+                                              <span className="font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                                                Extracted Text Preview
+                                              </span>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleCopyText(att.extracted_text, att.id)}
+                                                className="inline-flex items-center gap-1 text-[#443a30] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline"
+                                              >
+                                                {copiedId === att.id ? (
+                                                  <>
+                                                    <CheckCircle2 className="w-3.5 h-3.5" /> Copied!
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <Copy className="w-3.5 h-3.5" /> Copy Text
+                                                  </>
+                                                )}
+                                              </button>
+                                            </div>
 
-                                    {isExpanded && (
-                                      <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border-t border-[#cfc7b2] dark:border-[#38332C] space-y-3 font-courier">
-                                        <div className="flex items-center justify-between text-xs text-[#4f4b40] dark:text-[#A89F91]">
-                                          <span className="font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
-                                            Extracted Text Preview
-                                          </span>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleCopyText(att.extracted_text, att.id)}
-                                            className="inline-flex items-center gap-1 text-[#443a30] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline"
-                                          >
-                                            {copiedId === att.id ? (
-                                              <>
-                                                <CheckCircle2 className="w-3.5 h-3.5" /> Copied!
-                                              </>
-                                            ) : (
-                                              <>
-                                                <Copy className="w-3.5 h-3.5" /> Copy Text
-                                              </>
-                                            )}
-                                          </button>
-                                        </div>
-
-                                        <div className="max-h-60 overflow-y-auto bg-[#F4F0E6] dark:bg-[#181614] p-3 rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] whitespace-pre-wrap leading-relaxed select-text">
-                                          {att.extracted_text}
-                                        </div>
+                                            <div className="max-h-60 overflow-y-auto bg-[#F4F0E6] dark:bg-[#181614] p-3 rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] whitespace-pre-wrap leading-relaxed select-text">
+                                              {att.extracted_text}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           )}
-                        </div>
-                      )}
 
-                      {/* Active Panel 3: Voice & Call Sync */}
-                      {(ingestionTab === "voice" || ingestionTab === "meeting") && (
-                        <div className="space-y-4 animate-in fade-in duration-150 font-courier">
-                          <div className="flex items-center gap-2 border-b border-[#cfc7b2] dark:border-[#38332C] pb-3">
-                            <button
-                              type="button"
-                              onClick={() => setIngestionTab("voice")}
-                              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer transition-colors ${
-                                ingestionTab === "voice"
-                                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
-                              }`}
-                            >
-                              Voice Memo & Audio Upload
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setIngestionTab("meeting")}
-                              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer transition-colors ${
-                                ingestionTab === "meeting"
-                                  ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                                  : "text-[#4f4b40] hover:text-[#1d1d1b] dark:text-[#A89F91] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C]"
-                              }`}
-                            >
-                              Live Call & Anonymous Scribe
-                            </button>
-                          </div>
-
-                          {ingestionTab === "voice" ? (
-                            <div className="space-y-4">
-                              <AudioRecorder
-                                decisionId={decisionId}
-                                initialLanguage={decision.language || "en"}
-                                onTranscriptionSuccess={async (res) => {
-                                  if (res && res.transcript) {
-                                    setDecision((prev) =>
-                                      prev
-                                        ? {
-                                            ...prev,
-                                            transcript: res.transcript,
-                                            language: res.language || prev.language,
-                                            transcript_reviewed: res.transcript_reviewed ?? false,
-                                          }
-                                        : prev
-                                    );
-                                  }
-                                  await loadData(true);
-                                }}
-                              />
+                          {/* Inline Voice Memo & Audio Upload Drawer (plus saved TranscriptEditor whenever transcript exists) */}
+                          {(showAudioDrawer || ingestionTab === "voice" || Boolean(decision.transcript)) && (
+                            <div className="space-y-4 font-courier">
+                              {(showAudioDrawer || ingestionTab === "voice") && (
+                                <AudioRecorder
+                                  decisionId={decisionId}
+                                  initialLanguage={decision.language || "en"}
+                                  onTranscriptionSuccess={async (res) => {
+                                    if (res && res.transcript) {
+                                      setDecision((prev) =>
+                                        prev
+                                          ? {
+                                              ...prev,
+                                              transcript: res.transcript,
+                                              language: res.language || prev.language,
+                                              transcript_reviewed: res.transcript_reviewed ?? false,
+                                            }
+                                          : prev
+                                      );
+                                    }
+                                    await loadData(true);
+                                  }}
+                                />
+                              )}
 
                               <div id="transcript-editor-section" className="scroll-mt-24">
                                 <TranscriptEditor
@@ -866,8 +773,14 @@ export default function DecisionDetailPage({
                                 />
                               </div>
                             </div>
-                          ) : (
-                            <LiveMeetingRoom
+                          )}
+                        </div>
+                      )}
+
+                      {/* Active Panel: Google Meet Bot */}
+                      {ingestionTab === "meeting" && (
+                        <div className="space-y-4 animate-in fade-in duration-150 font-courier">
+                          <LiveMeetingRoom
                               decisionId={decisionId}
                               decisionTitle={title || decision.title}
                               recordType={recordType}
@@ -890,30 +803,31 @@ export default function DecisionDetailPage({
                                   await updateDecision(decisionId, { description: updatedDesc });
                                 }
                                 await loadData(true);
-                                setWorkflowStage("structuring");
-                                setStageManuallySelected(true);
-                                setTimeout(() => {
-                                  const elem = document.getElementById("deep-audit-section");
-                                  if (elem) elem.scrollIntoView({ behavior: "smooth", block: "start" });
-                                }, 150);
+                                if (data && data.transcript && data.transcript.trim()) {
+                                  setWorkflowStage("structuring");
+                                  setStageManuallySelected(true);
+                                  setTimeout(() => {
+                                    const elem = document.getElementById("deep-audit-section");
+                                    if (elem) elem.scrollIntoView({ behavior: "smooth", block: "start" });
+                                  }, 150);
+                                }
                               }}
                             />
-                          )}
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Stage 1 Bottom Action Bar */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-6 font-courier">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#cfc7b2] dark:border-[#38332C] mt-4 font-courier">
                     <div className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
-                      Stage 1 of 3: Provide dilemma context, reference specs, or meeting recording
+                      Stage 1 of 3 · Add optional context or jump straight to gap analysis
                     </div>
                     <button
                       type="button"
                       disabled={Boolean(pipelineLoadingMessage)}
                       onClick={handleAdvanceToGaps}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-md border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
                     >
                       {pipelineLoadingMessage ? (
                         <>
@@ -922,7 +836,7 @@ export default function DecisionDetailPage({
                         </>
                       ) : (
                         <>
-                          <span>Find Gaps & Unknowns</span>
+                          <span>Find gaps & unknowns</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}
@@ -941,21 +855,21 @@ export default function DecisionDetailPage({
                   />
 
                   {/* Stage 2 Bottom Action Bar */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs font-courier">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#cfc7b2] dark:border-[#38332C] font-courier">
                     <button
                       type="button"
                       onClick={() => handleSelectStage("ingestion")}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors cursor-pointer"
                     >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>Back to Input</span>
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to input</span>
                     </button>
 
                     <button
                       type="button"
                       disabled={Boolean(pipelineLoadingMessage)}
                       onClick={handleAdvanceToReport}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-md border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
                     >
                       {pipelineLoadingMessage ? (
                         <>
@@ -964,7 +878,7 @@ export default function DecisionDetailPage({
                         </>
                       ) : (
                         <>
-                          <span>Generate Final Report</span>
+                          <span>Generate final report</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}
@@ -992,22 +906,22 @@ export default function DecisionDetailPage({
                     <button
                       type="button"
                       onClick={() => setShowWhyBreakdown(!showWhyBreakdown)}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer self-start sm:self-auto"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] rounded-md transition-colors cursor-pointer self-start sm:self-auto"
                     >
-                      <span>{showWhyBreakdown ? "Hide Decision Rationale" : "Why was this decision chosen? (View Frameworks & Facts)"}</span>
+                      <span>{showWhyBreakdown ? "Hide decision rationale" : "Why was this decision chosen? (Frameworks & facts)"}</span>
                       <span className="text-[10px] text-[#7a4e10] dark:text-[#D4AA50]">
                         {showWhyBreakdown ? "▲" : "▼"}
                       </span>
                     </button>
                     <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
-                      Deterministic Multi-Attribute Utility & Grounding Facts
+                      Deterministic multi-attribute utility & grounding facts
                     </span>
                   </div>
 
                   {/* Collapsible Inspection Details when toggled */}
                   {showWhyBreakdown && (
                     <div className="space-y-4 pt-2 border-t border-[#cfc7b2] dark:border-[#38332C] animate-in fade-in duration-150 font-courier">
-                      <div className="flex items-center gap-1 bg-[#EDE7D6] dark:bg-[#221F1C] p-1 border border-[#cfc7b2] dark:border-[#38332C] text-xs font-bold uppercase tracking-wider w-fit">
+                      <div className="flex items-center gap-1 bg-[#EDE7D6] dark:bg-[#221F1C] p-1 border border-[#cfc7b2] dark:border-[#38332C] rounded-md text-xs font-semibold w-fit">
                         <button
                           type="button"
                           onClick={() => setWhySubTab("frameworks")}
@@ -1053,52 +967,21 @@ export default function DecisionDetailPage({
                     </div>
                   )}
 
-                  {/* Single Unified Stage 3 Action Bar */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-2xs mt-8 font-courier">
+                  {/* Quiet Stage 3 Footer Link */}
+                  <div className="pt-4 border-t border-[#cfc7b2] dark:border-[#38332C] mt-6 flex items-center justify-between font-courier">
                     <button
                       type="button"
                       onClick={() => handleSelectStage("gaps")}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors cursor-pointer"
                     >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>Back to Unknowns & Gaps</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowExportModal(true)}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-none border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Download Meeting Takeaways</span>
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to unknowns & gaps</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Right Deliberation Dossier (Inspector Panel) */}
-          <DecisionInspector
-            decision={decision}
-            folder={folder}
-            status={status}
-            setStatus={setStatus}
-            recordType={recordType}
-            setRecordType={setRecordType}
-            attachments={attachments}
-            saving={saving}
-            savedSuccess={savedSuccess}
-            onSave={handleSave}
-            onDelete={handleDelete}
-            onOpenAutoPilot={() => setShowAutoPilotModal(true)}
-            onOpenExport={() => setShowExportModal(true)}
-            isOpen={inspectorOpen}
-            onToggle={() => setInspectorOpen(false)}
-            currentStage={workflowStage}
-            onSelectStage={handleSelectStage}
-            onSelectIngestionTab={setIngestionTab}
-          />
         </div>
       ) : null}
 
@@ -1109,19 +992,6 @@ export default function DecisionDetailPage({
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         onReportSaved={() => loadData()}
-      />
-
-      {/* Autonomous Sequential Pipeline: Auto-Pilot Modal */}
-      <AutoPilotModal
-        decisionId={decisionId}
-        decisionTitle={title || decision?.title || "Decision Analysis"}
-        isOpen={showAutoPilotModal}
-        onClose={() => setShowAutoPilotModal(false)}
-        onComplete={async () => {
-          await loadData(true);
-          setWorkflowStage("synthesis");
-          setStageManuallySelected(true);
-        }}
       />
     </AppShell>
   );

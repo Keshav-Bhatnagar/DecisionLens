@@ -357,4 +357,56 @@ def test_cors_preflight_for_ai_studio_origin(client: TestClient):
     assert res.headers.get("access-control-allow-credentials") == "true"
 
 
+def test_forgot_and_reset_password_dev_flow(client: TestClient, registered_user: dict):
+    """Verify forgot-password returns dev reset_url locally, reset token is purpose-scoped, and reset updates password."""
+    email = registered_user["email"]
+    old_password = registered_user["password"]
+    new_password = "BrandNewPassword123!"
+
+    # 1. Request reset link
+    forgot_res = client.post(
+        "/api/auth/forgot-password",
+        json={"email": email},
+        headers={"Origin": "http://localhost:3000"},
+    )
+    assert forgot_res.status_code == 200
+    data = forgot_res.json()
+    assert data["reset_url"] is not None
+    assert "http://localhost:3000/auth/reset-password?token=" in data["reset_url"]
+
+    reset_token = data["reset_url"].split("token=", 1)[1]
+
+    # 2. Reset token must NOT work as a Bearer session token on /api/auth/me
+    me_res = client.get("/api/auth/me", headers={"Authorization": f"Bearer {reset_token}"})
+    assert me_res.status_code == 401
+
+    # 3. Reset password using the token
+    reset_res = client.post(
+        "/api/auth/reset-password",
+        json={"token": reset_token, "new_password": new_password},
+    )
+    assert reset_res.status_code == 200
+
+    # 4. Old password fails, new password succeeds
+    old_login = client.post("/api/auth/login", json={"email": email, "password": old_password})
+    assert old_login.status_code == 401
+
+    new_login = client.post("/api/auth/login", json={"email": email, "password": new_password})
+    assert new_login.status_code == 200
+    assert "access_token" in new_login.json()
+
+
+def test_reset_password_rejects_session_token_and_unknown_email_safe(client: TestClient, registered_user: dict):
+    """Verify normal login JWT cannot reset password and unknown emails never leak account existence."""
+    unknown_res = client.post("/api/auth/forgot-password", json={"email": "nobody_here@example.com"})
+    assert unknown_res.status_code == 200
+    assert unknown_res.json()["reset_url"] is None
+
+    bad_reset = client.post(
+        "/api/auth/reset-password",
+        json={"token": registered_user["token"], "new_password": "ValidPassword123!"},
+    )
+    assert bad_reset.status_code == 400
+
+
 

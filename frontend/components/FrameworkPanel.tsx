@@ -407,7 +407,6 @@ export default function FrameworkPanel({
           disabled={loading}
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-ink text-paper-surface hover:opacity-90 disabled:opacity-50 text-xs font-semibold rounded-xl shadow-xs transition shrink-0 cursor-pointer"
         >
-          <Sparkles className={`w-3.5 h-3.5 text-accent ${loading ? "animate-spin" : ""}`} />
           {loading
             ? "Running Crash Tests..."
             : analysis
@@ -456,7 +455,6 @@ export default function FrameworkPanel({
               onClick={handleRunAnalysis}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] hover:opacity-90 rounded-none text-xs font-semibold shadow-xs transition cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#181614]" />
               Run Decision Gauntlet Now
             </button>
           </div>
@@ -473,7 +471,6 @@ export default function FrameworkPanel({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#cfc7b2] dark:border-[#38332C]">
             <div className="flex items-start gap-3.5">
               <span className="p-3 rounded-none bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] shrink-0 shadow-2xs mt-0.5">
-                <Award className="w-6 h-6 text-[#7a4e10] dark:text-[#D4AA50]" />
               </span>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -512,7 +509,6 @@ export default function FrameworkPanel({
             {/* The Adversarial Trap Caught */}
             <div className="p-4 sm:p-5 rounded-none bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2 shadow-2xs">
               <div className="flex items-center gap-2 font-mono text-[13px] font-bold text-[#1d1d1b] dark:text-[#F0EAE1] uppercase tracking-wider">
-                <ShieldAlert className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
                 <span>The One Fatal Trap Caught by Red-Teaming:</span>
               </div>
               <p className="text-xs text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed font-sans">
@@ -526,7 +522,6 @@ export default function FrameworkPanel({
             {/* The Clear Resolution & Protection */}
             <div className="p-4 sm:p-5 rounded-none bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2 shadow-2xs">
               <div className="flex items-center gap-2 font-mono text-[13px] font-bold text-[#1d1d1b] dark:text-[#F0EAE1] uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4 text-[#7a4e10] dark:text-[#D4AA50] shrink-0" />
                 <span>The Exact Condition to Proceed Safely:</span>
               </div>
               <p className="text-xs text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed font-sans">
@@ -561,7 +556,6 @@ export default function FrameworkPanel({
               onClick={() => setShowSensitivitySliders(!showSensitivitySliders)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-none text-xs font-mono font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] transition cursor-pointer self-start sm:self-auto"
             >
-              <Sliders className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
               <span>{showSensitivitySliders ? "Hide Weight Sliders" : "Tune Criteria Weights"}</span>
               {showSensitivitySliders ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
@@ -637,7 +631,6 @@ export default function FrameworkPanel({
                     onClick={handleAutoBalanceWeights}
                     className="px-3 py-1 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] transition inline-flex items-center gap-1 shadow-2xs cursor-pointer"
                   >
-                    <Zap className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50]" />
                     <span>Auto-Balance 100%</span>
                   </button>
                   <span
