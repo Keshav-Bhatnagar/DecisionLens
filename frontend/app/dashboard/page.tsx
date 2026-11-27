@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
@@ -33,17 +33,30 @@ function ActionParamWatcher({
   onOpenChallenge: () => void;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const callbacksRef = useRef({ onOpenNewFolder, onOpenChallenge });
+  callbacksRef.current = { onOpenNewFolder, onOpenChallenge };
 
   useEffect(() => {
     if (!searchParams) return;
     const action = searchParams.get("action");
     const challenge = searchParams.get("challenge");
-    if (action === "new-workspace") {
-      onOpenNewFolder();
-    } else if (action === "new" || challenge === "true") {
-      onOpenChallenge();
+    if (action !== "new-workspace" && action !== "new" && challenge !== "true") {
+      return;
     }
-  }, [searchParams, onOpenNewFolder, onOpenChallenge]);
+
+    if (action === "new-workspace") {
+      callbacksRef.current.onOpenNewFolder();
+    } else {
+      callbacksRef.current.onOpenChallenge();
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("action");
+    params.delete("challenge");
+    const query = params.toString();
+    router.replace(query ? `/dashboard?${query}` : "/dashboard", { scroll: false });
+  }, [searchParams, router]);
 
   return null;
 }
