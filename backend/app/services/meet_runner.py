@@ -977,13 +977,23 @@ class MeetBotRunner:
                     "--autoplay-policy=no-user-gesture-required",
                     "--disable-blink-features=AutomationControlled",
                     "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
                 ]
-                context = p.chromium.launch_persistent_context(
-                    user_data_dir=str(profile_dir),
-                    headless=self.headless,
-                    args=launch_args,
-                    permissions=["microphone", "camera"],
-                )
+                context_kwargs = {
+                    "user_data_dir": str(profile_dir),
+                    "headless": self.headless,
+                    "args": launch_args,
+                    "permissions": ["microphone", "camera"],
+                }
+                if self.headless:
+                    context_kwargs["user_agent"] = (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/131.0.0.0 Safari/537.36"
+                    )
+                context = p.chromium.launch_persistent_context(**context_kwargs)
                 try:
                     page = context.pages[0] if context.pages else context.new_page()
                     page.on(
@@ -1008,7 +1018,15 @@ class MeetBotRunner:
                         ),
                     )
 
-                    page.goto(self.meet_url, wait_until="domcontentloaded", timeout=45000)
+                    try:
+                        page.goto(self.meet_url, wait_until="domcontentloaded", timeout=60000)
+                    except Exception as goto_exc:
+                        if "Timeout" in str(goto_exc):
+                            logger.warning("Meet goto domcontentloaded timed out, retrying with commit: %s", goto_exc)
+                            page.goto(self.meet_url, wait_until="commit", timeout=60000)
+                            time.sleep(5)
+                        else:
+                            raise
                     time.sleep(3)
 
                     # Dismiss "Continue without microphone and camera" if shown
