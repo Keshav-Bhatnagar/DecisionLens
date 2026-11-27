@@ -109,6 +109,7 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
   const [activeCitation, setActiveCitation] = useState<number | null>(null);
   const [showSources, setShowSources] = useState(false);
   const [status, setStatus] = useState<RagStatusResponse | null>(null);
+  const [statusChecked, setStatusChecked] = useState(false);
   const [reindexing, setReindexing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -116,16 +117,22 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
     getDecisionRagStatus(decisionId)
       .then((s) => {
         setStatus(s);
+        setStatusChecked(true);
         onStatusChange?.(s);
       })
       .catch(() => {
         setStatus(null);
+        setStatusChecked(true);
         onStatusChange?.(null);
       });
   }, [decisionId, onStatusChange]);
 
   useEffect(() => {
-    if (attachmentCount > 0) refreshStatus();
+    if (attachmentCount > 0) {
+      refreshStatus();
+    } else {
+      setStatusChecked(true);
+    }
   }, [attachmentCount, refreshStatus]);
 
   const ask = async (q: string) => {
@@ -176,6 +183,10 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
           <span className="truncate">
             · {status
               ? `${docCount} ${docCount === 1 ? "file" : "files"} (${status.chunk_count ?? 0} chunks) · ${status.semantic ? "semantic vector index" : "keyword index"}`
+              : attachmentCount === 0
+              ? "0 files attached · upload files above to ground Q&A"
+              : statusChecked
+              ? `${attachmentCount} ${attachmentCount === 1 ? "file" : "files"} · index unavailable`
               : "Checking index…"}
             {stale && <span className="text-[#7a4e10] dark:text-[#D4AA50]"> · needs refresh</span>}
           </span>

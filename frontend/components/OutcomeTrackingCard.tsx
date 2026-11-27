@@ -140,7 +140,7 @@ export default function OutcomeTrackingCard({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div>
           <span className="text-[14px] font-mono uppercase tracking-widest text-[#7a7264] block mb-1">
-            Stage 6 • Closed-Loop Accountability
+            Stage 03 • Closed-Loop Accountability
           </span>
           <h3 className="text-lg font-serif font-bold text-[#26211b]">
             Real-World Follow-Up & Outcome Tracking

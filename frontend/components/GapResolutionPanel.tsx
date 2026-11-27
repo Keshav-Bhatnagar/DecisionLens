@@ -602,7 +602,7 @@ export default function GapResolutionPanel({
             <DecisionLensIcon size={32} />
             <div>
               <span className="text-[14px] font-mono font-semibold uppercase tracking-widest text-accent block leading-none">
-                STAGE 03 / EVIDENCE AUDIT & RESEARCH
+                STAGE 02 / EVIDENCE AUDIT & RESEARCH
               </span>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-ink tracking-tight mt-1">
                 Information Gaps & Evidence Dossier
@@ -610,7 +610,7 @@ export default function GapResolutionPanel({
             </div>
           </div>
           <p className="text-xs text-ink-secondary max-w-2xl font-light leading-relaxed">
-            Stress-testing critical assumptions, SRE operational boundaries, and competitor benchmarks against empirical evidence before committing capital or architecture.
+            Stress-testing critical assumptions, operational boundaries, and real-world benchmarks against empirical evidence before committing budget or strategy.
           </p>
         </div>
 
@@ -1098,29 +1098,29 @@ export default function GapResolutionPanel({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <button
                           type="button"
-                          onClick={() => handleQuickResolve(gap, `Adopt conservative operational baseline based on standard tier limits.`)}
+                          onClick={() => handleQuickResolve(gap, `Proceed with conservative baseline within current budget, timeline, and team capacity.`)}
                           disabled={isWorking}
                           className="p-3.5 rounded-xl border border-border bg-paper-sidebar/50 hover:bg-paper-surface hover:border-accent text-left transition group space-y-1 disabled:opacity-50"
                         >
                           <span className="text-[14px] font-mono font-bold uppercase text-accent block">
-                            Scenario A: Conservative Standard Tier
+                            Assumption A: Conservative Baseline
                           </span>
                           <p className="text-xs text-ink font-medium leading-snug">
-                            Design within verified standard tier limits & standard operational SLA tolerances.
+                            Proceed with low-risk defaults within current budget, timeline, and team capacity.
                           </p>
                         </button>
 
                         <button
                           type="button"
-                          onClick={() => handleQuickResolve(gap, `Plan for high-capacity scale-out contingency budget and provisions.`)}
+                          onClick={() => handleQuickResolve(gap, `Plan with growth contingency buffer for higher scope, adoption, or edge cases.`)}
                           disabled={isWorking}
                           className="p-3.5 rounded-xl border border-border bg-paper-sidebar/50 hover:bg-paper-surface hover:border-accent text-left transition group space-y-1 disabled:opacity-50"
                         >
                           <span className="text-[14px] font-mono font-bold uppercase text-accent block">
-                            Scenario B: Scale-Out Allocation
+                            Assumption B: Contingency Buffer
                           </span>
                           <p className="text-xs text-ink font-medium leading-snug">
-                            Allocate buffer contingency & enable horizontal auto-scaling provisions.
+                            Allocate extra budget or timeline buffer to cover higher scope, adoption, or edge cases.
                           </p>
                         </button>
                       </div>

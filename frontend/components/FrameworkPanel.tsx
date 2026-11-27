@@ -389,7 +389,7 @@ export default function FrameworkPanel({
             <DecisionLensIcon size={32} />
             <div>
               <span className="text-[14px] font-mono font-semibold uppercase tracking-widest text-accent block leading-none">
-                STAGE 04 / DECISION GAUNTLET & ENSEMBLE
+                STAGE 03 / DECISION GAUNTLET & ENSEMBLE
               </span>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-ink tracking-tight mt-1">
                 The Decision Gauntlet & Unified Verdict
@@ -424,18 +424,9 @@ export default function FrameworkPanel({
       )}
 
       {analysis?.is_stale && (
-        <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-xs text-[#1d1d1b] dark:text-[#F0EAE1] rounded-none flex items-center justify-between shadow-2xs font-courier">
-          <div className="flex items-center gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 text-[#7a4e10] dark:text-[#D4AA50]" />
-            <span>Upstream problem inputs or gaps have changed. Re-run gauntlet to re-synchronize criteria and rankings.</span>
-          </div>
-          <button
-            onClick={() => handleRunAnalysis()}
-            disabled={loading}
-            className="px-3.5 py-1.5 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] text-xs font-semibold rounded-none hover:opacity-90 transition shrink-0 cursor-pointer"
-          >
-            Re-run Gauntlet
-          </button>
+        <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-xs text-[#1d1d1b] dark:text-[#F0EAE1] rounded-none flex items-center gap-2.5 shadow-2xs font-courier">
+          <AlertCircle className="w-4 h-4 shrink-0 text-[#7a4e10] dark:text-[#D4AA50]" />
+          <span>Upstream problem inputs or gaps have changed. Use <strong>Re-Run Gauntlet</strong> above to re-synchronize criteria and rankings.</span>
         </div>
       )}
 

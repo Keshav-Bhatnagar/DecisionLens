@@ -83,6 +83,7 @@ export default function SynthesisPanel({
     null
   );
   const [loading, setLoading] = useState(false);
+  const [synthesizing, setSynthesizing] = useState(false);
   const [savingRoadmap, setSavingRoadmap] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -259,7 +260,7 @@ export default function SynthesisPanel({
   }
 
   async function handleRunSynthesis() {
-    setLoading(true);
+    setSynthesizing(true);
     setError(null);
     setSuccessMsg(null);
     try {
@@ -283,7 +284,7 @@ export default function SynthesisPanel({
         err instanceof Error ? err.message : "Failed to synthesize decision";
       setError(message);
     } finally {
-      setLoading(false);
+      setSynthesizing(false);
     }
   }
 
@@ -675,7 +676,7 @@ Domain: ${(displaySynthesis.domain || "ENGINEERING").toUpperCase()}
 ${displaySynthesis.recommendation_text || displaySynthesis.headline || "Architectural decision deliberated in DecisionLens."}
 
 ## Decision Drivers
-- Epistemic Score: ${displaySynthesis.canonical_result?.winner_score?.toFixed(1) || "8.5"} / 10
+- Epistemic Score: ${displaySynthesis.canonical_result?.winner_score?.toFixed(2) || "8.50"} / 10
 - Mathematical Multi-Criteria Gauntlet Verification
 - Zero-Hallucination Empirical Proof Baseline
 
@@ -798,14 +799,14 @@ jobs:
 
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
             {snapshots.length > 0 && (
-              <div className="relative">
+              <div className={`relative ${showVersionMenu ? "z-50" : "z-45"}`}>
                 <button
                   type="button"
                   onClick={() => {
                     setShowVersionMenu(!showVersionMenu);
                     setShowActionsMenu(false);
                   }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-md text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] transition-colors cursor-pointer whitespace-nowrap"
+                  className="relative z-50 inline-flex items-center gap-2 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-md text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] transition-colors cursor-pointer whitespace-nowrap"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                   <span>
@@ -852,7 +853,9 @@ jobs:
                           </span>
                           {!viewingSnapshot && <Check className="w-3.5 h-3.5 shrink-0" />}
                         </button>
-                        {snapshots.map((snap) => {
+                        {snapshots
+                          .filter((snap) => snap.version !== (synthesis?.version || 1))
+                          .map((snap) => {
                           const isSelected = viewingSnapshot?.id === snap.id;
                           return (
                             <button
@@ -883,14 +886,14 @@ jobs:
             )}
 
             {/* Consolidated Actions & Export Dropdown Button */}
-            <div className="relative">
+            <div className={`relative ${showActionsMenu ? "z-50" : "z-45"}`}>
               <button
                 type="button"
                 onClick={() => {
                   setShowActionsMenu(!showActionsMenu);
                   setShowVersionMenu(false);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold text-xs rounded-md transition-colors cursor-pointer whitespace-nowrap"
+                className="relative z-50 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold text-xs rounded-md transition-colors cursor-pointer whitespace-nowrap"
               >
                 <span>Actions & Export</span>
                 <ChevronDown
@@ -963,10 +966,10 @@ jobs:
 
             <button
               onClick={handleRunSynthesis}
-              disabled={loading}
+              disabled={synthesizing}
               className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] font-semibold text-xs rounded-md transition-colors disabled:opacity-50 cursor-pointer shadow-sm whitespace-nowrap"
             >
-              {loading ? (
+              {synthesizing ? (
                 <>
                   <RotateCcw className="w-3.5 h-3.5 animate-spin" />
                   <span>Synthesizing Memo...</span>
@@ -1013,7 +1016,7 @@ jobs:
               <div className="flex items-center gap-2 flex-1 min-w-[240px]">
                 <input
                   type="text"
-                  placeholder="e.g. Sub-50ms p99 SLA, No SRE on-call burnout, DPDP Act compliance..."
+                  placeholder="e.g. Strict 30-day rollout, under budget cap, low onboarding friction..."
                   value={newPriorityInput}
                   onChange={(e) => setNewPriorityInput(e.target.value)}
                   onKeyDown={handleAddPriority}
@@ -1089,20 +1092,12 @@ jobs:
         <div className="space-y-6">
           {/* Stale Synthesis Warning */}
           {displaySynthesis.is_stale && (
-            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-between text-amber-900 dark:text-amber-200 text-xs">
-              <div className="flex items-center gap-2.5">
-                <div>
-                  <strong className="block font-bold">Upstream Analysis Updated</strong>
-                  <span>Problem framing, evidence findings, or matrix weights have changed since this synthesis was produced.</span>
-                </div>
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center gap-2.5 text-amber-900 dark:text-amber-200 text-xs">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-700 dark:text-amber-400" />
+              <div>
+                <strong className="font-bold">Upstream Analysis Updated: </strong>
+                <span>Problem framing, evidence findings, or matrix weights have changed since this synthesis was produced. Use <strong>Re-Synthesize Memo</strong> above to refresh.</span>
               </div>
-              <button
-                onClick={handleRunSynthesis}
-                disabled={loading}
-                className="px-3 py-1.5 bg-amber-800 hover:bg-amber-900 text-white font-semibold rounded-lg text-xs shrink-0 transition-colors cursor-pointer"
-              >
-                Re-Run Synthesis
-              </button>
             </div>
           )}
 
@@ -1163,46 +1158,47 @@ jobs:
 
               {/* Adaptable Itemized Rows (Decision-Specific, Connected to Stages 1-3) */}
               <div className="space-y-2.5 text-xs">
-                <div className="grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-[#97907e] border-b border-[#cfc7b2]/60 dark:border-[#38332C] pb-1">
-                  <span className="col-span-6">Factor / Option</span>
-                  <span className="col-span-2 text-center">Stage</span>
-                  <span className="col-span-4 text-right">Grounded Value</span>
-                </div>
-
                 {liveReceipt && liveReceipt.items.length > 0 ? (
-                  liveReceipt.items.map((item, idx) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="grid grid-cols-12 items-start gap-1.5 py-1.5 border-b border-dashed border-[#cfc7b2]/60 dark:border-[#38332C]/70"
-                    >
-                      <div className="col-span-6 min-w-0">
-                        <div className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">{item.item_name}</div>
-                        <div className="text-[10px] text-[#6e655a] dark:text-[#A89F91]">{item.category}</div>
-                      </div>
-                      <div className="col-span-2 text-center">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91]">
-                          {item.source_stage}
-                        </span>
-                      </div>
-                      <div
-                        className={`col-span-4 text-right font-bold leading-snug ${
-                          item.status === "gap_pending"
-                            ? "text-amber-700 dark:text-amber-400"
-                            : item.status === "verified"
-                            ? "text-emerald-700 dark:text-emerald-400"
-                            : "text-[#1d1d1b] dark:text-[#F0EAE1]"
-                        }`}
+                  <>
+                    <div className="grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-[#97907e] border-b border-[#cfc7b2]/60 dark:border-[#38332C] pb-1">
+                      <span className="col-span-6">Factor / Option</span>
+                      <span className="col-span-2 text-center">Stage</span>
+                      <span className="col-span-4 text-right">Grounded Value</span>
+                    </div>
+                    {liveReceipt.items.map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="grid grid-cols-12 items-start gap-1.5 py-1.5 border-b border-dashed border-[#cfc7b2]/60 dark:border-[#38332C]/70"
                       >
-                        {item.value_display}
-                      </div>
-                    </motion.div>
-                  ))
+                        <div className="col-span-6 min-w-0">
+                          <div className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">{item.item_name}</div>
+                          <div className="text-[10px] text-[#6e655a] dark:text-[#A89F91]">{item.category}</div>
+                        </div>
+                        <div className="col-span-2 text-center">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91]">
+                            {item.source_stage}
+                          </span>
+                        </div>
+                        <div
+                          className={`col-span-4 text-right font-bold leading-snug ${
+                            item.status === "gap_pending"
+                              ? "text-amber-700 dark:text-amber-400"
+                              : item.status === "verified"
+                              ? "text-emerald-700 dark:text-emerald-400"
+                              : "text-[#1d1d1b] dark:text-[#F0EAE1]"
+                          }`}
+                        >
+                          {item.value_display}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </>
                 ) : (
-                  <div className="py-3 px-3 rounded-md bg-[#EDE7D6]/60 dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
-                    Click <strong>Build Smart Ledger</strong> to connect Stage 1 inputs, Stage 2 facts &amp; gaps, and Stage 3 MAUT scores into a custom ledger for <strong>{displaySynthesis.domain}</strong>.
+                  <div className="py-2.5 px-3 rounded-md bg-[#EDE7D6]/60 dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
+                    Click <strong>Build Smart Ledger</strong> above to connect Stage 1 inputs, Stage 2 facts &amp; gaps, and Stage 3 MAUT scores for <strong>{displaySynthesis.domain}</strong>.
                   </div>
                 )}
 
@@ -1306,7 +1302,7 @@ jobs:
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-muted uppercase">Score:</span>
                     <span className="font-mono text-sm font-bold text-accent bg-paper-sidebar px-2 py-0.5 rounded-md border border-border">
-                      {displaySynthesis.canonical_result.winner_score.toFixed(1)} / 10
+                      {displaySynthesis.canonical_result.winner_score.toFixed(2)} / 10
                     </span>
                   </div>
                 )}
@@ -1652,7 +1648,7 @@ jobs:
                       <div className="flex items-center justify-between text-xs font-mono">
                         <span className="text-muted uppercase">Gauntlet Score</span>
                         <span className="font-bold text-ink">
-                          {displaySynthesis.canonical_result.winner_score.toFixed(1)} / 10
+                          {displaySynthesis.canonical_result.winner_score.toFixed(2)} / 10
                         </span>
                       </div>
                       <div className="w-full h-2 bg-paper-sidebar border border-border rounded-full overflow-hidden">

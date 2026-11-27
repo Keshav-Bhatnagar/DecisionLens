@@ -370,7 +370,11 @@ export default function GoogleMeetBotPanel({
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                Conducted Transcriptions ({isLoadingSessions ? "..." : conductedSessions.length})
+                Conducted Transcriptions {isLoadingSessions ? (
+                  <Loader2 className="w-3 h-3 animate-spin inline ml-1" />
+                ) : (
+                  `(${conductedSessions.length})`
+                )}
               </button>
             </div>
 

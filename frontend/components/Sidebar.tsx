@@ -379,7 +379,12 @@ export default function Sidebar({
 
             {isExpanded && (
               <div className="space-y-0.5">
-                {folders.length === 0 ? (
+                {loading && folders.length === 0 ? (
+                  <div className="space-y-1.5 px-2.5 py-1 animate-pulse">
+                    <div className="h-3.5 w-3/4 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm" />
+                    <div className="h-3.5 w-1/2 bg-[#EDE7D6] dark:bg-[#221F1C] rounded-sm" />
+                  </div>
+                ) : folders.length === 0 ? (
                   <p className="text-[15px] font-courier text-[#97907e] px-2.5 py-1">
                     No workspaces yet
                   </p>
