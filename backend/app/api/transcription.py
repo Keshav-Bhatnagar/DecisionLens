@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, get_current_user_from_header_or_query, verify_ownership
+from app.auth import get_current_user, get_current_user_from_header_or_query, verify_ownership, verify_decision_access
 from app.database import get_db
 from app.models import AudioRecording, Decision, User
 from app.schemas import (
@@ -63,7 +63,7 @@ async def upload_and_transcribe_audio(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     # Validate language parameter
     norm_lang = language.strip().lower()
@@ -199,7 +199,7 @@ def retry_with_original_audio(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     # Fetch latest audio recording for this decision
     stmt = (
@@ -272,7 +272,7 @@ def update_transcript(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     decision.transcript = payload.transcript.strip()
     decision.transcript_reviewed = payload.mark_reviewed
@@ -314,7 +314,7 @@ def get_transcription_details(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     stmt = (
         select(AudioRecording)
@@ -348,7 +348,7 @@ def list_audio_recordings(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     stmt = (
         select(AudioRecording)
@@ -375,7 +375,7 @@ def stream_audio_file(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     audio_rec = db.get(AudioRecording, audio_id)
     if not audio_rec or audio_rec.decision_id != decision_id:
@@ -415,7 +415,7 @@ def filter_transcript_tangents(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     raw_transcript = (decision.transcript or "").strip()
     if not raw_transcript:

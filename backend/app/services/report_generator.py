@@ -1770,11 +1770,20 @@ def generate_decision_interactive_pdf(decision: Decision) -> bytes:
             canonical = rec.get("canonical_result") or {}
             winner_name = canonical.get("winner_option_name") or rec.get("headline", "Primary Strategy")
             alts = rec.get("alternatives_considered", [])
+            runner_up_name = next(
+                (
+                    a.get("name")
+                    for a in alts
+                    if isinstance(a, dict) and not a.get("is_recommended") and a.get("name")
+                ),
+                None,
+            )
             risks = [r.get("risk") if isinstance(r, dict) else str(r) for r in rec.get("risks_and_mitigations", [])]
             shield_obj = compute_blunder_shield(
                 domain=domain,
                 top_option_name=winner_name,
-                alternatives=alts,
+                runner_up_name=runner_up_name,
+                decision_title=decision.title,
                 risks=risks,
                 decision_id=decision.id,
                 problem_statement=decision.problem_statement or decision.title,

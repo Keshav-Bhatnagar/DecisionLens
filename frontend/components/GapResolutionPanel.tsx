@@ -28,6 +28,8 @@ import {
   AlertTriangle,
   Zap,
   BookOpen,
+  Copy,
+  Share2,
 } from "lucide-react";
 import {
   analyzeDecisionInputs,
@@ -36,6 +38,7 @@ import {
   answerGap,
   executeGapResearch,
   getDecisionResearch,
+  shareGapsToSlack,
   GapItem,
   GapsResponse,
   GapImportance,
@@ -527,6 +530,46 @@ export default function GapResolutionPanel({
     );
   }, [gaps, criticalDoubts]);
 
+  const [copiedGaps, setCopiedGaps] = useState(false);
+  const [showSlackBox, setShowSlackBox] = useState(false);
+  const [slackWebhook, setSlackWebhook] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("decisionlens_slack_webhook") || "" : ""
+  );
+  const [sendingSlack, setSendingSlack] = useState(false);
+  const [slackFeedback, setSlackFeedback] = useState<string | null>(null);
+
+  const handleCopyGapsForSlack = () => {
+    const openGaps = gaps.filter((g) => g.status === "pending" || g.status === "research_queued");
+    const target = openGaps.length > 0 ? openGaps : gaps;
+    if (target.length === 0) return;
+    const text = [
+      `*Missing Meeting Takeaways & Open Gaps (${target.length})*`,
+      ...target.map((g, i) => `${i + 1}. [${(g.importance || "important").toUpperCase()}] ${g.question}`),
+    ].join("\n");
+    navigator.clipboard.writeText(text);
+    setCopiedGaps(true);
+    setTimeout(() => setCopiedGaps(false), 2000);
+  };
+
+  const handleSendToSlack = async () => {
+    const url = slackWebhook.trim();
+    if (!url) return;
+    setSendingSlack(true);
+    setSlackFeedback(null);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("decisionlens_slack_webhook", url);
+      }
+      const res = await shareGapsToSlack(decisionId, url, false);
+      setSlackFeedback(res.message);
+      setTimeout(() => setSlackFeedback(null), 4000);
+    } catch (err: unknown) {
+      setSlackFeedback(err instanceof Error ? err.message : "Failed to send to Slack");
+    } finally {
+      setSendingSlack(false);
+    }
+  };
+
   // Filtered Gaps by Active Track (secondary pending gaps are bundled into the merged card)
   const filteredGaps = useMemo(() => {
     const secondaryIds = new Set(secondaryPendingGaps.map((g) => g.id));
@@ -571,24 +614,69 @@ export default function GapResolutionPanel({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleDetectGaps}
-          disabled={isDetecting}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-ink hover:opacity-90 disabled:opacity-50 text-paper-surface rounded-xl text-xs font-semibold shadow-xs transition-all shrink-0 group"
-        >
-          {isDetecting ? (
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {gaps.length > 0 && (
             <>
-              <RotateCw className="w-3.5 h-3.5 animate-spin text-paper-surface" />
-              Auditing Evidence Base...
-            </>
-          ) : (
-            <>
-              {gaps.length > 0 ? "Re-Audit Information Gaps" : "Run Epistemic Gap Audit"}
+              <button
+                type="button"
+                onClick={handleCopyGapsForSlack}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-paper-sidebar hover:bg-paper-surface border border-border text-ink rounded-md text-xs font-semibold transition cursor-pointer"
+                title="Copy missing gaps formatted for Slack or Jira"
+              >
+                {copiedGaps ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedGaps ? "Copied!" : "Copy for Slack / Jira"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSlackBox((v) => !v)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-paper-sidebar hover:bg-paper-surface border border-border text-ink rounded-md text-xs font-semibold transition cursor-pointer"
+                title="Send open gaps directly to a Slack Incoming Webhook"
+              >
+                <Share2 className="w-3.5 h-3.5 text-accent" />
+                <span>Send to Slack</span>
+              </button>
             </>
           )}
-        </button>
+          <button
+            type="button"
+            onClick={handleDetectGaps}
+            disabled={isDetecting}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-ink hover:opacity-90 disabled:opacity-50 text-paper-surface rounded-md text-xs font-semibold shadow-xs transition-all shrink-0 group cursor-pointer"
+          >
+            {isDetecting ? (
+              <>
+                <RotateCw className="w-3.5 h-3.5 animate-spin text-paper-surface" />
+                Auditing Evidence Base...
+              </>
+            ) : (
+              <>
+                {gaps.length > 0 ? "Re-Audit Information Gaps" : "Run Epistemic Gap Audit"}
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {showSlackBox && (
+        <div className="p-3.5 rounded-md bg-paper-sidebar border border-border flex flex-col sm:flex-row sm:items-center gap-2.5 text-xs">
+          <input
+            type="url"
+            value={slackWebhook}
+            onChange={(e) => setSlackWebhook(e.target.value)}
+            placeholder="https://hooks.slack.com/services/..."
+            className="flex-1 px-3 py-1.5 bg-paper-surface border border-border rounded-md text-ink font-mono text-xs focus:outline-none focus:border-accent"
+          />
+          <button
+            type="button"
+            disabled={sendingSlack || !slackWebhook.trim()}
+            onClick={handleSendToSlack}
+            className="px-3.5 py-1.5 bg-ink text-paper-surface rounded-md font-semibold disabled:opacity-50 cursor-pointer shrink-0"
+          >
+            {sendingSlack ? "Sending..." : "Push Open Gaps"}
+          </button>
+          {slackFeedback && <span className="text-xs font-mono text-accent">{slackFeedback}</span>}
+        </div>
+      )}
 
       {/* 2. Living Epistemic Grounding Meter (Macro Status Banner) */}
       <div className="p-4 sm:p-5 rounded-xl bg-paper-sidebar border border-border space-y-3">

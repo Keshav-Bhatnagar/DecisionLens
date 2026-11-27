@@ -166,22 +166,27 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
   const stale = (status?.stale_chunks ?? 0) > 0;
 
   return (
-    <div className="space-y-2 pt-1">
-      {/* Status line */}
-      <div className="flex items-center justify-between gap-2 text-[14px] text-[#97907e]">
-        <span className="truncate">
-          {status
-            ? `${docCount} ${docCount === 1 ? "file" : "files"} indexed · ${status.semantic ? "search by meaning" : "word matching"}`
-            : "Checking index…"}
-          {stale && <span className="text-[#7a4e10] dark:text-[#D4AA50]"> · needs refresh</span>}
-        </span>
+    <div className="space-y-2.5 pt-1">
+      {/* RAG Grounding Header + Status line */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-courier text-[#6e655a] dark:text-[#A89F91]">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] shrink-0">
+            RAG Grounding
+          </span>
+          <span className="truncate">
+            · {status
+              ? `${docCount} ${docCount === 1 ? "file" : "files"} (${status.chunk_count ?? 0} chunks) · ${status.semantic ? "semantic vector index" : "keyword index"}`
+              : "Checking index…"}
+            {stale && <span className="text-[#7a4e10] dark:text-[#D4AA50]"> · needs refresh</span>}
+          </span>
+        </div>
         <button
           type="button"
           onClick={handleReindex}
           disabled={reindexing}
-          className="flex items-center gap-1 shrink-0 font-bold text-[#443a30] dark:text-[#D4AA50] hover:underline disabled:opacity-50"
+          className="flex items-center gap-1 shrink-0 font-bold text-[#443a30] dark:text-[#D4AA50] hover:underline disabled:opacity-50 cursor-pointer"
         >
-          <RefreshCw className={`w-2.5 h-2.5 ${reindexing ? "animate-spin" : ""}`} />
+          <RefreshCw className={`w-3 h-3 ${reindexing ? "animate-spin" : ""}`} />
           {reindexing ? "Re-indexing" : "Re-index"}
         </button>
       </div>
@@ -192,7 +197,7 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
           e.preventDefault();
           void ask(question);
         }}
-        className="group flex items-center gap-1 bg-[#FBF8F1] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] focus-within:border-[#7a4e10] dark:focus-within:border-[#D4AA50] transition-colors"
+        className="group flex items-center gap-1 bg-[#EDE7D6]/80 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] focus-within:border-[#7a4e10] dark:focus-within:border-[#D4AA50] transition-colors"
       >
         <input
           ref={inputRef}
@@ -201,7 +206,7 @@ export default function AskDocumentsPanel({ decisionId, attachmentCount, onStatu
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask your documents…"
           maxLength={1000}
-          className="flex-1 min-w-0 py-1.5 text-[11.5px] bg-transparent text-[#24211D] dark:text-[#E8E2D2] placeholder-[#97907e] focus:outline-none"
+          className="flex-1 min-w-0 px-2.5 py-1.5 text-xs bg-transparent text-[#24211D] dark:text-[#E8E2D2] placeholder-[#97907e] focus:outline-none"
         />
         <button
           type="submit"

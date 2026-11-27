@@ -13,7 +13,7 @@ from app.config import settings
 from app.database import get_db
 from app.models import User, Decision, Attachment
 from app.schemas import AttachmentResponse, GoogleDriveImportRequest
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, verify_ownership, verify_decision_access
 from app.services.file_parser import extract_text_from_file, get_file_extension, ALLOWED_EXTENSIONS
 
 router = APIRouter(prefix="/decisions/{decision_id}/attachments", tags=["Document Uploads"])
@@ -39,7 +39,7 @@ async def upload_attachment(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     original_filename = file.filename or "uploaded_file"
     ext = get_file_extension(original_filename)
@@ -134,7 +134,7 @@ async def import_google_drive(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     # 1. Resolve File ID
     file_id = None
@@ -315,7 +315,7 @@ def list_attachments(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     stmt = (
         select(Attachment)
@@ -342,7 +342,7 @@ def get_attachment(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     attachment = db.get(Attachment, attachment_id)
     if not attachment or attachment.decision_id != decision_id:
@@ -367,7 +367,7 @@ def delete_attachment(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     attachment = db.get(Attachment, attachment_id)
     if not attachment or attachment.decision_id != decision_id:

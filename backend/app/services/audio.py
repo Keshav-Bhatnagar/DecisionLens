@@ -628,7 +628,8 @@ _FASTER_WHISPER_MODEL = None
 def transcribe_pcm_array(
     audio_float32: Any,
     language: str = "en",
-    model_size: str = "base",
+    model_size: str = "small",
+    initial_prompt: Optional[str] = None,
 ) -> str:
     """Transcribe a 16kHz mono float32 numpy array directly via cached faster-whisper."""
     global _FASTER_WHISPER_MODEL
@@ -643,42 +644,174 @@ def transcribe_pcm_array(
             cpu_threads=min(6, os.cpu_count() or 4),
         )
 
-    # Allow automatic en/hi code-switching (Hinglish) unless explicitly locked to Hindi
-    tx_lang = "hi" if language == "hi" else None
-    segments, info = _FASTER_WHISPER_MODEL.transcribe(
-        audio_float32,
-        language=tx_lang,
-        condition_on_previous_text=False,
-        vad_filter=True,
-        vad_parameters={"threshold": 0.25, "min_silence_duration_ms": 300},
-        beam_size=1,
-    )
+    tx_lang = "hi" if language == "hi" else ("en" if language == "en" else None)
+    vad_opts = {"threshold": 0.15, "min_silence_duration_ms": 800, "speech_pad_ms": 500}
+    tx_kwargs: dict[str, Any] = {
+        "language": tx_lang,
+        "condition_on_previous_text": False,
+        "vad_filter": True,
+        "vad_parameters": vad_opts,
+        "beam_size": 3,
+    }
+    if initial_prompt and initial_prompt.strip():
+        tx_kwargs["initial_prompt"] = initial_prompt.strip()[-220:]
+
+    segments, info = _FASTER_WHISPER_MODEL.transcribe(audio_float32, **tx_kwargs)
     if tx_lang is None and getattr(info, "language", None) not in ("en", "hi"):
         # Prevent Urdu/other script hallucinations on Indian accents & Hinglish
         fallback_lang = "hi" if getattr(info, "language", None) in ("ur", "pa", "bn", "mr", "gu") else "en"
-        segments, _ = _FASTER_WHISPER_MODEL.transcribe(
-            audio_float32,
-            language=fallback_lang,
-            condition_on_previous_text=False,
-            vad_filter=True,
-            vad_parameters={"threshold": 0.25, "min_silence_duration_ms": 300},
-            beam_size=1,
-        )
+        tx_kwargs["language"] = fallback_lang
+        segments, _ = _FASTER_WHISPER_MODEL.transcribe(audio_float32, **tx_kwargs)
     text = " ".join(seg.text.strip() for seg in segments if seg.text and seg.text.strip())
     if not text.strip():
         import numpy as np
 
         rms = float(np.sqrt(np.mean(np.square(audio_float32)))) if len(audio_float32) else 0.0
-        if rms >= 0.002:
-            segments_raw, _ = _FASTER_WHISPER_MODEL.transcribe(
-                audio_float32,
-                language=tx_lang or "en",
-                condition_on_previous_text=False,
-                vad_filter=False,
-                beam_size=1,
-            )
+        if rms >= 0.0015:
+            raw_kwargs: dict[str, Any] = {
+                "language": tx_lang or "en",
+                "condition_on_previous_text": False,
+                "vad_filter": False,
+                "beam_size": 2,
+            }
+            if initial_prompt and initial_prompt.strip():
+                raw_kwargs["initial_prompt"] = initial_prompt.strip()[-220:]
+            segments_raw, _ = _FASTER_WHISPER_MODEL.transcribe(audio_float32, **raw_kwargs)
             text = " ".join(seg.text.strip() for seg in segments_raw if seg.text and seg.text.strip())
-    return clean_noise_tokens(text)
+    cleaned = clean_noise_tokens(text)
+    if cleaned.strip().lower() in {
+        "you",
+        "you.",
+        "thank you",
+        "thank you.",
+        "thanks for watching",
+        "thanks for watching!",
+        "thanks for watching.",
+        "bye",
+        "bye.",
+    }:
+        return ""
+    return cleaned
+
+
+class AzureStreamingTranscriber:
+    """Real-time continuous 16kHz mono PCM streaming recognizer backed by Azure AI Speech."""
+
+    def __init__(
+        self,
+        language: str = "en",
+        on_text: Optional[Any] = None,
+        on_error: Optional[Any] = None,
+    ) -> None:
+        import azure.cognitiveservices.speech as speechsdk
+
+        if not settings.azure_speech_key or not settings.azure_speech_region:
+            raise RuntimeError("Azure Speech key/region not configured.")
+
+        self.language = language or "en"
+        self._on_text = on_text
+        self._on_error = on_error
+        self._alive = False
+        self._stopped_evt = None
+
+        import threading
+
+        self._stopped_evt = threading.Event()
+        speech_config = speechsdk.SpeechConfig(
+            subscription=settings.azure_speech_key,
+            region=settings.azure_speech_region,
+        )
+        speech_config.set_property(
+            speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs,
+            "30000",
+        )
+        speech_config.set_property(
+            speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs,
+            "1200",
+        )
+
+        audio_format = speechsdk.audio.AudioStreamFormat(
+            samples_per_second=16000,
+            bits_per_sample=16,
+            channels=1,
+        )
+        self._push_stream = speechsdk.audio.PushAudioInputStream(stream_format=audio_format)
+        audio_config = speechsdk.audio.AudioConfig(stream=self._push_stream)
+
+        if self.language == "hi":
+            speech_config.speech_recognition_language = "hi-IN"
+            self._recognizer = speechsdk.SpeechRecognizer(
+                speech_config=speech_config,
+                audio_config=audio_config,
+            )
+        else:
+            auto_detect = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
+                languages=["en-IN", "en-US", "hi-IN"]
+            )
+            self._recognizer = speechsdk.SpeechRecognizer(
+                speech_config=speech_config,
+                auto_detect_source_language_config=auto_detect,
+                audio_config=audio_config,
+            )
+
+        def _handle_recognized(evt: Any) -> None:
+            try:
+                if evt.result.reason == speechsdk.ResultReason.RecognizedSpeech:
+                    raw_txt = (evt.result.text or "").strip()
+                    cleaned = clean_noise_tokens(raw_txt)
+                    if cleaned and self._on_text:
+                        self._on_text(cleaned)
+            except Exception as exc:
+                logger.warning("Azure STT recognized callback error: %s", exc)
+
+        def _handle_canceled(evt: Any) -> None:
+            self._alive = False
+            self._stopped_evt.set()
+            try:
+                details = evt.result.cancellation_details
+                if details.reason == speechsdk.CancellationReason.Error:
+                    msg = f"Azure STT error: {details.error_details}"
+                    logger.warning(msg)
+                    if self._on_error:
+                        self._on_error(msg)
+            except Exception:
+                pass
+
+        def _handle_stopped(_evt: Any) -> None:
+            self._alive = False
+            self._stopped_evt.set()
+
+        self._recognizer.recognized.connect(_handle_recognized)
+        self._recognizer.canceled.connect(_handle_canceled)
+        self._recognizer.session_stopped.connect(_handle_stopped)
+        self._recognizer.start_continuous_recognition_async().get()
+        self._alive = True
+
+    @property
+    def is_alive(self) -> bool:
+        return self._alive
+
+    def push_pcm(self, audio_float32: Any) -> None:
+        import numpy as np
+
+        if not self._alive or audio_float32 is None or len(audio_float32) == 0:
+            return
+        clipped = np.clip(audio_float32, -1.0, 1.0)
+        pcm_int16 = (clipped * 32767.0).astype(np.int16)
+        self._push_stream.write(pcm_int16.tobytes())
+
+    def close(self, timeout: float = 5.0) -> None:
+        try:
+            self._push_stream.close()
+        except Exception:
+            pass
+        if self._stopped_evt is not None:
+            self._stopped_evt.wait(timeout=timeout)
+        try:
+            self._recognizer.stop_continuous_recognition_async().get()
+        except Exception:
+            pass
+        self._alive = False
 
 
 def transcribe_audio_faster_whisper(

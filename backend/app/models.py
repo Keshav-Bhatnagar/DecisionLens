@@ -412,3 +412,28 @@ class MeetingPrivateInput(Base):
 
     def __repr__(self) -> str:
         return f"<MeetingPrivateInput id={self.id} category={self.category} author_role={self.author_role}>"
+
+
+class BotJob(Base):
+    """Postgres-backed job queue for isolated Google Meet bot workers (₹0 Redis alternative)."""
+
+    __tablename__ = "bot_jobs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("google_meet_bot_sessions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    meet_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    bot_name: Mapped[str] = mapped_column(String(120), default="DecisionLens Bot", nullable=False)
+    language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(30), default="queued", index=True, nullable=False
+    )  # queued, running, completed, failed
+    worker_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    locked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<BotJob id={self.id} session_id={self.session_id} status={self.status}>"

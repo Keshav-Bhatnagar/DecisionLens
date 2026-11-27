@@ -244,3 +244,99 @@ def test_meeting_bot_api_endpoints(client, registered_user):
     assert finish_data["private_inputs_count"] == 1
     assert "Cloudflare Workers" in finish_data["transcript"]
     assert finish_data["structured_findings"] is not None
+
+
+def test_new_meeting_invite_closes_previous_and_late_chunk_keeps_completed(db_session, registered_user):
+    user = registered_user["user"]
+    folder = Folder(name="Infra", owner_id=user.id)
+    db_session.add(folder)
+    db_session.commit()
+
+    decision = Decision(
+        title="Redis vs Memcached",
+        domain="SOFTWARE",
+        owner_id=user.id,
+        folder_id=folder.id,
+    )
+    db_session.add(decision)
+    db_session.commit()
+
+    s1 = create_or_join_bot_session(
+        db=db_session,
+        decision=decision,
+        meet_url="https://meet.google.com/aaa-bbbb-ccc",
+    )
+    assert s1.status == "active"
+
+    # Inviting bot to a different Meet URL must close s1 and create a fresh session
+    s2 = create_or_join_bot_session(
+        db=db_session,
+        decision=decision,
+        meet_url="https://meet.google.com/ddd-eeee-fff",
+    )
+    db_session.refresh(s1)
+    assert s2.id != s1.id
+    assert s1.status == "completed"
+    assert s1.ended_at is not None
+    assert s2.status == "active"
+    assert s2.meet_url == "https://meet.google.com/ddd-eeee-fff"
+
+    # Late audio chunk arriving after s1 is completed must NOT flip s1 back to active
+    ingest_speech_chunk(db_session, s1, "Final buffered sentence", speaker="Host")
+    db_session.refresh(s1)
+    assert s1.status == "completed"
+    assert "Final buffered sentence" in s1.raw_transcript
+
+
+def test_meet_runner_trim_overlap():
+    from app.services.meet_runner import MeetBotRunner
+
+    prev = "Learn all about databases in this course designed to help you"
+    nxt = "designed to help you understand the complexities of database architecture"
+    trimmed = MeetBotRunner._trim_overlap(prev, nxt)
+    assert trimmed == "understand the complexities of database architecture"
+
+    # Non-overlapping sentence should remain untouched
+    unrelated = "The storage engine manages pages on disk."
+    assert MeetBotRunner._trim_overlap(prev, unrelated) == unrelated
+
+    runner = MeetBotRunner(session_id=999, meet_url="https://meet.google.com/abc-defg-hij")
+    assert runner.get_pending_stats() == (0, 0)
+    assert runner.stop_event.is_set() is False
+
+
+def test_force_new_session_on_same_meet_url_starts_clean_transcript(db_session, registered_user):
+    user = registered_user["user"]
+    folder = Folder(name="Infra 2", owner_id=user.id)
+    db_session.add(folder)
+    db_session.commit()
+
+    decision = Decision(
+        title="Kafka vs RabbitMQ",
+        domain="SOFTWARE",
+        owner_id=user.id,
+        folder_id=folder.id,
+    )
+    db_session.add(decision)
+    db_session.commit()
+
+    s1 = create_or_join_bot_session(
+        db=db_session,
+        decision=decision,
+        meet_url="https://meet.google.com/zzz-aaaa-bbb",
+    )
+    ingest_speech_chunk(db_session, s1, "Old disrupted meeting text", speaker="Host")
+    assert "Old disrupted meeting text" in s1.raw_transcript
+
+    # Re-inviting with force_new=True (even to the same URL) must close s1 and create a clean s2
+    s2 = create_or_join_bot_session(
+        db=db_session,
+        decision=decision,
+        meet_url="https://meet.google.com/zzz-aaaa-bbb",
+        force_new=True,
+    )
+    db_session.refresh(s1)
+    assert s2.id != s1.id
+    assert s1.status == "completed"
+    assert s2.status == "active"
+    assert s2.raw_transcript == ""

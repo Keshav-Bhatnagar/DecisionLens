@@ -263,6 +263,56 @@ function HexagonRadar({
   );
 }
 
+// 3-Stage Progress Bar Component (matches 01 Input & Evidence, 02 Unknowns & Gaps, 03 Final Report)
+function getDecisionStageProgress(d: Decision): { label: string; done: boolean }[] {
+  const s1 = Boolean(
+    (d.description && d.description.trim()) ||
+      (d.transcript && d.transcript.trim()) ||
+      (d.raw_input && d.raw_input.trim()) ||
+      (d.points && typeof d.points === "object" && Object.keys(d.points).length > 0)
+  );
+  const s2 = Boolean(
+    Array.isArray(d.gaps)
+      ? d.gaps.length > 0
+      : d.gaps && typeof d.gaps === "object" && Object.keys(d.gaps).length > 0
+  );
+  const s3 = Boolean(
+    d.recommendation &&
+      typeof d.recommendation === "object" &&
+      "headline" in d.recommendation
+  );
+  return [
+    { label: "01 Input & Evidence", done: s1 },
+    { label: "02 Unknowns & Gaps", done: s2 },
+    { label: "03 Final Report", done: s3 },
+  ];
+}
+
+function ThreeStageBar({ decision }: { decision: Decision }) {
+  const stages = getDecisionStageProgress(decision);
+  const completed = stages.filter((s) => s.done).length;
+  return (
+    <div className="flex items-center gap-1.5" title="Workflow stages completed">
+      <div className="flex items-center gap-1.5">
+        {stages.map((st) => (
+          <span
+            key={st.label}
+            title={`${st.label}: ${st.done ? "COMPLETED" : "PENDING"}`}
+            className={`inline-block w-[42px] h-[8px] rounded-none shrink-0 ${
+              st.done
+                ? "bg-[#443a30] dark:bg-[#D4AA50] border border-[#443a30] dark:border-[#D4AA50]"
+                : "bg-transparent border border-[#cfc7b2] dark:border-[#524B40]"
+            }`}
+          />
+        ))}
+      </div>
+      <span className="font-courier text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] ml-1">
+        {completed}/3
+      </span>
+    </div>
+  );
+}
+
 // 6-Segment Status Bar Component
 function SixSegmentBar({
   levels,
@@ -832,8 +882,8 @@ export default function FolderDetailPage({
                               {decision.title}
                             </h2>
 
-                            {/* Row 3: Six-segment bar + n/6 */}
-                            <SixSegmentBar levels={levels} />
+                            {/* Row 3: Three-stage bar + n/3 */}
+                            <ThreeStageBar decision={decision} />
                           </div>
 
                           {/* Col 3: Direct Open Action */}
@@ -869,7 +919,7 @@ export default function FolderDetailPage({
                           <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
-                          <SixSegmentBar levels={getDecisionFaultLines(d)} />
+                          <ThreeStageBar decision={d} />
                           <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
@@ -899,7 +949,7 @@ export default function FolderDetailPage({
                           <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
-                          <SixSegmentBar levels={getDecisionFaultLines(d)} />
+                          <ThreeStageBar decision={d} />
                           <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#8F2D2D] dark:text-[#E57373] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
@@ -929,7 +979,7 @@ export default function FolderDetailPage({
                           <h3 className="font-newsreader text-[20px] font-normal leading-snug line-clamp-2 text-[#1d1d1b] dark:text-[#F0EAE1] group-hover:text-[#443a30] dark:group-hover:text-[#D4AA50] mb-3 transition-colors">
                             {d.title}
                           </h3>
-                          <SixSegmentBar levels={getDecisionFaultLines(d)} />
+                          <ThreeStageBar decision={d} />
                           <div className="pt-3 mt-3 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex items-center justify-between text-[15px] font-courier font-bold text-[#4f4b40] dark:text-[#b08a3c] uppercase tracking-wider">
                             <span>OPEN</span>
                             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />

@@ -210,7 +210,7 @@ def update_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     if body.folder_id is not None and body.folder_id != decision.folder_id:
         target_folder = db.get(Folder, body.folder_id)
@@ -293,7 +293,7 @@ def delete_decision(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     db.delete(decision)
     db.commit()
@@ -341,7 +341,7 @@ def get_meeting_takeaways(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     from app.services.meeting_takeaways import generate_meeting_takeaways
 

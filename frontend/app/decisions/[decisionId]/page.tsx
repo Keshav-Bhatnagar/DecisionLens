@@ -15,6 +15,7 @@ import WorkflowStepper, { WorkflowStage } from "@/components/WorkflowStepper";
 import ReportExportModal from "@/components/ReportExportModal";
 import SpeechDictationButton from "@/components/SpeechDictationButton";
 import LiveMeetingRoom from "@/components/LiveMeetingRoom";
+import AskDocumentsPanel from "@/components/AskDocumentsPanel";
 import {
   getDecision,
   updateDecision,
@@ -121,7 +122,28 @@ export default function DecisionDetailPage({
     }, 80);
   };
 
+  const isStage1Complete = Boolean(
+    description.trim() || attachments.length > 0 || decision?.transcript
+  );
+  const isStage2Complete = Boolean(
+    Array.isArray(decision?.gaps)
+      ? decision.gaps.length > 0
+      : decision?.gaps && Object.keys(decision.gaps).length > 0
+  );
+  const isStage3Complete = Boolean(
+    decision?.recommendation && "headline" in decision.recommendation
+  );
+
   const handleSelectStage = (stage: WorkflowStage, targetWhySubTab?: "frameworks" | "facts") => {
+    if (stage === "gaps" && !isStage1Complete) {
+      return;
+    }
+    if (
+      (stage === "synthesis" || stage === "frameworks" || stage === "structuring") &&
+      (!isStage1Complete || !isStage2Complete)
+    ) {
+      return;
+    }
     setStageManuallySelected(true);
     if (stage === "structuring") {
       setWorkflowStage("synthesis");
@@ -149,6 +171,7 @@ export default function DecisionDetailPage({
 
   // Step 1 -> Step 2: From Input to Gaps
   const handleAdvanceToGaps = async () => {
+    if (!isStage1Complete) return;
     try {
       await handleSave();
       setPipelineLoadingMessage("Structuring dilemma inputs & cognitive facts...");
@@ -427,7 +450,7 @@ export default function DecisionDetailPage({
             <div
               id="deep-audit-section"
               ref={stepContentRef}
-              className="sticky top-14 z-20 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md border-b border-[#cfc7b2] dark:border-[#38332C] transition-all font-courier"
+              className="sticky top-14 z-30 bg-[#F4F0E6] dark:bg-[#181614] border-b border-[#cfc7b2] dark:border-[#38332C] transition-all font-courier"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <nav className="flex items-center gap-4 sm:gap-6 overflow-x-auto scrollbar-none" aria-label="Deliberation stages">
@@ -441,24 +464,37 @@ export default function DecisionDetailPage({
 
                     const isComplete =
                       stage.id === "ingestion"
-                        ? Boolean(description.trim() || attachments.length > 0 || decision?.transcript)
+                        ? isStage1Complete
                         : stage.id === "gaps"
-                        ? Boolean(
-                            Array.isArray(decision?.gaps)
-                              ? decision.gaps.length > 0
-                              : decision?.gaps && Object.keys(decision.gaps).length > 0
-                          )
-                        : Boolean(decision?.recommendation && "headline" in decision.recommendation);
+                        ? isStage2Complete
+                        : isStage3Complete;
+
+                    const isUnlocked =
+                      stage.id === "ingestion"
+                        ? true
+                        : stage.id === "gaps"
+                        ? isStage1Complete
+                        : isStage1Complete && isStage2Complete;
 
                     return (
                       <button
                         key={stage.id}
                         type="button"
+                        disabled={!isUnlocked}
+                        title={
+                          !isUnlocked
+                            ? stage.id === "gaps"
+                              ? "Complete Stage 01 (Input & Evidence) first"
+                              : "Complete Stage 01 and Stage 02 (Unknowns & Gaps) first"
+                            : undefined
+                        }
                         onClick={() => handleSelectStage(stage.id)}
-                        className={`inline-flex items-center gap-2 py-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                          isActive
-                            ? "border-[#7a4e10] dark:border-[#D4AA50] text-[#1d1d1b] dark:text-[#F0EAE1]"
-                            : "border-transparent text-[#6e655a] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                        className={`inline-flex items-center gap-2 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                          !isUnlocked
+                            ? "border-transparent opacity-45 cursor-not-allowed text-[#6e655a] dark:text-[#A89F91]"
+                            : isActive
+                            ? "border-[#7a4e10] dark:border-[#D4AA50] text-[#1d1d1b] dark:text-[#F0EAE1] cursor-pointer"
+                            : "border-transparent text-[#6e655a] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] cursor-pointer"
                         }`}
                       >
                         <span className="text-[11px] font-mono text-[#7a4e10] dark:text-[#D4AA50]">
@@ -558,13 +594,7 @@ export default function DecisionDetailPage({
                             </span>
                           )}
                         </div>
-                        <p
-                          className={`text-xs leading-relaxed ${
-                            ingestionTab !== "meeting"
-                              ? "text-[#E5DEC9] dark:text-[#221F1C]"
-                              : "text-[#6e655a] dark:text-[#A89F91]"
-                          }`}
-                        >
+                        <p className="text-xs leading-relaxed text-[#4f4b40] dark:text-[#A89F91]">
                           Add dilemma constraints, attach specs, or record voice memos in one composer.
                         </p>
                       </button>
@@ -575,7 +605,7 @@ export default function DecisionDetailPage({
                       {/* Unified Notes, Docs & Voice Composer */}
                       {ingestionTab !== "meeting" && (
                         <div className="space-y-4 animate-in fade-in duration-150">
-                          <div className="bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md overflow-hidden">
+                          <div className="bg-[#EDE7D6]/80 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md overflow-hidden">
                             <textarea
                               value={description}
                               onChange={(e) => setDescription(e.target.value)}
@@ -737,6 +767,14 @@ export default function DecisionDetailPage({
                             </div>
                           )}
 
+                          {/* Always-visible RAG Grounding & Ask Documents Q&A inside Stage 1 */}
+                          <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]">
+                            <AskDocumentsPanel
+                              decisionId={decisionId}
+                              attachmentCount={attachments.length}
+                            />
+                          </div>
+
                           {/* Inline Voice Memo & Audio Upload Drawer (plus saved TranscriptEditor whenever transcript exists) */}
                           {(showAudioDrawer || ingestionTab === "voice" || Boolean(decision.transcript)) && (
                             <div className="space-y-4 font-courier">
@@ -803,14 +841,7 @@ export default function DecisionDetailPage({
                                   await updateDecision(decisionId, { description: updatedDesc });
                                 }
                                 await loadData(true);
-                                if (data && data.transcript && data.transcript.trim()) {
-                                  setWorkflowStage("structuring");
-                                  setStageManuallySelected(true);
-                                  setTimeout(() => {
-                                    const elem = document.getElementById("deep-audit-section");
-                                    if (elem) elem.scrollIntoView({ behavior: "smooth", block: "start" });
-                                  }, 150);
-                                }
+                                // Stay on Stage 1 until user is ready to advance to Stage 2
                               }}
                             />
                         </div>
@@ -825,9 +856,10 @@ export default function DecisionDetailPage({
                     </div>
                     <button
                       type="button"
-                      disabled={Boolean(pipelineLoadingMessage)}
+                      disabled={Boolean(pipelineLoadingMessage) || !isStage1Complete}
+                      title={!isStage1Complete ? "Add notes, attachments, or a meeting transcript in Stage 1 first" : undefined}
                       onClick={handleAdvanceToGaps}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-md border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-md border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                     >
                       {pipelineLoadingMessage ? (
                         <>

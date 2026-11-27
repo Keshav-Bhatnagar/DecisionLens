@@ -286,51 +286,18 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Action Button: Single Primary Action */}
-        <div className="p-3 border-b border-[#cfc7b2] dark:border-[#38332C] bg-[#E5DEC9] dark:bg-[#1C1917]">
-          {!isExpanded ? (
-            <button
-              type="button"
-              onClick={() => {
-                const count = decisions.length;
-                setNewDecisionTitle(`Decision ${count + 1}`);
-                setShowNewDecisionModal(true);
-              }}
-              className="w-10 h-10 rounded-sm bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] flex items-center justify-center transition-colors focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs mx-auto"
-              title="New Decision"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                const count = decisions.length;
-                setNewDecisionTitle(`Decision ${count + 1}`);
-                setShowNewDecisionModal(true);
-                closeMobile();
-              }}
-              className="w-full py-2.5 px-3 rounded-sm bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:hover:bg-[#E5BE64] dark:text-[#181614] border border-[#1d1d1b] dark:border-[#D4AA50] font-bold text-[15px] uppercase tracking-wider flex items-center justify-center gap-2 transition-colors focus:ring-2 focus:ring-[#443a30]/25 focus:outline-none shadow-xs"
-              title="Challenge a new decision"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>New Decision</span>
-            </button>
-          )}
-        </div>
-
         {/* Navigation Sections */}
         <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
           {/* Main Nav (All Decisions / Ledger / Portfolio) */}
-          <nav className="space-y-0.5">
+          <nav className="space-y-1">
             <Link
               href="/dashboard"
               onClick={closeMobile}
-              className={`flex items-center py-2 rounded-sm text-[15px] transition-colors ${
+              className={`flex items-center py-1.5 rounded-sm font-newsreader text-[15.5px] whitespace-nowrap transition-colors ${
                 !isExpanded ? "justify-center px-0" : "gap-2.5 px-2.5"
               } ${
                 pathname === "/dashboard"
-                  ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                  ? "text-[#7a4e10] dark:text-[#D4AA50] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
               }`}
               title="Workspaces Hub"
@@ -338,17 +305,17 @@ export default function Sidebar({
               <LayoutDashboard className={`w-4 h-4 shrink-0 ${
                 pathname === "/dashboard" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#4f4b40] dark:text-[#A89F91]"
               }`} />
-              {isExpanded && <span>Workspaces</span>}
+              {isExpanded && <span className="truncate">Workspaces</span>}
             </Link>
 
             <Link
               href="/portfolio"
               onClick={closeMobile}
-              className={`flex items-center py-2 rounded-sm text-[15px] transition-colors ${
+              className={`flex items-center py-1.5 rounded-sm font-newsreader text-[15.5px] whitespace-nowrap transition-colors ${
                 !isExpanded ? "justify-center px-0" : "gap-2.5 px-2.5"
               } ${
                 pathname === "/portfolio"
-                  ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                  ? "text-[#7a4e10] dark:text-[#D4AA50] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
               }`}
               title="Decision Portfolio (3D Constellation)"
@@ -356,17 +323,17 @@ export default function Sidebar({
               <Compass className={`w-4 h-4 shrink-0 ${
                 pathname === "/portfolio" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#4f4b40] dark:text-[#A89F91]"
               }`} />
-              {isExpanded && <span>Decision Portfolio</span>}
+              {isExpanded && <span className="truncate">Decision Portfolio</span>}
             </Link>
 
             <Link
               href="/profile"
               onClick={closeMobile}
-              className={`flex items-center py-2 rounded-sm text-[15px] transition-colors ${
+              className={`flex items-center py-1.5 rounded-sm font-newsreader text-[15.5px] whitespace-nowrap transition-colors ${
                 !isExpanded ? "justify-center px-0" : "gap-2.5 px-2.5"
               } ${
                 pathname === "/profile"
-                  ? "text-[#1d1d1b] dark:text-[#D4AA50] font-bold bg-[#cfc7b2]/60 dark:bg-[#D4AA50]/[0.15] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                  ? "text-[#7a4e10] dark:text-[#D4AA50] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
                   : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 dark:hover:bg-[#38332C]/40"
               }`}
               title="Executive Folio & System Calibration"
@@ -374,7 +341,7 @@ export default function Sidebar({
               <UserIcon className={`w-4 h-4 shrink-0 ${
                 pathname === "/profile" ? "text-[#7a4e10] dark:text-[#D4AA50]" : "text-[#4f4b40] dark:text-[#A89F91]"
               }`} />
-              {isExpanded && <span>Executive Folio</span>}
+              {isExpanded && <span className="truncate">Executive Folio</span>}
             </Link>
           </nav>
 
@@ -427,10 +394,10 @@ export default function Sidebar({
                         <Link
                           href={`/folders/${f.id}`}
                           onClick={closeMobile}
-                          className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-none text-[15px] transition-colors border-l-2 ${
+                          className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-none font-newsreader text-[15.5px] transition-colors border-l-2 ${
                             isActive
-                              ? "text-[#1d1d1b] dark:text-[#F0EAE1] font-bold bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/15 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
-                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/40 dark:hover:bg-[#38332C]/40 border-l-transparent"
+                              ? "text-[#7a4e10] dark:text-[#D4AA50] border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/25 dark:hover:bg-[#38332C]/40 border-l-transparent"
                           }`}
                         >
                           <div className="flex items-center gap-2 truncate min-w-0">
@@ -447,7 +414,7 @@ export default function Sidebar({
                             <span className="truncate">{f.name}</span>
                           </div>
                           {count > 0 && (
-                            <span className="font-courier text-[15px] text-[#7a4e10] dark:text-[#D4AA50] font-bold px-1 rounded-sm shrink-0">
+                            <span className="font-courier text-xs text-[#7a4e10] dark:text-[#D4AA50] font-medium px-1 rounded-sm shrink-0">
                               {count}
                             </span>
                           )}
@@ -471,8 +438,8 @@ export default function Sidebar({
                                     onClick={closeMobile}
                                     className={`group flex items-center justify-between gap-1.5 px-2 py-1 text-xs transition-colors rounded-none border-l-2 ${
                                       isItemActive
-                                        ? "font-bold text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#cfc7b2]/70 dark:bg-[#D4AA50]/20 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
-                                        : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/30 border-l-transparent"
+                                        ? "text-[#7a4e10] dark:text-[#D4AA50] border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                                        : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] hover:bg-[#cfc7b2]/25 border-l-transparent"
                                     }`}
                                     title={d.title}
                                   >

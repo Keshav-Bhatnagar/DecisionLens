@@ -61,6 +61,7 @@ def create_or_join_bot_session(
     language: str = "en",
     recording_enabled: bool = True,
     distraction_filtering: bool = True,
+    force_new: bool = False,
 ) -> GoogleMeetBotSession:
     """
     Initialize or retrieve an active bot session for Google Meet.
@@ -72,7 +73,7 @@ def create_or_join_bot_session(
             f"Invalid Google Meet URL '{meet_url}'. Expected format: https://meet.google.com/abc-defg-hij"
         )
 
-    # Check for existing active session for this decision and URL
+    # Check for existing active session for this decision
     stmt = (
         select(GoogleMeetBotSession)
         .where(
@@ -83,12 +84,16 @@ def create_or_join_bot_session(
     )
     existing = db.scalars(stmt).first()
     if existing:
-        existing.meet_url = normalized_url
-        existing.bot_name = bot_name or existing.bot_name
-        existing.language = language or existing.language
+        if not force_new and existing.meet_url == normalized_url:
+            existing.bot_name = bot_name or existing.bot_name
+            existing.language = language or existing.language
+            db.commit()
+            db.refresh(existing)
+            return existing
+        # Different Meet URL or explicit new session requested: cleanly close the previous active session
+        existing.status = "completed"
+        existing.ended_at = datetime.now(timezone.utc)
         db.commit()
-        db.refresh(existing)
-        return existing
 
     # Create new bot session
     token = secrets.token_urlsafe(16)
@@ -142,7 +147,8 @@ def ingest_speech_chunk(
     else:
         session.raw_transcript = line
 
-    session.status = "active"
+    if session.status not in ("completed", "failed"):
+        session.status = "active"
     db.commit()
     db.refresh(session)
     return session

@@ -479,7 +479,7 @@ export default function StructuredFindingsEditor({
   const currentSlide = slides[activeSlide];
 
   return (
-    <div className="bg-[#FCFBF8] dark:bg-[#181614] rounded-xl border border-[#D9D2C3] dark:border-[#38332C] p-6 sm:p-8 space-y-6 font-sans">
+    <div className="bg-[#F4F0E6] dark:bg-[#181614] rounded-xl border border-[#D9D2C3] dark:border-[#38332C] p-6 sm:p-8 space-y-6 font-sans">
       {/* Editorial Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-[#D9D2C3]/60 dark:border-[#38332C]">
         <div>
@@ -573,7 +573,7 @@ export default function StructuredFindingsEditor({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
               <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Problem Statement
               </span>
@@ -585,7 +585,7 @@ export default function StructuredFindingsEditor({
               </span>
             </div>
 
-            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
               <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Meeting Scribe &amp; Audio
               </span>
@@ -597,7 +597,7 @@ export default function StructuredFindingsEditor({
               </span>
             </div>
 
-            <div className="p-4 bg-[#FCFBF8] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
+            <div className="p-4 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#D9D2C3] dark:border-[#38332C] rounded-lg space-y-1">
               <span className="text-[15px] font-mono font-bold text-[#7a4e10] dark:text-[#D4AA50] uppercase tracking-wider block">
                 Document Dossier
               </span>
@@ -669,7 +669,7 @@ export default function StructuredFindingsEditor({
           </div>
 
           {/* Active Dimension Orbit Stage */}
-          <div className="rounded-xl border border-[#D9D2C3] dark:border-[#38332C] bg-[#FCFBF8] dark:bg-[#1A1815] p-5 sm:p-6 space-y-4">
+          <div className="rounded-xl border border-[#D9D2C3] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#1A1815] p-5 sm:p-6 space-y-4">
             {/* Header: Title & Stepper */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#D9D2C3]/60 dark:border-[#38332C]">
               <div>

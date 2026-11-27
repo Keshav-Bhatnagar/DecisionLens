@@ -52,14 +52,21 @@ engine_kwargs = {"echo": False}
 if is_sqlite:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
-    engine_kwargs["pool_size"] = 10
-    engine_kwargs["max_overflow"] = 20
+    engine_kwargs["pool_size"] = 15
+    engine_kwargs["max_overflow"] = 30
+    engine_kwargs["pool_timeout"] = 15
     engine_kwargs["pool_recycle"] = 300
-    engine_kwargs["pool_pre_ping"] = False  # Avoid 450ms WAN roundtrip ping on every request
+    engine_kwargs["pool_pre_ping"] = True  # Auto-recover dropped Supabase PgBouncer SSL connections
     if db_url.startswith("postgresql+psycopg://"):
         # Disable server-side prepared statements in psycopg3 so PgBouncer / Supabase
         # transaction poolers (:6543) never hit DuplicatePreparedStatement (_pg3_0).
-        engine_kwargs["connect_args"] = {"prepare_threshold": None}
+        engine_kwargs["connect_args"] = {
+            "prepare_threshold": None,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5,
+        }
 
 engine = create_engine(db_url, **engine_kwargs)
 
@@ -98,6 +105,17 @@ def init_db() -> None:
     import app.models  # noqa: F401 - ensure models are registered on Base.metadata
 
     try:
+        if not is_sqlite:
+            # Fast-path for remote Postgres/Supabase: skip 15+ create_all roundtrips when schema already exists
+            schema_ready = False
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1 FROM bot_jobs LIMIT 1"))
+                    schema_ready = True
+            except Exception:
+                schema_ready = False
+            if schema_ready:
+                return
         Base.metadata.create_all(bind=engine)
     except Exception as exc:
         logger.error(f"Failed to connect to primary database ({exc}). Falling back to local SQLite.")

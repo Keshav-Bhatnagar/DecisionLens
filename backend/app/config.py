@@ -41,10 +41,10 @@ class Settings(BaseSettings):
     ai_provider: str = "auto"  # auto, azure, gemini, openai, or mock
     gemini_api_key: str = ""
     google_api_key: str = ""
-    gemini_model: str = "gemini-3.5-flash-lite"
-    gemini_structuring_model: str = "gemini-3.5-flash-lite"
+    gemini_model: str = "gemini-3-flash-preview"
+    gemini_structuring_model: str = "gemini-3-flash-preview"
     gemini_gaps_model: str = "gemini-3.5-flash-lite"
-    gemini_framework_model: str = "gemini-3.5-flash-lite"
+    gemini_framework_model: str = "gemini-3-flash-preview"
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"

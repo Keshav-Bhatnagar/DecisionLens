@@ -16,6 +16,8 @@ import {
   getActiveRoadmap,
   updateActiveRoadmap,
   recordDecisionOverride,
+  fetchLiveCostReceipt,
+  LiveCostReceiptResponse,
 } from "@/lib/api";
 import {
   AlertTriangle,
@@ -363,6 +365,28 @@ export default function SynthesisPanel({
       phases: updatedPhases,
     });
   }
+
+  // Smart Stage-Connected AI Decision Ledger & Interactive Calibrator
+  const [liveReceipt, setLiveReceipt] = useState<LiveCostReceiptResponse | null>(null);
+  const [loadingLiveReceipt, setLoadingLiveReceipt] = useState(false);
+  const [calValues, setCalValues] = useState<Record<string, number>>({});
+
+  const handleFetchLiveReceipt = async () => {
+    setLoadingLiveReceipt(true);
+    try {
+      const data = await fetchLiveCostReceipt(decisionId);
+      setLiveReceipt(data);
+      const initialVals: Record<string, number> = {};
+      (data.calibrator_controls || []).forEach((ctrl) => {
+        initialVals[ctrl.key] = ctrl.value;
+      });
+      setCalValues(initialVals);
+    } catch (err) {
+      console.warn("Could not fetch smart stage-connected ledger:", err);
+    } finally {
+      setLoadingLiveReceipt(false);
+    }
+  };
 
   async function handleSaveRoadmap() {
     if (!activeRoadmap || viewingSnapshot) return;
@@ -1068,460 +1092,277 @@ jobs:
           )}
 
           {/* ========================================================================= */}
-          {/* 1. EXECUTIVE VERDICT & BOARDROOM ADR HEADER (Hero Card)                   */}
+          {/* 1. STITCH TWO-COLUMN STUDIO: LEFT = REAL RECEIPT + CALIBRATOR | RIGHT = VERDICT & KNOWLEDGE */}
           {/* ========================================================================= */}
-          <div className="bg-paper-surface border border-border rounded-md p-6 sm:p-7 space-y-5 shadow-2xs">
-            {/* Top Meta Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-md text-[15px] font-mono uppercase bg-paper-sidebar text-ink border border-border font-bold">
-                  {displaySynthesis.domain} DOMAIN
-                </span>
-                <span
-                  className={`px-2.5 py-0.5 rounded-md text-[15px] font-mono uppercase font-bold border ${
-                    isConditional
-                      ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700"
-                      : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
-                  }`}
-                >
-                  {isConditional ? "Conditional Pre-Commitment" : "Conclusive Recommendation"}
-                </span>
-                <span className="font-mono text-xs text-muted">
-                  Version {displaySynthesis.version} • {new Date(displaySynthesis.created_at).toLocaleDateString()}
-                </span>
-              </div>
-
-              {displaySynthesis.canonical_result && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-muted uppercase">Gauntlet Score:</span>
-                  <span className="font-mono text-sm font-bold text-accent bg-paper-sidebar px-2 py-0.5 rounded border border-border">
-                    {displaySynthesis.canonical_result.winner_score.toFixed(1)} / 10
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* LEFT DIV: Adaptable Cross-Stage AI Ledger & Interactive Calibrator */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="lg:col-span-5 bg-[#F4F0E6] dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-5 space-y-4 shadow-xs font-courier"
+            >
+              {/* Ledger Header */}
+              <div className="border-b border-dashed border-[#cfc7b2] dark:border-[#38332C] pb-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50] truncate">
+                    {liveReceipt?.ledger_title || "CROSS-STAGE DECISION LEDGER"}
+                  </span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#4f4b40] dark:text-[#A89F91] shrink-0">
+                    {liveReceipt?.as_of_date || new Date().toISOString().split("T")[0]}
                   </span>
                 </div>
-              )}
-            </div>
 
-            {/* Headline & Recommendation Body */}
-            {!hasOnlyPlaceholderOptions && (
-            <div>
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent block mb-1">
-                EXECUTIVE VERDICT & DIRECTIVE
-              </span>
-              <h3 className="font-newsreader text-2xl sm:text-3xl font-normal text-ink leading-tight mb-3">
-                {displaySynthesis.headline}
-              </h3>
-              <p className="text-sm text-ink leading-relaxed font-sans whitespace-pre-line">
-                {displaySynthesis.recommendation_text}
-              </p>
-            </div>
-            )}
+                {/* Stage 1 -> Stage 2 -> Stage 3 Connection Strip */}
+                {liveReceipt?.stage_connection && (
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[#4f4b40] dark:text-[#A89F91]">
+                    <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C]">
+                      S1: {liveReceipt.stage_connection.stage1_sources.join(" + ")}
+                    </span>
+                    <span>→</span>
+                    <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C]">
+                      S2: {liveReceipt.stage_connection.stage2_facts_count} facts · {liveReceipt.stage_connection.stage2_open_gaps} open gaps
+                    </span>
+                    <span>→</span>
+                    <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C] font-bold text-[#7a4e10] dark:text-[#D4AA50]">
+                      S3: {liveReceipt.stage_connection.stage3_winner || "Verdict"}
+                    </span>
+                  </div>
+                )}
 
-            {/* ========================================================================= */}
-            {/* 1.5. CAPITAL AT RISK & BLUNDER SHIELD (Munshi Procurement & ROI Proof)   */}
-            {/* ========================================================================= */}
-            {displaySynthesis.blunder_shield && (
-            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-5 space-y-3.5 transition-all">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                    {isPersonalDomain ? "Financial Risk & Commitment Shield" : "Executive ROI & Sunk-Cost Shield"}
+                <div className="flex items-center justify-between gap-2 text-[11px] text-[#6e655a] dark:text-[#A89F91]">
+                  <span className="truncate">
+                    {liveReceipt?.pricing_source || "Connect Stage 1–3 & Live Market"}
                   </span>
-                  {isCalibrated && !isPersonalDomain && (
-                    <span className="text-[14px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border border-emerald-500/40 font-bold animate-pulse">
-                      Live Calibrated
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
-                  {!isPersonalDomain ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[15px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
-                          isCalibratorOpen || isCalibrated
-                            ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
-                            : "border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200"
-                        }`}
-                        title="Calibrate headcount, geography rate card, and cloud scale tier"
-                      >
-                        <span>{isCalibratorOpen ? "Hide Calibrator" : "Calibrate FinOps Assumptions"}</span>
-                      </button>
-                      <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                        Procurement ROI: Verified 10x+
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-[14px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                      Personal Risk Shield: Verified
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Collapsible FinOps Assumptions Calibrator Drawer */}
-              {!isPersonalDomain && isCalibratorOpen && (
-                <div className="p-4 rounded-xl bg-paper-surface border border-emerald-500/30 space-y-4 animate-in fade-in duration-150">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-ink">
-                          FinOps Baseline Calibrator
-                        </h4>
-                      </div>
-                      <p className="text-[15px] text-muted font-sans mt-0.5">
-                        Fine-tune capital risk assumptions according to your actual squad size, market salary rates, and cloud scale.
-                      </p>
-                    </div>
-                    {isCalibrated && (
-                      <button
-                        type="button"
-                        onClick={handleResetCalibrator}
-                        className="inline-flex items-center gap-1 text-[15px] font-mono font-semibold text-muted hover:text-ink px-2 py-1 rounded border border-border hover:bg-paper-sidebar transition-colors cursor-pointer self-start sm:self-auto"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>Reset to AI Baseline</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    {/* Control 1: Team Headcount Slider */}
-                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-ink flex items-center gap-1.5">
-                          <span>Squad Headcount</span>
-                        </span>
-                        <span className="px-2 py-0.5 rounded bg-paper-surface border border-border font-bold text-accent text-xs">
-                          {customTeamSize} Engineers
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min={2}
-                        max={25}
-                        step={1}
-                        value={customTeamSize}
-                        onChange={(e) => setCustomTeamSize(parseInt(e.target.value, 10))}
-                        className="w-full h-1.5 bg-border rounded-lg appearance-none cursor-pointer accent-accent"
-                      />
-                      <div className="flex justify-between text-[14px] font-mono text-muted">
-                        <span>2 (Lean Pod)</span>
-                        <span className={customTeamSize === 5 ? "font-bold text-accent" : ""}>5 (AI Base)</span>
-                        <span>12 (Squad)</span>
-                        <span>25 (Org)</span>
-                      </div>
-                      <p className="text-[14px] text-muted">
-                        Scales developer payroll, platform SRE toil, and transition burn.
-                      </p>
-                    </div>
-
-                    {/* Control 2: Geography Rate Card */}
-                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-ink flex items-center gap-1.5">
-                          <span>Market Rate Card</span>
-                        </span>
-                        <span className="text-[14px] text-muted font-bold">
-                          {GEO_RATES[selectedGeoRate].multiplier}x
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {(Object.keys(GEO_RATES) as GeoKey[]).map((geoKey) => (
-                          <button
-                            key={geoKey}
-                            type="button"
-                            onClick={() => setSelectedGeoRate(geoKey)}
-                            className={`p-1.5 rounded text-left border transition-all cursor-pointer ${
-                              selectedGeoRate === geoKey
-                                ? "bg-accent/15 border-accent text-accent font-bold"
-                                : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
-                            }`}
-                          >
-                            <div className="text-[15px] leading-tight truncate">{GEO_RATES[geoKey].label}</div>
-                            <div className="text-[15px] font-mono opacity-80 truncate">{GEO_RATES[geoKey].rateStr}</div>
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-[14px] text-muted">
-                        Adjusts compensation rates across international engineering hubs.
-                      </p>
-                    </div>
-
-                    {/* Control 3: Cloud Scale Tier */}
-                    <div className="space-y-2 p-3 rounded-lg bg-paper-sidebar border border-border/70">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-ink flex items-center gap-1.5">
-                          <Server className="w-3.5 h-3.5 text-accent" />
-                          <span>Cloud Scale Tier</span>
-                        </span>
-                        <span className="text-[14px] text-muted font-bold">
-                          {SCALE_TIERS[selectedScaleTier].multiplier}x
-                        </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {(Object.keys(SCALE_TIERS) as ScaleKey[]).map((tierKey) => (
-                          <button
-                            key={tierKey}
-                            type="button"
-                            onClick={() => setSelectedScaleTier(tierKey)}
-                            className={`w-full p-1.5 rounded flex items-center justify-between text-left border transition-all cursor-pointer ${
-                              selectedScaleTier === tierKey
-                                ? "bg-accent/15 border-accent text-accent font-bold"
-                                : "bg-paper-surface border-border/60 text-muted hover:text-ink hover:bg-paper-surface/80"
-                            }`}
-                          >
-                            <span className="text-[15px]">{SCALE_TIERS[tierKey].label}</span>
-                            <span className="text-[15px] font-mono opacity-80">{SCALE_TIERS[tierKey].desc}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-[14px] text-muted">
-                        Scales multi-AZ node commitments, ingress egress, and managed broker floors.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Summary Footer */}
-                  <div className="pt-2 border-t border-border/60 flex flex-wrap items-center justify-between gap-2 text-[15px] font-mono text-muted">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-ink">Active Multipliers:</span>
-                      <span>Headcount: {(customTeamSize / 5).toFixed(2)}x</span>
-                      <span>•</span>
-                      <span>Rate Card: {GEO_RATES[selectedGeoRate].multiplier}x</span>
-                      <span>•</span>
-                      <span>Infrastructure: {SCALE_TIERS[selectedScaleTier].multiplier}x</span>
-                    </div>
-                    {isCalibrated && (
-                      <span className="text-emerald-700 dark:text-emerald-300 font-bold">
-                        ✓ Calibrated values applied across headline and itemized voucher
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                {/* Metric 1: Capital at Risk Prevented */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[14px] font-mono uppercase text-muted font-bold block">
-                      {isPersonalDomain ? "Financial Risk / Expense Avoided" : "Capital at Risk Prevented"}
-                    </span>
-                    {isCalibrated && !isPersonalDomain && (
-                      <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                        Calibrated
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-newsreader text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                    {calibratedBlunderShield?.capital_at_risk_saved || displaySynthesis.blunder_shield?.capital_at_risk_saved || (
-                      isPersonalDomain
-                        ? "₹25,000 – ₹75,000"
-                        : displaySynthesis.domain === "REAL_ESTATE"
-                        ? "₹1.50 Cr – ₹2.80 Cr"
-                        : displaySynthesis.domain === "FINANCE"
-                        ? "₹85 Lakh – ₹1.40 Cr"
-                        : "₹45 Lakh – ₹65 Lakh"
-                    )}
-                  </div>
-                  <p className="text-[15px] text-muted leading-tight">
-                    {calibratedBlunderShield?.risk_reduction_rationale || displaySynthesis.blunder_shield?.risk_reduction_rationale || (
-                      isPersonalDomain
-                        ? "Avoided non-cancellable reservations, unforeseen surge tariffs, and schedule disruption."
-                        : "Avoided unbudgeted rewrite toil, licensing traps, and premature infrastructure commitments."
-                    )}
-                  </p>
-                </div>
-
-                {/* Metric 2: Sprint Velocity Saved */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[14px] font-mono uppercase text-muted font-bold block">
-                      {isPersonalDomain ? "Planning & Preparation Horizon" : "Engineering Velocity Saved"}
-                    </span>
-                    {isCalibrated && !isPersonalDomain && (
-                      <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                        Calibrated
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-newsreader text-2xl font-bold text-ink">
-                    {calibratedBlunderShield?.developer_sprints_saved || displaySynthesis.blunder_shield?.developer_sprints_saved || (
-                      isPersonalDomain ? "3–5 Days Planning" : "6 Sprints (12 Wks)"
-                    )}
-                  </div>
-                  <p className="text-[15px] text-muted leading-tight">
-                    {isPersonalDomain
-                      ? "Structured calendar planning prevents last-minute scramble, itinerary clash, and booking overlaps."
-                      : isCalibrated
-                      ? `Calibrated for ${customTeamSize} engineers. Prevents dead-end prototyping sprints and on-call operational drag.`
-                      : "Prevented dead-end prototype iterations and on-call operational drag before validation."}
-                  </p>
-                </div>
-
-                {/* Metric 3: Fatal Sunk-Cost Trap Neutralized */}
-                <div className="p-3.5 rounded-lg bg-paper-surface border border-emerald-500/20 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[14px] font-mono uppercase text-muted font-bold block">
-                      {isPersonalDomain ? "Primary Risk Mitigated" : "Fatal Sunk-Cost Trap Blocked"}
-                    </span>
-                    {isCalibrated && !isPersonalDomain && (
-                      <span className="text-[15px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                        Mitigated
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs font-bold text-ink truncate">
-                    {calibratedBlunderShield?.prevented_fatal_trap || displaySynthesis.blunder_shield?.prevented_fatal_trap || (
-                      isPersonalDomain ? "Non-Refundable Booking Lock-in" : (displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.name || "Premature Complexity")
-                    )}
-                  </div>
-                  <p className="text-[15px] text-muted line-clamp-2 leading-tight">
-                    {isPersonalDomain
-                      ? (displaySynthesis.blunder_shield?.risk_reduction_rationale || "Prevented non-refundable upfront commitment prior to firm schedule clearance.")
-                      : isCalibrated
-                      ? `Deprioritized to eliminate ${SCALE_TIERS[selectedScaleTier].label} infrastructure tax and ${GEO_RATES[selectedGeoRate].label} hiring overhead.`
-                      : (displaySynthesis.blunder_shield?.risk_reduction_rationale || displaySynthesis.alternatives_considered.find(a => !a.is_recommended)?.why_not_recommended || "Deprioritized due to operational friction, high maintenance drag, and criteria misalignment.")}
-                  </p>
-                </div>
-              </div>
-
-              {/* Receipt Toggle & Expanded Voucher */}
-              {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt) && (
-                <div className="pt-2 border-t border-emerald-500/20">
                   <button
                     type="button"
-                    onClick={() => setShowReceipt(!showReceipt)}
-                    className="flex items-center justify-between w-full text-left text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-emerald-100 transition-colors py-1 cursor-pointer"
+                    onClick={handleFetchLiveReceipt}
+                    disabled={loadingLiveReceipt}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:text-[#181614] text-[#F4F0E6] font-semibold text-[11px] transition-colors cursor-pointer disabled:opacity-50 shrink-0"
                   >
-                    <span className="flex items-center gap-1.5">
-                      <span>
-                        {showReceipt
-                          ? "Hide Itemized Breakdown"
-                          : isPersonalDomain
-                          ? "Inspect Itemized Travel / Risk Ledger"
-                          : "Inspect Itemized Sunk-Cost Receipt (Munshi Audit Ledger)"}
-                      </span>
-                      <span className="text-[14px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                        {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.receipt_id}
-                      </span>
-                      {isCalibrated && !isPersonalDomain && (
-                        <span className="text-[15px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">
-                          Custom Calibrated
-                        </span>
-                      )}
-                    </span>
-                    {showReceipt ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <RotateCcw className={`w-3 h-3 ${loadingLiveReceipt ? "animate-spin" : ""}`} />
+                    <span>{loadingLiveReceipt ? "Syncing..." : liveReceipt ? "Refresh Ledger" : "Build Smart Ledger"}</span>
                   </button>
+                </div>
+              </div>
 
-                  {showReceipt && (
-                    <div className="mt-3 p-4 rounded-lg bg-paper-surface border border-emerald-500/30 font-mono text-xs space-y-3 shadow-inner">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border/60 pb-2 text-[15px] text-muted">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div>
-                            <span className="font-bold text-ink">ARCHETYPE:</span>{" "}
-                            <span className="px-1.5 py-0.5 rounded bg-muted/10 text-ink font-semibold">
-                              {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.decision_type}
+              {/* Adaptable Itemized Rows (Decision-Specific, Connected to Stages 1-3) */}
+              <div className="space-y-2.5 text-xs">
+                <div className="grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-[#97907e] border-b border-[#cfc7b2]/60 dark:border-[#38332C] pb-1">
+                  <span className="col-span-6">Factor / Option</span>
+                  <span className="col-span-2 text-center">Stage</span>
+                  <span className="col-span-4 text-right">Grounded Value</span>
+                </div>
+
+                {liveReceipt && liveReceipt.items.length > 0 ? (
+                  liveReceipt.items.map((item, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="grid grid-cols-12 items-start gap-1.5 py-1.5 border-b border-dashed border-[#cfc7b2]/60 dark:border-[#38332C]/70"
+                    >
+                      <div className="col-span-6 min-w-0">
+                        <div className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">{item.item_name}</div>
+                        <div className="text-[10px] text-[#6e655a] dark:text-[#A89F91]">{item.category}</div>
+                      </div>
+                      <div className="col-span-2 text-center">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91]">
+                          {item.source_stage}
+                        </span>
+                      </div>
+                      <div
+                        className={`col-span-4 text-right font-bold leading-snug ${
+                          item.status === "gap_pending"
+                            ? "text-amber-700 dark:text-amber-400"
+                            : item.status === "verified"
+                            ? "text-emerald-700 dark:text-emerald-400"
+                            : "text-[#1d1d1b] dark:text-[#F0EAE1]"
+                        }`}
+                      >
+                        {item.value_display}
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="py-3 px-3 rounded-md bg-[#EDE7D6]/60 dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
+                    Click <strong>Build Smart Ledger</strong> to connect Stage 1 inputs, Stage 2 facts &amp; gaps, and Stage 3 MAUT scores into a custom ledger for <strong>{displaySynthesis.domain}</strong>.
+                  </div>
+                )}
+
+                {/* Dynamic Summary Row */}
+                {liveReceipt && (
+                  <div className="pt-2 border-t-2 border-dashed border-[#7a4e10]/40 dark:border-[#D4AA50]/40 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+                      {liveReceipt.summary_label}
+                    </span>
+                    <span className="font-newsreader text-lg font-bold text-emerald-700 dark:text-emerald-400 text-right">
+                      {liveReceipt.summary_value}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* AI-Generated Decision-Specific Interactive Calibrator */}
+              {liveReceipt?.calibrator_controls && liveReceipt.calibrator_controls.length > 0 && (
+                <div className="pt-3 border-t border-[#cfc7b2] dark:border-[#38332C] space-y-2.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
+                    Decision-Specific Calibrator
+                  </span>
+                  <div className="space-y-2.5">
+                    {liveReceipt.calibrator_controls.map((ctrl) => {
+                      const currentVal = calValues[ctrl.key] ?? ctrl.value;
+                      return (
+                        <div key={ctrl.key} className="space-y-1 text-[11px]">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#4f4b40] dark:text-[#A89F91] font-semibold">{ctrl.label}</span>
+                            <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                              {currentVal.toLocaleString()} {ctrl.unit}
                             </span>
                           </div>
-                          {isCalibrated && (
-                            <span className="text-[14px] text-emerald-700 dark:text-emerald-300 font-bold">
-                              [{customTeamSize} Devs • {GEO_RATES[selectedGeoRate].label} • {SCALE_TIERS[selectedScaleTier].label}]
-                            </span>
-                          )}
+                          <input
+                            type="range"
+                            min={ctrl.min}
+                            max={ctrl.max}
+                            step={ctrl.step || 1}
+                            value={currentVal}
+                            onChange={(e) =>
+                              setCalValues((prev) => ({
+                                ...prev,
+                                [ctrl.key]: parseFloat(e.target.value),
+                              }))
+                            }
+                            className="w-full h-1.5 bg-[#cfc7b2] dark:bg-[#38332C] rounded-lg appearance-none cursor-pointer accent-[#7a4e10] dark:accent-[#D4AA50]"
+                          />
                         </div>
-                        <div className="text-[14px]">
-                          STANDARD: {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.audit_standard || "Munshi FinOps Matrix v2.1"}
-                        </div>
-                      </div>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-[15px] divide-y divide-border/60">
-                          <thead>
-                            <tr className="text-[14px] uppercase text-muted font-bold">
-                              <th className="py-1.5 pr-2">Cost Vector</th>
-                              <th className="py-1.5 px-2">Category</th>
-                              <th className="py-1.5 px-2">Unit / Basis</th>
-                              <th className="py-1.5 pl-2 text-right">Protected (INR)</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y border-border/40">
-                            {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.line_items.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-emerald-500/5 transition-colors">
-                                <td className="py-2 pr-2">
-                                  <div className="font-bold text-ink">{item.item_name}</div>
-                                  <div className="text-[14px] text-muted font-sans line-clamp-1">{item.rationale}</div>
-                                </td>
-                                <td className="py-2 px-2 text-[14px] text-muted whitespace-nowrap">
-                                  <span className="px-1.5 py-0.5 rounded bg-paper-surface border border-border text-[15px]">
-                                    {item.category}
-                                  </span>
-                                </td>
-                                <td className="py-2 px-2 text-[14px] text-muted">{item.unit_basis}</td>
-                                <td className="py-2 pl-2 text-right font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                                  {item.amount_inr}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr className="border-t-2 border-emerald-500/40 font-bold">
-                              <td colSpan={3} className="py-2 text-ink uppercase text-[14px]">
-                                Total Capital at Risk Neutralized {isCalibrated ? "(Calibrated)" : ""}:
-                              </td>
-                              <td className="py-2 text-right font-bold text-sm text-emerald-700 dark:text-emerald-400">
-                                {(calibratedBlunderShield?.receipt || displaySynthesis.blunder_shield?.receipt)?.total_capital_at_risk}
-                              </td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
-            </div>
-            )}
 
-            {/* ========================================================================= */}
-            {/* 2. MANDATORY DUE DILIGENCE CLEARANCE SPIKES (The Kisan Gate)              */}
-            {/* ========================================================================= */}
-            {/* Mandatory Pre-Commitment Gated Spikes */}
-            {!hasOnlyPlaceholderOptions && displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
-              <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/60 space-y-3">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-950 dark:text-amber-200">
-                    Mandatory Pre-Commitment Due Diligence Spikes (Clear Before Merging)
-                  </h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {displaySynthesis.conditional_triggers.map((trigger, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 bg-paper-surface border border-amber-200 dark:border-amber-800/80 rounded-lg text-xs text-amber-950 dark:text-amber-200 flex items-start gap-2.5"
+              {liveReceipt?.sources && liveReceipt.sources.length > 0 && (
+                <div className="pt-1 flex flex-wrap gap-1.5 text-[10px] text-[#6e655a] dark:text-[#A89F91]">
+                  <span>Sources:</span>
+                  {liveReceipt.sources.map((src, i) => (
+                    <a
+                      key={i}
+                      href={src}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline hover:text-[#7a4e10] dark:hover:text-[#D4AA50] truncate max-w-[140px]"
                     >
-                      <span className="font-mono text-amber-800 dark:text-amber-400 font-bold shrink-0 mt-0.5">
-                        SPIKE 0{idx + 1}
-                      </span>
-                      <span className="leading-snug">{trigger}</span>
-                    </div>
+                      {src.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}
+                    </a>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </motion.div>
 
-            {/* Guardrail Banner when Stage 1 inputs have no real competing options */}
-            {hasOnlyPlaceholderOptions && (
-              <div className="p-4 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200 space-y-1">
-                <p className="font-mono font-bold uppercase tracking-wider">
-                  No Competing Decision Options Detected
-                </p>
-                <p className="leading-relaxed">
-                  Your Stage 1 transcript or notes did not present concrete competing options or trade-offs to compare. Synthetic alternative objections and placeholder roadmap tasks have been hidden. Add explicit options and constraints in Stage 1, then click <strong>Re-Synthesize Memo</strong>.
-                </p>
+            {/* RIGHT DIV: Executive Verdict & Additional Knowledge (Only Shown When Present) */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.08 }}
+              className="lg:col-span-7 bg-paper-surface border border-border rounded-md p-6 space-y-5 shadow-2xs"
+            >
+              {/* Top Meta Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-md text-[13px] font-mono uppercase bg-paper-sidebar text-ink border border-border font-bold">
+                    {displaySynthesis.domain} DOMAIN
+                  </span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-md text-[13px] font-mono uppercase font-bold border ${
+                      isConditional
+                        ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                        : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
+                    }`}
+                  >
+                    {isConditional ? "Conditional Pre-Commitment" : "Conclusive Recommendation"}
+                  </span>
+                  <span className="font-mono text-xs text-muted">
+                    v{displaySynthesis.version} · {new Date(displaySynthesis.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {displaySynthesis.canonical_result && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-muted uppercase">Score:</span>
+                    <span className="font-mono text-sm font-bold text-accent bg-paper-sidebar px-2 py-0.5 rounded-md border border-border">
+                      {displaySynthesis.canonical_result.winner_score.toFixed(1)} / 10
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Headline & Recommendation Body */}
+              {!hasOnlyPlaceholderOptions && (
+                <div>
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent block mb-1">
+                    EXECUTIVE VERDICT & DIRECTIVE
+                  </span>
+                  <h3 className="font-newsreader text-2xl sm:text-3xl font-normal text-ink leading-tight mb-3">
+                    {displaySynthesis.headline}
+                  </h3>
+                  <p className="text-sm text-ink leading-relaxed font-sans whitespace-pre-line">
+                    {displaySynthesis.recommendation_text}
+                  </p>
+                </div>
+              )}
+
+              {/* Additional Knowledge: Mandatory Pre-Commitment Spikes */}
+              {!hasOnlyPlaceholderOptions && displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
+                <div className="p-4 rounded-md bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/60 space-y-2.5">
+                  <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-950 dark:text-amber-200">
+                    Mandatory Pre-Commitment Spikes (Clear Before Committing)
+                  </h4>
+                  <div className="space-y-2">
+                    {displaySynthesis.conditional_triggers.map((trigger, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + idx * 0.05 }}
+                        className="p-2.5 bg-paper-surface border border-amber-200 dark:border-amber-800/80 rounded-md text-xs text-amber-950 dark:text-amber-200 flex items-start gap-2.5 transition-all duration-200 hover:-translate-y-0.5"
+                      >
+                        <span className="font-mono text-amber-800 dark:text-amber-400 font-bold shrink-0 mt-0.5">
+                          SPIKE 0{idx + 1}
+                        </span>
+                        <span className="leading-snug">{trigger}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Knowledge: Confidence Limitations (Only when present) */}
+              {displaySynthesis.confidence_assessment?.limitations &&
+                displaySynthesis.confidence_assessment.limitations.length > 0 && (
+                  <div className="p-4 rounded-md bg-paper-sidebar border border-border space-y-2">
+                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-muted block">
+                      Additional Knowledge & Blindspots
+                    </span>
+                    <ul className="list-disc pl-4 space-y-1 text-xs text-ink-secondary">
+                      {displaySynthesis.confidence_assessment.limitations.slice(0, 4).map((lim, idx) => (
+                        <li key={idx}>{lim}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+              {hasOnlyPlaceholderOptions && (
+                <div className="p-4 rounded-md bg-amber-50/80 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200 space-y-1">
+                  <p className="font-mono font-bold uppercase tracking-wider">
+                    No Competing Decision Options Detected
+                  </p>
+                  <p className="leading-relaxed">
+                    Add explicit options and constraints in Stage 1, then click <strong>Re-Synthesize Memo</strong>.
+                  </p>
+                </div>
+              )}
+
 
             {/* Sovereign Executive Override Banner */}
             {displaySynthesis.override ? (
@@ -1567,12 +1408,13 @@ jobs:
                 )}
               </div>
             )}
+            </motion.div>
           </div>
 
           {/* ========================================================================= */}
           {/* EXECUTIVE DOSSIER TABS (Eliminates Lengthy Scrolling & Cognitive Overload) */}
           {/* ========================================================================= */}
-          <div className="sticky top-[100px] z-10 bg-[#F4F0E6]/95 dark:bg-[#181614]/95 backdrop-blur-md py-2.5 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-center justify-between gap-3 font-courier">
+          <div className="sticky top-[98px] z-20 bg-[#F4F0E6] dark:bg-[#181614] py-2.5 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-center justify-between gap-3 font-courier">
             <div className="inline-flex items-center p-1 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md gap-1 overflow-x-auto max-w-full">
               <button
                 type="button"
@@ -2147,6 +1989,11 @@ jobs:
               canonicalWinner={displaySynthesis.canonical_result?.winner_option_name}
             />
           )}
+
+          {/* AI Advisory & Limitation of Liability Disclaimer */}
+          <div className="pt-3 border-t border-border/70 text-xs font-courier text-muted leading-relaxed">
+            <strong>Advisory Notice:</strong> DecisionLens outputs are AI-assisted decision-support analyses grounded in your provided meeting takeaways and documents. Final architectural, financial, legal, and production commitments remain the sole responsibility of your engineering and leadership teams.
+          </div>
         </div>
       ) : (
         /* Empty State */

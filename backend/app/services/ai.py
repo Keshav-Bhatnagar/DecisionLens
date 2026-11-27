@@ -8,6 +8,7 @@ import httpx
 from fastapi import HTTPException, status
 from app.config import settings
 from app.schemas import GroundedCognitiveItem, PrivateTranscriptFeedback, StructuredFindings
+from app.services.pii_redactor import redact_pii
 
 logger = logging.getLogger("decisionlens.ai")
 
@@ -1154,6 +1155,7 @@ def validate_and_sanitize_grounded_findings(findings: StructuredFindings, raw_in
 def call_gemini_direct_rest(model: str, system_prompt: str, user_prompt: str, api_key: str, temperature: float = 0.0) -> str:
     """Direct REST caller for Google Gemini using the native generateContent API with transient error retry."""
     import time
+    safe_user_prompt = redact_pii(user_prompt)
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     headers = {
         "x-goog-api-key": api_key,
@@ -1163,7 +1165,7 @@ def call_gemini_direct_rest(model: str, system_prompt: str, user_prompt: str, ap
         "contents": [
             {
                 "role": "user",
-                "parts": [{"text": user_prompt}],
+                "parts": [{"text": safe_user_prompt}],
             }
         ],
         "systemInstruction": {
@@ -1306,7 +1308,8 @@ class AIService:
             mock_findings = generate_mock_structuring_findings(raw_text, language)
             return validate_and_sanitize_grounded_findings(mock_findings, raw_text)
 
-        fenced_input = f"<UNTRUSTED_USER_INPUT>\n{raw_text}\n</UNTRUSTED_USER_INPUT>"
+        safe_raw_text = redact_pii(raw_text)
+        fenced_input = f"<UNTRUSTED_USER_INPUT>\n{safe_raw_text}\n</UNTRUSTED_USER_INPUT>"
         user_prompt = (
             f"Analyze and structure the following untrusted input into DecisionLens's 4 Grounded Dimensions (Ground Truth, Working Assumptions, Decision Traps & Blindspots, Meeting Caveats & Friction) "
             f"and provide private feedback with strict source grounding. Target language context: {language}.\n\n{fenced_input}"

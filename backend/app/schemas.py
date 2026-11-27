@@ -1377,6 +1377,7 @@ class GoogleMeetJoinRequest(BaseModel):
     language: Optional[str] = Field("en", description="Spoken meeting language (en/hi)")
     recording_enabled: Optional[bool] = Field(True, description="Enable recording / audio capture")
     distraction_filtering: Optional[bool] = Field(True, description="Filter tangents and chit-chat")
+    force_new: Optional[bool] = Field(False, description="Close any prior active session and start a fresh meeting session")
 
 
 class GoogleMeetSpeechStreamRequest(BaseModel):
@@ -1429,6 +1430,8 @@ class GoogleMeetBotSessionResponse(BaseModel):
     private_message_count: int = 0
     runner_note: Optional[str] = None
     audio_chunks_received: int = 0
+    pending_chunks: int = 0
+    buffered_seconds: int = 0
     created_at: datetime
     updated_at: datetime
 

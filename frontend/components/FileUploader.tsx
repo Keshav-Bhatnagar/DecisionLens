@@ -262,7 +262,7 @@ export default function FileUploader({ decisionId, onUploadSuccess }: FileUpload
         className={`relative border-2 border-dashed p-8 sm:p-10 text-center cursor-pointer transition-all duration-150 rounded-none ${
           isDragging
             ? "border-[#7a4e10] dark:border-[#D4AA50] bg-[#efe8d8] dark:bg-[#28221a] scale-[1.005]"
-            : "border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] bg-[#F4F0E6] dark:bg-[#181614]"
+            : "border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] dark:hover:border-[#D4AA50] bg-[#EDE7D6]/70 dark:bg-[#181614]"
         }`}
       >
         <input

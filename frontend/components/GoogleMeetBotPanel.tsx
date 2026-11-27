@@ -19,6 +19,8 @@ import {
   Maximize2,
   Play,
   Check,
+  History,
+  Clock,
 } from "lucide-react";
 import {
   GoogleMeetBotSession,
@@ -44,10 +46,16 @@ export default function GoogleMeetBotPanel({
   onAnalysisCompleted,
   extraHeaderAction,
 }: GoogleMeetBotPanelProps) {
-  const [meetUrlInput, setMeetUrlInput] = useState("https://meet.google.com/xyz-tech-dec");
+  const [meetUrlInput, setMeetUrlInput] = useState("");
   const [botNameInput, setBotNameInput] = useState("DecisionLens Bot");
   const [isJoining, setIsJoining] = useState(false);
   const [activeSession, setActiveSession] = useState<GoogleMeetBotSession | null>(null);
+  const userDismissedActiveRef = useRef(false);
+  const [sessionsList, setSessionsList] = useState<GoogleMeetBotSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [panelMode, setPanelMode] = useState<"live" | "conducted">("live");
+  const [expandedConductedId, setExpandedConductedId] = useState<number | null>(null);
+  const [analyzingConductedId, setAnalyzingConductedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"speech" | "private_chat">("speech");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -82,31 +90,55 @@ export default function GoogleMeetBotPanel({
     };
   }, [activeSession?.id, activeSession?.status]);
 
-  // Restore active/latest bot session on mount
+  const refreshSessions = async () => {
+    try {
+      const sessions = await getBotSessions(decisionId);
+      setSessionsList(sessions || []);
+    } catch {
+      // Ignore refresh errors
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  // Restore active bot session on mount & populate conducted history
   useEffect(() => {
     let cancelled = false;
-    getBotSessions(decisionId)
-      .then((sessions) => {
-        if (cancelled || !sessions || sessions.length === 0) return;
-        const active = sessions.find((s) =>
-          ["active", "connecting", "transcribing"].includes(s.status)
-        );
-        if (active) {
-          setActiveSession(active);
-        } else {
-          const latestWithTranscript = sessions.find((s) => Boolean(s.raw_transcript && s.raw_transcript.trim()));
-          if (latestWithTranscript) {
-            setActiveSession(latestWithTranscript);
+    const syncSessions = () => {
+      getBotSessions(decisionId)
+        .then((sessions) => {
+          if (cancelled || !sessions) return;
+          setSessionsList(sessions);
+          const active = sessions.find((s) =>
+            ["active", "connecting", "transcribing"].includes(s.status)
+          );
+          if (active && !userDismissedActiveRef.current) {
+            setActiveSession((prev) =>
+              !prev || prev.id === active.id || prev.status === "completed" || prev.status === "failed"
+                ? active
+                : prev
+            );
           }
-        }
-      })
-      .catch(() => {});
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setIsLoadingSessions(false);
+        });
+    };
+    syncSessions();
+    const onFocus = () => syncSessions();
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", onFocus);
+    }
     return () => {
       cancelled = true;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", onFocus);
+      }
     };
   }, [decisionId]);
 
-  // Poll backend every 3s while bot session is running so live transcriptions & status updates appear immediately
+  // Poll backend every 2s while bot session is running so live transcriptions & status updates appear immediately
   useEffect(() => {
     if (
       !activeSession ||
@@ -118,6 +150,9 @@ export default function GoogleMeetBotPanel({
       try {
         const latest = await getBotSession(decisionId, activeSession.id);
         setActiveSession(latest);
+        if (latest.status === "completed" || latest.status === "failed") {
+          refreshSessions();
+        }
       } catch {
         // Ignore transient poll errors
       }
@@ -143,9 +178,16 @@ export default function GoogleMeetBotPanel({
         decisionId,
         meetUrlInput.trim(),
         botNameInput.trim() || "DecisionLens Bot",
-        "en"
+        "en",
+        true
       );
+      userDismissedActiveRef.current = false;
+      setFinishResult(null);
+      setCallDuration(0);
+      setSpeechTextInput("");
       setActiveSession(session);
+      setPanelMode("live");
+      refreshSessions();
     } catch (err: any) {
       console.error("Could not dispatch bot to Google Meet:", err);
       setErrorMsg(err.message || "Could not dispatch bot. Please check the Google Meet URL.");
@@ -224,6 +266,7 @@ export default function GoogleMeetBotPanel({
       const res = await finishBotMeetingAndAnalyze(decisionId, activeSession.id);
       setFinishResult(res);
       setActiveSession(res.session);
+      refreshSessions();
       if (onAnalysisCompleted) {
         onAnalysisCompleted(res);
       }
@@ -290,8 +333,173 @@ export default function GoogleMeetBotPanel({
         </div>
       )}
 
-      {/* STAGE A: Bot Dispatch Form (When not connected yet) */}
-      {!activeSession ? (
+      {/* Primary Mode Switcher: Live Transcriptions vs Conducted Transcriptions */}
+      {(() => {
+        const conductedSessions = sessionsList.filter(
+          (s) => s.status === "completed" || s.status === "failed"
+        );
+        const isLiveRunning =
+          activeSession &&
+          ["active", "connecting", "transcribing"].includes(activeSession.status);
+
+        return (
+          <>
+            <div className="flex items-center gap-2 border-b border-[#cfc7b2] dark:border-[#38332C] pb-2">
+              <button
+                type="button"
+                onClick={() => setPanelMode("live")}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-sm border transition-colors cursor-pointer ${
+                  panelMode === "live"
+                    ? "bg-[#1d1d1b] text-[#F4F0E6] border-[#1d1d1b] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50]"
+                    : "bg-[#F4F0E6] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE5D5]"
+                }`}
+              >
+                <Radio className={`w-3.5 h-3.5 ${isLiveRunning ? "text-emerald-400 animate-pulse" : ""}`} />
+                Live Transcriptions
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPanelMode("conducted");
+                  refreshSessions();
+                }}
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-sm border transition-colors cursor-pointer ${
+                  panelMode === "conducted"
+                    ? "bg-[#1d1d1b] text-[#F4F0E6] border-[#1d1d1b] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50]"
+                    : "bg-[#F4F0E6] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE5D5]"
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                Conducted Transcriptions ({isLoadingSessions ? "..." : conductedSessions.length})
+              </button>
+            </div>
+
+            {panelMode === "conducted" ? (
+              <div className="space-y-3">
+                {isLoadingSessions && conductedSessions.length === 0 ? (
+                  <div className="p-8 text-center bg-[#EDE5D5]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-xs text-[#6e655a] dark:text-[#A89F91] flex items-center justify-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Loading conducted transcriptions...
+                  </div>
+                ) : conductedSessions.length === 0 ? (
+                  <div className="p-8 text-center bg-[#EDE5D5]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-xs text-[#6e655a] dark:text-[#A89F91]">
+                    No conducted meeting transcriptions recorded yet for this decision.
+                  </div>
+                ) : (
+                  conductedSessions.map((sess) => {
+                    const transcriptText = (sess.cleaned_transcript || sess.raw_transcript || "").trim();
+                    const isExpanded = expandedConductedId === sess.id;
+                    const isAnalyzingThis = analyzingConductedId === sess.id;
+                    return (
+                      <div
+                        key={sess.id}
+                        className="p-4 bg-[#EDE5D5]/80 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm space-y-2.5"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <span
+                              className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-sm ${
+                                sess.status === "completed"
+                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                                  : "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300"
+                              }`}
+                            >
+                              {sess.status === "completed" ? "Conducted" : "Stopped / Disrupted"}
+                            </span>
+                            <a
+                              href={sess.meet_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-mono text-xs font-semibold text-[#7a4e10] dark:text-[#D4AA50] hover:underline flex items-center gap-1"
+                            >
+                              {sess.meet_url.replace("https://", "")}
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                            <span className="text-[11px] text-[#6e655a] dark:text-[#A89F91] flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(sess.started_at || sess.created_at).toLocaleString()}
+                            </span>
+                            <span className="text-[11px] font-mono text-[#6e655a] dark:text-[#A89F91]">
+                              · Chunks: {sess.audio_chunks_received ?? 0}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMeetUrlInput(sess.meet_url);
+                                setActiveSession(null);
+                                userDismissedActiveRef.current = false;
+      setFinishResult(null);
+                                setCallDuration(0);
+                                setPanelMode("live");
+                              }}
+                              className="px-2.5 py-1 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] hover:bg-[#EDE7D6] rounded-sm cursor-pointer"
+                            >
+                              New Live Call Here
+                            </button>
+                            {transcriptText && (
+                              <button
+                                type="button"
+                                disabled={isAnalyzingThis}
+                                onClick={async () => {
+                                  setAnalyzingConductedId(sess.id);
+                                  setErrorMsg(null);
+                                  try {
+                                    const res = await finishBotMeetingAndAnalyze(decisionId, sess.id);
+                                    setFinishResult(res);
+                                    refreshSessions();
+                                    if (onAnalysisCompleted) onAnalysisCompleted(res);
+                                  } catch (err: any) {
+                                    setErrorMsg(err.message || "Failed to analyze conducted transcript.");
+                                  } finally {
+                                    setAnalyzingConductedId(null);
+                                  }
+                                }}
+                                className="px-2.5 py-1 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] text-[11px] font-semibold rounded-sm disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                              >
+                                {isAnalyzingThis && <Loader2 className="w-3 h-3 animate-spin" />}
+                                Analyze
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedConductedId(isExpanded ? null : sess.id)
+                              }
+                              className="px-2.5 py-1 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-[11px] font-semibold text-[#7a4e10] dark:text-[#D4AA50] rounded-sm cursor-pointer"
+                            >
+                              {isExpanded ? "Hide" : "View Transcript"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {sess.runner_note && (
+                          <div className="text-[11px] font-mono text-[#6e655a] dark:text-[#A89F91] truncate">
+                            {sess.runner_note}
+                          </div>
+                        )}
+
+                        {isExpanded && (
+                          <div className="max-h-[260px] overflow-y-auto p-3 bg-[#F5F1E8] dark:bg-[#1C1917] border border-[#cfc7b2]/50 dark:border-[#38332C] text-[12px] font-mono leading-relaxed space-y-1">
+                            {transcriptText ? (
+                              transcriptText.split("\n").filter(Boolean).map((line, i) => (
+                                <div key={i}>{line}</div>
+                              ))
+                            ) : (
+                              <div className="text-[#6e655a] dark:text-[#A89F91]">
+                                No speech was captured in this session.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            ) : !activeSession ? (
         <form onSubmit={handleJoinMeet} className="space-y-4 max-w-2xl bg-[#EDE5D5] dark:bg-[#221F1C] p-5 border border-[#cfc7b2] dark:border-[#38332C] rounded-sm">
           <div className="space-y-2">
             <label className="text-[12px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] block">
@@ -375,7 +583,8 @@ export default function GoogleMeetBotPanel({
                   type="button"
                   onClick={() => {
                     setActiveSession(null);
-                    setFinishResult(null);
+                    userDismissedActiveRef.current = false;
+      setFinishResult(null);
                     setCallDuration(0);
                     setErrorMsg(null);
                   }}
@@ -442,16 +651,44 @@ export default function GoogleMeetBotPanel({
                 </button>
               </div>
 
-              {/* Live Bot Progress Ticker */}
-              {activeSession.runner_note && (
-                <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-[#EDE7D6]/80 dark:bg-[#221F1C] border border-[#cfc7b2]/60 dark:border-[#38332C] text-[12px] font-courier text-[#4f4b40] dark:text-[#A89F91]">
-                  <span className="truncate">
+              {/* Live Bot Progress Ticker + Pending Chunks Bar */}
+              {(activeSession.runner_note || (activeSession.pending_chunks ?? 0) > 0 || (activeSession.audio_chunks_received ?? 0) > 0) && (
+                <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-1.5 bg-[#EDE7D6]/80 dark:bg-[#221F1C] border border-[#cfc7b2]/60 dark:border-[#38332C] text-[12px] font-courier text-[#4f4b40] dark:text-[#A89F91]">
+                  <span className="truncate min-w-0 flex-1">
                     <strong className="text-[#7a4e10] dark:text-[#D4AA50]">Status:</strong>{" "}
-                    {activeSession.runner_note}
+                    {activeSession.runner_note || "Listening for meeting audio..."}
                   </span>
-                  <span className="shrink-0 font-bold text-[#7a4e10] dark:text-[#D4AA50]">
-                    Chunks: {activeSession.audio_chunks_received ?? 0}
-                  </span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50]">
+                      Transcribed: {activeSession.audio_chunks_received ?? 0}
+                    </span>
+                    {(() => {
+                      const pending = activeSession.pending_chunks ?? 0;
+                      const bufSec = activeSession.buffered_seconds ?? 0;
+                      const pct = Math.min(100, Math.round((bufSec / 120) * 100));
+                      if (pending === 0 && bufSec === 0) {
+                        return (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-emerald-100/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold text-[11px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Pending: 0 · Synced
+                          </span>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-amber-800 dark:text-amber-300 text-[11px]">
+                            Pending: {pending} ({bufSec}s/120s)
+                          </span>
+                          <div className="w-20 h-2 bg-[#cfc7b2]/70 dark:bg-[#38332C] rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-amber-600 dark:bg-[#D4AA50] transition-all duration-500"
+                              style={{ width: `${Math.max(8, pct)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               )}
 
@@ -547,6 +784,9 @@ export default function GoogleMeetBotPanel({
           )}
         </div>
       )}
+          </>
+        );
+      })()}
     </div>
   );
 }

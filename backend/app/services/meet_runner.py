@@ -1,6 +1,7 @@
 import base64
 import logging
 import os
+import queue
 import tempfile
 import threading
 import time
@@ -10,7 +11,7 @@ from typing import Dict, Optional
 from app.config import settings
 from app.database import SessionLocal
 from app.models import GoogleMeetBotSession
-from app.services.audio import get_ffmpeg_binary, transcribe_pcm_array
+from app.services.audio import AzureStreamingTranscriber, get_ffmpeg_binary, transcribe_pcm_array
 from app.services.meeting_bot import ingest_speech_chunk
 
 logger = logging.getLogger("decisionlens.meet_runner")
@@ -257,27 +258,12 @@ WEBRTC_AUDIO_HOOK_JS = """
         try {
           if (!ev.data || ev.data.size === 0) return;
           const buf = new Uint8Array(await ev.data.arrayBuffer());
-          if (!trackWebmHeader) {
-            const hdr = extractWebmHeader(buf);
-            if (hdr) {
-              trackWebmHeader = hdr;
-            }
-          }
-          if (buf.length < 200) return;
-          let payload = buf;
-          const hasEbmlHeader =
-            buf.length >= 4 && buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3;
-          if (trackWebmHeader && !hasEbmlHeader) {
-            payload = new Uint8Array(trackWebmHeader.length + buf.length);
-            payload.set(trackWebmHeader, 0);
-            payload.set(buf, trackWebmHeader.length);
-          }
           window.__dlDiag.framesRead += 1;
           window.__dlDiag.pcmChunks += 1;
-          const b64 = uint8ToB64(payload);
+          const b64 = uint8ToB64(buf);
           const speaker = detectActiveMeetSpeaker();
           if (typeof window.__dl_onWebmChunk === 'function') {
-            window.__dl_onWebmChunk(b64, speaker);
+            window.__dl_onWebmChunk(b64, speaker, track.id || 'default');
           }
         } catch (err) {
           window.__dlDiag.lastError = String(err);
@@ -285,7 +271,7 @@ WEBRTC_AUDIO_HOOK_JS = """
         }
       };
 
-      rec.start(5000);
+      rec.start(2500);
       window.__dlActiveRecorders = window.__dlActiveRecorders || [];
       window.__dlActiveRecorders.push(rec);
 
@@ -431,6 +417,21 @@ class MeetBotRunner:
         self._loopback_chunks = 0
         self._active_speaker = ""
         self._active_speaker_at = 0.0
+        self._consent_announced = False
+        self._webrtc_q: queue.Queue = queue.Queue(maxsize=240)
+        self._webrtc_worker_started = False
+        self._thread: Optional[threading.Thread] = None
+        self._track_webm_buffers: Dict[str, bytearray] = {}
+        self._track_decoded_sec: Dict[str, float] = {}
+        self._track_pending_bytes: Dict[str, int] = {}
+        self._track_last_decode_at: Dict[str, float] = {}
+        self._track_last_speaker: Dict[str, str] = {}
+        self._last_prompt: str = ""
+        self._last_transcript_tail: str = ""
+        self._is_transcribing: bool = False
+        self._azure_stream: Optional[AzureStreamingTranscriber] = None
+        self._azure_failed: bool = False
+        self._azure_lock = threading.Lock()
 
     def start(self) -> None:
         self._thread = threading.Thread(
@@ -442,6 +443,74 @@ class MeetBotRunner:
 
     def stop(self) -> None:
         self.stop_event.set()
+
+    def _announce_consent_in_chat(self, page) -> None:
+        """Post a one-time DPDP/privacy consent notice in Google Meet chat after admission."""
+        if self._consent_announced:
+            return
+        try:
+            leave_btn = page.locator("[aria-label*='Leave call' i]").first
+            if leave_btn.count() == 0 or not leave_btn.is_visible():
+                return
+
+            chat_input = page.locator(
+                "textarea[aria-label*='Send a message' i], textarea[placeholder*='message' i]"
+            ).first
+            if chat_input.count() == 0 or not chat_input.is_visible():
+                chat_btn = page.locator(
+                    "button[aria-label*='Chat with everyone' i], button[aria-label*='chat' i]"
+                ).first
+                if chat_btn.count() > 0 and chat_btn.is_visible():
+                    chat_btn.click()
+                    page.wait_for_timeout(400)
+
+            chat_input = page.locator(
+                "textarea[aria-label*='Send a message' i], textarea[placeholder*='message' i]"
+            ).first
+            if chat_input.count() > 0 and chat_input.is_visible():
+                notice = (
+                    f"{self.bot_name} has joined to audit meeting takeaways and surface missing gaps. "
+                    "Audio transcription is active (DPDP PII redaction enabled)."
+                )
+                chat_input.fill(notice)
+                chat_input.press("Enter")
+                self._consent_announced = True
+                logger.info("Posted Meet consent announcement for session=%s", self.session_id)
+        except Exception as exc:
+            logger.debug("Meet consent chat announcement skipped (session=%s): %s", self.session_id, exc)
+
+    def _announce_leaving_in_chat(self, page) -> None:
+        """Post a polite goodbye notice in Google Meet chat before the bot disconnects."""
+        try:
+            leave_btn = page.locator("[aria-label*='Leave call' i]").first
+            if leave_btn.count() == 0 or not leave_btn.is_visible():
+                return
+
+            chat_input = page.locator(
+                "textarea[aria-label*='Send a message' i], textarea[placeholder*='message' i]"
+            ).first
+            if chat_input.count() == 0 or not chat_input.is_visible():
+                chat_btn = page.locator(
+                    "button[aria-label*='Chat with everyone' i], button[aria-label*='chat' i]"
+                ).first
+                if chat_btn.count() > 0 and chat_btn.is_visible():
+                    chat_btn.click()
+                    page.wait_for_timeout(300)
+
+            chat_input = page.locator(
+                "textarea[aria-label*='Send a message' i], textarea[placeholder*='message' i]"
+            ).first
+            if chat_input.count() > 0 and chat_input.is_visible():
+                notice = (
+                    f"{self.bot_name} is leaving the meeting. "
+                    "Captured audio has been transcribed and saved to DecisionLens."
+                )
+                chat_input.fill(notice)
+                chat_input.press("Enter")
+                page.wait_for_timeout(300)
+                logger.info("Posted Meet leaving announcement for session=%s", self.session_id)
+        except Exception as exc:
+            logger.debug("Meet leaving chat announcement skipped (session=%s): %s", self.session_id, exc)
 
     def _update_status(self, new_status: str, note: Optional[str] = None) -> None:
         db = SessionLocal()
@@ -475,13 +544,91 @@ class MeetBotRunner:
         finally:
             db.close()
 
+    @staticmethod
+    def _trim_overlap(prev_tail: str, new_text: str) -> str:
+        """Remove repeated boundary words caused by overlapping audio windows."""
+        if not prev_tail or not new_text:
+            return new_text
+        import re
+
+        def _norm(w: str) -> str:
+            return re.sub(r"[^\w']", "", w.lower())
+
+        prev_words = prev_tail.split()
+        new_words = new_text.split()
+        if not prev_words or not new_words:
+            return new_text
+
+        max_k = min(14, len(prev_words), len(new_words))
+        for k in range(max_k, 1, -1):
+            if [_norm(w) for w in prev_words[-k:]] == [_norm(w) for w in new_words[:k]]:
+                return " ".join(new_words[k:]).strip()
+        if len(new_words[0]) >= 5 and _norm(prev_words[-1]) == _norm(new_words[0]):
+            return " ".join(new_words[1:]).strip()
+        return new_text
+
+    def _on_azure_recognized(self, text: str, allow_completed: bool = True) -> None:
+        """Persist finalized Azure AI Speech sentence immediately with active speaker attribution."""
+        clean = (text or "").strip()
+        if not clean:
+            return
+        spk_name = (
+            self._active_speaker
+            if (self._active_speaker and time.monotonic() - self._active_speaker_at < 12.0)
+            else "Meeting Audio"
+        )
+        print(
+            f"[MeetBot] session={self.session_id} src=AzureSTT speaker={spk_name!r} -> {clean[:120]!r}",
+            flush=True,
+        )
+        db = SessionLocal()
+        try:
+            sess = db.get(GoogleMeetBotSession, self.session_id)
+            if sess and (allow_completed or sess.status not in ("completed", "failed")):
+                ingest_speech_chunk(
+                    db=db,
+                    session=sess,
+                    text=clean,
+                    speaker=spk_name,
+                )
+                self._record_progress(f"Azure STT: {clean[:60]}...", increment_chunk=True)
+        finally:
+            db.close()
+
+    def _get_azure_stream(self) -> Optional[AzureStreamingTranscriber]:
+        """Lazily initialize Azure AI Speech continuous stream when configured."""
+        if self._azure_failed or not settings.azure_speech_key or not settings.azure_speech_region:
+            return None
+        with self._azure_lock:
+            if self._azure_stream is not None and self._azure_stream.is_alive:
+                return self._azure_stream
+            if self._azure_failed:
+                return None
+            try:
+                self._azure_stream = AzureStreamingTranscriber(
+                    language=self.language,
+                    on_text=self._on_azure_recognized,
+                    on_error=lambda msg: setattr(self, "_last_err", msg[:80]),
+                )
+                logger.info(
+                    "Azure AI Speech continuous streaming active for session=%s (region=%s)",
+                    self.session_id,
+                    settings.azure_speech_region,
+                )
+                return self._azure_stream
+            except Exception as exc:
+                self._azure_failed = True
+                logger.warning("Azure AI Speech unavailable, falling back to Whisper: %s", exc)
+                return None
+
     def _ingest_pcm_audio(
         self,
         audio_float32,
         speaker: str = "Meeting Audio",
         source_label: str = "WebRTC",
+        allow_completed: bool = False,
     ) -> None:
-        """Compute RMS, transcribe non-silent 16kHz float32 PCM via faster-whisper, and persist speech."""
+        """Compute RMS, stream to Azure AI Speech (if configured) or transcribe via faster-whisper."""
         import numpy as np
 
         if len(audio_float32) < 1600:
@@ -490,6 +637,13 @@ class MeetBotRunner:
         self._last_rms = rms if rms >= 0.0005 else max(self._last_rms * 0.5, rms)
         if rms > self._max_rms:
             self._max_rms = rms
+
+        azure_stream = self._get_azure_stream()
+        if azure_stream is not None and azure_stream.is_alive:
+            if rms >= 0.0005:
+                self._record_progress(f"{source_label} → Azure STT streaming (RMS {rms:.4f})...")
+            azure_stream.push_pcm(audio_float32)
+            return
 
         if rms < 0.0005:
             return
@@ -500,11 +654,20 @@ class MeetBotRunner:
         )
 
         with self._tx_lock:
-            transcript = transcribe_pcm_array(
-                audio_float32=audio_float32,
-                language=self.language,
-            )
-        clean = (transcript or "").strip()
+            self._is_transcribing = True
+            try:
+                transcript = transcribe_pcm_array(
+                    audio_float32=audio_float32,
+                    language=self.language,
+                    initial_prompt=self._last_prompt or None,
+                )
+            finally:
+                self._is_transcribing = False
+            clean = (transcript or "").strip()
+            clean = self._trim_overlap(self._last_transcript_tail, clean)
+            if clean:
+                self._last_prompt = (self._last_prompt + " " + clean).strip()[-400:]
+                self._last_transcript_tail = clean
         print(
             f"[MeetBot] session={self.session_id} src={source_label} rms={rms:.5f} speaker={speaker!r} -> {clean[:120]!r}",
             flush=True,
@@ -514,7 +677,7 @@ class MeetBotRunner:
             db = SessionLocal()
             try:
                 sess = db.get(GoogleMeetBotSession, self.session_id)
-                if sess and sess.status not in ("completed", "failed"):
+                if sess and (allow_completed or sess.status not in ("completed", "failed")):
                     ingest_speech_chunk(
                         db=db,
                         session=sess,
@@ -620,43 +783,138 @@ class MeetBotRunner:
                 except Exception:
                     pass
 
-    def _transcribe_chunk(self, b64_webm: str, speaker: str = "Meeting Audio") -> None:
-        if not b64_webm:
+    def _enqueue_webrtc_chunk(
+        self,
+        b64_webm: str,
+        speaker: str = "Meeting Audio",
+        track_id: str = "default",
+    ) -> None:
+        if not self._webrtc_worker_started:
+            self._webrtc_worker_started = True
+            threading.Thread(target=self._webrtc_worker_loop, daemon=True).start()
+        try:
+            self._webrtc_q.put_nowait((b64_webm, speaker, track_id))
+        except queue.Full:
+            logger.warning("[MeetBot %s] WebRTC audio queue full; dropping oldest chunk", self.session_id)
+            try:
+                self._webrtc_q.get_nowait()
+                self._webrtc_q.put_nowait((b64_webm, speaker, track_id))
+            except Exception:
+                pass
+
+    def _webrtc_worker_loop(self) -> None:
+        while not self.stop_event.is_set():
+            try:
+                b64_webm, speaker, track_id = self._webrtc_q.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            try:
+                self._transcribe_chunk(b64_webm, speaker, track_id=track_id)
+            except Exception as exc:
+                logger.warning("[MeetBot %s] WebRTC worker error: %s", self.session_id, exc)
+            finally:
+                self._webrtc_q.task_done()
+
+    def _flush_all_tracks(self, allow_completed: bool = False) -> None:
+        """Force-transcribe any remaining buffered WebRTC audio across all tracks."""
+        for tid in list(self._track_webm_buffers.keys()):
+            if self._track_pending_bytes.get(tid, 0) > 0:
+                spk = self._track_last_speaker.get(tid) or "Meeting Audio"
+                self._transcribe_chunk(
+                    "",
+                    speaker=spk,
+                    track_id=tid,
+                    force_flush=True,
+                    allow_completed=allow_completed,
+                )
+
+    def _transcribe_chunk(
+        self,
+        b64_webm: str,
+        speaker: str = "Meeting Audio",
+        track_id: str = "default",
+        force_flush: bool = False,
+        allow_completed: bool = False,
+    ) -> None:
+        if not b64_webm and not force_flush:
             return
         tmp_path: Optional[Path] = None
         try:
             import subprocess
             import numpy as np
 
-            raw_bytes = base64.b64decode(b64_webm)
-            self._last_bytes = len(raw_bytes)
-            if len(raw_bytes) > self._max_bytes:
-                self._max_bytes = len(raw_bytes)
-            if len(raw_bytes) < 200:
-                return
+            if b64_webm:
+                raw_bytes = base64.b64decode(b64_webm)
+                self._last_bytes = len(raw_bytes)
+                if len(raw_bytes) > self._max_bytes:
+                    self._max_bytes = len(raw_bytes)
+                buf = self._track_webm_buffers.setdefault(track_id, bytearray())
+                buf.extend(raw_bytes)
+                self._track_pending_bytes[track_id] = self._track_pending_bytes.get(track_id, 0) + len(raw_bytes)
+            else:
+                buf = self._track_webm_buffers.get(track_id)
+                if not buf:
+                    return
+
+            now = time.monotonic()
+            last_at = self._track_last_decode_at.setdefault(track_id, now)
+            pending_bytes = self._track_pending_bytes.get(track_id, 0)
+            decoded_sec = self._track_decoded_sec.get(track_id, 0.0)
+            elapsed = now - last_at
+
+            prev_speaker = self._track_last_speaker.get(track_id, "")
+            norm_speaker = (speaker or "Meeting Audio").strip()
+            speaker_changed = (
+                bool(prev_speaker)
+                and prev_speaker != "Meeting Audio"
+                and norm_speaker != "Meeting Audio"
+                and norm_speaker != prev_speaker
+            )
+            if norm_speaker != "Meeting Audio" or not prev_speaker:
+                self._track_last_speaker[track_id] = norm_speaker
+
+            azure_active = bool(
+                not self._azure_failed
+                and settings.azure_speech_key
+                and settings.azure_speech_region
+            )
+            # With Azure continuous streaming, push PCM every ~3s with zero overlap;
+            # with local Whisper, batch into 120s windows (or 20s speaker turns).
+            if not force_flush:
+                if azure_active:
+                    if elapsed < 3.0 and pending_bytes < 8000:
+                        return
+                else:
+                    ready_2min = elapsed >= 120.0 or pending_bytes >= 360000
+                    ready_speaker_turn = speaker_changed and elapsed >= 20.0
+                    if not (ready_2min or ready_speaker_turn):
+                        return
+                    if ready_speaker_turn and prev_speaker:
+                        speaker = prev_speaker
+                if len(buf) < 4000:
+                    return
+
             with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
-                tmp.write(raw_bytes)
+                tmp.write(buf)
                 tmp_path = Path(tmp.name)
 
             ffmpeg_bin = get_ffmpeg_binary()
             if not ffmpeg_bin:
                 self._last_err = "ffmpeg not found"
                 return
+
+            overlap_sec = 0.0 if azure_active else 2.0
+            seek_sec = max(0.0, decoded_sec - overlap_sec)
+            cmd = [ffmpeg_bin, "-nostdin", "-threads", "0", "-i", str(tmp_path)]
+            if seek_sec > 0.05:
+                cmd.extend(["-ss", f"{seek_sec:.3f}"])
+            cmd.extend(["-f", "s16le", "-ac", "1", "-acodec", "pcm_s16le", "-ar", "16000", "-"])
+
             proc = subprocess.run(
-                [
-                    ffmpeg_bin,
-                    "-nostdin",
-                    "-threads", "0",
-                    "-i", str(tmp_path),
-                    "-f", "s16le",
-                    "-ac", "1",
-                    "-acodec", "pcm_s16le",
-                    "-ar", "16000",
-                    "-",
-                ],
+                cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                timeout=15,
+                timeout=45,
             )
             if proc.returncode != 0 or not proc.stdout:
                 err_msg = proc.stderr.decode("utf-8", errors="ignore")[-160:].strip()
@@ -668,14 +926,27 @@ class MeetBotRunner:
                 return
 
             audio_float32 = np.frombuffer(proc.stdout, dtype=np.int16).astype(np.float32) / 32768.0
+            new_dur = len(audio_float32) / 16000.0
+            if not force_flush and new_dur < 2.0:
+                return
             if len(audio_float32) < 1600:
                 self._last_err = f"short pcm ({len(audio_float32)})"
                 return
+
+            self._track_decoded_sec[track_id] = seek_sec + new_dur
+            self._track_pending_bytes[track_id] = 0
+            self._track_last_decode_at[track_id] = now
+
             self._last_err = ""
             rms = float(np.sqrt(np.mean(np.square(audio_float32))))
             if rms >= 0.0005:
                 self._last_webrtc_audio_at = time.monotonic()
-            self._ingest_pcm_audio(audio_float32, speaker=speaker, source_label="WebRTC")
+            self._ingest_pcm_audio(
+                audio_float32,
+                speaker=speaker,
+                source_label="WebRTC",
+                allow_completed=allow_completed,
+            )
         except Exception as exc:
             print(f"[MeetBot] WebM transcription error session={self.session_id}: {exc}", flush=True)
         finally:
@@ -732,11 +1003,9 @@ class MeetBotRunner:
                     )
                     page.expose_function(
                         "__dl_onWebmChunk",
-                        lambda b64, speaker="Meeting Audio": threading.Thread(
-                            target=self._transcribe_chunk,
-                            args=(b64, speaker),
-                            daemon=True,
-                        ).start(),
+                        lambda b64, speaker="Meeting Audio", track_id="default": self._enqueue_webrtc_chunk(
+                            b64, speaker, track_id
+                        ),
                     )
 
                     page.goto(self.meet_url, wait_until="domcontentloaded", timeout=45000)
@@ -802,10 +1071,26 @@ class MeetBotRunner:
                     ).start()
 
                     # Stay in the meeting until stopped or call ends
+                    meet_code = self.meet_url.rstrip("/").split("/")[-1].split("?")[0]
+                    was_in_call = False
+                    rejoin_attempts = 0
+                    zero_pc_ticks = 0
                     loop_ticks = 0
                     while not self.stop_event.is_set():
+                        if page.is_closed():
+                            self._update_status("completed", "Bot browser tab closed.")
+                            break
                         page.wait_for_timeout(2000)
                         loop_ticks += 1
+                        if not self._consent_announced:
+                            self._announce_consent_in_chat(page)
+                        try:
+                            leave_btn = page.locator("[aria-label*='Leave call' i]").first
+                            if leave_btn.count() > 0 and leave_btn.is_visible():
+                                was_in_call = True
+                                zero_pc_ticks = 0
+                        except Exception:
+                            pass
                         try:
                             top_spk = page.evaluate(
                                 "window.__dlConsumeTopSpeaker ? window.__dlConsumeTopSpeaker() : ''"
@@ -818,6 +1103,13 @@ class MeetBotRunner:
                         if loop_ticks % 2 == 0:
                             try:
                                 diag = page.evaluate("window.__dlDiag || null")
+                                if isinstance(diag, dict):
+                                    if was_in_call and int(diag.get("pcCount", 0) or 0) == 0:
+                                        zero_pc_ticks += 1
+                                        if zero_pc_ticks >= 5:
+                                            self._record_progress("WebRTC audio stream interrupted — monitoring for reconnect...")
+                                    else:
+                                        zero_pc_ticks = 0
                                 if isinstance(diag, dict) and (diag.get("trackCount", 0) > 0 or diag.get("lastError") or self._last_err):
                                     combined_err = self._last_err or diag.get("lastError") or ""
                                     err_part = f" · Err: {combined_err}" if combined_err else ""
@@ -830,7 +1122,7 @@ class MeetBotRunner:
                                     )
                             except Exception:
                                 pass
-                        # Detect if Google Meet call has ended in the browser DOM
+                        # Detect if Google Meet call has ended or glitched in the browser DOM
                         try:
                             blocked_loc = page.locator("text=/You can't join|You cannot join|aren't allowed to join/i").first
                             if blocked_loc.count() > 0 and blocked_loc.is_visible():
@@ -840,12 +1132,33 @@ class MeetBotRunner:
                                 )
                                 break
                             ended_loc = page.locator(
-                                "text=/You left the meeting|The meeting has ended|Return to home screen|You've been removed/i"
+                                "text=/You left the meeting|You've left the call|The meeting has ended|The call ended|Your meeting has ended|Return to home screen|Returning to home screen|You've been removed|No one responded to your request|Meeting ended/i"
                             ).first
                             if ended_loc.count() > 0 and ended_loc.is_visible():
                                 logger.info("Google Meet ended in browser for session=%s", self.session_id)
                                 self._update_status("completed", "Google Meet call ended.")
                                 break
+                            if meet_code and loop_ticks > 3 and meet_code not in (page.url or ""):
+                                logger.info("Google Meet redirected away from %s for session=%s", meet_code, self.session_id)
+                                self._update_status("completed", "Google Meet call ended (returned to home screen).")
+                                break
+                            glitch_loc = page.locator(
+                                "text=/Trying to reconnect|You lost your network connection|Check your network connection|Reconnecting|Audio may be degraded/i"
+                            ).first
+                            if glitch_loc.count() > 0 and glitch_loc.is_visible():
+                                self._record_progress("Meet network glitch detected — flushing buffered audio & waiting for reconnect...")
+                                self._flush_all_tracks(allow_completed=False)
+                            rejoin_btn = page.locator("button:has-text('Rejoin')").first
+                            if was_in_call and rejoin_btn.count() > 0 and rejoin_btn.is_visible():
+                                self._flush_all_tracks(allow_completed=False)
+                                if rejoin_attempts < 3:
+                                    rejoin_attempts += 1
+                                    self._record_progress(f"Meet glitch/drop detected — auto-rejoining (attempt {rejoin_attempts}/3)...")
+                                    rejoin_btn.click()
+                                    page.wait_for_timeout(2000)
+                                else:
+                                    self._update_status("failed", "Repeated Meet disconnects — could not rejoin call.")
+                                    break
                         except Exception:
                             pass
 
@@ -858,12 +1171,17 @@ class MeetBotRunner:
                         finally:
                             db.close()
 
-                    # Flush final audio chunk before closing
+                    # Announce leaving in Meet chat if still in call, then flush final audio
+                    if was_in_call and not page.is_closed():
+                        self._announce_leaving_in_chat(page)
                     try:
                         page.evaluate("window.__dlFlushAudio && window.__dlFlushAudio()")
-                        page.wait_for_timeout(1500)
+                        page.wait_for_timeout(800)
                     except Exception:
                         pass
+                    self._flush_all_tracks(allow_completed=True)
+                    if self._azure_stream is not None:
+                        self._azure_stream.close(timeout=5.0)
                 finally:
                     try:
                         context.close()
@@ -878,7 +1196,21 @@ class MeetBotRunner:
                 logger.exception("MeetBotRunner error for session=%s: %s", self.session_id, exc)
                 self._update_status("failed", f"Bot runner error: {exc}")
         finally:
+            self.stop_event.set()
             _ACTIVE_RUNNERS.pop(self.session_id, None)
+
+    def get_pending_stats(self) -> tuple[int, int]:
+        """Return (pending_chunks, buffered_seconds) currently awaiting transcription."""
+        q_size = self._webrtc_q.qsize()
+        pending_tracks = sum(1 for b in self._track_pending_bytes.values() if b > 0)
+        pending_chunks = q_size + pending_tracks + (1 if self._is_transcribing else 0)
+        now = time.monotonic()
+        buffered_sec = 0
+        for tid, b in list(self._track_pending_bytes.items()):
+            if b > 0:
+                last_at = self._track_last_decode_at.get(tid, now)
+                buffered_sec = max(buffered_sec, int(max(0.0, now - last_at)))
+        return pending_chunks, min(buffered_sec, 120)
 
 
 _ACTIVE_RUNNERS: Dict[int, MeetBotRunner] = {}
@@ -896,6 +1228,18 @@ def start_meet_bot_background(
         logger.debug("Skipping live Playwright launch during pytest (session=%s).", session_id)
         return
 
+    stale_runners = []
+    with _RUNNER_LOCK:
+        for active_id, active_runner in list(_ACTIVE_RUNNERS.items()):
+            if active_id != session_id:
+                active_runner.stop()
+                stale_runners.append(active_runner)
+
+    # Wait briefly for any previous Playwright context to release meet_bot_profile
+    for stale in stale_runners:
+        if stale._thread and stale._thread.is_alive():
+            stale._thread.join(timeout=5.0)
+
     with _RUNNER_LOCK:
         if session_id in _ACTIVE_RUNNERS:
             return
@@ -911,10 +1255,21 @@ def start_meet_bot_background(
         runner.start()
 
 
-def stop_meet_bot(session_id: int) -> None:
+def get_runner_pending_stats(session_id: int) -> tuple[int, int]:
+    """Return live (pending_chunks, buffered_seconds) for an active runner, or (0, 0)."""
+    runner = _ACTIVE_RUNNERS.get(session_id)
+    if not runner:
+        return 0, 0
+    return runner.get_pending_stats()
+
+
+def stop_meet_bot(session_id: int, wait_timeout: float = 0.0) -> None:
     """Signal an active MeetBotRunner to flush audio and leave the meeting."""
+    runner: Optional[MeetBotRunner] = None
     with _RUNNER_LOCK:
         runner = _ACTIVE_RUNNERS.get(session_id)
         if runner:
             runner.stop()
+    if runner and wait_timeout > 0 and runner._thread and runner._thread.is_alive():
+        runner._thread.join(timeout=wait_timeout)
 

@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, verify_ownership, verify_decision_access
 from app.database import get_db
 from app.models import Decision, User
 from app.schemas import (
@@ -50,7 +50,7 @@ def evaluate_frameworks(
     if not decision:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     try:
         response = run_framework_analysis(decision=decision, request=request, db=db)
@@ -82,7 +82,7 @@ def get_framework_analysis(
     if not decision:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     if not decision.analysis or not isinstance(decision.analysis, dict) or not decision.analysis.get("selected_frameworks"):
         if auto_run:
@@ -136,7 +136,7 @@ def evaluate_matrix_scores(
     if not decision:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     try:
         results, winner_id, winner_name = validate_and_calculate_matrix_scores(

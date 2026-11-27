@@ -31,7 +31,7 @@ from app.services.report_generator import (
     generate_decision_latex_report,
     generate_decision_interactive_pdf,
 )
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, verify_ownership, verify_decision_access
 
 logger = logging.getLogger("decisionlens.api.roadmap")
 
@@ -62,7 +62,7 @@ def create_decision_synthesis(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     try:
         synthesis = run_decision_synthesis(
@@ -98,7 +98,7 @@ def get_decision_synthesis(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     if not decision.recommendation:
         raise HTTPException(
@@ -160,7 +160,7 @@ def record_decision_override(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     if not decision.recommendation or not isinstance(decision.recommendation, dict):
         raise HTTPException(
@@ -224,7 +224,7 @@ def list_analysis_snapshots(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     snapshots = (
         db.query(AnalysisSnapshot)
@@ -254,7 +254,7 @@ def get_analysis_snapshot_detail(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     snapshot = (
         db.query(AnalysisSnapshot)
@@ -291,7 +291,7 @@ def get_active_roadmap(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     active_record = (
         db.query(RoadmapRecord)
@@ -386,7 +386,7 @@ def update_active_roadmap(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     # Fetch active record or create one
     active_record = (
@@ -473,7 +473,7 @@ def export_decision_report(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     slug = re.sub(r"[^a-zA-Z0-9_-]", "_", decision.title)[:40] or f"decision_{decision.id}"
     fmt = format.lower().strip()
@@ -554,7 +554,7 @@ def save_decision_report_export(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with ID {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, "decision")
+    verify_decision_access(db, decision, current_user)
 
     slug = re.sub(r"[^a-zA-Z0-9_-]", "_", decision.title)[:40] or f"decision_{decision.id}"
     timestamp_suffix = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -627,4 +627,250 @@ def save_decision_report_export(
         "content": md_content,
         "created_at": att_pdf.created_at.isoformat(),
         "message": "Executive Dossier Bundle (PDF, LaTeX, and Markdown) successfully saved to attachments library.",
+    }
+
+
+@router.post(
+    "/{decision_id}/live-cost-receipt",
+    status_code=status.HTTP_200_OK,
+    summary="Generate an adaptable, stage-connected AI Decision Ledger & Calibrator grounded in Stage 1-3 + live pricing",
+)
+def fetch_live_cost_receipt(
+    decision_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Connect Stage 1 (inputs, transcript, private chat), Stage 2 (facts, gaps, research),
+    and Stage 3 (MAUT scores & verdict) plus live web search (when available) into an
+    adaptable, decision-specific ledger and interactive calibrator.
+    """
+    decision = db.get(Decision, decision_id)
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+    verify_decision_access(db, decision, current_user)
+
+    today_iso = datetime.now(timezone.utc).date().isoformat()
+    today_year = datetime.now(timezone.utc).year
+
+    # Stage 1 signals
+    s1_sources = []
+    if decision.description and decision.description.strip():
+        s1_sources.append("Notes")
+    if decision.transcript and decision.transcript.strip():
+        s1_sources.append("Transcript")
+    att_count = len(decision.attachments or [])
+    if att_count > 0:
+        s1_sources.append(f"{att_count} Doc(s)")
+
+    # Stage 2 signals (Facts, Gaps, Research)
+    points = decision.points if isinstance(decision.points, dict) else {}
+    facts = [str(f) for f in (points.get("facts") or [])]
+    assumptions = [str(a) for a in (points.get("assumptions") or [])]
+    cons = [str(c) for c in (points.get("cons") or [])]
+
+    gaps_list = list((decision.gaps or {}).get("gaps", [])) if isinstance(decision.gaps, dict) else []
+    resolved_gaps = [g for g in gaps_list if g.get("status") in ("answered", "researched")]
+    open_gaps = [g for g in gaps_list if g.get("status") not in ("answered", "researched", "skipped")]
+
+    # Stage 3 signals (MAUT + Synthesis)
+    rec = decision.recommendation if isinstance(decision.recommendation, dict) else {}
+    alts = rec.get("alternatives_considered") or []
+    option_names = [
+        str(a.get("name", "")).strip()
+        for a in alts
+        if isinstance(a, dict) and a.get("name") and "no clear alternative" not in str(a.get("name")).lower()
+    ]
+    canonical = rec.get("canonical_result") or {}
+    winner_name = canonical.get("winner_option_name") or (option_names[0] if option_names else "")
+    winner_score = canonical.get("winner_score")
+
+    facts_text = " ".join(facts)
+    full_context = (
+        f"Title: {decision.title or ''}\n"
+        f"Problem: {decision.problem_statement or ''}\n"
+        f"Notes: {(decision.description or '')[:1200]}\n"
+        f"Transcript: {(decision.transcript or '')[:800]}\n"
+        f"Stage 2 Facts: {'; '.join(facts[:8])}\n"
+        f"Stage 2 Assumptions: {'; '.join(assumptions[:5])}\n"
+        f"Stage 2 Open Gaps: {'; '.join(str(g.get('question', '')) for g in open_gaps[:5])}\n"
+        f"Stage 2 Resolved Gaps: {'; '.join(str(g.get('question', '')) + ' -> ' + str(g.get('answer', '')) for g in resolved_gaps[:5])}\n"
+        f"Stage 3 Winner: {winner_name} (Score: {winner_score})\n"
+        f"Options: {', '.join(option_names)}"
+    )
+
+    # Optional live web search for today's pricing when financial options exist
+    search_snippets = []
+    source_urls = []
+    option_tokens = [o.lower() for o in option_names if o]
+    try:
+        from app.services.search import _call_duckduckgo_search, _call_tavily_search, _call_serper_search
+
+        provider = settings.active_search_provider
+        queries = (
+            [f"{opt} pricing {today_year}" for opt in option_names[:3]]
+            if option_names
+            else [f"{decision.title} cost {today_year}"]
+        )
+        raw_results = []
+        for q in queries:
+            try:
+                if provider == "tavily" and (settings.tavily_api_key or settings.search_api_key):
+                    raw_results.extend(_call_tavily_search(q, settings.tavily_api_key or settings.search_api_key)[:2])
+                elif provider == "serper" and (settings.serper_api_key or settings.search_api_key):
+                    raw_results.extend(_call_serper_search(q, settings.serper_api_key or settings.search_api_key)[:2])
+                elif provider != "mock":
+                    raw_results.extend(_call_duckduckgo_search(q)[:2])
+            except Exception:
+                continue
+
+        for r in raw_results:
+            title = r.get("title", "")
+            snippet = r.get("snippet", "") or r.get("content", "")
+            url = r.get("url", "")
+            haystack = f"{title} {snippet} {url}".lower()
+            if option_tokens and not any(tok in haystack for tok in option_tokens):
+                continue
+            if snippet:
+                search_snippets.append(f"[{title}]({url}): {snippet[:350]}")
+            if url and url not in source_urls:
+                source_urls.append(url)
+    except Exception as exc:
+        logger.info("Live web search skipped for decision=%s: %s", decision_id, exc)
+
+    pricing_source = (
+        f"Stage 1-3 + Live Web ({today_iso})"
+        if search_snippets
+        else f"Stage 1-3 Grounded ({today_iso})"
+    )
+
+    from app.services.ai import call_gemini_direct_rest, get_llm_client_and_model
+
+    prompt_system = (
+        "You are DecisionLens's Adaptable Cross-Stage Decision Analyst.\n"
+        "Build a compact, decision-specific Ledger & Interactive Calibrator that connects Stage 1 (inputs), "
+        "Stage 2 (facts & gaps), and Stage 3 (MAUT winner & verdict).\n"
+        "CRITICAL RULES:\n"
+        "1. NEVER use a generic 'Seats x Rate x Months' template unless this specific decision is actually about per-seat software.\n"
+        "2. Adapt 'ledger_title', 'items', and 'calibrator_controls' to the ACTUAL domain and context "
+        "(e.g., for SaaS tool selection: budget cap, team size, integration/RBAC checks, rollout timeline; "
+        "for Cloud migration: compute, egress, migration effort; for Career/Personal: compensation, relocation, risk).\n"
+        "3. Every item must cite which stage or live source it comes from ('Stage 1', 'Stage 2', 'Stage 3', or 'Live Web').\n"
+        "4. NEVER invent prices or fake numbers not in the context or live snippets.\n"
+        "Return strict JSON:\n"
+        "{\n"
+        '  "ledger_title": "Short specific title (e.g. SaaS Procurement & Readiness Ledger)",\n'
+        '  "decision_archetype": "Short tag",\n'
+        '  "is_financial": true | false,\n'
+        '  "currency": "INR" | "USD" | "",\n'
+        '  "summary_label": "e.g. Budget & Readiness Target",\n'
+        '  "summary_value": "e.g. ₹3,000/mo · 3 Gaps Open",\n'
+        '  "items": [\n'
+        "    {\n"
+        '      "item_name": "Specific factor, option, cost, or gap",\n'
+        '      "category": "Budget | Timeline | Gap | Constraint | Option",\n'
+        '      "value_display": "Grounded value or status",\n'
+        '      "status": "verified" | "gap_pending" | "context",\n'
+        '      "source_stage": "Stage 1" | "Stage 2" | "Stage 3" | "Live Web"\n'
+        "    }\n"
+        "  ],\n"
+        '  "calibrator_controls": [\n'
+        "    {\n"
+        '      "key": "snake_case_id",\n'
+        '      "label": "Specific parameter label",\n'
+        '      "value": number,\n'
+        '      "unit": "e.g. employees | ₹/mo | days | %",\n'
+        '      "min": number,\n'
+        '      "max": number,\n'
+        '      "step": number\n'
+        "    }\n"
+        "  ]\n"
+        "}"
+    )
+    prompt_user = (
+        f"TODAY: {today_iso}\n"
+        f"DOMAIN: {decision.domain}\n"
+        f"{full_context}\n\n"
+        f"LIVE_WEB_SNIPPETS:\n" + ("\n".join(search_snippets) if search_snippets else "None.")
+    )
+
+    parsed_ledger = {}
+    try:
+        gemini_key = (settings.gemini_api_key or settings.google_api_key or "").strip()
+        raw_json = ""
+        if gemini_key:
+            raw_json = call_gemini_direct_rest(
+                model=settings.gemini_model,
+                system_prompt=prompt_system,
+                user_prompt=prompt_user,
+                api_key=gemini_key,
+                temperature=0.0,
+            )
+        else:
+            client, model, _ = get_llm_client_and_model(task="default")
+            if client:
+                resp = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": prompt_system},
+                        {"role": "user", "content": prompt_user},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.0,
+                )
+                raw_json = resp.choices[0].message.content or ""
+        if raw_json:
+            parsed_ledger = json.loads(raw_json)
+    except Exception as exc:
+        logger.warning("Smart ledger AI generation failed for decision=%s: %s", decision_id, exc)
+
+    items = parsed_ledger.get("items") if isinstance(parsed_ledger.get("items"), list) else []
+    controls = parsed_ledger.get("calibrator_controls") if isinstance(parsed_ledger.get("calibrator_controls"), list) else []
+
+    if not items:
+        items = [
+            {
+                "item_name": f"Recommended Path: {winner_name or decision.title}",
+                "category": "Verdict",
+                "value_display": f"{winner_score:.1f}/10" if isinstance(winner_score, (int, float)) else "Evaluated",
+                "status": "verified",
+                "source_stage": "Stage 3",
+            },
+            {
+                "item_name": "Stage 2 Grounded Facts",
+                "category": "Evidence",
+                "value_display": f"{len(facts)} fact(s), {len(resolved_gaps)} resolved gap(s)",
+                "status": "verified" if facts else "context",
+                "source_stage": "Stage 2",
+            },
+            {
+                "item_name": "Pending Information Gaps",
+                "category": "Gap",
+                "value_display": f"{len(open_gaps)} open" if open_gaps else "All cleared",
+                "status": "gap_pending" if open_gaps else "verified",
+                "source_stage": "Stage 2",
+            },
+        ]
+
+    return {
+        "as_of_date": today_iso,
+        "pricing_source": pricing_source,
+        "ledger_title": parsed_ledger.get("ledger_title") or f"{decision.domain.title()} Decision Ledger",
+        "decision_archetype": parsed_ledger.get("decision_archetype") or decision.domain,
+        "is_financial": bool(parsed_ledger.get("is_financial", False)),
+        "currency": parsed_ledger.get("currency", ""),
+        "summary_label": parsed_ledger.get("summary_label") or "Cross-Stage Readiness",
+        "summary_value": parsed_ledger.get("summary_value") or f"{len(resolved_gaps)}/{len(gaps_list)} Gaps Cleared",
+        "recommended_option": winner_name,
+        "stage_connection": {
+            "stage1_sources": s1_sources or ["Title/Notes"],
+            "stage2_facts_count": len(facts),
+            "stage2_resolved_gaps": len(resolved_gaps),
+            "stage2_open_gaps": len(open_gaps),
+            "stage3_winner": winner_name,
+            "stage3_score": winner_score,
+        },
+        "items": items[:6],
+        "calibrator_controls": controls[:3],
+        "sources": source_urls[:4],
     }

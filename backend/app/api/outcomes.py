@@ -10,7 +10,7 @@ from app.schemas import (
     DecisionOutcomeResponse,
     FolderOutcomesInsights,
 )
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, verify_ownership, verify_decision_access
 
 logger = logging.getLogger("decisionlens.api.outcomes")
 
@@ -40,7 +40,7 @@ def create_decision_outcome(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with id {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id)
+    verify_decision_access(db, decision, current_user)
 
     # Determine default chosen option if omitted
     chosen = payload.chosen_option
@@ -96,7 +96,7 @@ def list_decision_outcomes(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with id {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id)
+    verify_decision_access(db, decision, current_user)
 
     outcomes = (
         db.query(DecisionOutcome)
@@ -123,7 +123,7 @@ def get_latest_decision_outcome(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with id {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id)
+    verify_decision_access(db, decision, current_user)
 
     outcome = (
         db.query(DecisionOutcome)
@@ -151,7 +151,7 @@ def delete_decision_outcome(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision with id {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id)
+    verify_decision_access(db, decision, current_user)
 
     outcome = (
         db.query(DecisionOutcome)

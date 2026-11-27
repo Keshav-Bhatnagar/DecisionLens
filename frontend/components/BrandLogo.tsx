@@ -36,17 +36,12 @@ export default function BrandLogo({
       </div>
 
       {showWordmark && (
-        <div className="flex flex-col">
-          <span
-            className="font-newsreader text-[20px] sm:text-[22px] font-medium tracking-tight leading-none transition-colors"
-            style={{ color: inkPrimary }}
-          >
-            DecisionLens<span className="text-[#b4874b] dark:text-[#FBBF24]">.</span>
-          </span>
-          <span className="text-[11px] font-mono font-semibold uppercase tracking-widest text-[#9E7D47] dark:text-[#D4AA50] mt-0.5">
-            Executive Cognitive
-          </span>
-        </div>
+        <span
+          className="font-newsreader text-[20px] sm:text-[22px] font-medium tracking-tight leading-none transition-colors whitespace-nowrap"
+          style={{ color: inkPrimary }}
+        >
+          DecisionLens<span className="text-[#b4874b] dark:text-[#FBBF24]">.</span>
+        </span>
       )}
     </Link>
   );

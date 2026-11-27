@@ -213,14 +213,16 @@ def _has_financial_or_scale_stakes(
     runner_up_name: Optional[str] = None,
     facts: Optional[List[str]] = None,
 ) -> bool:
-    """Return True only when the decision context contains explicit monetary/cost figures or cloud/infra spend stakes."""
+    """Return True only when the context has concrete monetary/budget numbers or cloud/infra architecture stakes."""
     text = f"{decision_title or ''} {problem_statement or ''} {top_option_name or ''} {runner_up_name or ''} {' '.join(str(f) for f in (facts or []))}".lower()
-    explicit_money_or_spend = (
-        "cost", "budget", "price", "pricing", "salary", "payroll", "revenue", "lakh", "crore",
-        "roi", "$", "₹", "inr", "usd", "billing", "spend", "fee", "kafka", "kubernetes",
-        "k8s", "aws", "azure", "gcp", "build vs buy", "microservices", "monolith", "migration",
+    has_numeric_money = bool(
+        re.search(r"(?:₹|\$|rs\.?|inr|usd)\s*\d|\b\d+(?:\.\d+)?\s*(?:lakh|lakhs|crore|cr)\b", text)
     )
-    return any(m in text for m in explicit_money_or_spend)
+    infra_or_arch_stakes = (
+        "kafka", "kubernetes", "k8s", "aws", "azure", "gcp",
+        "build vs buy", "microservices", "monolith", "migration", "rewrite",
+    )
+    return has_numeric_money or any(m in text for m in infra_or_arch_stakes)
 
 
 def compute_blunder_shield(
@@ -232,6 +234,7 @@ def compute_blunder_shield(
     problem_statement: Optional[str] = None,
     facts: Optional[List[str]] = None,
     decision_id: Optional[int] = None,
+    alternatives: Optional[List[Any]] = None,
 ) -> BlunderShield:
     """
     Epistemically compute the Capital at Risk prevented, engineering velocity saved,
@@ -239,6 +242,15 @@ def compute_blunder_shield(
     Context-aware: dynamically classifies into Cloud Migration, Build vs Buy, Database Architecture,
     Software Rewrite, Real Estate, Finance, Career, or Operations.
     """
+    if not runner_up_name and alternatives:
+        runner_up_name = next(
+            (
+                a.get("name")
+                for a in alternatives
+                if isinstance(a, dict) and not a.get("is_recommended") and a.get("name")
+            ),
+            None,
+        )
     domain_upper = (domain or "BUSINESS").upper()
     runner = runner_up_name or "Alternative Option"
     
@@ -622,6 +634,32 @@ def compute_blunder_shield(
                 ),
             ]
             total_receipt = "₹45.00 Lakh"
+
+        elif any(k in context_text for k in ("saas", "tool", "jira", "asana", "clickup", "notion", "crm", "erp", "vendor", "subscription", "seat", "license")):
+            archetype = "SAAS_PROCUREMENT"
+            seat_match = re.search(r"\b(\d{1,5})\s*(?:employees|users|seats|members|people)\b", context_text)
+            seat_label = f"{seat_match.group(1)} seats" if seat_match else "team seats"
+            capital = "Grounded in contract/seat tier"
+            sprints = "30-day rollout window"
+            trap = f"Premature annual lock-in on {runner} before integration & RBAC sign-off"
+            rationale = f"Avoided multi-year seat lock-in and migration friction across {seat_label}."
+            line_items = [
+                ReceiptLineItem(
+                    item_name=f"Seat Licensing & Tier Misalignment ({seat_label})",
+                    category="SaaS Subscription",
+                    unit_basis=f"Per-seat tier variance across {seat_label} (RBAC / SSO / integrations)",
+                    amount_inr="Per vendor quote",
+                    rationale="Verifying RBAC and GitHub/CI integration tiers before signing prevents mid-year tier upgrades.",
+                ),
+                ReceiptLineItem(
+                    item_name="Team Onboarding & Workflow Migration Drag",
+                    category="Adoption & Training",
+                    unit_basis=f"Rollout across {seat_label} and legacy ticket/board migration",
+                    amount_inr="Operational hours",
+                    rationale="Validating adoption fit before full rollout prevents shelfware and tool switching.",
+                ),
+            ]
+            total_receipt = "Pending vendor quote"
 
         else:
             archetype = "ARCHITECTURE_REWRITE"
@@ -2661,12 +2699,12 @@ def execute_hosted_synthesis(
     raw_content = None
     candidate_models = [model]
     if provider == "gemini":
-        for alt_m in ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-flash-latest"]:
+        for alt_m in ["gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview", "gemini-flash-latest"]:
             if alt_m not in candidate_models:
                 candidate_models.append(alt_m)
 
     last_err = None
-    for cand_model in candidate_models:
+    for idx, cand_model in enumerate(candidate_models):
         try:
             logger.info("Attempting hosted %s synthesis with model '%s'...", provider.upper(), cand_model)
             response = client.chat.completions.create(
@@ -2684,7 +2722,12 @@ def execute_hosted_synthesis(
                 break
         except Exception as proxy_exc:
             last_err = proxy_exc
+            err_str = str(proxy_exc)
+            is_overloaded = "503" in err_str or "429" in err_str or "UNAVAILABLE" in err_str or "RESOURCE_EXHAUSTED" in err_str
+            has_next_candidate = idx + 1 < len(candidate_models)
             logger.warning("Synthesis with model '%s' failed (%s), trying fallback...", cand_model, proxy_exc)
+            if is_overloaded and has_next_candidate:
+                continue
             if provider in {"azure", "gemini"}:
                 try:
                     gemini_key = (settings.gemini_api_key or settings.google_api_key).strip()
@@ -2856,6 +2899,15 @@ def execute_hosted_synthesis(
                     for task in phase.get("tasks", []):
                         if isinstance(task, dict):
                             task["owner_role"] = "You"
+
+    if isinstance(parsed.get("alternatives_considered"), list):
+        for alt in parsed["alternatives_considered"]:
+            if isinstance(alt, dict) and not alt.get("tradeoffs"):
+                alt["tradeoffs"] = (
+                    alt.get("summary")
+                    or alt.get("why_not_recommended")
+                    or "Evaluated against decision criteria and operational constraints."
+                )
 
     return DecisionSynthesis.model_validate(parsed)
 

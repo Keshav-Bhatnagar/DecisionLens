@@ -1764,6 +1764,8 @@ export interface GoogleMeetBotSession {
   private_message_count: number;
   runner_note?: string | null;
   audio_chunks_received?: number;
+  pending_chunks?: number;
+  buffered_seconds?: number;
   created_at: string;
   updated_at: string;
 }
@@ -1808,7 +1810,8 @@ export async function joinGoogleMeetBot(
   decisionId: number,
   meetUrl: string,
   botName: string = "DecisionLens Bot",
-  language: string = "en"
+  language: string = "en",
+  forceNew: boolean = true
 ): Promise<GoogleMeetBotSession> {
   return fetchApi<GoogleMeetBotSession>(`/api/decisions/${decisionId}/bot/join-meet`, {
     method: "POST",
@@ -1816,6 +1819,7 @@ export async function joinGoogleMeetBot(
       meet_url: meetUrl,
       bot_name: botName,
       language: language,
+      force_new: forceNew,
     }),
   });
 }
@@ -1916,6 +1920,72 @@ export async function sendPublicPrivateChatMessage(
 /** Get participant token-based chat history */
 export async function getPublicChatHistory(token: string): Promise<PrivateChatMessage[]> {
   return fetchApi<PrivateChatMessage[]>(`/api/bot/invite/${token}/history`);
+}
+
+/** Share missing information gaps to a Slack Incoming Webhook */
+export async function shareGapsToSlack(
+  decisionId: number,
+  webhookUrl: string,
+  includeResolved = false
+): Promise<{ sent: boolean; gaps_shared: number; message: string }> {
+  return fetchApi<{ sent: boolean; gaps_shared: number; message: string }>(
+    `/api/decisions/${decisionId}/gaps/share-slack`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        webhook_url: webhookUrl,
+        include_resolved: includeResolved,
+      }),
+    }
+  );
+}
+
+export interface LiveCostReceiptItem {
+  item_name: string;
+  category: string;
+  value_display: string;
+  status: "verified" | "gap_pending" | "context";
+  source_stage: string;
+}
+
+export interface SmartCalibratorControl {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+}
+
+export interface LiveCostReceiptResponse {
+  as_of_date: string;
+  pricing_source: string;
+  ledger_title: string;
+  decision_archetype: string;
+  is_financial: boolean;
+  currency: string;
+  summary_label: string;
+  summary_value: string;
+  recommended_option: string;
+  stage_connection: {
+    stage1_sources: string[];
+    stage2_facts_count: number;
+    stage2_resolved_gaps: number;
+    stage2_open_gaps: number;
+    stage3_winner: string;
+    stage3_score: number | null;
+  };
+  items: LiveCostReceiptItem[];
+  calibrator_controls: SmartCalibratorControl[];
+  sources: string[];
+}
+
+/** Fetch today's live market pricing receipt for a decision */
+export async function fetchLiveCostReceipt(decisionId: number): Promise<LiveCostReceiptResponse> {
+  return fetchApi<LiveCostReceiptResponse>(`/api/decisions/${decisionId}/live-cost-receipt`, {
+    method: "POST",
+  });
 }
 
 

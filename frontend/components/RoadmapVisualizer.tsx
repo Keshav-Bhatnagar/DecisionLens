@@ -525,9 +525,9 @@ export default function RoadmapVisualizer({
         /* ========================================================================= */
         /* ROADMAP.SH INTERACTIVE NODE GRAPH VIEW                                    */
         /* ========================================================================= */
-        <div className="space-y-8 relative pl-2 sm:pl-6">
-          {/* Continuous vertical guide line running behind the phases */}
-          <div className="absolute left-6 sm:left-10 top-6 bottom-6 w-0.5 bg-[#cfc7b2] dark:bg-[#38332C] z-0" />
+        <div className="space-y-8 relative">
+          {/* Continuous vertical guide line centered on the 36px (w-9) phase badges */}
+          <div className="absolute left-[17px] top-4 bottom-4 w-0.5 bg-[#cfc7b2] dark:bg-[#38332C] z-0" />
 
           {roadmap.phases.map((phase, pIdx) => {
             const phaseDates = getPhaseDates(pIdx);
@@ -537,7 +537,7 @@ export default function RoadmapVisualizer({
             const isPhaseDone = phase.tasks.length > 0 && completedCount === phase.tasks.length;
 
             return (
-              <div key={phase.phase_id} className="relative z-10 space-y-4">
+              <div key={phase.phase_id} className="relative z-[1] space-y-4">
                 {/* PHASE HEADER NODE */}
                 <div className="flex items-start gap-4">
                   {/* Phase Marker Dot */}
@@ -580,7 +580,7 @@ export default function RoadmapVisualizer({
                 </div>
 
                 {/* TASKS FLOW / CONNECTED NODES */}
-                <div className="ml-4 sm:ml-9 pl-6 sm:pl-8 space-y-3 border-l-2 border-dashed border-[#cfc7b2] dark:border-[#38332C]">
+                <div className="ml-[17px] pl-7 sm:pl-9 space-y-3 border-l-2 border-dashed border-[#cfc7b2] dark:border-[#38332C]">
                   {filteredTasks.length === 0 ? (
                     <div className="p-3 bg-[#EDE7D6]/50 dark:bg-[#181614]/50 border border-dashed border-[#cfc7b2] dark:border-[#38332C] text-xs text-[#78716c] italic">
                       No milestones match current filters.
@@ -605,7 +605,7 @@ export default function RoadmapVisualizer({
                           onClick={() => setSelectedTask({ phaseId: phase.phase_id, task })}
                         >
                           {/* Horizontal connector line linking from the dotted track */}
-                          <div className="absolute -left-6 sm:-left-8 top-6 w-6 sm:w-8 h-0.5 bg-[#cfc7b2] dark:bg-[#38332C]" />
+                          <div className="absolute -left-7 sm:-left-9 top-6 w-7 sm:w-9 h-0.5 bg-[#cfc7b2] dark:bg-[#38332C]" />
 
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3 min-w-0 flex-1">

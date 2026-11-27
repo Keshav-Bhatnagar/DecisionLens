@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, verify_ownership, verify_decision_access
 from app.database import get_db
 from app.models import Decision, User
 from app.schemas import (
@@ -46,7 +46,7 @@ def analyze_inputs(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     findings, source_summary = run_decision_structuring(
         decision=decision,
@@ -98,7 +98,7 @@ def get_structured_findings(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     _, source_summary = assemble_decision_input_context(decision, db=db)
 
@@ -139,7 +139,7 @@ def update_structured_findings(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     current_points = dict(decision.points) if decision.points else {}
 

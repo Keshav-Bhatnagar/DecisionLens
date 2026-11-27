@@ -24,21 +24,27 @@ from app.services.meeting_bot import (
     ingest_speech_chunk,
     validate_google_meet_url,
 )
-from app.services.meet_runner import start_meet_bot_background, stop_meet_bot
+from app.services.meet_runner import get_runner_pending_stats, start_meet_bot_background, stop_meet_bot
 
 logger = logging.getLogger("decisionlens.api.meeting_bot")
 
 router = APIRouter(tags=["Google Meet Bot & Private Chat"])
 
 
-def _to_session_response(session: GoogleMeetBotSession, db: Session) -> GoogleMeetBotSessionResponse:
-    # Count private messages
-    msg_count = db.scalar(
-        select(func.count(MeetingPrivateInput.id))
-        .where(MeetingPrivateInput.decision_id == session.decision_id)
-    ) or 0
+def _to_session_response(
+    session: GoogleMeetBotSession,
+    db: Session,
+    msg_count: Optional[int] = None,
+) -> GoogleMeetBotSessionResponse:
+    # Count private messages once when not pre-fetched (avoids N+1 queries in list_bot_sessions)
+    if msg_count is None:
+        msg_count = db.scalar(
+            select(func.count(MeetingPrivateInput.id))
+            .where(MeetingPrivateInput.decision_id == session.decision_id)
+        ) or 0
 
     meta = session.metadata_json or {}
+    pending_chunks, buffered_seconds = get_runner_pending_stats(session.id)
     return GoogleMeetBotSessionResponse(
         id=session.id,
         decision_id=session.decision_id,
@@ -58,6 +64,8 @@ def _to_session_response(session: GoogleMeetBotSession, db: Session) -> GoogleMe
         private_message_count=msg_count,
         runner_note=meta.get("runner_note"),
         audio_chunks_received=int(meta.get("audio_chunks_received") or 0),
+        pending_chunks=pending_chunks,
+        buffered_seconds=buffered_seconds,
         created_at=session.created_at,
         updated_at=session.updated_at,
     )
@@ -101,6 +109,7 @@ def join_google_meet(
             language=req.language or "en",
             recording_enabled=req.recording_enabled if req.recording_enabled is not None else True,
             distraction_filtering=req.distraction_filtering if req.distraction_filtering is not None else True,
+            force_new=bool(req.force_new),
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -137,7 +146,11 @@ def list_bot_sessions(
         .order_by(GoogleMeetBotSession.created_at.desc())
     )
     sessions = db.scalars(stmt).all()
-    return [_to_session_response(s, db) for s in sessions]
+    msg_count = db.scalar(
+        select(func.count(MeetingPrivateInput.id))
+        .where(MeetingPrivateInput.decision_id == decision_id)
+    ) or 0
+    return [_to_session_response(s, db, msg_count=msg_count) for s in sessions]
 
 
 @router.get(
@@ -319,7 +332,8 @@ def finish_meeting_and_analyze(
     if not session or session.decision_id != decision_id:
         raise HTTPException(status_code=404, detail="Bot session not found")
 
-    stop_meet_bot(session_id)
+    stop_meet_bot(session_id, wait_timeout=30.0)
+    db.refresh(session)
 
     result = finish_bot_session_and_analyze(
         db=db,

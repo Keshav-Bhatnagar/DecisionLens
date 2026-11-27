@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, verify_ownership, verify_decision_access
 from app.database import get_db
 from app.models import Decision, User
 from app.schemas import (
@@ -32,7 +32,7 @@ def _get_owned_decision(decision_id: int, db: Session, current_user: User) -> De
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision {decision_id} not found",
         )
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
     return decision
 
 

@@ -3,9 +3,11 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+import httpx
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, verify_ownership
+from app.auth import get_current_user, verify_ownership, verify_decision_access
 from app.database import get_db
 from app.models import Decision, User
 from app.schemas import (
@@ -69,7 +71,7 @@ def detect_gaps(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     resp = detect_decision_gaps(decision, db, force_mock=force_mock)
     if decision.analysis and isinstance(decision.analysis, dict):
@@ -108,7 +110,7 @@ def get_gaps(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     gaps_data = decision.gaps or {}
     raw_list = gaps_data.get("gaps", [])
@@ -148,7 +150,7 @@ def answer_gap(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     gaps_data = dict(decision.gaps) if decision.gaps else {"gaps": []}
     gaps_list = gaps_data.get("gaps", [])
@@ -232,7 +234,7 @@ def research_gap(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     # Validate resolution method strictly
     method = payload.resolution_method.strip().lower()
@@ -383,7 +385,7 @@ def get_decision_research(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     res_data = decision.research or {}
     raw_findings = res_data.get("findings", [])
@@ -421,7 +423,7 @@ def execute_gap_research_endpoint(
     if not decision:
         raise HTTPException(status_code=404, detail="Decision not found")
 
-    verify_ownership(decision.owner_id, current_user.id, resource_name="Decision")
+    verify_decision_access(db, decision, current_user)
 
     gaps_data = dict(decision.gaps) if decision.gaps else {"gaps": []}
     gaps_list = gaps_data.get("gaps", [])
@@ -515,4 +517,75 @@ def execute_gap_research_endpoint(
         finding=finding,
         updated_gap=GapItem.model_validate(target_gap),
         message="Web research executed and synthesized successfully",
+    )
+
+
+class SlackShareRequest(BaseModel):
+    webhook_url: str
+    include_resolved: bool = False
+
+
+class SlackShareResponse(BaseModel):
+    sent: bool
+    gaps_shared: int
+    message: str
+
+
+@router.post(
+    "/gaps/share-slack",
+    response_model=SlackShareResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Send missing information gaps to a Slack Incoming Webhook (₹0 free integration)",
+)
+def share_gaps_to_slack(
+    decision_id: int,
+    body: SlackShareRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Push unresolved or all meeting gaps to a team Slack channel via Incoming Webhook."""
+    decision = db.get(Decision, decision_id)
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+    verify_decision_access(db, decision, current_user)
+
+    webhook_url = (body.webhook_url or "").strip()
+    if not webhook_url.startswith("https://hooks.slack.com/services/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Slack Incoming Webhook URL. Must start with https://hooks.slack.com/services/",
+        )
+
+    gaps_list = list((decision.gaps or {}).get("gaps", []))
+    target_gaps = (
+        gaps_list
+        if body.include_resolved
+        else [g for g in gaps_list if g.get("status") in ("pending", "research_queued", "unresolved_research")]
+    )
+    if not target_gaps:
+        return SlackShareResponse(sent=False, gaps_shared=0, message="No matching gaps to share.")
+
+    lines = [f"*DecisionLens — Missing Takeaways & Gaps for:* {decision.title}"]
+    for idx, g in enumerate(target_gaps[:12], start=1):
+        imp = str(g.get("importance", "important")).upper()
+        q = str(g.get("question", "")).strip()
+        lines.append(f"{idx}. *[{imp}]* {q}")
+    if len(target_gaps) > 12:
+        lines.append(f"_...and {len(target_gaps) - 12} more open gap(s) in DecisionLens._")
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(webhook_url, json={"text": "\n".join(lines)})
+            resp.raise_for_status()
+    except Exception as exc:
+        logger.warning("Slack webhook delivery failed for decision=%s: %s", decision_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to deliver gaps to Slack webhook: {exc}",
+        )
+
+    return SlackShareResponse(
+        sent=True,
+        gaps_shared=len(target_gaps),
+        message=f"Sent {len(target_gaps)} gap(s) to Slack.",
     )
