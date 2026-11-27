@@ -32,9 +32,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python backend dependencies
+# Install Python backend dependencies and headless Chromium for Google Meet Bot
 COPY backend/requirements.txt ./backend/
-RUN pip install --no-cache-dir -r ./backend/requirements.txt
+RUN pip install --no-cache-dir -r ./backend/requirements.txt \
+    && playwright install chromium --with-deps
 
 # Copy backend source code
 COPY backend/ ./backend/
@@ -55,6 +56,7 @@ ENV PORT=3000
 ENV INTERNAL_API_URL=http://127.0.0.1:8000
 ENV NEXT_PUBLIC_API_URL=""
 ENV PYTHONUNBUFFERED=1
+ENV MEET_BOT_HEADLESS=true
 
 EXPOSE 3000
 
