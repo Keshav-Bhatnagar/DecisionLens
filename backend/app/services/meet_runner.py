@@ -980,6 +980,11 @@ class MeetBotRunner:
                     "--disable-setuid-sandbox",
                     "--disable-dev-shm-usage",
                     "--disable-gpu",
+                    "--disable-extensions",
+                    "--disable-background-networking",
+                    "--disable-sync",
+                    "--no-first-run",
+                    "--no-default-browser-check",
                 ]
                 context_kwargs = {
                     "user_data_dir": str(profile_dir),
@@ -1018,16 +1023,21 @@ class MeetBotRunner:
                         ),
                     )
 
+                    self._update_status("connecting", "Navigating to Google Meet...")
                     try:
-                        page.goto(self.meet_url, wait_until="domcontentloaded", timeout=60000)
+                        page.goto(self.meet_url, wait_until="domcontentloaded", timeout=20000)
                     except Exception as goto_exc:
                         if "Timeout" in str(goto_exc):
-                            logger.warning("Meet goto domcontentloaded timed out, retrying with commit: %s", goto_exc)
-                            page.goto(self.meet_url, wait_until="commit", timeout=60000)
-                            time.sleep(5)
+                            logger.warning("Meet goto domcontentloaded timed out, switching to commit: %s", goto_exc)
+                            page.goto(self.meet_url, wait_until="commit", timeout=25000)
                         else:
                             raise
-                    time.sleep(3)
+                    try:
+                        page.locator(
+                            "button:has-text('Ask to join'), button:has-text('Join now'), button:has-text('Continue without microphone and camera'), input[aria-label*='name' i]"
+                        ).first.wait_for(state="visible", timeout=20000)
+                    except Exception:
+                        time.sleep(3)
 
                     # Dismiss "Continue without microphone and camera" if shown
                     for label in ["Continue without microphone and camera", "Got it", "Dismiss"]:
