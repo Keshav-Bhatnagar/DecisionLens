@@ -103,10 +103,29 @@ def test_share_gaps_to_slack_validates_url_and_delivers_open_gaps(client: TestCl
     assert "Already answered?" not in captured["text"]
 
 
-def test_postgres_worker_queue_enqueue_and_atomic_claim(db_session):
+def test_postgres_worker_queue_enqueue_and_atomic_claim(db_session, registered_user):
+    from app.models import GoogleMeetBotSession
+
+    user = registered_user["user"]
+    folder = Folder(name="Worker Test Folder", owner_id=user.id)
+    db_session.add(folder)
+    db_session.commit()
+    decision = Decision(title="Worker Queue Test", folder_id=folder.id, owner_id=user.id)
+    db_session.add(decision)
+    db_session.commit()
+    bot_sess = GoogleMeetBotSession(
+        decision_id=decision.id,
+        meet_url="https://meet.google.com/abc-defg-hij",
+        bot_name="DecisionLens Bot",
+        status="connecting",
+        private_chat_token="test-worker-token-101",
+    )
+    db_session.add(bot_sess)
+    db_session.commit()
+
     job = enqueue_bot_job(
         db_session,
-        session_id=101,
+        session_id=bot_sess.id,
         meet_url="https://meet.google.com/abc-defg-hij",
         bot_name="DecisionLens Bot",
         language="en",
