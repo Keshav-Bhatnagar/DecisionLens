@@ -63,12 +63,14 @@ interface SynthesisPanelProps {
   decisionId: number;
   initialSynthesis?: DecisionSynthesis | null;
   onSynthesisUpdated?: (synthesis: DecisionSynthesis) => void;
+  onOpenExportModal?: () => void;
 }
 
 export default function SynthesisPanel({
   decisionId,
   initialSynthesis,
   onSynthesisUpdated,
+  onOpenExportModal,
 }: SynthesisPanelProps) {
   const [synthesis, setSynthesis] = useState<DecisionSynthesis | null>(
     initialSynthesis || null
@@ -939,6 +941,19 @@ jobs:
                           <span>{copiedADR ? "Copied Summary!" : "Copy Summary"}</span>
                         </button>
                       </>
+                    )}
+                    {onOpenExportModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          onOpenExportModal();
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer border-t border-[#e5dec9] dark:border-[#2e2a24]"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                        <span>Export PDF / LaTeX Dossier</span>
+                      </button>
                     )}
                     </motion.div>
                   </>

@@ -931,6 +931,7 @@ export default function DecisionDetailPage({
                         : null
                     }
                     onSynthesisUpdated={() => loadData()}
+                    onOpenExportModal={() => setShowExportModal(true)}
                   />
 
                   {/* Small Why Button Directly Below the Verdict */}
