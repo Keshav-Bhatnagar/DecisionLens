@@ -999,6 +999,17 @@ class MeetBotRunner:
                         "Chrome/131.0.0.0 Safari/537.36"
                     )
                 context = p.chromium.launch_persistent_context(**context_kwargs)
+                cookies_b64 = os.environ.get("MEET_BOT_COOKIES_B64", "").strip()
+                if cookies_b64:
+                    try:
+                        import json
+
+                        raw_cookies = json.loads(base64.b64decode(cookies_b64).decode("utf-8"))
+                        if isinstance(raw_cookies, list) and raw_cookies:
+                            context.add_cookies(raw_cookies)
+                            logger.info("Loaded %d Meet bot cookies from MEET_BOT_COOKIES_B64", len(raw_cookies))
+                    except Exception as cookie_exc:
+                        logger.warning("Failed to load MEET_BOT_COOKIES_B64: %s", cookie_exc)
                 try:
                     page = context.pages[0] if context.pages else context.new_page()
                     page.on(
