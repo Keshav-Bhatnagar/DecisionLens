@@ -125,10 +125,10 @@ export default function AppShell({
         showMobileHeader={false}
       />
 
-      {/* Main Layout Area - shifts with sidebar width (240px desktop) */}
+      {/* Main Layout Area - shifts cleanly with full-height Concave Curved Paper Sidebar */}
       <div
         className={`flex-1 flex flex-col transition-all duration-200 ease-in-out ${
-          collapsed ? "lg:pl-16" : "lg:pl-[240px]"
+          collapsed ? "lg:pl-14" : "lg:pl-[204px]"
         }`}
       >
         {/* Calm Contextual Topbar: Breadcrumbs + User Info + Aperture Theme Shutter */}

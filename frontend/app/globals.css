@@ -226,3 +226,31 @@ nav a, nav button {
 td, th {
   font-size: 14px;
 }
+
+/* ── Scoped Archival Slip-Rail Sidebar Typography & Depth ────── */
+.dl-sidebar nav a,
+.dl-sidebar nav button {
+  font-size: 14px;
+}
+
+.dl-sidebar-kicker {
+  font-size: 10.5px !important;
+  line-height: 1.2 !important;
+}
+
+.dl-sidebar-doc {
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+}
+
+.dl-sidebar-pull {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 140ms ease,
+    box-shadow 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dl-sidebar-pull {
+    transition: none;
+  }
+}
