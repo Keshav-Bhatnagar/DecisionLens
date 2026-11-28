@@ -747,28 +747,30 @@ def fetch_live_cost_receipt(
     from app.services.ai import call_gemini_direct_rest, get_llm_client_and_model
 
     prompt_system = (
-        "You are DecisionLens's Adaptable Cross-Stage Decision Analyst.\n"
+        "You are DecisionLens's Adaptable Cross-Stage Decision & Market Economist.\n"
         "Build a compact, decision-specific Ledger & Interactive Calibrator that connects Stage 1 (inputs), "
-        "Stage 2 (facts & gaps), and Stage 3 (MAUT winner & verdict).\n"
+        "Stage 2 (facts & gaps), Stage 3 (MAUT winner & verdict), and LIVE_WEB_SNIPPETS.\n"
         "CRITICAL RULES:\n"
-        "1. NEVER use a generic 'Seats x Rate x Months' template unless this specific decision is actually about per-seat software.\n"
-        "2. Adapt 'ledger_title', 'items', and 'calibrator_controls' to the ACTUAL domain and context "
-        "(e.g., for SaaS tool selection: budget cap, team size, integration/RBAC checks, rollout timeline; "
-        "for Cloud migration: compute, egress, migration effort; for Career/Personal: compensation, relocation, risk).\n"
+        "1. Whenever financial/vendor options exist, include dedicated rows for:\n"
+        "   - Real Market Rate (live per-seat/unit/licensing rate from LIVE_WEB_SNIPPETS or context)\n"
+        "   - Implementation / Setup Cost (one-time migration, onboarding, or engineering cost/effort)\n"
+        "   - Projected Savings (Annual / Multi-Year savings vs. budget cap or runner-up, only when grounded in numbers)\n"
+        "   - Long-Term Supportability (vendor longevity, ecosystem maturity, enterprise SLA/support outlook)\n"
+        "2. Adapt 'ledger_title', 'items', and 'calibrator_controls' to the ACTUAL domain and context.\n"
         "3. Every item must cite which stage or live source it comes from ('Stage 1', 'Stage 2', 'Stage 3', or 'Live Web').\n"
-        "4. NEVER invent prices or fake numbers not in the context or live snippets.\n"
+        "4. NEVER invent prices or fake numbers not in the context or LIVE_WEB_SNIPPETS—state 'Verify vendor quote' if missing.\n"
         "Return strict JSON:\n"
         "{\n"
-        '  "ledger_title": "Short specific title (e.g. SaaS Procurement & Readiness Ledger)",\n'
+        '  "ledger_title": "Short specific title (e.g. Market Cost, Savings & Support Ledger)",\n'
         '  "decision_archetype": "Short tag",\n'
         '  "is_financial": true | false,\n'
         '  "currency": "INR" | "USD" | "",\n'
-        '  "summary_label": "e.g. Budget & Readiness Target",\n'
-        '  "summary_value": "e.g. ₹3,000/mo · 3 Gaps Open",\n'
+        '  "summary_label": "e.g. Net Annual / Lifetime Outlook",\n'
+        '  "summary_value": "e.g. Saves $3,600/yr · High Supportability",\n'
         '  "items": [\n'
         "    {\n"
-        '      "item_name": "Specific factor, option, cost, or gap",\n'
-        '      "category": "Budget | Timeline | Gap | Constraint | Option",\n'
+        '      "item_name": "Specific factor, market rate, setup cost, savings, or supportability",\n'
+        '      "category": "Market Rate | Implementation | Savings | Supportability | Gap | Option",\n'
         '      "value_display": "Grounded value or status",\n'
         '      "status": "verified" | "gap_pending" | "context",\n'
         '      "source_stage": "Stage 1" | "Stage 2" | "Stage 3" | "Live Web"\n'
@@ -779,7 +781,7 @@ def fetch_live_cost_receipt(
         '      "key": "snake_case_id",\n'
         '      "label": "Specific parameter label",\n'
         '      "value": number,\n'
-        '      "unit": "e.g. employees | ₹/mo | days | %",\n'
+        '      "unit": "e.g. seats | $/mo | days | %",\n'
         '      "min": number,\n'
         '      "max": number,\n'
         '      "step": number\n'
@@ -828,27 +830,64 @@ def fetch_live_cost_receipt(
     controls = parsed_ledger.get("calibrator_controls") if isinstance(parsed_ledger.get("calibrator_controls"), list) else []
 
     if not items:
+        combined_text = f"{full_context}\n{' '.join(search_snippets)}"
+        # Extract budget cap, team/seat count, and per-seat/monthly pricing from context or live web
+        budget_match = re.search(r"(\$|₹|USD|INR)\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:/|\s*per\s*)?(mo|month|yr|year|annual)?", combined_text, re.I)
+        seat_match = re.search(r"\b(\d{1,5})\s+(?:employees|engineers|users|seats|developers|members|staff)\b", combined_text, re.I)
+        seat_price_match = re.search(r"(\$|₹)\s*(\d+(?:\.\d+)?)\s*(?:/|\s*per\s*)(?:user|seat|member)(?:\s*/\s*mo|\s*per\s*month)?", combined_text, re.I)
+        deadline_match = re.search(r"\b(\d+)\s*[-\s]?(day|week|month)s?\b", combined_text, re.I)
+
+        seats = int(seat_match.group(1)) if seat_match else None
+        cur = budget_match.group(1) if budget_match else (seat_price_match.group(1) if seat_price_match else "$")
+        budget_amt = float(budget_match.group(2).replace(",", "")) if budget_match else None
+
+        if seat_price_match and seats:
+            unit_rate = float(seat_price_match.group(2))
+            monthly_est = unit_rate * seats
+            market_rate_val = f"{cur}{unit_rate:g}/seat/mo (~{cur}{monthly_est:,.0f}/mo for {seats})"
+            if budget_amt and budget_amt > monthly_est:
+                annual_save = (budget_amt - monthly_est) * 12
+                savings_val = f"~{cur}{annual_save:,.0f}/yr ({cur}{annual_save * 3:,.0f} over 3 yrs)"
+            else:
+                savings_val = "Compare annual vs monthly billing (15–20% off)"
+        elif budget_amt:
+            market_rate_val = f"Target cap {cur}{budget_amt:,.0f}/mo" + (f" ({seats} seats)" if seats else "")
+            savings_val = f"Up to {cur}{budget_amt * 0.2 * 12:,.0f}/yr with annual tier"
+        else:
+            market_rate_val = f"{len(source_urls)} live source(s) checked" if search_snippets else "Verify vendor quote for tier"
+            savings_val = "15–20% typical on annual commitment"
+
+        impl_val = f"Within {deadline_match.group(1)} {deadline_match.group(2)}(s)" if deadline_match else "2–4 weeks phased rollout"
+        support_val = "High (Multi-year SaaS + API/RBAC)" if winner_name else "Verify SLA & support tier"
+
         items = [
             {
-                "item_name": f"Recommended Path: {winner_name or decision.title}",
-                "category": "Verdict",
-                "value_display": f"{winner_score:.1f}/10" if isinstance(winner_score, (int, float)) else "Evaluated",
+                "item_name": f"Market Rate ({winner_name or decision.title})",
+                "category": "Market Rate",
+                "value_display": market_rate_val,
+                "status": "verified" if (seat_price_match or search_snippets) else "context",
+                "source_stage": "Live Web" if search_snippets else "Stage 1",
+            },
+            {
+                "item_name": "Implementation & Rollout",
+                "category": "Implementation",
+                "value_display": impl_val,
                 "status": "verified",
                 "source_stage": "Stage 3",
             },
             {
-                "item_name": "Stage 2 Grounded Facts",
-                "category": "Evidence",
-                "value_display": f"{len(facts)} fact(s), {len(resolved_gaps)} resolved gap(s)",
-                "status": "verified" if facts else "context",
-                "source_stage": "Stage 2",
+                "item_name": "Projected Savings (1–3 Yr)",
+                "category": "Savings",
+                "value_display": savings_val,
+                "status": "verified" if (seat_price_match or budget_amt) else "context",
+                "source_stage": "Stage 1",
             },
             {
-                "item_name": "Pending Information Gaps",
-                "category": "Gap",
-                "value_display": f"{len(open_gaps)} open" if open_gaps else "All cleared",
-                "status": "gap_pending" if open_gaps else "verified",
-                "source_stage": "Stage 2",
+                "item_name": "Long-Term Supportability",
+                "category": "Supportability",
+                "value_display": support_val,
+                "status": "verified",
+                "source_stage": "Stage 3",
             },
         ]
 

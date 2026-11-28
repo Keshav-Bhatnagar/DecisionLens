@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DecisionSynthesis,
@@ -18,6 +18,7 @@ import {
   recordDecisionOverride,
   fetchLiveCostReceipt,
   LiveCostReceiptResponse,
+  askDecisionQuestion,
 } from "@/lib/api";
 import {
   AlertTriangle,
@@ -55,6 +56,8 @@ import {
   ChevronUp,
   Globe,
   Server,
+  Send,
+  MessageSquare,
 } from "lucide-react";
 import OutcomeTrackingCard from "@/components/OutcomeTrackingCard";
 import RoadmapVisualizer from "@/components/RoadmapVisualizer";
@@ -64,6 +67,7 @@ interface SynthesisPanelProps {
   initialSynthesis?: DecisionSynthesis | null;
   onSynthesisUpdated?: (synthesis: DecisionSynthesis) => void;
   onOpenExportModal?: () => void;
+  whyBreakdownSlot?: React.ReactNode;
 }
 
 export default function SynthesisPanel({
@@ -71,6 +75,7 @@ export default function SynthesisPanel({
   initialSynthesis,
   onSynthesisUpdated,
   onOpenExportModal,
+  whyBreakdownSlot,
 }: SynthesisPanelProps) {
   const [synthesis, setSynthesis] = useState<DecisionSynthesis | null>(
     initialSynthesis || null
@@ -88,7 +93,7 @@ export default function SynthesisPanel({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [copiedADR, setCopiedADR] = useState(false);
-  const [activeTab, setActiveTab] = useState<"memo" | "roadmap" | "audit">("memo");
+  const [activeTab, setActiveTab] = useState<"memo" | "roadmap" | "audit" | "ask">("memo");
 
   // Dynamic Sprint Calendar & Runway State
   const [projectStartDate, setProjectStartDate] = useState<string>(() => {
@@ -211,6 +216,43 @@ export default function SynthesisPanel({
   const [showPriorities, setShowPriorities] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showVersionMenu, setShowVersionMenu] = useState(false);
+
+  // Follow-up Decision Q&A state
+  const [qaQuestion, setQaQuestion] = useState("");
+  const [qaLoading, setQaLoading] = useState(false);
+  const [qaError, setQaError] = useState<string | null>(null);
+  const [qaHistory, setQaHistory] = useState<
+    Array<{ role: "user" | "assistant"; content: string; sources?: string[] }>
+  >([]);
+
+  async function handleAskDecision(customQuestion?: string) {
+    const q = (customQuestion ?? qaQuestion).trim();
+    if (q.length < 2 || qaLoading) return;
+    setQaQuestion("");
+    setQaError(null);
+    const nextHistory = [...qaHistory, { role: "user" as const, content: q }];
+    setQaHistory(nextHistory);
+    setQaLoading(true);
+    try {
+      const res = await askDecisionQuestion(
+        decisionId,
+        q,
+        nextHistory.map((m) => ({ role: m.role, content: m.content }))
+      );
+      setQaHistory((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: res.answer,
+          sources: res.grounded_sources,
+        },
+      ]);
+    } catch (err: unknown) {
+      setQaError(err instanceof Error ? err.message : "Failed to answer question.");
+    } finally {
+      setQaLoading(false);
+    }
+  }
 
   // New task inline creation state
   const [addingTaskPhaseId, setAddingTaskPhaseId] = useState<string | null>(null);
@@ -373,6 +415,7 @@ export default function SynthesisPanel({
   const [liveReceipt, setLiveReceipt] = useState<LiveCostReceiptResponse | null>(null);
   const [loadingLiveReceipt, setLoadingLiveReceipt] = useState(false);
   const [calValues, setCalValues] = useState<Record<string, number>>({});
+  const autoFetchedLedgerRef = useRef<number | null>(null);
 
   const handleFetchLiveReceipt = async () => {
     setLoadingLiveReceipt(true);
@@ -390,6 +433,20 @@ export default function SynthesisPanel({
       setLoadingLiveReceipt(false);
     }
   };
+
+  useEffect(() => {
+    if (
+      synthesis &&
+      !viewingSnapshot &&
+      !liveReceipt &&
+      !loadingLiveReceipt &&
+      autoFetchedLedgerRef.current !== decisionId
+    ) {
+      autoFetchedLedgerRef.current = decisionId;
+      handleFetchLiveReceipt();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decisionId, synthesis, viewingSnapshot]);
 
   async function handleSaveRoadmap() {
     if (!activeRoadmap || viewingSnapshot) return;
@@ -615,38 +672,36 @@ ${displaySynthesis.headline}
 
 ${displaySynthesis.recommendation_text}
 
-${
-  displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0
-    ? `## Mandatory Due-Diligence Pre-Commitment Spikes
+${displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0
+        ? `## Mandatory Due-Diligence Pre-Commitment Spikes
 ` +
-      displaySynthesis.conditional_triggers.map((t, i) => `${i + 1}. ${t}`).join("\n") +
-      "\n\n"
-    : ""
-}## Evaluated Alternatives & Strategic Trade-offs
+        displaySynthesis.conditional_triggers.map((t, i) => `${i + 1}. ${t}`).join("\n") +
+        "\n\n"
+        : ""
+      }## Evaluated Alternatives & Strategic Trade-offs
 ${displaySynthesis.alternatives_considered
-  .map(
-    (alt) => `### ${alt.name} ${alt.is_recommended ? "(SELECTED)" : "(DEPRIORITIZED)"}
+        .map(
+          (alt) => `### ${alt.name} ${alt.is_recommended ? "(SELECTED)" : "(DEPRIORITIZED)"}
 ${alt.description}
 - **Advantages:** ${alt.pros.join(", ")}
 - **Disadvantages:** ${alt.cons.join(", ")}
 ${alt.why_not_recommended ? `- **Deprioritization Rationale:** ${alt.why_not_recommended}` : ""}
 `
-  )
-  .join("\n")}
+        )
+        .join("\n")}
 
 ## 3-Phase Execution Roadmap
-${
-  displayRoadmap
-    ? displayRoadmap.phases
-        .map(
-          (p) => `### ${p.title} (${p.timeline})
+${displayRoadmap
+        ? displayRoadmap.phases
+          .map(
+            (p) => `### ${p.title} (${p.timeline})
 ${p.description}
 ${p.tasks.map((t) => `- [${t.is_completed ? "x" : " "}] **${t.title}** (Owner: ${t.owner_role}, Timeline: ${t.timeline})`).join("\n")}
 `
-        )
-        .join("\n")
-    : "No roadmap available."
-}
+          )
+          .join("\n")
+        : "No roadmap available."
+      }
 ---
 *Generated by DecisionLens Multi-Stage Epistemic Synthesis Engine.*
 `;
@@ -780,260 +835,78 @@ jobs:
   return (
     <div className="space-y-6">
       {/* Editorial Header & Action Bar */}
-      <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-5 shadow-2xs space-y-4 font-courier">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-none bg-[#7a4e10] dark:bg-[#D4AA50] shrink-0"></span>
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
-                STAGE 03 / FINAL REPORT & EXECUTIVE VERDICT
+      {/* Compact Action Bar (only shown standalone before synthesis or when Priorities drawer is open) */}
+      {(!displaySynthesis || (!viewingSnapshot && (showPriorities || priorities.length > 0))) && (
+        <div className="bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 shadow-2xs space-y-3 font-courier">
+          {!displaySynthesis && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                Ready to Generate Final Report
               </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleRunSynthesis}
+                  disabled={synthesizing}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] font-semibold text-xs rounded-none transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {synthesizing ? "Synthesizing..." : "Generate Verdict"}
+                </button>
+              </div>
             </div>
-            <h2 className="font-newsreader text-2xl sm:text-[26px] font-normal text-[#1d1d1b] dark:text-[#F0EAE1] mt-0.5 leading-snug">
-              Boardroom Decision Memo & Execution Roadmap
-            </h2>
-            <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] font-courier mt-1 max-w-2xl">
-              Synthesized from cognitive findings, resolved information gaps, and multi-criteria stress testing.
-            </p>
-          </div>
+          )}
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-            {snapshots.length > 0 && (
-              <div className={`relative ${showVersionMenu ? "z-50" : "z-45"}`}>
+          {/* Collapsible Strategic Priorities Drawer */}
+          {!viewingSnapshot && (showPriorities || (!displaySynthesis && priorities.length > 0)) && (
+            <div className="pt-3 border-t border-border space-y-2 animate-in fade-in">
+              <div className="flex items-center justify-between">
+                <label className="block text-[15px] font-mono uppercase tracking-wider text-muted font-bold">
+                  Executive Prioritization Directives (Calibrates Synthesis Weighting):
+                </label>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowVersionMenu(!showVersionMenu);
-                    setShowActionsMenu(false);
-                  }}
-                  className="relative z-50 inline-flex items-center gap-2 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-md text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] transition-colors cursor-pointer whitespace-nowrap"
+                  onClick={() => setShowPriorities(false)}
+                  className="text-xs text-muted hover:text-ink cursor-pointer"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                  <span>
-                    {viewingSnapshot
-                      ? `Snapshot v${viewingSnapshot.version}`
-                      : `Active Version (v${synthesis?.version || 1})`}
-                  </span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50] transition-transform duration-150 ${
-                      showVersionMenu ? "rotate-180" : ""
-                    }`}
-                  />
+                  Close
                 </button>
-
-                <AnimatePresence>
-                  {showVersionMenu && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setShowVersionMenu(false)}
-                      />
-                      <motion.div
-                        initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                        transition={{ duration: 0.14 }}
-                        className="absolute right-0 top-full mt-1.5 w-72 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md shadow-xl z-50 py-1 font-courier text-xs divide-y divide-[#cfc7b2]/40 dark:divide-[#38332C]/40"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleSelectSnapshot(0);
-                            setShowVersionMenu(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] flex items-center justify-between gap-2 cursor-pointer ${
-                            !viewingSnapshot
-                              ? "bg-[#E5DEC9]/70 dark:bg-[#221F1C] font-bold text-[#1d1d1b] dark:text-[#D4AA50]"
-                              : "text-[#1d1d1b] dark:text-[#F0EAE1]"
-                          }`}
-                        >
-                          <span className="flex items-center gap-2 truncate">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                            <span>Active Version (v{synthesis?.version || 1})</span>
-                          </span>
-                          {!viewingSnapshot && <Check className="w-3.5 h-3.5 shrink-0" />}
-                        </button>
-                        {snapshots
-                          .filter((snap) => snap.version !== (synthesis?.version || 1))
-                          .map((snap) => {
-                          const isSelected = viewingSnapshot?.id === snap.id;
-                          return (
-                            <button
-                              key={snap.id}
-                              type="button"
-                              onClick={() => {
-                                handleSelectSnapshot(snap.id);
-                                setShowVersionMenu(false);
-                              }}
-                              className={`w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] flex items-center justify-between gap-2 cursor-pointer ${
-                                isSelected
-                                  ? "bg-[#E5DEC9]/70 dark:bg-[#221F1C] font-bold text-[#1d1d1b] dark:text-[#D4AA50]"
-                                  : "text-[#4f4b40] dark:text-[#A89F91]"
-                              }`}
-                            >
-                              <span className="truncate">
-                                v{snap.version}: {snap.headline}
-                              </span>
-                              {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
-                            </button>
-                          );
-                        })}
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
               </div>
-            )}
-
-            {/* Consolidated Actions & Export Dropdown Button */}
-            <div className={`relative ${showActionsMenu ? "z-50" : "z-45"}`}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowActionsMenu(!showActionsMenu);
-                  setShowVersionMenu(false);
-                }}
-                className="relative z-50 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold text-xs rounded-md transition-colors cursor-pointer whitespace-nowrap"
-              >
-                <span>Actions & Export</span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50] transition-transform duration-150 ${
-                    showActionsMenu ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              <AnimatePresence>
-                {showActionsMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowActionsMenu(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                      transition={{ duration: 0.14 }}
-                      className="absolute right-0 top-full mt-1.5 w-60 bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md shadow-xl z-50 py-1 font-courier text-xs divide-y divide-[#cfc7b2]/40 dark:divide-[#38332C]/40"
-                    >
-                    {!viewingSnapshot && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPriorities(!showPriorities);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer"
-                      >
-                        <span>{priorities.length > 0 ? `Priorities (${priorities.length})` : "Set Priorities"}</span>
-                      </button>
-                    )}
-
-                    {displaySynthesis && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleCopyBoardroomADR();
-                            setShowActionsMenu(false);
-                          }}
-                          className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer"
-                        >
-                          <Copy className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-                          <span>{copiedADR ? "Copied Summary!" : "Copy Summary"}</span>
-                        </button>
-                      </>
-                    )}
-                    {onOpenExportModal && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowActionsMenu(false);
-                          onOpenExportModal();
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer border-t border-[#e5dec9] dark:border-[#2e2a24]"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-                        <span>Export PDF / LaTeX Dossier</span>
-                      </button>
-                    )}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <button
-              onClick={handleRunSynthesis}
-              disabled={synthesizing}
-              className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] font-semibold text-xs rounded-md transition-colors disabled:opacity-50 cursor-pointer shadow-sm whitespace-nowrap"
-            >
-              {synthesizing ? (
-                <>
-                  <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Synthesizing Memo...</span>
-                </>
-              ) : (
-                <>
-                  <span>{synthesis ? "Re-Synthesize Memo" : "Generate Final Synthesis"}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Collapsible Strategic Priorities Drawer */}
-        {!viewingSnapshot && (showPriorities || (!displaySynthesis && priorities.length > 0)) && (
-          <div className="pt-3 border-t border-border space-y-2 animate-in fade-in">
-            <div className="flex items-center justify-between">
-              <label className="block text-[15px] font-mono uppercase tracking-wider text-muted font-bold">
-                Executive Prioritization Directives (Calibrates Synthesis Weighting):
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowPriorities(false)}
-                className="text-xs text-muted hover:text-ink cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {priorities.map((p) => (
-                <span
-                  key={p}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-paper-sidebar text-ink border border-border"
-                >
-                  {p}
-                  <button
-                    onClick={() => handleRemovePriority(p)}
-                    className="hover:text-rose-600 text-muted font-bold cursor-pointer"
+              <div className="flex flex-wrap items-center gap-2">
+                {priorities.map((p) => (
+                  <span
+                    key={p}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-semibold bg-[#E5DEC9] text-[#1d1d1b] border border-[#cfc7b2]"
                   >
-                    ×
+                    {p}
+                    <button
+                      onClick={() => handleRemovePriority(p)}
+                      className="hover:text-rose-600 text-muted font-bold cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+                  <input
+                    type="text"
+                    placeholder="e.g. Strict 30-day rollout, under budget cap, low onboarding friction..."
+                    value={newPriorityInput}
+                    onChange={(e) => setNewPriorityInput(e.target.value)}
+                    onKeyDown={handleAddPriority}
+                    className="w-full text-xs px-3 py-1.5 bg-[#F4F0E6] border border-[#cfc7b2] rounded-none text-[#1d1d1b] focus:outline-none focus:border-[#7a4e10]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddPriority}
+                    className="text-xs px-3 py-1.5 bg-[#1d1d1b] text-[#F4F0E6] font-semibold rounded-none transition-colors cursor-pointer"
+                  >
+                    Add
                   </button>
-                </span>
-              ))}
-              <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-                <input
-                  type="text"
-                  placeholder="e.g. Strict 30-day rollout, under budget cap, low onboarding friction..."
-                  value={newPriorityInput}
-                  onChange={(e) => setNewPriorityInput(e.target.value)}
-                  onKeyDown={handleAddPriority}
-                  className="w-full text-xs px-3 py-1.5 bg-paper-sidebar border border-border rounded-lg text-ink focus:outline-none focus:border-accent"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddPriority}
-                  className="text-xs px-3 py-1.5 bg-paper-surface hover:bg-paper-sidebar text-ink font-semibold rounded-lg border border-border transition-colors cursor-pointer"
-                >
-                  Add
-                </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Alert Notices */}
       {error && (
@@ -1089,880 +962,867 @@ jobs:
 
       {/* Main Synthesis Presentation */}
       {displaySynthesis ? (
-        <div className="space-y-6">
-          {/* Stale Synthesis Warning */}
-          {displaySynthesis.is_stale && (
-            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center gap-2.5 text-amber-900 dark:text-amber-200 text-xs">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-700 dark:text-amber-400" />
-              <div>
-                <strong className="font-bold">Upstream Analysis Updated: </strong>
-                <span>Problem framing, evidence findings, or matrix weights have changed since this synthesis was produced. Use <strong>Re-Synthesize Memo</strong> above to refresh.</span>
-              </div>
-            </div>
-          )}
-
+        <div className="space-y-4">
           {/* ========================================================================= */}
-          {/* 1. STITCH TWO-COLUMN STUDIO: LEFT = REAL RECEIPT + CALIBRATOR | RIGHT = VERDICT & KNOWLEDGE */}
+          {/* SINGLE-ROW MANILA DOSSIER TABS + INLINE HEADER ACTIONS                   */}
           {/* ========================================================================= */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* LEFT DIV: Adaptable Cross-Stage AI Ledger & Interactive Calibrator */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="lg:col-span-5 bg-[#F4F0E6] dark:bg-[#1E1B18] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-5 space-y-4 shadow-xs font-courier"
-            >
-              {/* Ledger Header */}
-              <div className="border-b border-dashed border-[#cfc7b2] dark:border-[#38332C] pb-3 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50] truncate">
-                    {liveReceipt?.ledger_title || "CROSS-STAGE DECISION LEDGER"}
-                  </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#4f4b40] dark:text-[#A89F91] shrink-0">
-                    {liveReceipt?.as_of_date || new Date().toISOString().split("T")[0]}
-                  </span>
-                </div>
-
-                {/* Stage 1 -> Stage 2 -> Stage 3 Connection Strip */}
-                {liveReceipt?.stage_connection && (
-                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[#4f4b40] dark:text-[#A89F91]">
-                    <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C]">
-                      S1: {liveReceipt.stage_connection.stage1_sources.join(" + ")}
-                    </span>
-                    <span>→</span>
-                    <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C]">
-                      S2: {liveReceipt.stage_connection.stage2_facts_count} facts · {liveReceipt.stage_connection.stage2_open_gaps} open gaps
-                    </span>
-                    <span>→</span>
-                    <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C] font-bold text-[#7a4e10] dark:text-[#D4AA50]">
-                      S3: {liveReceipt.stage_connection.stage3_winner || "Verdict"}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between gap-2 text-[11px] text-[#6e655a] dark:text-[#A89F91]">
-                  <span className="truncate">
-                    {liveReceipt?.pricing_source || "Connect Stage 1–3 & Live Market"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleFetchLiveReceipt}
-                    disabled={loadingLiveReceipt}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:text-[#181614] text-[#F4F0E6] font-semibold text-[11px] transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-                  >
-                    <RotateCcw className={`w-3 h-3 ${loadingLiveReceipt ? "animate-spin" : ""}`} />
-                    <span>{loadingLiveReceipt ? "Syncing..." : liveReceipt ? "Refresh Ledger" : "Build Smart Ledger"}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Adaptable Itemized Rows (Decision-Specific, Connected to Stages 1-3) */}
-              <div className="space-y-2.5 text-xs">
-                {liveReceipt && liveReceipt.items.length > 0 ? (
-                  <>
-                    <div className="grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-[#97907e] border-b border-[#cfc7b2]/60 dark:border-[#38332C] pb-1">
-                      <span className="col-span-6">Factor / Option</span>
-                      <span className="col-span-2 text-center">Stage</span>
-                      <span className="col-span-4 text-right">Grounded Value</span>
-                    </div>
-                    {liveReceipt.items.map((item, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, x: -6 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="grid grid-cols-12 items-start gap-1.5 py-1.5 border-b border-dashed border-[#cfc7b2]/60 dark:border-[#38332C]/70"
-                      >
-                        <div className="col-span-6 min-w-0">
-                          <div className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">{item.item_name}</div>
-                          <div className="text-[10px] text-[#6e655a] dark:text-[#A89F91]">{item.category}</div>
-                        </div>
-                        <div className="col-span-2 text-center">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91]">
-                            {item.source_stage}
-                          </span>
-                        </div>
-                        <div
-                          className={`col-span-4 text-right font-bold leading-snug ${
-                            item.status === "gap_pending"
-                              ? "text-amber-700 dark:text-amber-400"
-                              : item.status === "verified"
-                              ? "text-emerald-700 dark:text-emerald-400"
-                              : "text-[#1d1d1b] dark:text-[#F0EAE1]"
-                          }`}
-                        >
-                          {item.value_display}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </>
-                ) : (
-                  <div className="py-2.5 px-3 rounded-md bg-[#EDE7D6]/60 dark:bg-[#221F1C] border border-dashed border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
-                    Click <strong>Build Smart Ledger</strong> above to connect Stage 1 inputs, Stage 2 facts &amp; gaps, and Stage 3 MAUT scores for <strong>{displaySynthesis.domain}</strong>.
-                  </div>
-                )}
-
-                {/* Dynamic Summary Row */}
-                {liveReceipt && (
-                  <div className="pt-2 border-t-2 border-dashed border-[#7a4e10]/40 dark:border-[#D4AA50]/40 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
-                      {liveReceipt.summary_label}
-                    </span>
-                    <span className="font-newsreader text-lg font-bold text-emerald-700 dark:text-emerald-400 text-right">
-                      {liveReceipt.summary_value}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* AI-Generated Decision-Specific Interactive Calibrator */}
-              {liveReceipt?.calibrator_controls && liveReceipt.calibrator_controls.length > 0 && (
-                <div className="pt-3 border-t border-[#cfc7b2] dark:border-[#38332C] space-y-2.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
-                    Decision-Specific Calibrator
-                  </span>
-                  <div className="space-y-2.5">
-                    {liveReceipt.calibrator_controls.map((ctrl) => {
-                      const currentVal = calValues[ctrl.key] ?? ctrl.value;
-                      return (
-                        <div key={ctrl.key} className="space-y-1 text-[11px]">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[#4f4b40] dark:text-[#A89F91] font-semibold">{ctrl.label}</span>
-                            <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
-                              {currentVal.toLocaleString()} {ctrl.unit}
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min={ctrl.min}
-                            max={ctrl.max}
-                            step={ctrl.step || 1}
-                            value={currentVal}
-                            onChange={(e) =>
-                              setCalValues((prev) => ({
-                                ...prev,
-                                [ctrl.key]: parseFloat(e.target.value),
-                              }))
-                            }
-                            className="w-full h-1.5 bg-[#cfc7b2] dark:bg-[#38332C] rounded-lg appearance-none cursor-pointer accent-[#7a4e10] dark:accent-[#D4AA50]"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {liveReceipt?.sources && liveReceipt.sources.length > 0 && (
-                <div className="pt-1 flex flex-wrap gap-1.5 text-[10px] text-[#6e655a] dark:text-[#A89F91]">
-                  <span>Sources:</span>
-                  {liveReceipt.sources.map((src, i) => (
-                    <a
-                      key={i}
-                      href={src}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline hover:text-[#7a4e10] dark:hover:text-[#D4AA50] truncate max-w-[140px]"
-                    >
-                      {src.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-
-            {/* RIGHT DIV: Executive Verdict & Additional Knowledge (Only Shown When Present) */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: 0.08 }}
-              className="lg:col-span-7 bg-paper-surface border border-border rounded-md p-6 space-y-5 shadow-2xs"
-            >
-              {/* Top Meta Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 rounded-md text-[13px] font-mono uppercase bg-paper-sidebar text-ink border border-border font-bold">
-                    {displaySynthesis.domain} DOMAIN
-                  </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-md text-[13px] font-mono uppercase font-bold border ${
-                      isConditional
-                        ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700"
-                        : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700"
-                    }`}
-                  >
-                    {isConditional ? "Conditional Pre-Commitment" : "Conclusive Recommendation"}
-                  </span>
-                  <span className="font-mono text-xs text-muted">
-                    v{displaySynthesis.version} · {new Date(displaySynthesis.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {displaySynthesis.canonical_result && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-muted uppercase">Score:</span>
-                    <span className="font-mono text-sm font-bold text-accent bg-paper-sidebar px-2 py-0.5 rounded-md border border-border">
-                      {displaySynthesis.canonical_result.winner_score.toFixed(2)} / 10
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Headline & Recommendation Body */}
-              {!hasOnlyPlaceholderOptions && (
-                <div>
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent block mb-1">
-                    EXECUTIVE VERDICT & DIRECTIVE
-                  </span>
-                  <h3 className="font-newsreader text-2xl sm:text-3xl font-normal text-ink leading-tight mb-3">
-                    {displaySynthesis.headline}
-                  </h3>
-                  <p className="text-sm text-ink leading-relaxed font-sans whitespace-pre-line">
-                    {displaySynthesis.recommendation_text}
-                  </p>
-                </div>
-              )}
-
-              {/* Additional Knowledge: Mandatory Pre-Commitment Spikes */}
-              {!hasOnlyPlaceholderOptions && displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
-                <div className="p-4 rounded-md bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/60 space-y-2.5">
-                  <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-amber-950 dark:text-amber-200">
-                    Mandatory Pre-Commitment Spikes (Clear Before Committing)
-                  </h4>
-                  <div className="space-y-2">
-                    {displaySynthesis.conditional_triggers.map((trigger, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + idx * 0.05 }}
-                        className="p-2.5 bg-paper-surface border border-amber-200 dark:border-amber-800/80 rounded-md text-xs text-amber-950 dark:text-amber-200 flex items-start gap-2.5 transition-all duration-200 hover:-translate-y-0.5"
-                      >
-                        <span className="font-mono text-amber-800 dark:text-amber-400 font-bold shrink-0 mt-0.5">
-                          SPIKE 0{idx + 1}
-                        </span>
-                        <span className="leading-snug">{trigger}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Additional Knowledge: Confidence Limitations (Only when present) */}
-              {displaySynthesis.confidence_assessment?.limitations &&
-                displaySynthesis.confidence_assessment.limitations.length > 0 && (
-                  <div className="p-4 rounded-md bg-paper-sidebar border border-border space-y-2">
-                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-muted block">
-                      Additional Knowledge & Blindspots
-                    </span>
-                    <ul className="list-disc pl-4 space-y-1 text-xs text-ink-secondary">
-                      {displaySynthesis.confidence_assessment.limitations.slice(0, 4).map((lim, idx) => (
-                        <li key={idx}>{lim}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-              {hasOnlyPlaceholderOptions && (
-                <div className="p-4 rounded-md bg-amber-50/80 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200 space-y-1">
-                  <p className="font-mono font-bold uppercase tracking-wider">
-                    No Competing Decision Options Detected
-                  </p>
-                  <p className="leading-relaxed">
-                    Add explicit options and constraints in Stage 1, then click <strong>Re-Synthesize Memo</strong>.
-                  </p>
-                </div>
-              )}
-
-
-            {/* Sovereign Executive Override Banner */}
-            {displaySynthesis.override ? (
-              <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-xl space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <AlertOctagon className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
-                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
-                      Leadership Sovereign Override Active: {displaySynthesis.override.overridden_winner}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRevertOverride}
-                    disabled={savingOverride}
-                    className="text-xs font-mono font-bold text-amber-800 dark:text-amber-300 underline hover:no-underline cursor-pointer"
-                  >
-                    Revert to AI Verdict ({displaySynthesis.override.previous_winner || "Option C"})
-                  </button>
-                </div>
-                <p className="text-xs text-amber-900/90 dark:text-amber-200/90 font-sans leading-relaxed">
-                  <strong>Leadership Mandate:</strong> "{displaySynthesis.override.reason}" • <span className="opacity-75">{new Date(displaySynthesis.override.timestamp).toLocaleDateString()} by {displaySynthesis.override.overridden_by || "Executive Lead"}</span>
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border text-xs font-mono">
-                <div className="flex items-center gap-2 text-muted">
-                  <UserCheck className="w-3.5 h-3.5 text-accent" />
-                  <span>Human Sovereignty: AI advises, leadership decides. You hold final fiduciary authority.</span>
-                </div>
-                {!hasOnlyPlaceholderOptions && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const defaultOther = displaySynthesis.alternatives_considered.find((a: any) => !a.is_recommended)?.name || "";
-                    setSelectedOverrideOption(defaultOther);
-                    setIsOverrideModalOpen(true);
-                  }}
-                  className="px-3.5 py-1.5 rounded-lg border border-border bg-paper-sidebar hover:border-accent text-ink font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                >
-                  <span>Override Winner / Choose Alternative</span>
-                </button>
-                )}
-              </div>
-            )}
-            </motion.div>
-          </div>
-
-          {/* ========================================================================= */}
-          {/* EXECUTIVE DOSSIER TABS (Eliminates Lengthy Scrolling & Cognitive Overload) */}
-          {/* ========================================================================= */}
-          <div className="sticky top-[98px] z-20 bg-[#F4F0E6] dark:bg-[#181614] py-2.5 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-center justify-between gap-3 font-courier">
-            <div className="inline-flex items-center p-1 bg-[#E5DEC9] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md gap-1 overflow-x-auto max-w-full">
+          <div className="sticky top-[98px] z-20 bg-[#F4F0E6] dark:bg-[#181614] pt-1 border-b border-[#cfc7b2] dark:border-[#38332C] flex flex-wrap items-end justify-between gap-3 font-courier">
+            <div className="flex items-end gap-1.5 overflow-x-auto max-w-full px-1">
               <button
                 type="button"
                 onClick={() => setActiveTab("memo")}
-                className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
-                  activeTab === "memo"
-                    ? "text-[#F4F0E6] dark:text-[#181614]"
-                    : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                }`}
+                className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-md border border-b-0 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${activeTab === "memo"
+                  ? "bg-[#EDE5D5] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] relative -mb-px pb-2.5 border-t-2 border-t-[#7a4e10] dark:border-t-[#D4AA50]"
+                  : "bg-[#E5DEC9]/60 dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-transparent hover:bg-[#E5DEC9] dark:hover:bg-[#221F1C]"
+                  }`}
               >
-                {activeTab === "memo" && (
-                  <motion.span
-                    layoutId="synthesisActiveTab"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    className="absolute inset-0 bg-[#1d1d1b] dark:bg-[#D4AA50] rounded-md shadow-2xs"
-                  />
-                )}
-                <span className="relative z-10 whitespace-nowrap">1. Boardroom Memo & Alignment</span>
+                Verdict
               </button>
 
               {!hasOnlyPlaceholderOptions && (
-              <button
-                type="button"
-                onClick={() => setActiveTab("roadmap")}
-                className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
-                  activeTab === "roadmap"
-                    ? "text-[#F4F0E6] dark:text-[#181614]"
-                    : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                }`}
-              >
-                {activeTab === "roadmap" && (
-                  <motion.span
-                    layoutId="synthesisActiveTab"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    className="absolute inset-0 bg-[#1d1d1b] dark:bg-[#D4AA50] rounded-md shadow-2xs"
-                  />
-                )}
-                <span className="relative z-10 whitespace-nowrap">2. Execution Roadmap</span>
-                {displayRoadmap && (
-                  <span className={`relative z-10 text-[11px] px-1.5 py-0.5 rounded-md font-courier whitespace-nowrap shrink-0 ${
-                    activeTab === "roadmap" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
-                  }`}>
-                    {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)} tasks
-                  </span>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("roadmap")}
+                  className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-md border border-b-0 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${activeTab === "roadmap"
+                    ? "bg-[#EDE5D5] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] relative -mb-px pb-2.5 border-t-2 border-t-[#7a4e10] dark:border-t-[#D4AA50]"
+                    : "bg-[#E5DEC9]/60 dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-transparent hover:bg-[#E5DEC9] dark:hover:bg-[#221F1C]"
+                    }`}
+                >
+                  <span>Action Plan</span>
+                  {displayRoadmap && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#E5DEC9] dark:bg-[#181614] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2]/70 dark:border-[#38332C]">
+                      {displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)}
+                    </span>
+                  )}
+                </button>
               )}
 
               <button
                 type="button"
                 onClick={() => setActiveTab("audit")}
-                className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
-                  activeTab === "audit"
-                    ? "text-[#F4F0E6] dark:text-[#181614]"
-                    : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                }`}
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-md border border-b-0 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${activeTab === "audit"
+                  ? "bg-[#EDE5D5] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] relative -mb-px pb-2.5 border-t-2 border-t-[#7a4e10] dark:border-t-[#D4AA50]"
+                  : "bg-[#E5DEC9]/60 dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-transparent hover:bg-[#E5DEC9] dark:hover:bg-[#221F1C]"
+                  }`}
               >
-                {activeTab === "audit" && (
-                  <motion.span
-                    layoutId="synthesisActiveTab"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    className="absolute inset-0 bg-[#1d1d1b] dark:bg-[#D4AA50] rounded-md shadow-2xs"
-                  />
-                )}
-                <span className="relative z-10 whitespace-nowrap">{hasOnlyPlaceholderOptions ? "2. Epistemic Audit" : "3. Trade-Offs & Epistemic Audit"}</span>
+                <span>Comparison &amp; Proof</span>
                 {!hasOnlyPlaceholderOptions && (
-                  <span className={`relative z-10 text-[11px] px-1.5 py-0.5 rounded-md font-courier whitespace-nowrap shrink-0 ${
-                    activeTab === "audit" ? "bg-white/20 text-white dark:text-[#181614]" : "bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
-                  }`}>
-                    {displaySynthesis.alternatives_considered.length} alts
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#E5DEC9] dark:bg-[#181614] text-[#7a4e10] dark:text-[#D4AA50] border border-[#cfc7b2]/70 dark:border-[#38332C]">
+                    {displaySynthesis.alternatives_considered.length}
                   </span>
                 )}
               </button>
             </div>
 
-            <span className="hidden lg:inline text-[15px] text-[#97907e] dark:text-[#A89F91] italic font-newsreader">
-              {activeTab === "memo" && "Executive verdict, stakeholder alignment, and pre-commitment gates."}
-              {activeTab === "roadmap" && (
-                isPersonalDomain
-                  ? "Day-by-day action plan, ownership, and execution milestones."
-                  : displayRoadmap?.phases?.[0]?.timeline?.toLowerCase().includes("month")
-                    ? "Multi-month execution roadmap with phase milestones and operational ownership."
-                    : "Sprint-based execution roadmap with phase milestones and operational ownership."
+            <div className="flex items-center gap-2 pb-1.5 shrink-0">
+              {onOpenExportModal && (
+                <button
+                  type="button"
+                  onClick={onOpenExportModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] font-semibold text-xs rounded-none transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Export PDF</span>
+                </button>
               )}
-              {activeTab === "audit" && "Evidentiary claims, stress-tested assumptions, risks, and counterarguments."}
-            </span>
+
+              <button
+                type="button"
+                onClick={handleRunSynthesis}
+                disabled={synthesizing}
+                title={displaySynthesis.is_stale ? "Upstream inputs changed — click to refresh" : "Re-generate synthesis"}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#EDE5D5] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-semibold text-xs rounded-none transition-colors disabled:opacity-50 cursor-pointer whitespace-nowrap"
+              >
+                {displaySynthesis.is_stale && !synthesizing && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50]" />
+                )}
+                {synthesizing ? (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Refreshing...</span>
+                  </>
+                ) : (
+                  <span>Re-generate</span>
+                )}
+              </button>
+
+              <div className={`relative ${showActionsMenu ? "z-50" : "z-45"}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowActionsMenu(!showActionsMenu);
+                    setShowVersionMenu(false);
+                  }}
+                  aria-label="More actions"
+                  title="Priorities, Copy Summary & Version History"
+                  className="relative z-50 inline-flex items-center justify-center px-2.5 py-1.5 bg-[#EDE5D5] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] font-bold text-xs rounded-none transition-colors cursor-pointer"
+                >
+                  ⋯
+                </button>
+
+                <AnimatePresence>
+                  {showActionsMenu && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowActionsMenu(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                        transition={{ duration: 0.14 }}
+                        className="absolute right-0 top-full mt-1.5 w-64 bg-[#EDE5D5] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-none shadow-xl z-50 py-1 font-courier text-xs divide-y divide-[#cfc7b2]/40 dark:divide-[#38332C]/40"
+                      >
+                        {!viewingSnapshot && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPriorities(!showPriorities);
+                              setShowActionsMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer"
+                          >
+                            <Sliders className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                            <span>{priorities.length > 0 ? `Priorities (${priorities.length})` : "Set Priorities"}</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleCopyBoardroomADR();
+                            setShowActionsMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center gap-2 cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                          <span>{copiedADR ? "Copied Summary!" : "Copy Summary"}</span>
+                        </button>
+
+                        {snapshots.length > 0 && (
+                          <div className="py-1">
+                            <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] font-bold">
+                              Version History (v{synthesis?.version || 1})
+                            </div>
+                            {viewingSnapshot && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleSelectSnapshot(0);
+                                  setShowActionsMenu(false);
+                                }}
+                                className="w-full text-left px-3 py-1.5 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] flex items-center justify-between cursor-pointer"
+                              >
+                                <span>Active Version (v{synthesis?.version || 1})</span>
+                              </button>
+                            )}
+                            {snapshots
+                              .filter((snap) => snap.version !== (synthesis?.version || 1))
+                              .map((snap) => (
+                                <button
+                                  key={snap.id}
+                                  type="button"
+                                  onClick={() => {
+                                    handleSelectSnapshot(snap.id);
+                                    setShowActionsMenu(false);
+                                  }}
+                                  className="w-full text-left px-3 py-1.5 hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91] truncate cursor-pointer"
+                                >
+                                  v{snap.version}: {snap.headline}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
           </div>
 
-          {/* TAB 1: BOARDROOM MEMO & ALIGNMENT */}
+          {/* TAB 1: VERDICT (UNIFIED 8-COL DOSSIER + 4-COL AT-A-GLANCE RAIL) */}
           {activeTab === "memo" && (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start animate-in fade-in duration-150">
-              <div className="xl:col-span-8 space-y-6">
-              {/* ========================================================================= */}
-              {/* 3. DYNAMIC OBJECTIONS & RESOLUTION LEDGER                                 */}
-              {/* ========================================================================= */}
-              {!hasOnlyPlaceholderOptions && displaySynthesis.counterarguments && displaySynthesis.counterarguments.length > 0 ? (
-                <div className="bg-paper-surface border border-border rounded-md p-6 space-y-4 shadow-2xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border pb-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                        KEY OBJECTIONS & NEGOTIATED RESOLUTIONS
-                      </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start animate-in fade-in duration-150">
+              <div className="lg:col-span-8 space-y-5">
+                {/* RIGHT DIV: Executive Verdict & Additional Knowledge (Only Shown When Present) */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.08 }}
+                  className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-6 space-y-5 shadow-2xs"
+                >
+                  {/* Top Meta Bar with Tactile Ink-Stamp Seal */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#cfc7b2] dark:border-[#38332C]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-md text-[12px] font-mono uppercase bg-[#E5DEC9] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] font-bold">
+                        {displaySynthesis.domain} DOMAIN
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-md text-[11px] font-mono uppercase font-bold border-2 border-double border-[#7a4e10] dark:border-[#D4AA50] bg-[#E5DEC9] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1]">
+                        {isConditional ? "Conditional Pre-Commitment" : "Recommended"}
+                      </span>
+                      <span className="font-mono text-xs text-[#4f4b40] dark:text-[#A89F91]">
+                        v{displaySynthesis.version} · {new Date(displaySynthesis.created_at).toLocaleDateString()}
+                      </span>
                     </div>
-                    <span className="font-mono text-[11px] text-muted uppercase">
-                      {displaySynthesis.counterarguments.length} Critical Perspective{displaySynthesis.counterarguments.length > 1 ? "s" : ""} Addressed
-                    </span>
-                  </div>
-                  <p className="font-newsreader text-xl font-normal text-ink">
-                    How competing priorities and critical counterarguments were resolved
-                  </p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-sans text-xs">
-                    {displaySynthesis.counterarguments.map((item, idx) => (
-                      <div key={idx} className="p-4 rounded-none bg-paper-sidebar border border-border space-y-2">
-                        <div className="flex items-center justify-between border-b border-border pb-2">
-                          <span className="font-mono text-[13px] font-bold text-ink uppercase">
-                            Objection #{idx + 1}
-                          </span>
-                          <span className="text-[12px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-none font-bold">
-                            Resolved
-                          </span>
-                        </div>
-                        <strong className="block font-semibold text-ink text-sm leading-snug">
-                          &ldquo;{item.argument}&rdquo;
-                        </strong>
-                        <p className="text-muted leading-relaxed">
-                          <strong className="text-ink font-mono text-[11px] uppercase block mb-0.5">Resolution / Safeguard:</strong>
-                          {item.rebuttal_or_concession}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : displaySynthesis.risks_and_mitigations && displaySynthesis.risks_and_mitigations.length > 0 ? (
-                <div className="bg-paper-surface border border-border rounded-none p-6 space-y-4 shadow-2xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border pb-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                        KEY RISKS & PROACTIVE SAFEGUARDS
-                      </h3>
-                    </div>
-                    <span className="font-mono text-[11px] text-muted uppercase">
-                      {displaySynthesis.risks_and_mitigations.length} Vulnerabilit{displaySynthesis.risks_and_mitigations.length > 1 ? "ies" : "y"} Mitigated
-                    </span>
-                  </div>
-                  <p className="font-newsreader text-xl font-normal text-ink">
-                    Critical vulnerabilities identified and mitigated
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-sans text-xs">
-                    {displaySynthesis.risks_and_mitigations.slice(0, 3).map((item, idx) => (
-                      <div key={idx} className="p-4 rounded-none bg-paper-sidebar border border-border space-y-2">
-                        <div className="flex items-center justify-between border-b border-border pb-2">
-                          <span className="font-mono text-[13px] font-bold text-ink uppercase">
-                            Risk Factor #{idx + 1}
-                          </span>
-                          <span className={`text-[12px] font-mono px-1.5 py-0.5 rounded-none font-bold uppercase ${
-                            item.severity === "high" ? "text-amber-800 bg-amber-500/10" : "text-emerald-700 bg-emerald-50"
-                          }`}>
-                            {item.severity}
-                          </span>
-                        </div>
-                        <strong className="block font-semibold text-ink text-sm leading-snug">
-                          {item.risk}
-                        </strong>
-                        <p className="text-muted leading-relaxed">
-                          <strong className="text-ink font-mono text-[11px] uppercase block mb-0.5">Proactive Mitigation:</strong>
-                          {item.mitigation}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Quick Navigation Footer inside Tab 1 */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-paper-surface border border-border rounded-2xl">
-                <div>
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-ink block">
-                    Execution Next Steps
-                  </span>
-                  <span className="text-xs text-muted">
-                    Decision validated. Review the timely calculated execution roadmap or examine the full evidence audit.
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("audit")}
-                    className="px-3.5 py-2 text-xs font-mono font-bold uppercase tracking-wider border border-border bg-paper-sidebar text-ink hover:border-accent transition cursor-pointer rounded-lg"
-                  >
-                    Examine Trade-Offs &rarr;
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("roadmap")}
-                    className="px-4 py-2 text-xs font-mono font-bold uppercase tracking-wider bg-ink text-paper-surface hover:opacity-90 transition cursor-pointer shadow-xs rounded-lg"
-                  >
-                    View Phased Roadmap &rarr;
-                  </button>
-                </div>
-              </div>
-              </div>
-
-              {/* Right Sticky Executive Vitals Rail (Fills desktop whitespace with live decision telemetry) */}
-              <aside className="xl:col-span-4 xl:sticky xl:top-28 space-y-4">
-                <div className="bg-paper-surface border border-border rounded-md p-5 space-y-4 shadow-2xs">
-                  <div className="flex items-center justify-between border-b border-border pb-2.5">
-                    <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                      Decision Vitals
-                    </h3>
-                    <span className="font-mono text-[11px] text-muted uppercase">
-                      v{displaySynthesis.version}
-                    </span>
-                  </div>
-
-                  {/* Gauntlet Score & Confidence */}
-                  {displaySynthesis.canonical_result && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-muted uppercase">Gauntlet Score</span>
-                        <span className="font-bold text-ink">
+                    {displaySynthesis.canonical_result && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-muted uppercase">Score:</span>
+                        <span className="font-mono text-sm font-bold text-accent bg-paper-sidebar px-2 py-0.5 rounded-md border border-border">
                           {displaySynthesis.canonical_result.winner_score.toFixed(2)} / 10
                         </span>
                       </div>
-                      <div className="w-full h-2 bg-paper-sidebar border border-border rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{
-                            width: `${Math.min(100, Math.max(0, displaySynthesis.canonical_result.winner_score * 10))}%`,
-                          }}
-                          transition={{ duration: 0.6, ease: "easeOut" }}
-                          className="h-full bg-[#7a4e10] dark:bg-[#D4AA50]"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quick Telemetry Grid */}
-                  <div className="grid grid-cols-2 gap-2.5 pt-1 font-mono">
-                    <div className="p-3 bg-paper-sidebar border border-border rounded-md">
-                      <span className="text-[10px] uppercase text-muted block">Posture</span>
-                      <span className={`text-xs font-bold uppercase mt-0.5 block ${isConditional ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                        {isConditional ? "Conditional" : "Ready"}
-                      </span>
-                    </div>
-                    <div className="p-3 bg-paper-sidebar border border-border rounded-md">
-                      <span className="text-[10px] uppercase text-muted block">Alternatives</span>
-                      <span className="text-xs font-bold text-ink mt-0.5 block">
-                        {displaySynthesis.alternatives_considered.length} Evaluated
-                      </span>
-                    </div>
-                    <div className="p-3 bg-paper-sidebar border border-border rounded-md">
-                      <span className="text-[10px] uppercase text-muted block">Evidence</span>
-                      <span className="text-xs font-bold text-ink mt-0.5 block">
-                        {displaySynthesis.supporting_evidence.length} Citations
-                      </span>
-                    </div>
-                    <div className="p-3 bg-paper-sidebar border border-border rounded-md">
-                      <span className="text-[10px] uppercase text-muted block">Roadmap</span>
-                      <span className="text-xs font-bold text-ink mt-0.5 block">
-                        {displayRoadmap
-                          ? `${displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)} Tasks`
-                          : "0 Tasks"}
-                      </span>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Confidence Assessment Summary */}
-                  {displaySynthesis.confidence_assessment && (
-                    <div className="pt-2 border-t border-border space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-muted uppercase">Confidence</span>
-                        <span className="font-bold uppercase text-ink">
-                          {displaySynthesis.confidence_assessment.level} ({Math.round((displaySynthesis.confidence_assessment.score || 0) * 100)}%)
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted leading-relaxed">
-                        {displaySynthesis.confidence_assessment.rationale}
+                  {/* Headline & Recommendation Body */}
+                  {!hasOnlyPlaceholderOptions && (
+                    <div>
+                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block mb-1">
+                        Recommended Decision
+                      </span>
+                      <h3 className="font-newsreader text-2xl sm:text-3xl font-normal text-ink leading-tight mb-3">
+                        {displaySynthesis.headline}
+                      </h3>
+                      <p className="text-sm text-ink leading-relaxed font-sans whitespace-pre-line">
+                        {displaySynthesis.recommendation_text}
                       </p>
                     </div>
                   )}
 
-                  {/* Quick Jump Actions */}
-                  <div className="pt-2 border-t border-border flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("roadmap")}
-                      className="w-full py-2 px-3 text-xs font-mono font-bold uppercase tracking-wider bg-paper-sidebar hover:border-accent border border-border text-ink rounded-md flex items-center justify-between transition-colors cursor-pointer"
-                    >
-                      <span>Open Execution Roadmap</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-accent" />
-                    </button>
+                  {/* Before You Commit: Open Checks */}
+                  {!hasOnlyPlaceholderOptions && displaySynthesis.conditional_triggers && displaySynthesis.conditional_triggers.length > 0 && (
+                    <div className="p-4 rounded-none bg-[#E5DEC9]/75 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] border-l-4 border-l-[#7a4e10] dark:border-l-[#D4AA50] space-y-2.5">
+                      <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                        Before You Commit (Open Checks)
+                      </h4>
+                      <div className="space-y-2">
+                        {displaySynthesis.conditional_triggers.map((trigger, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 + idx * 0.05 }}
+                            className="p-2.5 bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-xs text-[#1d1d1b] dark:text-[#F0EAE1] flex items-start gap-2.5 transition-all duration-200 hover:-translate-y-0.5"
+                          >
+                            <span className="font-mono text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0 mt-0.5">
+                              Check {idx + 1}
+                            </span>
+                            <span className="leading-snug">{trigger}</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Knowledge: Confidence Limitations (Only when no conditional triggers already listed) */}
+                  {(!displaySynthesis.conditional_triggers || displaySynthesis.conditional_triggers.length === 0) &&
+                    displaySynthesis.confidence_assessment?.limitations &&
+                    displaySynthesis.confidence_assessment.limitations.length > 0 && (
+                      <div className="p-4 rounded-none bg-[#E5DEC9]/75 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2">
+                        <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] block">
+                          Additional Knowledge &amp; Blindspots
+                        </span>
+                        <ul className="list-disc pl-4 space-y-1 text-xs text-[#4f4b40] dark:text-[#A89F91]">
+                          {displaySynthesis.confidence_assessment.limitations.slice(0, 4).map((lim, idx) => (
+                            <li key={idx}>{lim}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                  {hasOnlyPlaceholderOptions && (
+                    <div className="p-4 rounded-md bg-amber-50/80 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200 space-y-1">
+                      <p className="font-mono font-bold uppercase tracking-wider">
+                        No Competing Decision Options Detected
+                      </p>
+                      <p className="leading-relaxed">
+                        Add explicit options and constraints in Stage 1, then click <strong>Re-Synthesize Memo</strong>.
+                      </p>
+                    </div>
+                  )}
+
+
+                  {/* Sovereign Executive Override Banner */}
+                  {displaySynthesis.override ? (
+                    <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-xl space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <AlertOctagon className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0" />
+                          <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                            Leadership Sovereign Override Active: {displaySynthesis.override.overridden_winner}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRevertOverride}
+                          disabled={savingOverride}
+                          className="text-xs font-mono font-bold text-amber-800 dark:text-amber-300 underline hover:no-underline cursor-pointer"
+                        >
+                          Revert to AI Verdict ({displaySynthesis.override.previous_winner || "Option C"})
+                        </button>
+                      </div>
+                      <p className="text-xs text-amber-900/90 dark:text-amber-200/90 font-sans leading-relaxed">
+                        <strong>Leadership Mandate:</strong> "{displaySynthesis.override.reason}" • <span className="opacity-75">{new Date(displaySynthesis.override.timestamp).toLocaleDateString()} by {displaySynthesis.override.overridden_by || "Executive Lead"}</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border text-xs font-mono">
+                      <div className="flex items-center gap-2 text-muted">
+                        <UserCheck className="w-3.5 h-3.5 text-accent" />
+                        <span>Human Sovereignty: AI advises, leadership decides. You hold final fiduciary authority.</span>
+                      </div>
+                      {!hasOnlyPlaceholderOptions && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const defaultOther = displaySynthesis.alternatives_considered.find((a: any) => !a.is_recommended)?.name || "";
+                            setSelectedOverrideOption(defaultOther);
+                            setIsOverrideModalOpen(true);
+                          }}
+                          className="px-3.5 py-1.5 rounded-lg border border-border bg-paper-sidebar hover:border-accent text-ink font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                        >
+                          <span>Override Winner / Choose Alternative</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-5 space-y-4 shadow-2xs font-courier"
+                >
+                  {/* Ledger Header */}
+                  <div className="border-b border-dashed border-[#cfc7b2] dark:border-[#38332C] pb-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50] truncate">
+                        {liveReceipt?.ledger_title || "CROSS-STAGE DECISION LEDGER"}
+                      </span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#4f4b40] dark:text-[#A89F91] shrink-0">
+                        {liveReceipt?.as_of_date || new Date().toISOString().split("T")[0]}
+                      </span>
+                    </div>
+
+                    {/* Stage 1 -> Stage 2 -> Stage 3 Connection Strip */}
+                    {liveReceipt?.stage_connection && (
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[#4f4b40] dark:text-[#A89F91]">
+                        <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C]">
+                          S1: {liveReceipt.stage_connection.stage1_sources.join(" + ")}
+                        </span>
+                        <span>→</span>
+                        <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C]">
+                          S2: {liveReceipt.stage_connection.stage2_facts_count} facts · {liveReceipt.stage_connection.stage2_open_gaps} open gaps
+                        </span>
+                        <span>→</span>
+                        <span className="px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C] font-bold text-[#7a4e10] dark:text-[#D4AA50]">
+                          S3: {liveReceipt.stage_connection.stage3_winner || "Verdict"}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-[#6e655a] dark:text-[#A89F91]">
+                      <span className="truncate">
+                        {liveReceipt?.pricing_source || "Connect Stage 1–3 & Live Market"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleFetchLiveReceipt}
+                        disabled={loadingLiveReceipt}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:text-[#181614] text-[#F4F0E6] font-semibold text-[11px] transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                      >
+                        <RotateCcw className={`w-3 h-3 ${loadingLiveReceipt ? "animate-spin" : ""}`} />
+                        <span>{loadingLiveReceipt ? "Syncing..." : liveReceipt ? "Refresh Ledger" : "Build Smart Ledger"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Adaptable Itemized Rows (Decision-Specific, Connected to Stages 1-3) */}
+                  <div className="space-y-2.5 text-xs">
+                    {liveReceipt && liveReceipt.items.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-[#97907e] border-b border-[#cfc7b2]/60 dark:border-[#38332C] pb-1">
+                          <span className="col-span-6">Factor / Option</span>
+                          <span className="col-span-2 text-center">Stage</span>
+                          <span className="col-span-4 text-right">Grounded Value</span>
+                        </div>
+                        {liveReceipt.items.map((item, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, x: -6 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            className="grid grid-cols-12 items-start gap-1.5 py-1.5 border-b border-dashed border-[#cfc7b2]/60 dark:border-[#38332C]/70"
+                          >
+                            <div className="col-span-6 min-w-0">
+                              <div className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">{item.item_name}</div>
+                              <div className="text-[10px] text-[#6e655a] dark:text-[#A89F91]">{item.category}</div>
+                            </div>
+                            <div className="col-span-2 text-center">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#EDE7D6] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91]">
+                                {item.source_stage}
+                              </span>
+                            </div>
+                            <div
+                              className={`col-span-4 text-right font-bold leading-snug ${item.status === "gap_pending"
+                                ? "text-amber-700 dark:text-amber-400"
+                                : item.status === "verified"
+                                  ? "text-emerald-700 dark:text-emerald-400"
+                                  : "text-[#1d1d1b] dark:text-[#F0EAE1]"
+                                }`}
+                            >
+                              {item.value_display}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="py-2.5 px-3 rounded-none bg-[#E5DEC9]/75 dark:bg-[#181614] border border-dashed border-[#cfc7b2] dark:border-[#38332C] text-[11px] text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
+                        {loadingLiveReceipt
+                          ? "Fetching live market rates, setup cost, projected savings & supportability..."
+                          : <>Click <strong>Build Smart Ledger</strong> above to fetch market pricing and readiness for <strong>{displaySynthesis.domain}</strong>.</>}
+                      </div>
+                    )}
+
+                    {/* Dynamic Summary Row */}
+                    {liveReceipt && (
+                      <div className="pt-2 border-t-2 border-dashed border-[#7a4e10]/40 dark:border-[#D4AA50]/40 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1]">
+                          {liveReceipt.summary_label}
+                        </span>
+                        <span className="font-newsreader text-lg font-bold text-emerald-700 dark:text-emerald-400 text-right">
+                          {liveReceipt.summary_value}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* AI-Generated Decision-Specific Interactive Calibrator */}
+                  {liveReceipt?.calibrator_controls && liveReceipt.calibrator_controls.length > 0 && (
+                    <div className="pt-3 border-t border-[#cfc7b2] dark:border-[#38332C] space-y-2.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
+                        Decision-Specific Calibrator
+                      </span>
+                      <div className="space-y-2.5">
+                        {liveReceipt.calibrator_controls.map((ctrl) => {
+                          const currentVal = calValues[ctrl.key] ?? ctrl.value;
+                          return (
+                            <div key={ctrl.key} className="space-y-1 text-[11px]">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[#4f4b40] dark:text-[#A89F91] font-semibold">{ctrl.label}</span>
+                                <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                                  {currentVal.toLocaleString()} {ctrl.unit}
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min={ctrl.min}
+                                max={ctrl.max}
+                                step={ctrl.step || 1}
+                                value={currentVal}
+                                onChange={(e) =>
+                                  setCalValues((prev) => ({
+                                    ...prev,
+                                    [ctrl.key]: parseFloat(e.target.value),
+                                  }))
+                                }
+                                className="w-full h-1.5 bg-[#cfc7b2] dark:bg-[#38332C] rounded-lg appearance-none cursor-pointer accent-[#7a4e10] dark:accent-[#D4AA50]"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {liveReceipt?.sources && liveReceipt.sources.length > 0 && (
+                    <div className="pt-1 flex flex-wrap gap-1.5 text-[10px] text-[#6e655a] dark:text-[#A89F91]">
+                      <span>Sources:</span>
+                      {liveReceipt.sources.map((src, i) => (
+                        <a
+                          key={i}
+                          href={src}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline hover:text-[#7a4e10] dark:hover:text-[#D4AA50] truncate max-w-[140px]"
+                        >
+                          {src.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+
+                <div className="space-y-5">
+                  {/* ========================================================================= */}
+                  {/* 3. DYNAMIC OBJECTIONS & RESOLUTION LEDGER                                 */}
+                  {/* ========================================================================= */}
+                  {!hasOnlyPlaceholderOptions && displaySynthesis.counterarguments && displaySynthesis.counterarguments.length > 0 ? (
+                    <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-5 space-y-4 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border pb-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
+                            KEY OBJECTIONS & NEGOTIATED RESOLUTIONS
+                          </h3>
+                        </div>
+                        <span className="font-mono text-[11px] text-muted uppercase">
+                          {displaySynthesis.counterarguments.length} Critical Perspective{displaySynthesis.counterarguments.length > 1 ? "s" : ""} Addressed
+                        </span>
+                      </div>
+                      <p className="font-newsreader text-xl font-normal text-ink">
+                        How competing priorities and critical counterarguments were resolved
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-sans text-xs">
+                        {displaySynthesis.counterarguments.map((item, idx) => (
+                          <div key={idx} className="p-4 rounded-none bg-[#E5DEC9]/75 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2">
+                            <div className="flex items-center justify-between border-b border-border pb-2">
+                              <span className="font-mono text-[13px] font-bold text-ink uppercase">
+                                Objection #{idx + 1}
+                              </span>
+                              <span className="text-[12px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-none font-bold">
+                                Resolved
+                              </span>
+                            </div>
+                            <strong className="block font-semibold text-ink text-sm leading-snug">
+                              &ldquo;{item.argument}&rdquo;
+                            </strong>
+                            <p className="text-muted leading-relaxed">
+                              <strong className="text-ink font-mono text-[11px] uppercase block mb-0.5">Resolution / Safeguard:</strong>
+                              {item.rebuttal_or_concession}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : displaySynthesis.risks_and_mitigations && displaySynthesis.risks_and_mitigations.length > 0 ? (
+                    <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-5 space-y-4 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-border pb-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
+                            KEY RISKS & PROACTIVE SAFEGUARDS
+                          </h3>
+                        </div>
+                        <span className="font-mono text-[11px] text-muted uppercase">
+                          {displaySynthesis.risks_and_mitigations.length} Vulnerabilit{displaySynthesis.risks_and_mitigations.length > 1 ? "ies" : "y"} Mitigated
+                        </span>
+                      </div>
+                      <p className="font-newsreader text-xl font-normal text-ink">
+                        Critical vulnerabilities identified and mitigated
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 font-sans text-xs">
+                        {displaySynthesis.risks_and_mitigations.slice(0, 3).map((item, idx) => (
+                          <div key={idx} className="p-4 rounded-none bg-[#E5DEC9]/75 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2">
+                            <div className="flex items-center justify-between border-b border-border pb-2">
+                              <span className="font-mono text-[13px] font-bold text-ink uppercase">
+                                Risk Factor #{idx + 1}
+                              </span>
+                              <span className={`text-[12px] font-mono px-1.5 py-0.5 rounded-none font-bold uppercase ${item.severity === "high" ? "text-amber-800 bg-amber-500/10" : "text-emerald-700 bg-emerald-50"
+                                }`}>
+                                {item.severity}
+                              </span>
+                            </div>
+                            <strong className="block font-semibold text-ink text-sm leading-snug">
+                              {item.risk}
+                            </strong>
+                            <p className="text-muted leading-relaxed">
+                              <strong className="text-ink font-mono text-[11px] uppercase block mb-0.5">Proactive Mitigation:</strong>
+                              {item.mitigation}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Right 4-Col: Ruled "At a Glance" Index Card */}
+              <aside className="lg:col-span-4 lg:sticky lg:top-28 space-y-4">
+                <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-4 shadow-2xs space-y-3 font-courier">
+                  <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50]">
+                      At a Glance
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#E5DEC9] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91]">
+                      v{displaySynthesis.version}
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-[#cfc7b2]/70 dark:divide-[#38332C] text-xs">
+                    {displaySynthesis.canonical_result && (
+                      <div className="py-2 flex items-center justify-between gap-2">
+                        <span className="text-[#4f4b40] dark:text-[#A89F91]">Verdict Score</span>
+                        <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50]">
+                          {displaySynthesis.canonical_result.winner_score.toFixed(2)} / 10
+                        </span>
+                      </div>
+                    )}
+                    <div className="py-2 flex items-center justify-between gap-2">
+                      <span className="text-[#4f4b40] dark:text-[#A89F91]">Posture</span>
+                      <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                        {isConditional ? "Conditional" : "Ready"}
+                      </span>
+                    </div>
+                    <div className="py-2 flex items-center justify-between gap-2">
+                      <span className="text-[#4f4b40] dark:text-[#A89F91]">Options Compared</span>
+                      <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                        {displaySynthesis.alternatives_considered.length}
+                      </span>
+                    </div>
+                    <div className="py-2 flex items-center justify-between gap-2">
+                      <span className="text-[#4f4b40] dark:text-[#A89F91]">Action Plan</span>
+                      <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                        {displayRoadmap
+                          ? `${displayRoadmap.phases.reduce((acc, p) => acc + p.tasks.length, 0)} tasks`
+                          : "0 tasks"}
+                      </span>
+                    </div>
+                    {displaySynthesis.confidence_assessment && (
+                      <div className="py-2 flex items-center justify-between gap-2">
+                        <span className="text-[#4f4b40] dark:text-[#A89F91]">Confidence</span>
+                        <span className="font-bold uppercase text-[#1d1d1b] dark:text-[#F0EAE1]">
+                          {displaySynthesis.confidence_assessment.level} ({Math.round((displaySynthesis.confidence_assessment.score || 0) * 100)}%)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-1 border-t border-[#cfc7b2]/70 dark:border-[#38332C]">
                     <button
                       type="button"
                       onClick={() => setActiveTab("audit")}
-                      className="w-full py-2 px-3 text-xs font-mono font-bold uppercase tracking-wider bg-paper-sidebar hover:border-accent border border-border text-ink rounded-md flex items-center justify-between transition-colors cursor-pointer"
+                      className="w-full py-1.5 text-left text-xs font-sans font-semibold text-[#7a4e10] dark:text-[#D4AA50] hover:underline flex items-center justify-between cursor-pointer"
                     >
-                      <span>Inspect Epistemic Audit</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-accent" />
+                      <span>View Score Breakdown &amp; Proof</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
+
+                {/* Post-Execution Outcome Check-In in Right Rail */}
+                <OutcomeTrackingCard
+                  decisionId={decisionId}
+                  canonicalWinner={displaySynthesis.canonical_result?.winner_option_name}
+                />
               </aside>
             </div>
           )}
 
           {/* TAB 3: COMPARATIVE ALTERNATIVES, EVIDENCE & EPISTEMIC AUDIT */}
           {activeTab === "audit" && (
-            <div className="space-y-6 animate-in fade-in duration-150">
+            <div className="space-y-5 animate-in fade-in duration-150">
               {/* ========================================================================= */}
               {/* 4. COMPARATIVE ALTERNATIVES & STRATEGIC TRADE-OFFS                         */}
-          {/* ========================================================================= */}
-          <div className="bg-paper-surface border border-border rounded-2xl p-6 space-y-4 shadow-2xs">
-            <div>
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent block">
-                STRATEGIC COMPARISON
-              </span>
-              <h3 className="font-newsreader text-xl font-normal text-ink">
-                Considered Alternatives & Trade-Off Architecture
-              </h3>
-            </div>
+              {/* ========================================================================= */}
+              <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-5 space-y-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 pb-3 border-b border-[#cfc7b2] dark:border-[#38332C]">
+                  <div>
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
+                      Strategic Comparison
+                    </span>
+                    <h3 className="font-newsreader text-xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+                      Considered Alternatives &amp; Trade-Offs
+                    </h3>
+                  </div>
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-[#57534e] dark:text-[#A89F91]">
+                    {displaySynthesis.alternatives_considered.length} Options Evaluated
+                  </span>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {displaySynthesis.alternatives_considered.map((alt, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.22, delay: idx * 0.06 }}
-                  whileHover={{ y: -3 }}
-                  className={`rounded-xl p-4 border flex flex-col justify-between transition-shadow hover:shadow-md ${
-                    alt.is_recommended
-                      ? "bg-[#EDE7D6]/80 dark:bg-[#221F1C] border-[#7a4e10] dark:border-[#D4AA50] shadow-xs"
-                      : "bg-[#F4F0E6]/60 dark:bg-[#181614] border-[#cfc7b2] dark:border-[#38332C]"
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-border">
-                      <h4 className="font-semibold text-ink text-sm truncate">
-                        {alt.name}
-                      </h4>
-                      {alt.is_recommended ? (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-mono uppercase font-bold bg-[#7a4e10] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] shrink-0">
-                          Selected
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-mono uppercase bg-paper-sidebar text-muted border border-border shrink-0">
-                          Alternative
-                        </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {displaySynthesis.alternatives_considered.map((alt, idx) => (
+                    <div
+                      key={idx}
+                      className={`rounded-none p-4 border flex flex-col justify-between transition-colors ${alt.is_recommended
+                        ? "bg-[#E5DEC9]/90 dark:bg-[#2A2622] border-[#7a4e10] dark:border-[#D4AA50]"
+                        : "bg-[#F4F0E6] dark:bg-[#181614] border-[#cfc7b2] dark:border-[#38332C]"
+                        }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#cfc7b2]/80 dark:border-[#38332C]">
+                          <h4 className="font-newsreader font-medium text-[#1d1d1b] dark:text-[#F0EAE1] text-base truncate">
+                            {alt.name}
+                          </h4>
+                          {alt.is_recommended ? (
+                            <span className="px-2 py-0.5 rounded-none text-[10px] font-mono uppercase font-bold bg-[#1d1d1b] dark:bg-[#D4AA50] text-[#F4F0E6] dark:text-[#181614] shrink-0">
+                              Selected
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-none text-[10px] font-mono uppercase bg-[#EDE7D6] dark:bg-[#221F1C] text-[#57534e] dark:text-[#A89F91] border border-[#cfc7b2] dark:border-[#38332C] shrink-0">
+                              Alternative
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] leading-relaxed font-sans">
+                          {alt.description}
+                        </p>
+
+                        <div className="space-y-2.5">
+                          <div>
+                            <span className="text-[11px] font-mono uppercase font-bold text-[#2E6F4E] dark:text-[#7FB08E] block mb-1">
+                              Operational Advantages
+                            </span>
+                            <ul className="text-xs text-[#1d1d1b] dark:text-[#F0EAE1] space-y-1 font-sans">
+                              {alt.pros.map((p, pIdx) => (
+                                <li key={pIdx} className="flex items-start gap-1.5">
+                                  <span className="text-[#2E6F4E] dark:text-[#7FB08E] font-bold font-mono">+</span>
+                                  <span className="leading-snug">{p}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div>
+                            <span className="text-[11px] font-mono uppercase font-bold text-[#8C4A27] dark:text-[#D99B78] block mb-1">
+                              Downsides &amp; Operational Drag
+                            </span>
+                            <ul className="text-xs text-[#1d1d1b] dark:text-[#F0EAE1] space-y-1 font-sans">
+                              {alt.cons.map((c, cIdx) => (
+                                <li key={cIdx} className="flex items-start gap-1.5">
+                                  <span className="text-[#8C4A27] dark:text-[#D99B78] font-bold font-mono">&minus;</span>
+                                  <span className="leading-snug">{c}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {alt.why_not_recommended && (
+                        <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C] mt-3 text-xs">
+                          <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] bg-[#EDE7D6]/80 dark:bg-[#221F1C] p-2.5 rounded-none border border-[#cfc7b2] dark:border-[#38332C] leading-relaxed font-sans">
+                            <strong className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">Why Deprioritized:</strong> {alt.why_not_recommended}
+                          </p>
+                        </div>
                       )}
                     </div>
+                  ))}
+                </div>
+              </div>
 
-                    <p className="text-xs text-muted leading-relaxed">
-                      {alt.description}
-                    </p>
-
-                    <div className="space-y-2.5">
-                      <div>
-                        <span className="text-[11px] font-mono uppercase font-bold text-[#2E6F4E] dark:text-[#7FB08E] block mb-1">
-                          Operational Advantages
-                        </span>
-                        <ul className="text-xs text-ink space-y-1">
-                          {alt.pros.map((p, pIdx) => (
-                            <li key={pIdx} className="flex items-start gap-1.5">
-                              <span className="text-[#2E6F4E] dark:text-[#7FB08E] font-bold">+</span>
-                              <span className="leading-snug">{p}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div>
-                        <span className="text-[11px] font-mono uppercase font-bold text-[#8C4A27] dark:text-[#D99B78] block mb-1">
-                          Downsides &amp; Operational Drag
-                        </span>
-                        <ul className="text-xs text-ink space-y-1">
-                          {alt.cons.map((c, cIdx) => (
-                            <li key={cIdx} className="flex items-start gap-1.5">
-                              <span className="text-[#8C4A27] dark:text-[#D99B78] font-bold">&minus;</span>
-                              <span className="leading-snug">{c}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-border mt-3 space-y-1 text-xs">
-                    {alt.why_not_recommended && (
-                      <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] bg-[#EDE7D6]/70 dark:bg-[#221F1C] p-2.5 rounded border border-[#cfc7b2] dark:border-[#38332C] leading-relaxed">
-                        <strong className="font-bold text-ink">Why Deprioritized:</strong> {alt.why_not_recommended}
+              {/* ========================================================================= */}
+              {/* 5. EVIDENTIARY ROBUSTNESS, ASSUMPTIONS & RISK GOVERNANCE                   */}
+              {/* ========================================================================= */}
+              {/* Supporting Evidence Card (Full-Width) */}
+              <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-5 space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#cfc7b2] dark:border-[#38332C]">
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                    Supporting Evidence Receipts
+                  </span>
+                  <span className="text-[11px] font-mono text-[#57534e] dark:text-[#A89F91] uppercase">
+                    {displaySynthesis.supporting_evidence.length} Verified
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {displaySynthesis.supporting_evidence.map((ev, idx) => (
+                    <div key={idx} className="p-3.5 rounded-none bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-xs flex flex-col justify-between gap-2">
+                      <p className="text-[#1d1d1b] dark:text-[#F0EAE1] font-medium leading-snug font-sans">
+                        &ldquo;{ev.claim}&rdquo;
                       </p>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* ========================================================================= */}
-          {/* 5. EVIDENTIARY ROBUSTNESS, ASSUMPTIONS & DIALECTICAL REBUTTALS            */}
-          {/* ========================================================================= */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Supporting Evidence Card */}
-            <div className="bg-paper-surface border border-border rounded-2xl p-5 space-y-3 shadow-2xs">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                  SUPPORTING EVIDENCE RECEIPTS
-                </span>
-                <span className="text-[14px] font-mono text-muted uppercase">Verified</span>
-              </div>
-              <div className="space-y-2">
-                {displaySynthesis.supporting_evidence.map((ev, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-paper-sidebar border border-border text-xs space-y-1">
-                    <p className="text-ink font-medium leading-snug">
-                      &ldquo;{ev.claim}&rdquo;
-                    </p>
-                    <div className="flex items-center justify-between text-[15px] text-muted pt-1">
-                      <span>{ev.source_title || "Empirical Benchmark"}</span>
-                      {ev.source_url && (
-                        <a
-                          href={ev.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-accent hover:underline flex items-center gap-1 font-mono text-[14px]"
-                        >
-                          <span>Clickable Receipt</span>
-                          <ExternalLink className="w-2.5 h-2.5" />
-                        </a>
-                      )}
+                      <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-[#57534e] dark:text-[#A89F91] pt-1.5 border-t border-[#cfc7b2]/50 dark:border-[#38332C]/50">
+                        <span className="truncate">{ev.source_title || "Empirical Benchmark"}</span>
+                        {ev.source_url && (
+                          <a
+                            href={ev.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#7a4e10] dark:text-[#D4AA50] hover:underline flex items-center gap-1 font-mono text-[11px] shrink-0 font-bold"
+                          >
+                            <span>Source</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Operating Assumptions & Inversion Stress Test */}
-            <div className="bg-paper-surface border border-border rounded-2xl p-5 space-y-3 shadow-2xs">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                  ASSUMPTIONS & SENSITIVITY STRESS TEST
-                </span>
-                <span className="text-[14px] font-mono text-muted uppercase">Pre-Mortem</span>
-              </div>
-              <div className="space-y-2">
-                {displaySynthesis.assumptions.map((item, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-paper-sidebar border border-border text-xs space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-ink leading-snug">{item.assumption}</span>
-                      <span
-                        className={`text-[15px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
-                          item.is_verified
+              {/* Operating Assumptions & Inversion Stress Test (Full-Width) */}
+              <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-5 space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#cfc7b2] dark:border-[#38332C]">
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                    Assumptions &amp; Sensitivity Stress Test
+                  </span>
+                  <span className="text-[11px] font-mono text-[#57534e] dark:text-[#A89F91] uppercase">
+                    Pre-Mortem ({displaySynthesis.assumptions.length})
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {displaySynthesis.assumptions.map((item, idx) => (
+                    <div key={idx} className="p-3.5 rounded-none bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-xs space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug font-sans">
+                          {item.assumption}
+                        </span>
+                        <span
+                          className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded-none border shrink-0 font-bold ${item.is_verified
                             ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
                             : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
-                        }`}
-                      >
-                        {item.is_verified ? "Verified" : "Unverified"}
-                      </span>
-                    </div>
-                    <p className="text-[15px] text-muted leading-relaxed">
-                      <strong className="text-ink">Failure Impact:</strong> {item.impact_if_false}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Risks & Mitigation Strategies */}
-            <div className="bg-paper-surface border border-border rounded-2xl p-5 space-y-3 shadow-2xs">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                  CRITICAL RISKS & CONTINGENCY SAFEGUARDS
-                </span>
-                <span className="text-[14px] font-mono text-muted uppercase">Risk Governance</span>
-              </div>
-              <div className="space-y-2">
-                {displaySynthesis.risks_and_mitigations.map((r, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-paper-sidebar border border-border text-xs space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-ink leading-snug">{r.risk}</span>
-                      <span
-                        className={`text-[15px] font-mono uppercase px-1.5 py-0.2 rounded border shrink-0 ${
-                          r.severity === "high" || r.severity === "critical"
-                            ? "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800 font-bold"
-                            : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
-                        }`}
-                      >
-                        {r.severity}
-                      </span>
-                    </div>
-                    <p className="text-[15px] text-muted leading-relaxed">
-                      <strong className="text-ink">Mitigation:</strong> {r.mitigation}
-                    </p>
-                    {r.contingency_plan && (
-                      <p className="text-[15px] text-accent font-medium leading-relaxed">
-                        <strong>Contingency Runbook:</strong> {r.contingency_plan}
+                            }`}
+                        >
+                          {item.is_verified ? "Verified" : "Unverified"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] leading-relaxed font-sans">
+                        <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">Failure Impact:</strong> {item.impact_if_false}
                       </p>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Dialectical Counterarguments & Rebuttals */}
-            <div className="bg-paper-surface border border-border rounded-2xl p-5 space-y-3 shadow-2xs">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-accent">
-                  STEEL-MANNED OBJECTIONS & REBUTTALS
-                </span>
-                <span className="text-[14px] font-mono text-muted uppercase">Dialectics</span>
+              {/* Critical Risks & Contingency Safeguards (Full-Width, 2-col internal grid) */}
+              <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-5 space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#cfc7b2] dark:border-[#38332C]">
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                    Critical Risks &amp; Contingency Safeguards
+                  </span>
+                  <span className="text-[11px] font-mono text-[#57534e] dark:text-[#A89F91] uppercase">
+                    Risk Governance ({displaySynthesis.risks_and_mitigations.length})
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {displaySynthesis.risks_and_mitigations.map((r, idx) => (
+                    <div key={idx} className="p-3.5 rounded-none bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-xs space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug font-sans">
+                          {r.risk}
+                        </span>
+                        <span
+                          className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded-none border shrink-0 font-bold ${r.severity === "high" || r.severity === "critical"
+                            ? "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-800"
+                            : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
+                            }`}
+                        >
+                          {r.severity}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] leading-relaxed font-sans">
+                        <strong className="text-[#1d1d1b] dark:text-[#F0EAE1]">Mitigation:</strong> {r.mitigation}
+                      </p>
+                      {r.contingency_plan && (
+                        <p className="text-xs text-[#7a4e10] dark:text-[#D4AA50] font-medium leading-relaxed font-sans pt-1 border-t border-[#cfc7b2]/50 dark:border-[#38332C]/50">
+                          <strong>Contingency Runbook:</strong> {r.contingency_plan}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2">
-                {displaySynthesis.counterarguments.map((c, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-paper-sidebar border border-border text-xs space-y-1.5">
-                    <p className="font-newsreader italic text-ink font-semibold text-sm leading-snug">
-                      &ldquo;{c.argument}&rdquo;
-                    </p>
-                    <p className="text-[15px] text-muted leading-relaxed">
-                      <strong className="text-ink not-italic">Strategic Rebuttal:</strong>{" "}
-                      {c.rebuttal_or_concession}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
             </div>
           )}
 
-          {/* TAB 2: ACTIONABLE PHASED EXECUTION ROADMAP */}
+          {/* TAB 2: ACTION PLAN */}
           {activeTab === "roadmap" && (
             <div className="space-y-6 animate-in fade-in duration-150">
-              {/* ========================================================================= */}
-              {/* 6. ACTIONABLE PHASED EXECUTION ROADMAP (roadmap.sh INTERACTIVE GRAPH)      */}
-              {/* ========================================================================= */}
               {displayRoadmap && (
                 <RoadmapVisualizer
                   roadmap={displayRoadmap}
@@ -1972,33 +1832,14 @@ jobs:
                   isReadOnly={Boolean(viewingSnapshot)}
                 />
               )}
-
-              {/* Quick Navigation Footer inside Tab 2 */}
-              <div className="flex items-center justify-between p-4 bg-paper-surface border border-border rounded-2xl font-mono text-xs">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("memo")}
-                  className="hover:underline text-muted hover:text-ink cursor-pointer font-bold"
-                >
-                  &larr; Back to Boardroom Memo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("audit")}
-                  className="hover:underline text-accent font-bold cursor-pointer"
-                >
-                  Examine Trade-Offs & Evidence &rarr;
-                </button>
-              </div>
             </div>
           )}
 
-          {/* Outcome Tracking Post-Decision Review (Rendered inside Tab 3 Audit) */}
-          {activeTab === "audit" && (
-            <OutcomeTrackingCard
-              decisionId={decisionId}
-              canonicalWinner={displaySynthesis.canonical_result?.winner_option_name}
-            />
+          {/* Unified MAUT Score Breakdown inside Comparison & Proof */}
+          {activeTab === "audit" && whyBreakdownSlot && (
+            <div className="space-y-6">
+              {whyBreakdownSlot}
+            </div>
           )}
 
           {/* AI Advisory & Limitation of Liability Disclaimer */}
@@ -2074,11 +1915,10 @@ jobs:
                   {displaySynthesis.alternatives_considered.map((alt: any) => (
                     <label
                       key={alt.name}
-                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
-                        selectedOverrideOption === alt.name
-                          ? "bg-accent/10 border-accent text-ink font-semibold ring-1 ring-accent"
-                          : "bg-paper-sidebar border-border text-muted hover:text-ink"
-                      }`}
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${selectedOverrideOption === alt.name
+                        ? "bg-accent/10 border-accent text-ink font-semibold ring-1 ring-accent"
+                        : "bg-paper-sidebar border-border text-muted hover:text-ink"
+                        }`}
                     >
                       <input
                         type="radio"

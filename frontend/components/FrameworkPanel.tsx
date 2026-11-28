@@ -408,10 +408,10 @@ export default function FrameworkPanel({
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-ink text-paper-surface hover:opacity-90 disabled:opacity-50 text-xs font-semibold rounded-xl shadow-xs transition shrink-0 cursor-pointer"
         >
           {loading
-            ? "Running Crash Tests..."
+            ? "Scoring Options..."
             : analysis
-            ? "Re-Run Gauntlet"
-            : "Run Decision Gauntlet"}
+            ? "Re-score Options"
+            : "Score Options"}
         </button>
       </div>
 
@@ -426,7 +426,7 @@ export default function FrameworkPanel({
       {analysis?.is_stale && (
         <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] text-xs text-[#1d1d1b] dark:text-[#F0EAE1] rounded-none flex items-center gap-2.5 shadow-2xs font-courier">
           <AlertCircle className="w-4 h-4 shrink-0 text-[#7a4e10] dark:text-[#D4AA50]" />
-          <span>Upstream problem inputs or gaps have changed. Use <strong>Re-Run Gauntlet</strong> above to re-synchronize criteria and rankings.</span>
+          <span>Upstream problem inputs or gaps have changed. Use <strong>Re-score Options</strong> above to refresh criteria and rankings.</span>
         </div>
       )}
 
@@ -457,44 +457,6 @@ export default function FrameworkPanel({
       {/* ========================================================================= */}
       {analysis && canonicalWinner && (
         <div className="rounded-none border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#221F1C] p-6 sm:p-7 space-y-6 shadow-2xs font-courier">
-          
-          {/* Winner Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[#cfc7b2] dark:border-[#38332C]">
-            <div className="flex items-start gap-3.5">
-              <span className="p-3 rounded-none bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50] border border-[#cfc7b2] dark:border-[#38332C] shrink-0 shadow-2xs mt-0.5">
-              </span>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[12px] font-mono font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50]">
-                    The Gauntlet Winner (Rank #1)
-                  </span>
-                  <span
-                    className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-none uppercase tracking-wider bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C]"
-                  >
-                    {canonicalWinner.status === "READY" ? "Ready for Execution" : "Conditional on Due Diligence"}
-                  </span>
-                </div>
-                <h3 className="text-2xl sm:text-3xl font-newsreader font-bold text-[#1d1d1b] dark:text-[#F0EAE1] tracking-tight">
-                  {canonicalWinner.name}
-                </h3>
-                <p className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
-                  Option {canonicalWinner.name} emerged as the dominant strategic choice across multi-criteria scoring and empirical citations.
-                </p>
-              </div>
-            </div>
-
-            <div className="text-left sm:text-right bg-[#F4F0E6] dark:bg-[#181614] p-4 rounded-none border border-[#cfc7b2] dark:border-[#38332C] shrink-0 shadow-2xs">
-              <span className="font-mono text-3xl font-extrabold text-[#1d1d1b] dark:text-[#F0EAE1] block leading-none">
-                {canonicalWinner.score.toFixed(2)}<span className="text-xs text-[#97907e] font-normal"> / 10</span>
-              </span>
-              <span className="text-[12px] font-mono text-[#7a4e10] dark:text-[#D4AA50] font-bold uppercase tracking-wider mt-1 block">
-                {canonicalWinner.margin !== null && canonicalWinner.margin > 0
-                  ? `+${canonicalWinner.margin.toFixed(2)} pts over runner-up`
-                  : "Convergence Rank #1"}
-              </span>
-            </div>
-          </div>
-
           {/* The Tension & Resolution (The 2 things an executive must know) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-courier">
             {/* The Adversarial Trap Caught */}

@@ -332,54 +332,54 @@ export default function RoadmapVisualizer({
   }
 
   return (
-    <div className="space-y-6 font-courier">
-      {/* 1. ROADMAP HEADER & PROGRESS BANNER */}
-      <div className="bg-[#F4F0E6] dark:bg-[#1f1d1a] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-5 sm:p-6 space-y-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#cfc7b2]/70 dark:border-[#38332C]/70">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] px-2 py-0.5 bg-[#EDE7D6] dark:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C]">
-                Interactive Roadmap (roadmap.sh)
-              </span>
-              <span className="text-xs text-[#57534e] dark:text-[#A89F91]">
-                • {stats.total} Milestones Total
-              </span>
-            </div>
-            <h3 className="font-newsreader text-2xl sm:text-3xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+    <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 sm:p-5 space-y-5 font-courier">
+      {/* 1. COMPACT ROADMAP HEADER & TOOLBAR */}
+      <div className="space-y-3 pb-4 border-b border-[#cfc7b2] dark:border-[#38332C]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#cfc7b2]/70 dark:border-[#38332C]/70">
+          <div className="min-w-0">
+            <h3 className="font-newsreader text-xl sm:text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] truncate">
               {roadmap.title}
             </h3>
-            <p className="text-xs text-[#57534e] dark:text-[#A89F91] mt-1 max-w-2xl font-sans leading-relaxed">
-              Phase-gated execution path with dependency graph, verification criteria, and stakeholder assignment. Tap any milestone to inspect details.
-            </p>
+            <div className="flex items-center gap-3 mt-1.5">
+              <span className="text-[11px] font-bold text-[#1d1d1b] dark:text-[#F0EAE1] font-mono shrink-0">
+                {stats.completed}/{stats.total} Done ({stats.percent}%)
+              </span>
+              <div className="w-32 sm:w-44 h-1.5 bg-[#F4F0E6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C] overflow-hidden">
+                <div
+                  className="h-full bg-[#7a4e10] dark:bg-[#D4AA50] transition-all duration-300"
+                  style={{ width: `${stats.percent}%` }}
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             {/* View Mode Switcher */}
             <div className="inline-flex border border-[#cfc7b2] dark:border-[#38332C] bg-[#EDE7D6] dark:bg-[#181614] p-0.5">
               <button
                 type="button"
                 onClick={() => setViewMode("graph")}
-                className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ${
                   viewMode === "graph"
                     ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                     : "text-[#57534e] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                 }`}
-                title="Interactive Node Graph (roadmap.sh track)"
+                title="Phase-by-phase breakdown"
               >
-                <GitBranch className="w-3.5 h-3.5" />
-                <span>Visual Graph</span>
+                <GitBranch className="w-3 h-3" />
+                <span>Detailed Phases</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5 ${
                   viewMode === "list"
                     ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                     : "text-[#57534e] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
                 }`}
-                title="Sprint Checklist View"
+                title="Compact Checklist View"
               >
-                <span>Sprint List</span>
+                <span>Compact List</span>
               </button>
             </div>
 
@@ -388,92 +388,32 @@ export default function RoadmapVisualizer({
                 type="button"
                 onClick={onSaveRoadmap}
                 disabled={isSaving}
-                className="px-4 py-1.5 bg-[#1d1d1b] hover:bg-[#38332c] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#e0b85c] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                title="Save checked tasks, dates, and custom milestones"
+                className="px-3.5 py-1.5 bg-[#1d1d1b] hover:bg-[#38332c] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#e0b85c] text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
               >
-                {isSaving ? "Saving..." : "Save Roadmap"}
+                {isSaving ? "Saving..." : "Save Plan Changes"}
               </button>
             )}
           </div>
         </div>
 
-        {/* 2. PROGRESS METRICS & KICKOFF CALENDAR */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-          {/* Progress Bar Metric */}
-          <div className="p-3 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-[#57534e] dark:text-[#A89F91] uppercase tracking-wider">
-                Progress
-              </span>
-              <span className="text-[#7a4e10] dark:text-[#D4AA50] font-mono">
-                {stats.percent}% ({stats.completed}/{stats.total})
-              </span>
-            </div>
-            <div className="w-full h-2 bg-[#F4F0E6] dark:bg-[#2A2622] border border-[#cfc7b2]/70 dark:border-[#38332C] overflow-hidden">
-              <div
-                className="h-full bg-[#7a4e10] dark:bg-[#D4AA50] transition-all duration-300"
-                style={{ width: `${stats.percent}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Pending Tasks */}
-          <div className="p-3 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-between">
-            <div>
-              <span className="text-[11px] text-[#57534e] dark:text-[#A89F91] uppercase tracking-wider block">
-                Pending Actions
-              </span>
-              <span className="text-xl font-bold text-[#1d1d1b] dark:text-[#F0EAE1] font-mono">
-                {stats.pending}
-              </span>
-            </div>
-          </div>
-
-          {/* Gaps Addressed */}
-          <div className="p-3 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-between">
-            <div>
-              <span className="text-[11px] text-[#57534e] dark:text-[#A89F91] uppercase tracking-wider block">
-                Gaps Addressed
-              </span>
-              <span className="text-xl font-bold text-emerald-700 dark:text-emerald-400 font-mono">
-                {stats.gapsAddressed}
-              </span>
-            </div>
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-
-          {/* Kickoff Anchor Date */}
-          <div className="p-3 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-1">
-            <span className="text-[11px] text-[#57534e] dark:text-[#A89F91] uppercase tracking-wider block flex items-center gap-1">
-              <CalendarDays className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
-              Kickoff Date
-            </span>
-            <input
-              type="date"
-              value={kickoffDate}
-              onChange={(e) => setKickoffDate(e.target.value)}
-              disabled={isReadOnly}
-              className="w-full text-xs font-mono bg-[#F4F0E6] dark:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] px-2 py-0.5 focus:outline-none focus:border-[#7a4e10] cursor-pointer"
-            />
-          </div>
-        </div>
-
-        {/* 3. DYNAMIC FILTER BAR */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 text-xs">
+        {/* 2. COMPACT SINGLE-ROW FILTER & KICKOFF TOOLBAR */}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           {/* Search Input */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#78716c]" />
             <input
               type="text"
-              placeholder="Filter roadmap milestones..."
+              placeholder="Filter milestones..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] text-xs focus:outline-none focus:border-[#7a4e10]"
+              className="w-full pl-8 pr-7 py-1 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] text-xs focus:outline-none focus:border-[#7a4e10]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#78716c] hover:text-[#1d1d1b]"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#78716c] hover:text-[#1d1d1b]"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -488,7 +428,7 @@ export default function RoadmapVisualizer({
                   key={st}
                   type="button"
                   onClick={() => setStatusFilter(st)}
-                  className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                     statusFilter === st
                       ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
                       : "text-[#57534e] dark:text-[#A89F91] hover:text-[#1d1d1b]"
@@ -499,9 +439,9 @@ export default function RoadmapVisualizer({
               ))}
             </div>
 
-            {/* Dynamic Role Filter Dropdown (shown only when multiple organizational teams are present) */}
+            {/* Dynamic Role Filter Dropdown */}
             {!isDayBased && availableRoles.filter((r) => r.toLowerCase() !== "you" && r !== "ALL").length > 1 && (
-              <div className="flex items-center gap-1.5 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] px-2.5 py-1">
+              <div className="flex items-center gap-1.5 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] px-2 py-0.5">
                 <Filter className="w-3 h-3 text-[#7a4e10] dark:text-[#D4AA50]" />
                 <select
                   value={roleFilter}
@@ -516,6 +456,21 @@ export default function RoadmapVisualizer({
                 </select>
               </div>
             )}
+
+            {/* Kickoff Date */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] uppercase tracking-wider flex items-center gap-1 font-mono">
+                <CalendarDays className="w-3.5 h-3.5 text-[#7a4e10] dark:text-[#D4AA50]" />
+                Kickoff:
+              </span>
+              <input
+                type="date"
+                value={kickoffDate}
+                onChange={(e) => setKickoffDate(e.target.value)}
+                disabled={isReadOnly}
+                className="text-xs font-mono bg-[#F4F0E6] dark:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] text-[#1d1d1b] dark:text-[#F0EAE1] px-2 py-0.5 focus:outline-none focus:border-[#7a4e10] cursor-pointer"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -624,7 +579,7 @@ export default function RoadmapVisualizer({
                                     ? "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700"
                                     : "bg-[#EDE7D6] dark:bg-[#181614] border-[#cfc7b2] hover:border-[#7a4e10]"
                                 }`}
-                                title={task.is_completed ? "Mark Incomplete" : isBlocked ? "Prerequisites Incomplete" : "Mark Complete"}
+                                title={task.is_completed ? "Mark Incomplete" : isBlocked ? "Complete earlier phase task first" : "Mark Complete"}
                               >
                                 {task.is_completed ? (
                                   <Check className="w-3.5 h-3.5" />
@@ -687,37 +642,11 @@ export default function RoadmapVisualizer({
                                   </p>
                                 )}
 
-                                {/* Prerequisites / Dependencies Alert Tag */}
-                                {task.dependencies && task.dependencies.length > 0 && (
-                                  <div className="flex items-center gap-1.5 text-[11px] font-mono mt-1 flex-wrap">
-                                    <span className="text-[#78716c] flex items-center gap-1">
-                                      <GitBranch className="w-3 h-3" /> Depends on:
-                                    </span>
-                                    {task.dependencies.map((depId) => {
-                                      const depInfo = taskMap.get(depId);
-                                      const isDepDone = depInfo?.task.is_completed;
-                                      return (
-                                        <span
-                                          key={depId}
-                                          className={`px-1.5 py-0.2 border text-[10px] font-bold ${
-                                            isDepDone
-                                              ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/30 dark:text-emerald-300"
-                                              : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/30 dark:text-amber-300"
-                                          }`}
-                                        >
-                                          {isDepDone ? "✓ " : "⏳ "}
-                                          {depInfo?.task.title ? depInfo.task.title.slice(0, 24) + "..." : depId}
-                                        </span>
-                                      );
-                                    })}
-                                  </div>
-                                )}
                               </div>
                             </div>
 
-                            {/* Right Arrow / Inspector Trigger */}
-                            <div className="flex items-center gap-1 text-[#78716c] group-hover:text-[#7a4e10] dark:group-hover:text-[#D4AA50] text-xs shrink-0 self-center">
-                              <span className="hidden sm:inline font-mono text-[11px] uppercase tracking-wider">Inspect</span>
+                            {/* Right Arrow Trigger */}
+                            <div className="flex items-center text-[#78716c] group-hover:text-[#7a4e10] dark:group-hover:text-[#D4AA50] shrink-0 self-center">
                               <ChevronRight className="w-4 h-4" />
                             </div>
                           </div>

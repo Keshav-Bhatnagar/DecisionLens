@@ -16,6 +16,7 @@ import ReportExportModal from "@/components/ReportExportModal";
 import SpeechDictationButton from "@/components/SpeechDictationButton";
 import LiveMeetingRoom from "@/components/LiveMeetingRoom";
 import AskDocumentsPanel from "@/components/AskDocumentsPanel";
+import AskAiDrawer from "@/components/AskAiDrawer";
 import {
   getDecision,
   updateDecision,
@@ -93,6 +94,7 @@ export default function DecisionDetailPage({
   const [stageManuallySelected, setStageManuallySelected] = useState(false);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showAskAiDrawer, setShowAskAiDrawer] = useState(false);
   const [showWhyBreakdown, setShowWhyBreakdown] = useState(false);
   const [whySubTab, setWhySubTab] = useState<"frameworks" | "facts">("frameworks");
   const [pipelineLoadingMessage, setPipelineLoadingMessage] = useState<string | null>(null);
@@ -509,157 +511,169 @@ export default function DecisionDetailPage({
                   })}
                 </nav>
 
-                {pipelineLoadingMessage && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-semibold pb-2 sm:pb-0 animate-pulse">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>{pipelineLoadingMessage}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-3 pb-2 sm:pb-0 shrink-0">
+                  {pipelineLoadingMessage && (
+                    <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-semibold animate-pulse">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>{pipelineLoadingMessage}</span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowAskAiDrawer(true)}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1d1d1b] hover:bg-[#38332c] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#e0b85c] text-xs font-mono font-bold uppercase tracking-wider rounded-none transition-colors cursor-pointer shadow-xs"
+                    title="Ask Ollie — Interactive 3D Decision Advisor"
+                  >
+                    {/* Bespoke static SVG Brass-Spectacles Owl Emblem (Single WebGL context kept inside Drawer) */}
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M5.5 6.5L4 3.5L8 5.2C9.2 4.6 10.5 4.3 12 4.3C13.5 4.3 14.8 4.6 16 5.2L20 3.5L18.5 6.5C19.5 8 20 9.8 20 12C20 16.8 16.5 20.5 12 20.5C7.5 20.5 4 16.8 4 12C4 9.8 4.5 8 5.5 6.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                      <circle cx="9.2" cy="11.2" r="2.6" stroke="#D4AA50" strokeWidth="1.5" className="dark:stroke-[#181614]"/>
+                      <circle cx="14.8" cy="11.2" r="2.6" stroke="#D4AA50" strokeWidth="1.5" className="dark:stroke-[#181614]"/>
+                      <path d="M11.7 11.2H12.3" stroke="#D4AA50" strokeWidth="1.5" className="dark:stroke-[#181614]"/>
+                      <circle cx="9.2" cy="11.2" r="0.9" fill="currentColor"/>
+                      <circle cx="14.8" cy="11.2" r="0.9" fill="currentColor"/>
+                      <path d="M10.8 14.4L12 16L13.2 14.4" stroke="#D4AA50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="dark:stroke-[#181614]"/>
+                    </svg>
+                    <span>Ask AI</span>
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Dedicated Active Stage Viewport with Auto-Focus Anchor */}
-            <div id="active-stage-viewport" className="scroll-mt-24 space-y-6">
-              {/* STAGE 1: Supporting Evidence & Context (Zero Duplication) */}
+            <div id="active-stage-viewport" className="scroll-mt-36 pt-2 space-y-6">
+              {/* STAGE 1: Tactile Dossier Intake (Live Bot Default + Notes & Files Secondary) */}
               {(viewMode === "all" || workflowStage === "ingestion") && (
-                <div className="space-y-6 animate-in fade-in duration-200">
-                  {/* Context & Reference Data (Optional) */}
-                  <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-5 sm:p-6 shadow-2xs space-y-5 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-                      <h2 className="font-newsreader text-xl sm:text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
-                        Supporting Evidence & Context{" "}
-                        <span className="font-sans text-xs text-[#97907e] dark:text-[#A89F91]">
-                          (Optional)
-                        </span>
-                      </h2>
-                      <p className="text-xs text-[#6e655a] dark:text-[#A89F91]">
-                        Add meeting audio, notes, or files to sharpen the analysis
-                      </p>
-                    </div>
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  {/* Manila Dossier Folder Tabs */}
+                  <div className="flex items-end gap-1.5 border-b border-[#cfc7b2] dark:border-[#38332C] px-1 font-courier">
+                    <button
+                      type="button"
+                      onClick={() => setIngestionTab("meeting")}
+                      className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-md border border-b-0 transition-colors cursor-pointer flex items-center gap-2 ${
+                        ingestionTab === "meeting"
+                          ? "bg-[#EDE5D5] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] relative -mb-px pb-2.5 border-t-2 border-t-[#7a4e10] dark:border-t-[#D4AA50]"
+                          : "bg-[#E5DEC9]/60 dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-transparent hover:bg-[#E5DEC9] dark:hover:bg-[#221F1C]"
+                      }`}
+                    >
+                      <span>Live Meeting Bot</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] font-bold">
+                        Default
+                      </span>
+                    </button>
 
-                    {/* 2-Card Primary Intake Selector */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setIngestionTab("meeting")}
-                        className={`p-4 text-left rounded-md transition-all duration-200 cursor-pointer space-y-1.5 hover:-translate-y-0.5 ${
-                          ingestionTab === "meeting"
-                            ? "bg-[#EDE7D6] text-[#1d1d1b] dark:bg-[#24201C] dark:text-[#F0EAE1] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm"
-                            : "bg-[#F4F0E6]/60 text-[#1d1d1b] dark:bg-[#181614] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C]"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold">
-                            Google Meet Autonomous Bot
-                          </span>
-                          <span
-                            className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
-                              ingestionTab === "meeting"
-                                ? "bg-[#7a4e10] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                                : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
-                            }`}
-                          >
-                            Primary Intake
-                          </span>
-                        </div>
-                        <p className="text-xs leading-relaxed text-[#4f4b40] dark:text-[#A89F91]">
-                          Joins your Google Meet call, transcribes discussions live, and captures confidential inputs.
-                        </p>
-                      </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (ingestionTab === "meeting") setIngestionTab("context");
+                      }}
+                      className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-md border border-b-0 transition-colors cursor-pointer flex items-center gap-2 ${
+                        ingestionTab !== "meeting"
+                          ? "bg-[#EDE5D5] dark:bg-[#221F1C] text-[#1d1d1b] dark:text-[#F0EAE1] border-[#cfc7b2] dark:border-[#38332C] relative -mb-px pb-2.5 border-t-2 border-t-[#7a4e10] dark:border-t-[#D4AA50]"
+                          : "bg-[#E5DEC9]/60 dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-transparent hover:bg-[#E5DEC9] dark:hover:bg-[#221F1C]"
+                      }`}
+                    >
+                      <span>Notes &amp; Files</span>
+                      {(description.trim() || attachments.length > 0 || decision.transcript) && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#7a4e10] dark:bg-[#D4AA50]" />
+                      )}
+                    </button>
+                  </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (ingestionTab === "meeting") setIngestionTab("context");
-                        }}
-                        className={`p-4 text-left rounded-md transition-all duration-200 cursor-pointer space-y-1.5 hover:-translate-y-0.5 ${
-                          ingestionTab !== "meeting"
-                            ? "bg-[#EDE7D6] text-[#1d1d1b] dark:bg-[#24201C] dark:text-[#F0EAE1] border-2 border-[#7a4e10] dark:border-[#D4AA50] shadow-sm"
-                            : "bg-[#F4F0E6]/60 text-[#1d1d1b] dark:bg-[#181614] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE7D6] dark:hover:bg-[#221F1C]"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold">
-                            Written Notes & Context
-                          </span>
-                          {(description.trim() || attachments.length > 0 || decision.transcript) && (
-                            <span
-                              className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
-                                ingestionTab !== "meeting"
-                                  ? "bg-[#F4F0E6] text-[#181614] dark:bg-[#181614] dark:text-[#D4AA50]"
-                                  : "bg-[#E5DEC9] text-[#7a4e10] dark:bg-[#2C2723] dark:text-[#D4AA50]"
-                              }`}
-                            >
-                              Active
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs leading-relaxed text-[#4f4b40] dark:text-[#A89F91]">
-                          Add dilemma constraints, attach specs, or record voice memos in one composer.
-                        </p>
-                      </button>
-                    </div>
-
-                    {/* Active Expanded Context Area */}
-                    <div className="pt-2">
-                      {/* Unified Notes, Docs & Voice Composer */}
-                      {ingestionTab !== "meeting" && (
-                        <div className="space-y-4 animate-in fade-in duration-150">
-                          <div className="bg-[#EDE7D6]/80 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md overflow-hidden">
-                            <textarea
-                              value={description}
-                              onChange={(e) => setDescription(e.target.value)}
-                              rows={4}
-                              placeholder={
-                                recordType === "meeting"
-                                  ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
-                                  : "Add background notes, constraints, budget limits, or deadlines..."
-                              }
-                              className="w-full text-base font-newsreader bg-transparent p-4 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:outline-none leading-relaxed resize-y"
-                            />
-                            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-[#EDE7D6]/70 dark:bg-[#221F1C] border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 font-courier">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setShowDocsDrawer((v) => !v)}
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold border rounded-md cursor-pointer transition-colors ${
-                                    showDocsDrawer || ingestionTab === "docs"
-                                      ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50]"
-                                      : "bg-[#EDE5D5] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                                  }`}
-                                  title="Attach PDF, DOCX, TXT, or Markdown files"
-                                >
-                                  <Paperclip className="w-3.5 h-3.5" />
-                                  <span>Attach docs{attachments.length > 0 ? ` (${attachments.length})` : ""}</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setShowAudioDrawer((v) => !v)}
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold border rounded-md cursor-pointer transition-colors ${
-                                    showAudioDrawer || ingestionTab === "voice"
-                                      ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50]"
-                                      : "bg-[#EDE5D5] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                                  }`}
-                                  title="Record a voice memo or upload an audio file"
-                                >
-                                  <Mic className="w-3.5 h-3.5" />
-                                  <span>Voice / Audio{decision.transcript ? " (Ready)" : ""}</span>
-                                </button>
-                              </div>
-
-                              <SpeechDictationButton
-                                onTranscript={(text) =>
-                                  setDescription((prev) => (prev ? `${prev} ${text}` : text))
+                  {/* 8-Col Main Dossier Sheet + 4-Col Ruled Captured Rail */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    {/* LEFT 8-COL: Active Intake Dossier */}
+                    <div className="lg:col-span-8 bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-5 sm:p-6 shadow-2xs space-y-5 transition-colors">
+                      {/* Default Tab: Live Meeting Bot */}
+                      {ingestionTab === "meeting" && (
+                        <div className="space-y-4 animate-in fade-in duration-150 font-courier">
+                          <LiveMeetingRoom
+                            decisionId={decisionId}
+                            decisionTitle={title || decision.title}
+                            recordType={recordType}
+                            onFinishMeeting={async (data) => {
+                              if (data && data.transcript && data.transcript.trim()) {
+                                try {
+                                  await updateTranscript(decisionId, data.transcript.trim(), true);
+                                } catch (err) {
+                                  console.warn("Could not save live transcript:", err);
                                 }
-                                title="Dictate directly into notes"
+                              }
+                              if (data && data.notes && data.notes.length > 0) {
+                                const notesSummary = data.notes
+                                  .map((n) => `[${n.category.toUpperCase()}] ${n.content} (${n.isAnonymous ? "Anonymous" : n.author})`)
+                                  .join("\n");
+                                const updatedDesc = description
+                                  ? `${description}\n\n### Anonymous Meeting Risks & Constraints:\n${notesSummary}`
+                                  : `### Anonymous Meeting Risks & Constraints:\n${notesSummary}`;
+                                setDescription(updatedDesc);
+                                await updateDecision(decisionId, { description: updatedDesc });
+                              }
+                              await loadData(true);
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Secondary Tab: Notes & Files */}
+                      {ingestionTab !== "meeting" && (
+                        <div className="space-y-5 animate-in fade-in duration-150">
+                          {/* Ruled Brief Sheet */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-courier text-[11px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50]">
+                                Problem Statement &amp; Context Sheet
+                              </span>
+                            </div>
+                            <div className="bg-[#E5DEC9]/65 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-md overflow-hidden">
+                              <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                rows={5}
+                                placeholder={
+                                  recordType === "meeting"
+                                    ? "e.g. Participants: Product Lead, Eng Manager, Tech Lead. Pre-read: RFC #102..."
+                                    : "Write background notes, constraints, budget caps, or deadlines..."
+                                }
+                                className="w-full text-base font-newsreader bg-[linear-gradient(transparent_31px,rgba(207,199,178,0.4)_32px)] dark:bg-none bg-[length:100%_32px] px-4 py-3 text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#97907e] focus:outline-none leading-8 resize-y"
                               />
+                              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-[#EDE5D5] dark:bg-[#221F1C] border-t border-[#cfc7b2]/70 dark:border-[#38332C]/70 font-courier">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowDocsDrawer((v) => !v)}
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold border rounded-md cursor-pointer transition-colors ${
+                                      showDocsDrawer || ingestionTab === "docs"
+                                        ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50]"
+                                        : "bg-[#E5DEC9] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                                    }`}
+                                    title="Attach PDF, DOCX, TXT, or Markdown files"
+                                  >
+                                    <Paperclip className="w-3.5 h-3.5" />
+                                    <span>Attach docs{attachments.length > 0 ? ` (${attachments.length})` : ""}</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowAudioDrawer((v) => !v)}
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold border rounded-md cursor-pointer transition-colors ${
+                                      showAudioDrawer || ingestionTab === "voice"
+                                        ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] border-[#1d1d1b] dark:border-[#D4AA50]"
+                                        : "bg-[#E5DEC9] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                                    }`}
+                                    title="Record a voice memo or upload an audio file"
+                                  >
+                                    <Mic className="w-3.5 h-3.5" />
+                                    <span>Voice Note / Audio{decision.transcript ? " (Ready)" : ""}</span>
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Inline Attach Docs Drawer */}
+                          {/* Document Folder Pocket */}
                           {(showDocsDrawer || ingestionTab === "docs" || attachments.length > 0) && (
-                            <div className="space-y-4">
+                            <div className="space-y-3 pt-2 border-t border-[#cfc7b2]/70 dark:border-[#38332C]">
                               {(showDocsDrawer || ingestionTab === "docs") && (
                                 <FileUploader
                                   decisionId={decisionId}
@@ -671,9 +685,9 @@ export default function DecisionDetailPage({
                               )}
 
                               {attachments.length > 0 && (
-                                <div className="space-y-3">
+                                <div className="space-y-2.5">
                                   <h3 className="text-xs font-courier font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
-                                    Attached Documents ({attachments.length})
+                                    Attached Briefs &amp; Docs ({attachments.length})
                                   </h3>
                                   {attachments.map((att) => {
                                     const isExpanded = expandedAttachmentId === att.id;
@@ -684,11 +698,12 @@ export default function DecisionDetailPage({
                                     return (
                                       <div
                                         key={att.id}
-                                        className="border border-[#cfc7b2] dark:border-[#38332C] rounded-none overflow-hidden bg-[#F4F0E6] dark:bg-[#181614] transition-colors"
+                                        className="border border-[#cfc7b2] dark:border-[#38332C] rounded-md overflow-hidden bg-[#E5DEC9]/55 dark:bg-[#181614] transition-colors"
                                       >
-                                        <div className="p-3.5 flex items-center justify-between gap-4">
+                                        <div className="p-3 flex items-center justify-between gap-4">
                                           <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-8 h-8 rounded-none bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] font-bold shrink-0">
+                                            <div className="w-8 h-8 rounded-md bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] flex items-center justify-center text-[#7a4e10] dark:text-[#D4AA50] shrink-0">
+                                              <FileText className="w-4 h-4" />
                                             </div>
                                             <div className="min-w-0 font-courier">
                                               <p className="text-sm font-bold text-[#1d1d1b] dark:text-[#F0EAE1] truncate">
@@ -697,7 +712,7 @@ export default function DecisionDetailPage({
                                               <div className="flex items-center gap-2 text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
                                                 <span>{formatFileSize(att.file_size)}</span>
                                                 <span>•</span>
-                                                <span>{wordCount} words extracted</span>
+                                                <span>{wordCount} words</span>
                                                 <span>•</span>
                                                 <span>{new Date(att.created_at).toLocaleDateString()}</span>
                                               </div>
@@ -708,15 +723,15 @@ export default function DecisionDetailPage({
                                             <button
                                               type="button"
                                               onClick={() => setExpandedAttachmentId(isExpanded ? null : att.id)}
-                                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE7D6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] rounded-none transition-colors"
+                                              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9] dark:hover:bg-[#2A2622] rounded-md transition-colors cursor-pointer"
                                             >
                                               {isExpanded ? (
                                                 <>
-                                                  Hide Text <ChevronUp className="w-3.5 h-3.5" />
+                                                  Hide <ChevronUp className="w-3.5 h-3.5" />
                                                 </>
                                               ) : (
                                                 <>
-                                                  View Text <ChevronDown className="w-3.5 h-3.5" />
+                                                  View <ChevronDown className="w-3.5 h-3.5" />
                                                 </>
                                               )}
                                             </button>
@@ -724,7 +739,7 @@ export default function DecisionDetailPage({
                                               type="button"
                                               onClick={() => handleDeleteAttachment(att.id)}
                                               title="Delete document"
-                                              className="p-1.5 text-[#97907e] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors"
+                                              className="p-1.5 text-[#97907e] hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 border border-[#cfc7b2] dark:border-[#38332C] rounded-md transition-colors cursor-pointer"
                                             >
                                               <Trash2 className="w-4 h-4" />
                                             </button>
@@ -732,7 +747,7 @@ export default function DecisionDetailPage({
                                         </div>
 
                                         {isExpanded && (
-                                          <div className="p-4 bg-[#EDE7D6] dark:bg-[#221F1C] border-t border-[#cfc7b2] dark:border-[#38332C] space-y-3 font-courier">
+                                          <div className="p-4 bg-[#EDE5D5] dark:bg-[#221F1C] border-t border-[#cfc7b2] dark:border-[#38332C] space-y-3 font-courier">
                                             <div className="flex items-center justify-between text-xs text-[#4f4b40] dark:text-[#A89F91]">
                                               <span className="font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
                                                 Extracted Text Preview
@@ -740,7 +755,7 @@ export default function DecisionDetailPage({
                                               <button
                                                 type="button"
                                                 onClick={() => handleCopyText(att.extracted_text, att.id)}
-                                                className="inline-flex items-center gap-1 text-[#443a30] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline"
+                                                className="inline-flex items-center gap-1 text-[#443a30] dark:text-[#D4AA50] font-bold uppercase tracking-wider hover:underline cursor-pointer"
                                               >
                                                 {copiedId === att.id ? (
                                                   <>
@@ -754,7 +769,7 @@ export default function DecisionDetailPage({
                                               </button>
                                             </div>
 
-                                            <div className="max-h-60 overflow-y-auto bg-[#F4F0E6] dark:bg-[#181614] p-3 rounded-none border border-[#cfc7b2] dark:border-[#38332C] text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] whitespace-pre-wrap leading-relaxed select-text">
+                                            <div className="max-h-60 overflow-y-auto bg-[#F4F0E6] dark:bg-[#181614] p-3 rounded-md border border-[#cfc7b2] dark:border-[#38332C] text-xs font-mono text-[#1d1d1b] dark:text-[#F0EAE1] whitespace-pre-wrap leading-relaxed select-text">
                                               {att.extracted_text}
                                             </div>
                                           </div>
@@ -767,17 +782,19 @@ export default function DecisionDetailPage({
                             </div>
                           )}
 
-                          {/* Always-visible RAG Grounding & Ask Documents Q&A inside Stage 1 */}
-                          <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]">
-                            <AskDocumentsPanel
-                              decisionId={decisionId}
-                              attachmentCount={attachments.length}
-                            />
-                          </div>
+                          {/* Ask Attached Documents Q&A (only shown when files are attached) */}
+                          {attachments.length > 0 && (
+                            <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]">
+                              <AskDocumentsPanel
+                                decisionId={decisionId}
+                                attachmentCount={attachments.length}
+                              />
+                            </div>
+                          )}
 
-                          {/* Inline Voice Memo & Audio Upload Drawer (plus saved TranscriptEditor whenever transcript exists) */}
+                          {/* Voice Memo & Saved Transcript Editor */}
                           {(showAudioDrawer || ingestionTab === "voice" || Boolean(decision.transcript)) && (
-                            <div className="space-y-4 font-courier">
+                            <div className="space-y-4 font-courier pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]">
                               {(showAudioDrawer || ingestionTab === "voice") && (
                                 <AudioRecorder
                                   decisionId={decisionId}
@@ -814,106 +831,92 @@ export default function DecisionDetailPage({
                           )}
                         </div>
                       )}
+                    </div>
 
-                      {/* Active Panel: Google Meet Bot */}
-                      {ingestionTab === "meeting" && (
-                        <div className="space-y-4 animate-in fade-in duration-150 font-courier">
-                          <LiveMeetingRoom
-                              decisionId={decisionId}
-                              decisionTitle={title || decision.title}
-                              recordType={recordType}
-                              onFinishMeeting={async (data) => {
-                                if (data && data.transcript && data.transcript.trim()) {
-                                  try {
-                                    await updateTranscript(decisionId, data.transcript.trim(), true);
-                                  } catch (err) {
-                                    console.warn("Could not save live transcript:", err);
-                                  }
-                                }
-                                if (data && data.notes && data.notes.length > 0) {
-                                  const notesSummary = data.notes
-                                    .map((n) => `[${n.category.toUpperCase()}] ${n.content} (${n.isAnonymous ? "Anonymous" : n.author})`)
-                                    .join("\n");
-                                  const updatedDesc = description
-                                    ? `${description}\n\n### Anonymous Meeting Risks & Constraints:\n${notesSummary}`
-                                    : `### Anonymous Meeting Risks & Constraints:\n${notesSummary}`;
-                                  setDescription(updatedDesc);
-                                  await updateDecision(decisionId, { description: updatedDesc });
-                                }
-                                await loadData(true);
-                                // Stay on Stage 1 until user is ready to advance to Stage 2
-                              }}
-                            />
+                    {/* RIGHT 4-COL: Ruled "Captured So Far" Index Card + Primary CTA */}
+                    <aside className="lg:col-span-4 space-y-4">
+                      <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-4 shadow-2xs space-y-3 font-courier">
+                        <div className="flex items-center justify-between border-b border-[#cfc7b2] dark:border-[#38332C] pb-2">
+                          <span className="text-[11px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50]">
+                            Captured So Far
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#E5DEC9] dark:bg-[#2A2622] text-[#4f4b40] dark:text-[#A89F91]">
+                            Stage 01
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Stage 1 Bottom Action Bar */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#cfc7b2] dark:border-[#38332C] mt-4 font-courier">
-                    <div className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
-                      Stage 1 of 3 · Add optional context or jump straight to gap analysis
-                    </div>
-                    <button
-                      type="button"
-                      disabled={Boolean(pipelineLoadingMessage) || !isStage1Complete}
-                      title={!isStage1Complete ? "Add notes, attachments, or a meeting transcript in Stage 1 first" : undefined}
-                      onClick={handleAdvanceToGaps}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-md border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
-                    >
-                      {pipelineLoadingMessage ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>{pipelineLoadingMessage}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Find gaps & unknowns</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
+                        <div className="divide-y divide-[#cfc7b2]/70 dark:divide-[#38332C] text-xs">
+                          <div className="py-2 flex items-center justify-between gap-2">
+                            <span className="text-[#4f4b40] dark:text-[#A89F91]">Problem Notes</span>
+                            <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                              {description.trim() ? "Added" : "None yet"}
+                            </span>
+                          </div>
+                          <div className="py-2 flex items-center justify-between gap-2">
+                            <span className="text-[#4f4b40] dark:text-[#A89F91]">Meeting Transcript</span>
+                            <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                              {decision.transcript ? "Ready" : "Pending"}
+                            </span>
+                          </div>
+                          <div className="py-2 flex items-center justify-between gap-2">
+                            <span className="text-[#4f4b40] dark:text-[#A89F91]">Attached Files</span>
+                            <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                              {attachments.length} {attachments.length === 1 ? "file" : "files"}
+                            </span>
+                          </div>
+                          <div className="py-2 flex items-center justify-between gap-2">
+                            <span className="text-[#4f4b40] dark:text-[#A89F91]">Readiness</span>
+                            <span className="font-bold text-[#7a4e10] dark:text-[#D4AA50]">
+                              {isStage1Complete ? "Ready for Audit" : "Add input"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={Boolean(pipelineLoadingMessage) || !isStage1Complete}
+                          title={!isStage1Complete ? "Add notes, attachments, or a meeting transcript in Stage 1 first" : undefined}
+                          onClick={handleAdvanceToGaps}
+                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-[#F4F0E6] bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-md shadow-sm transition-colors cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                        >
+                          {pipelineLoadingMessage ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>{pipelineLoadingMessage}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Analyze &amp; Find Gaps</span>
+                              <ArrowRight className="w-4 h-4" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </aside>
                   </div>
                 </div>
               )}
 
               {/* STAGE 2: Unknowns & Information Gap Resolution */}
               {(viewMode === "all" || workflowStage === "gaps") && (
-                <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="space-y-4 animate-in fade-in duration-200">
                   <GapResolutionPanel
                     decisionId={decisionId}
                     initialGaps={decision.gaps}
                     onGapsUpdated={() => loadData()}
+                    onAdvanceToNextStage={handleAdvanceToReport}
+                    isAdvancing={Boolean(pipelineLoadingMessage)}
                   />
 
-                  {/* Stage 2 Bottom Action Bar */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#cfc7b2] dark:border-[#38332C] font-courier">
+                  {/* Quiet Back Link */}
+                  <div className="pt-2 flex items-center justify-between font-courier">
                     <button
                       type="button"
                       onClick={() => handleSelectStage("ingestion")}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1] transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back to input</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={Boolean(pipelineLoadingMessage)}
-                      onClick={handleAdvanceToReport}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-[#F4F0E6] bg-[#7a4e10] hover:bg-[#633f0d] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] rounded-md border border-[#7a4e10] dark:border-[#D4AA50] shadow-sm transition-colors cursor-pointer"
-                    >
-                      {pipelineLoadingMessage ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>{pipelineLoadingMessage}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Generate final report</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
+                      <span>Back to Stage 01 Inputs</span>
                     </button>
                   </div>
                 </div>
@@ -922,7 +925,7 @@ export default function DecisionDetailPage({
               {/* STAGE 3: Final Decision Synthesis (Direct Verdict) & Inspection Drawer */}
               {(viewMode === "all" || workflowStage === "synthesis" || workflowStage === "frameworks" || workflowStage === "structuring") && (
                 <div className="space-y-6 animate-in fade-in duration-200">
-                  {/* Primary Final ADR Verdict */}
+                  {/* Primary Final ADR Verdict + Unified Comparison & Proof Slot */}
                   <SynthesisPanel
                     decisionId={decisionId}
                     initialSynthesis={
@@ -932,73 +935,76 @@ export default function DecisionDetailPage({
                     }
                     onSynthesisUpdated={() => loadData()}
                     onOpenExportModal={() => setShowExportModal(true)}
-                  />
-
-                  {/* Small Why Button Directly Below the Verdict */}
-                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-[#cfc7b2] dark:border-[#38332C] font-courier">
-                    <button
-                      type="button"
-                      onClick={() => setShowWhyBreakdown(!showWhyBreakdown)}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-[#EDE7D6] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] text-[#1d1d1b] dark:text-[#F0EAE1] border border-[#cfc7b2] dark:border-[#38332C] rounded-md transition-colors cursor-pointer self-start sm:self-auto"
-                    >
-                      <span>{showWhyBreakdown ? "Hide decision rationale" : "Why was this decision chosen? (Frameworks & facts)"}</span>
-                      <span className="text-[10px] text-[#7a4e10] dark:text-[#D4AA50]">
-                        {showWhyBreakdown ? "▲" : "▼"}
-                      </span>
-                    </button>
-                    <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91]">
-                      Deterministic multi-attribute utility & grounding facts
-                    </span>
-                  </div>
-
-                  {/* Collapsible Inspection Details when toggled */}
-                  {showWhyBreakdown && (
-                    <div className="space-y-4 pt-2 border-t border-[#cfc7b2] dark:border-[#38332C] animate-in fade-in duration-150 font-courier">
-                      <div className="flex items-center gap-1 bg-[#EDE7D6] dark:bg-[#221F1C] p-1 border border-[#cfc7b2] dark:border-[#38332C] rounded-md text-xs font-semibold w-fit">
+                    whyBreakdownSlot={
+                      <div className="space-y-4 pt-3 border-t border-[#cfc7b2] dark:border-[#38332C] font-courier">
                         <button
                           type="button"
-                          onClick={() => setWhySubTab("frameworks")}
-                          className={`px-3 py-1.5 transition-colors cursor-pointer ${
-                            whySubTab === "frameworks"
-                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                          }`}
+                          onClick={() => setShowWhyBreakdown((v) => !v)}
+                          className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-[#EDE5D5] hover:bg-[#E5DEC9] dark:bg-[#221F1C] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] rounded-none transition-colors cursor-pointer text-left"
                         >
-                          Frameworks & Scores (MAUT)
+                          <div>
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50] block">
+                              Underlying Mechanism · Frameworks &amp; Structuring
+                            </span>
+                            <span className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
+                              Inspect multi-attribute utility weights (MAUT) and extracted facts
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-[#7a4e10] dark:text-[#D4AA50] shrink-0">
+                            {showWhyBreakdown ? "Hide ▲" : "Inspect ▼"}
+                          </span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setWhySubTab("facts")}
-                          className={`px-3 py-1.5 transition-colors cursor-pointer ${
-                            whySubTab === "facts"
-                              ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
-                              : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
-                          }`}
-                        >
-                          Underlying Facts & Statements
-                        </button>
+
+                        {showWhyBreakdown && (
+                          <div className="space-y-4 animate-in fade-in duration-150">
+                            <div className="flex items-center gap-1 bg-[#E5DEC9] dark:bg-[#221F1C] p-1 border border-[#cfc7b2] dark:border-[#38332C] rounded-none text-xs font-semibold w-fit">
+                              <button
+                                type="button"
+                                onClick={() => setWhySubTab("frameworks")}
+                                className={`px-3 py-1.5 rounded-none transition-colors cursor-pointer ${
+                                  whySubTab === "frameworks"
+                                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                                    : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                                }`}
+                              >
+                                Frameworks &amp; Scores (MAUT)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setWhySubTab("facts")}
+                                className={`px-3 py-1.5 rounded-none transition-colors cursor-pointer ${
+                                  whySubTab === "facts"
+                                    ? "bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]"
+                                    : "text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] dark:hover:text-[#F0EAE1]"
+                                }`}
+                              >
+                                Underlying Facts
+                              </button>
+                            </div>
+
+                            {whySubTab === "frameworks" ? (
+                              <FrameworkPanel
+                                decisionId={decisionId}
+                                initialAnalysis={decision.analysis}
+                                onAnalysisUpdated={() => loadData()}
+                              />
+                            ) : (
+                              <StructuredFindingsEditor
+                                decisionId={decisionId}
+                                initialFindings={decision.points as unknown as StructuredFindings}
+                                isReviewed={decision.points_reviewed || false}
+                                onFindingsUpdated={() => loadData()}
+                                problemStatement={problemStatement || decision.problem_statement || ""}
+                                transcript={decision.transcript || ""}
+                                attachmentCount={attachments.length}
+                                onAdvanceToGaps={() => handleSelectStage("gaps")}
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
-
-                      {whySubTab === "frameworks" ? (
-                        <FrameworkPanel
-                          decisionId={decisionId}
-                          initialAnalysis={decision.analysis}
-                          onAnalysisUpdated={() => loadData()}
-                        />
-                      ) : (
-                        <StructuredFindingsEditor
-                          decisionId={decisionId}
-                          initialFindings={decision.points as unknown as StructuredFindings}
-                          isReviewed={decision.points_reviewed || false}
-                          onFindingsUpdated={() => loadData()}
-                          problemStatement={problemStatement || decision.problem_statement || ""}
-                          transcript={decision.transcript || ""}
-                          attachmentCount={attachments.length}
-                          onAdvanceToGaps={() => handleSelectStage("gaps")}
-                        />
-                      )}
-                    </div>
-                  )}
+                    }
+                  />
 
                   {/* Quiet Stage 3 Footer Link */}
                   <div className="pt-4 border-t border-[#cfc7b2] dark:border-[#38332C] mt-6 flex items-center justify-between font-courier">
@@ -1025,6 +1031,13 @@ export default function DecisionDetailPage({
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         onReportSaved={() => loadData()}
+      />
+
+      {/* Global Interactive 3D Decision Assistant Drawer */}
+      <AskAiDrawer
+        decisionId={decisionId}
+        isOpen={showAskAiDrawer}
+        onClose={() => setShowAskAiDrawer(false)}
       />
     </AppShell>
   );

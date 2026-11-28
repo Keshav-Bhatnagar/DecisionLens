@@ -54,6 +54,7 @@ interface GapResolutionPanelProps {
   initialGaps?: Record<string, unknown>;
   onGapsUpdated?: () => void;
   onAdvanceToNextStage?: () => void;
+  isAdvancing?: boolean;
 }
 
 export default function GapResolutionPanel({
@@ -61,6 +62,7 @@ export default function GapResolutionPanel({
   initialGaps,
   onGapsUpdated,
   onAdvanceToNextStage,
+  isAdvancing = false,
 }: GapResolutionPanelProps) {
   const [gaps, setGaps] = useState<GapItem[]>([]);
   const [detectedAt, setDetectedAt] = useState<string | null>(null);
@@ -89,6 +91,7 @@ export default function GapResolutionPanel({
   const [activeActionGapId, setActiveActionGapId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<"ask_me" | "research" | null>(null);
   const [answerInput, setAnswerInput] = useState("");
+  const [selectedGapId, setSelectedGapId] = useState<string | null>(null);
   const [researchQueryInput, setResearchQueryInput] = useState("");
   const [forceMockToggle, setForceMockToggle] = useState(false);
 
@@ -592,764 +595,296 @@ export default function GapResolutionPanel({
     }
   }, [gaps, activeTrack, secondaryPendingGaps]);
 
-  return (
-    <div className="bg-paper-surface rounded-2xl border border-border p-6 sm:p-8 shadow-xs space-y-7 text-ink font-sans">
-      
-      {/* 1. Executive Header & Falsification Engine Identity */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border/80">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2.5">
-            <DecisionLensIcon size={32} />
-            <div>
-              <span className="text-[14px] font-mono font-semibold uppercase tracking-widest text-accent block leading-none">
-                STAGE 02 / EVIDENCE AUDIT & RESEARCH
-              </span>
-              <h2 className="text-xl sm:text-2xl font-serif font-bold text-ink tracking-tight mt-1">
-                Information Gaps & Evidence Dossier
-              </h2>
-            </div>
-          </div>
-          <p className="text-xs text-ink-secondary max-w-2xl font-light leading-relaxed">
-            Stress-testing critical assumptions, operational boundaries, and real-world benchmarks against empirical evidence before committing budget or strategy.
-          </p>
-        </div>
+  const activeGap = useMemo(() => {
+    if (gaps.length === 0) return null;
+    if (selectedGapId) {
+      const found = gaps.find((g) => g.id === selectedGapId);
+      if (found) return found;
+    }
+    return gaps.find((g) => g.status === "pending") || gaps[0];
+  }, [gaps, selectedGapId]);
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {gaps.length > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={handleCopyGapsForSlack}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-paper-sidebar hover:bg-paper-surface border border-border text-ink rounded-md text-xs font-semibold transition cursor-pointer"
-                title="Copy missing gaps formatted for Slack or Jira"
-              >
-                {copiedGaps ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedGaps ? "Copied!" : "Copy for Slack / Jira"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowSlackBox((v) => !v)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-paper-sidebar hover:bg-paper-surface border border-border text-ink rounded-md text-xs font-semibold transition cursor-pointer"
-                title="Send open gaps directly to a Slack Incoming Webhook"
-              >
-                <Share2 className="w-3.5 h-3.5 text-accent" />
-                <span>Send to Slack</span>
-              </button>
-            </>
-          )}
+  const activeGapIdx = activeGap ? gaps.findIndex((g) => g.id === activeGap.id) : -1;
+
+  const advanceToNextGap = (currentId: string) => {
+    const curIdx = gaps.findIndex((g) => g.id === currentId);
+    const nextPending =
+      gaps.slice(curIdx + 1).find((g) => g.status === "pending") ||
+      gaps.find((g) => g.id !== currentId && g.status === "pending") ||
+      gaps[(curIdx + 1) % gaps.length];
+    if (nextPending) {
+      setSelectedGapId(nextPending.id);
+      setAnswerInput(nextPending.answer || "");
+    }
+  };
+
+  return (
+    <div className="space-y-4 text-[#1d1d1b] dark:text-[#F0EAE1] font-sans">
+      {error && (
+        <div className="p-3.5 bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 rounded-md text-xs text-rose-800 dark:text-rose-200 flex items-center justify-between gap-2">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} className="cursor-pointer">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="py-12 text-center text-xs text-[#4f4b40] dark:text-[#A89F91] flex items-center justify-center gap-2 font-courier">
+          <RotateCw className="w-4 h-4 animate-spin text-[#7a4e10] dark:text-[#D4AA50]" />
+          Loading questions...
+        </div>
+      ) : gaps.length === 0 ? (
+        <div className="p-10 text-center bg-[#EDE5D5] dark:bg-[#221F1C] rounded-md border border-[#cfc7b2] dark:border-[#38332C] space-y-3">
+          <HelpCircle className="w-9 h-9 text-[#7a4e10]/70 mx-auto" />
+          <h3 className="text-lg font-newsreader text-[#1d1d1b] dark:text-[#F0EAE1]">
+            No Open Questions Found Yet
+          </h3>
+          <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] max-w-md mx-auto">
+            Scan your Stage 01 notes and documents to surface any missing constraints or assumptions.
+          </p>
           <button
             type="button"
             onClick={handleDetectGaps}
             disabled={isDetecting}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-ink hover:opacity-90 disabled:opacity-50 text-paper-surface rounded-md text-xs font-semibold shadow-xs transition-all shrink-0 group cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] rounded-md text-xs font-semibold cursor-pointer"
           >
-            {isDetecting ? (
-              <>
-                <RotateCw className="w-3.5 h-3.5 animate-spin text-paper-surface" />
-                Auditing Evidence Base...
-              </>
-            ) : (
-              <>
-                {gaps.length > 0 ? "Re-Audit Information Gaps" : "Run Epistemic Gap Audit"}
-              </>
-            )}
+            {isDetecting ? "Scanning..." : "Scan Notes for Questions"}
           </button>
-        </div>
-      </div>
-
-      {showSlackBox && (
-        <div className="p-3.5 rounded-md bg-paper-sidebar border border-border flex flex-col sm:flex-row sm:items-center gap-2.5 text-xs">
-          <input
-            type="url"
-            value={slackWebhook}
-            onChange={(e) => setSlackWebhook(e.target.value)}
-            placeholder="https://hooks.slack.com/services/..."
-            className="flex-1 px-3 py-1.5 bg-paper-surface border border-border rounded-md text-ink font-mono text-xs focus:outline-none focus:border-accent"
-          />
-          <button
-            type="button"
-            disabled={sendingSlack || !slackWebhook.trim()}
-            onClick={handleSendToSlack}
-            className="px-3.5 py-1.5 bg-ink text-paper-surface rounded-md font-semibold disabled:opacity-50 cursor-pointer shrink-0"
-          >
-            {sendingSlack ? "Sending..." : "Push Open Gaps"}
-          </button>
-          {slackFeedback && <span className="text-xs font-mono text-accent">{slackFeedback}</span>}
-        </div>
-      )}
-
-      {/* 2. Living Epistemic Grounding Meter (Macro Status Banner) */}
-      <div className="p-4 sm:p-5 rounded-xl bg-paper-sidebar border border-border space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-2 font-mono">
-            <span className="font-bold text-ink uppercase tracking-wider">Epistemic Grounding Ratio:</span>
-            <span className="text-sm font-bold text-accent">{groundingPercentage}%</span>
-            <span className="text-[15px] text-ink-secondary">
-              ({answeredCount + researchedCount} of {totalCount} items verified)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4 text-[15px] font-mono text-ink-secondary">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <strong className="text-ink">{pendingCount}</strong> Blockers Open
-            </span>
-            <span>&bull;</span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-sky-500" />
-              <strong className="text-ink">{researchedCount}</strong> Web Audited
-            </span>
-            <span>&bull;</span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <strong className="text-ink">{answeredCount}</strong> Human Decided
-            </span>
-          </div>
-        </div>
-
-        {/* Progress Bar with Luxury Gradient */}
-        <div className="w-full h-2 rounded-full bg-paper-surface border border-border overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-amber-600 via-amber-500 to-emerald-600 transition-all duration-700 ease-out"
-            style={{ width: `${groundingPercentage}%` }}
-          />
-        </div>
-      </div>
-
-      {/* 2b. Executive Fast-Track Action Bar (Tier 1 & Tier 3 Funnel) */}
-      {gaps.length > 0 && (pendingWebGaps.length > 0 || secondaryPendingGaps.length > 0) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-amber-500/5 border border-amber-300/60 shadow-2xs">
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-lg bg-amber-500/10 text-accent shrink-0">
-            </span>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold text-ink uppercase tracking-wider">
-                  Executive Fast-Track:
-                </span>
-                <span className="text-[14px] font-mono px-2 py-0.5 rounded-full bg-paper-surface border border-border text-ink-secondary">
-                  {criticalDoubts.length} Critical Focus • {secondaryPendingGaps.length} Bundled • {pendingWebGaps.length} Web Gaps
-                </span>
-              </div>
-              <p className="text-[15px] text-ink-secondary">
-                {pendingWebGaps.length > 0
-                  ? `${pendingWebGaps.length} external evidence queries can be auto-resolved in background.`
-                  : "External evidence queries cleared. Focus on core critical doubts below."}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {pendingWebGaps.length > 0 && (
-              <button
-                type="button"
-                onClick={handleAutoResolveWebGaps}
-                disabled={isAutoResearching}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-sky-700 hover:bg-sky-800 disabled:opacity-50 text-paper-surface rounded-lg text-xs font-semibold shadow-xs transition"
-              >
-                {isAutoResearching ? (
-                  <>
-                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>
-                      Resolving {autoResearchProgress?.current || 1}/{autoResearchProgress?.total || pendingWebGaps.length}...
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span>Auto-Resolve Web Gaps ({pendingWebGaps.length})</span>
-                  </>
-                )}
-              </button>
-            )}
-
-            {secondaryPendingGaps.length > 0 && (
-              <button
-                type="button"
-                onClick={handleBatchAcceptSecondary}
-                disabled={isBatchAccepting}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-ink hover:opacity-90 disabled:opacity-50 text-paper-surface rounded-lg text-xs font-semibold shadow-xs transition"
-              >
-                {isBatchAccepting ? (
-                  <>
-                    <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Bundling...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Accept Secondary Bundle ({secondaryPendingGaps.length})</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Alerts */}
-      {error && (
-        <div className="p-4 bg-rose-500/10 dark:bg-rose-950/30 border border-rose-500/30 rounded-xl text-xs text-rose-800 dark:text-rose-200 space-y-2 animate-in fade-in">
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
-            <div className="flex-1 font-medium">{error}</div>
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="text-rose-500 hover:text-rose-400"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {unconfiguredProviderError && activeActionGapId && (
-            <div className="pt-2 pl-6">
-              <button
-                type="button"
-                onClick={() => {
-                  const target = gaps.find((g) => g.id === activeActionGapId);
-                  if (target) handleExecuteResearch(target, true);
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ink text-paper-surface hover:opacity-90 rounded-lg text-xs font-semibold shadow-xs transition-all"
-              >
-                Retry with Deterministic Test Provider
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {successMsg && (
-        <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 rounded-xl text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2.5 animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-          <span className="font-medium">{successMsg}</span>
-        </div>
-      )}
-
-      {/* 3. Streamlined 3-Track Navigation (Replacing 6 tabs) */}
-      {gaps.length > 0 && (
-        <div className="flex items-center p-1 bg-paper-sidebar rounded-xl border border-border gap-1 overflow-x-auto text-xs">
-          <button
-            type="button"
-            onClick={() => setActiveTrack("blockers")}
-            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-              activeTrack === "blockers"
-                ? "bg-paper-surface text-ink font-bold shadow-2xs border border-border"
-                : "text-ink-secondary hover:text-ink"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            <span>Critical Blockers ({pendingCount})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTrack("research")}
-            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-              activeTrack === "research"
-                ? "bg-paper-surface text-ink font-bold shadow-2xs border border-border"
-                : "text-ink-secondary hover:text-ink"
-            }`}
-          >
-            <span>Empirical Web Research ({researchedCount + researchQueuedCount})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTrack("resolved")}
-            className={`flex-1 py-2 px-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-              activeTrack === "resolved"
-                ? "bg-paper-surface text-ink font-bold shadow-2xs border border-border"
-                : "text-ink-secondary hover:text-ink"
-            }`}
-          >
-            <span>Audited Facts ({answeredCount + researchedCount})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTrack("all")}
-            className={`py-2 px-3.5 rounded-lg font-medium transition-all text-ink-secondary hover:text-ink ${
-              activeTrack === "all" ? "bg-paper-surface text-ink font-bold shadow-2xs border border-border" : ""
-            }`}
-          >
-            All Dossier ({totalCount})
-          </button>
-        </div>
-      )}
-
-      {/* 4. Gaps Dossier Cards */}
-      {loading ? (
-        <div className="py-12 text-center text-xs text-ink-secondary flex items-center justify-center gap-2.5 font-mono">
-          <RotateCw className="w-4 h-4 animate-spin text-accent" />
-          Loading epistemic gap dossier...
-        </div>
-      ) : gaps.length === 0 ? (
-        <div className="p-10 text-center bg-paper-sidebar rounded-2xl border border-dashed border-border space-y-3">
-          <HelpCircle className="w-10 h-10 text-accent/60 mx-auto" />
-          <h3 className="text-base font-serif font-bold text-ink">
-            No Information Gaps Audited Yet
-          </h3>
-          <p className="text-xs text-ink-secondary max-w-md mx-auto leading-relaxed">
-            Click <strong>Run Epistemic Gap Audit</strong> to analyze your Stage 2 structured findings, extract hidden operational blindspots, and prepare empirical research queries.
-          </p>
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleDetectGaps}
-              disabled={isDetecting}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink text-paper-surface hover:opacity-90 rounded-xl text-xs font-semibold shadow-xs transition-all"
-            >
-              Run Epistemic Gap Audit Now
-            </button>
-          </div>
-        </div>
-      ) : filteredGaps.length === 0 ? (
-        <div className="p-8 text-center text-xs text-ink-secondary bg-paper-sidebar rounded-xl border border-border font-mono">
-          No information gaps in the selected track.
         </div>
       ) : (
-        <div className="space-y-4">
-          {filteredGaps.map((gap) => {
-            const isActionOpen = activeActionGapId === gap.id;
-            const isWorking = actionInProgressId === gap.id;
-            const finding = findingsMap[gap.id];
-            const isCritical = gap.importance === "critical";
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* LEFT 4-COL: Scannable Question Queue */}
+          <aside className="lg:col-span-4 bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-4 shadow-2xs space-y-3">
+            <div className="space-y-2 border-b border-[#cfc7b2] dark:border-[#38332C] pb-3">
+              <div className="flex items-center justify-between text-xs font-courier">
+                <span className="font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50]">
+                  Questions
+                </span>
+                <span className="font-bold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                  {answeredCount + researchedCount} of {totalCount} Answered
+                </span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-[#F4F0E6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] overflow-hidden">
+                <div
+                  className="h-full bg-[#7a4e10] dark:bg-[#D4AA50] transition-all duration-500"
+                  style={{ width: `${groundingPercentage}%` }}
+                />
+              </div>
+            </div>
 
-            return (
-              <div
-                key={gap.id}
-                className={`rounded-2xl border transition-all bg-paper-surface p-6 sm:p-7 space-y-6 shadow-2xs ${
-                  isCritical && gap.status === "pending"
-                    ? "border-amber-300 ring-1 ring-amber-200/60"
-                    : "border-border hover:border-accent/40"
-                }`}
-              >
-                {/* 1. Header Meta Row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/70">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[14px] font-mono font-bold text-ink-secondary bg-paper-sidebar px-2 py-0.5 rounded border border-border">
-                      #{gap.priority_score}
-                    </span>
-                    {getImportanceBadge(gap.importance)}
-                    {getStatusBadge(gap.status)}
-
-                    <span className="text-[11px] font-mono text-ink-secondary px-2 py-0.5 rounded bg-paper-sidebar border border-border">
-                      {gap.recommended_resolution_method === "web_research"
-                        ? "Empirical Web Research"
-                        : "Executive Decision"}
-                    </span>
-
-                    {gap.derived_from?.includes("domain_guideline") && (
-                      <span
-                        title="Flagged with help from the expert guide for this kind of decision"
-                        className="text-[11px] font-semibold px-2 py-0.5 rounded bg-[#F3E7CC] text-[#7a4e10] border border-[#D9C08A] dark:bg-[#D4AA50]/15 dark:text-[#D4AA50] dark:border-[#D4AA50]/40"
-                      >
-                        From domain guide
+            <div className="divide-y divide-[#cfc7b2]/70 dark:divide-[#38332C]">
+              {gaps.map((g, idx) => {
+                const isSelected = activeGap?.id === g.id;
+                const isDone = g.status === "answered" || Boolean(findingsMap[g.id]);
+                const isSkipped = g.status === "skipped";
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedGapId(g.id);
+                      setAnswerInput(g.answer || "");
+                    }}
+                    className={`w-full text-left py-2.5 px-2.5 rounded transition-colors cursor-pointer flex items-start justify-between gap-2 ${
+                      isSelected
+                        ? "bg-[#E5DEC9] dark:bg-[#181614] border-l-2 border-l-[#7a4e10] dark:border-l-[#D4AA50]"
+                        : "hover:bg-[#E5DEC9]/50 dark:hover:bg-[#181614]/60"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <span className="text-xs font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] line-clamp-1 leading-snug">
+                        {idx + 1}. {g.question}
                       </span>
-                    )}
-                  </div>
-
-                  {gap.affected_options && gap.affected_options.length > 0 && (
-                    <div className="flex items-center flex-wrap gap-1.5 text-[11px] font-mono text-ink-secondary">
-                      <span className="text-accent uppercase font-bold">Stakes on:</span>
-                      <div className="flex items-center flex-wrap gap-1">
-                        {gap.affected_options.map((opt, i) => (
-                          <span key={i} className="px-2 py-0.5 rounded bg-paper-sidebar border border-border text-ink font-semibold">
-                            {opt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Core Question / Claim */}
-                <div className="pl-3 border-l-2 border-accent/70">
-                  <h3 className="text-base sm:text-lg font-serif font-bold text-ink leading-snug">
-                    {gap.question}
-                  </h3>
-                </div>
-
-                {/* Scannable Key Pointers (Stakes, Evidence, & Decision) */}
-                <ul className="space-y-2.5 text-xs font-sans">
-                  {/* Pointer 1: Strategic Stakes */}
-                  <li className="p-3 rounded-lg bg-paper-sidebar/60 border border-border/80 space-y-1">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-accent block">
-                      • Key Impact
-                    </span>
-                    <p className="text-ink leading-relaxed pl-2.5">
-                      {gap.reason || "Foundational constraint that directly dictates downstream feasibility and financial risk."}
-                    </p>
-                    {gap.source_spans && gap.source_spans.length > 0 && (
-                      <p className="text-[11px] font-mono text-ink-secondary pt-1 pl-2.5">
-                        <span className="text-accent font-bold uppercase mr-1">Origin:</span>
-                        <span className="italic text-ink">&ldquo;{gap.source_spans[0]}&rdquo;</span>
-                      </p>
-                    )}
-                  </li>
-
-                  {/* Pointer 2: Empirical Evidence & Receipts */}
-                  <li className="p-3 rounded-lg bg-paper-sidebar/40 border border-border/80 space-y-2">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                        • Verified Evidence &amp; Receipts
-                      </span>
-                      {finding && (
-                        <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30">
-                          {finding.sources?.length || 0} Sources
+                      {g.answer && (
+                        <span className="text-[11px] text-[#4f4b40] dark:text-[#A89F91] truncate block mt-0.5">
+                          {g.answer}
                         </span>
                       )}
                     </div>
-
-                    {finding ? (
-                      <div className="space-y-2 pl-2.5">
-                          <p className="text-ink leading-relaxed bg-paper-surface p-2.5 rounded border border-border">
-                            {finding.synthesis}
-                          </p>
-                          {finding.claims && finding.claims.length > 0 && (
-                            <ul className="space-y-1 pl-3 list-disc marker:text-accent">
-                              {finding.claims.map((clm, idx) => (
-                                <li key={idx} className="text-xs text-ink">
-                                  <span>{clm.claim}</span>{" "}
-                                  <span className="text-[11px] font-mono text-accent font-bold uppercase">
-                                    [{clm.evidence_type} • {clm.sources_count} src]
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                          {finding.sources && finding.sources.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 pt-0.5">
-                              {finding.sources.map((src, idx) => (
-                                <a
-                                  key={idx}
-                                  href={src.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-paper-surface border border-border text-[11px] font-mono text-sky-700 dark:text-sky-300 hover:border-sky-500 transition"
-                                >
-                                  <span className="truncate max-w-[200px]">{src.source_title || src.url}</span>
-                                  <ExternalLink className="w-3 h-3 shrink-0 opacity-70" />
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-ink-secondary">
-                          <span>No external benchmark receipts queried yet.</span>
-                          <button
-                            type="button"
-                            onClick={() => handleExecuteResearch(gap, false)}
-                            disabled={isWorking}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-700 hover:bg-sky-600 disabled:opacity-50 text-white rounded-md text-[11px] font-mono font-semibold shrink-0 transition cursor-pointer"
-                          >
-                            {isWorking ? (
-                              <>
-                                <RotateCw className="w-3 h-3 animate-spin" />
-                                <span>Querying...</span>
-                              </>
-                            ) : (
-                              <span>Retrieve External Receipts</span>
-                            )}
-                          </button>
-                        </div>
-                      )}
-                  </li>
-                </ul>
-
-                {/* Part 3: Structured Executive Decision Scenarios (No Blank Page Paralysis!) */}
-                <div className="space-y-2.5 pt-1">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-[11px] font-mono font-bold text-ink uppercase tracking-wider">
-                      Executive Guidance &amp; Resolution
+                    <span className="font-courier text-[11px] font-bold shrink-0 mt-0.5 text-[#7a4e10] dark:text-[#D4AA50]">
+                      {isDone ? "✓" : isSkipped ? "–" : isSelected ? "●" : "○"}
                     </span>
+                  </button>
+                );
+              })}
+            </div>
 
-                    {gap.status === "answered" && gap.answer && (
-                      <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                        Grounded: &ldquo;{gap.answer.slice(0, 40)}{gap.answer.length > 40 ? "..." : ""}&rdquo;
-                      </span>
-                    )}
-                  </div>
-
-                  {gap.status === "answered" && gap.answer && !isActionOpen ? (
-                    <div className="p-3 rounded-lg bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                        <div className="space-y-0.5">
-                          <span className="text-[11px] font-mono uppercase text-emerald-700 dark:text-emerald-300 font-bold block">
-                            Audited Human Decision
-                          </span>
-                          <p className="text-xs text-ink font-medium">
-                            {gap.answer}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => openAskMe(gap)}
-                        className="text-xs font-mono text-emerald-700 dark:text-emerald-300 underline hover:opacity-80 shrink-0 cursor-pointer"
-                      >
-                        Change Guidance
-                      </button>
-                    </div>
+            <div className="pt-2 border-t border-[#cfc7b2] dark:border-[#38332C] space-y-2 font-courier">
+              {onAdvanceToNextStage && (
+                <button
+                  type="button"
+                  disabled={isAdvancing}
+                  onClick={onAdvanceToNextStage}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[#F4F0E6] rounded-md text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isAdvancing ? (
+                    <>
+                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Generating Verdict...</span>
+                    </>
                   ) : (
                     <>
-                      {/* Structured Guided Scenario Options */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <button
-                          type="button"
-                          onClick={() => handleQuickResolve(gap, `Proceed with conservative baseline within current budget, timeline, and team capacity.`)}
-                          disabled={isWorking}
-                          className="p-3.5 rounded-xl border border-border bg-paper-sidebar/50 hover:bg-paper-surface hover:border-accent text-left transition group space-y-1 disabled:opacity-50"
-                        >
-                          <span className="text-[14px] font-mono font-bold uppercase text-accent block">
-                            Assumption A: Conservative Baseline
-                          </span>
-                          <p className="text-xs text-ink font-medium leading-snug">
-                            Proceed with low-risk defaults within current budget, timeline, and team capacity.
-                          </p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleQuickResolve(gap, `Plan with growth contingency buffer for higher scope, adoption, or edge cases.`)}
-                          disabled={isWorking}
-                          className="p-3.5 rounded-xl border border-border bg-paper-sidebar/50 hover:bg-paper-surface hover:border-accent text-left transition group space-y-1 disabled:opacity-50"
-                        >
-                          <span className="text-[14px] font-mono font-bold uppercase text-accent block">
-                            Assumption B: Contingency Buffer
-                          </span>
-                          <p className="text-xs text-ink font-medium leading-snug">
-                            Allocate extra budget or timeline buffer to cover higher scope, adoption, or edge cases.
-                          </p>
-                        </button>
-                      </div>
-
-                      {/* Custom Input and Known Risk Controls */}
-                      <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => (isActionOpen ? closeActionBox() : openAskMe(gap))}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-paper-surface text-ink hover:bg-paper-sidebar border border-border transition"
-                          >
-                            <span>{isActionOpen && actionType === "ask_me" ? "Close Custom Input" : "Type Exact Constraint / Figure"}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleAnswerSubmit(gap, true)}
-                            disabled={isWorking}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-ink-secondary hover:text-ink hover:bg-paper-sidebar border border-border transition"
-                          >
-                            <Check className="w-3 h-3 text-emerald-600" />
-                            <span>Accept as Known Operational Risk</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Inline Custom Input Box */}
-                      {isActionOpen && actionType === "ask_me" && (
-                        <div className="p-4 rounded-xl bg-paper-sidebar border border-border space-y-3 animate-in fade-in">
-                          <textarea
-                            value={answerInput}
-                            onChange={(e) => setAnswerInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && answerInput.trim()) {
-                                handleAnswerSubmit(gap, false);
-                              }
-                            }}
-                            placeholder="State your exact metric, budget ceiling, or team constraint (Cmd + Enter to save)..."
-                            rows={2}
-                            className="w-full px-3.5 py-2.5 text-xs rounded-lg border border-border bg-paper-surface text-ink focus:outline-none focus:ring-1 focus:ring-accent font-sans leading-relaxed resize-y"
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={closeActionBox}
-                              className="px-3 py-1 text-xs text-ink-secondary hover:text-ink"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleAnswerSubmit(gap, false)}
-                              disabled={isWorking || !answerInput.trim()}
-                              className="px-4 py-1.5 bg-ink text-paper-surface rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition"
-                            >
-                              Save Constraint
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                      <span>Generate Final Decision</span>
+                      <ArrowRight className="w-4 h-4" />
                     </>
                   )}
+                </button>
+              )}
+
+              <div className="flex items-center justify-between text-[11px] text-[#4f4b40] dark:text-[#A89F91] pt-1">
+                <button
+                  type="button"
+                  onClick={handleDetectGaps}
+                  disabled={isDetecting}
+                  title="Scan Stage 01 notes for any newly added gaps without erasing your existing answers"
+                  className="hover:underline cursor-pointer"
+                >
+                  {isDetecting ? "Scanning..." : "Scan for new gaps"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyGapsForSlack}
+                  className="hover:underline cursor-pointer"
+                >
+                  {copiedGaps ? "Copied!" : "Copy questions"}
+                </button>
+              </div>
+            </div>
+          </aside>
+
+          {/* RIGHT 8-COL: Single Focused Active Question Card */}
+          {activeGap && (() => {
+            const isWorking = actionInProgressId === activeGap.id;
+            const finding = findingsMap[activeGap.id];
+            const isCritical = activeGap.importance === "critical";
+
+            return (
+              <div className="lg:col-span-8 bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-md p-6 sm:p-7 shadow-2xs space-y-5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#cfc7b2]/70 dark:border-[#38332C] pb-3 font-courier">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50]">
+                      Question {activeGapIdx + 1} of {gaps.length} · {isCritical ? "High Impact" : "Optional"}
+                    </span>
+                    {activeGap.status === "answered" && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#1d1d1b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614]">
+                        Answered ✓
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExecuteResearch(activeGap, false)}
+                    disabled={isWorking}
+                    title="Search the web for real-world benchmarks and attach findings below"
+                    className="text-xs font-sans font-semibold text-[#7a4e10] dark:text-[#D4AA50] hover:underline disabled:opacity-50 cursor-pointer"
+                  >
+                    {isWorking ? "Searching web..." : "Fetch web benchmark ↓"}
+                  </button>
                 </div>
 
-              </div>
-            );
-          })}
+                <div className="space-y-2">
+                  <h2 className="font-newsreader text-xl sm:text-2xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1] leading-snug">
+                    {activeGap.question}
+                  </h2>
+                  <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] leading-relaxed">
+                    {activeGap.reason || "Answering this helps sharpen your final recommendation."}
+                  </p>
+                </div>
 
-          {/* Tier 3: Consolidated Secondary Considerations Bundle Card (Merged into 1 Card) */}
-          {(activeTrack === "blockers" || activeTrack === "all") && secondaryPendingGaps.length > 0 && (
-            <div className="rounded-xl border border-amber-300/80 bg-paper-sidebar p-5 sm:p-6 space-y-4 shadow-2xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <span className="p-2 rounded-xl bg-amber-500/10 text-accent shrink-0 mt-0.5">
-                  </span>
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-base font-serif font-bold text-ink">
-                        Consolidated Secondary Considerations
-                      </h4>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[14px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                        {secondaryPendingGaps.length} Items Merged Into 1 Bundle
-                      </span>
-                    </div>
-                    <p className="text-xs text-ink-secondary max-w-xl font-light leading-relaxed">
-                      Non-critical operational nuances, secondary parameter estimates, and minor trade-offs bundled into a single batch dossier so you don&apos;t waste time on trivial questionnaires.
+                {finding && (
+                  <div className="p-3.5 rounded-md bg-[#E5DEC9]/80 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] space-y-2 text-xs">
+                    <span className="font-courier text-[11px] font-bold uppercase tracking-wider text-[#7a4e10] dark:text-[#D4AA50] block">
+                      Web Benchmark Found
+                    </span>
+                    <p className="text-[#1d1d1b] dark:text-[#F0EAE1] leading-relaxed">
+                      {finding.synthesis}
                     </p>
                   </div>
-                </div>
+                )}
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="space-y-2.5">
                   <button
                     type="button"
-                    onClick={() => setIsSecondaryExpanded(!isSecondaryExpanded)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-medium text-ink-secondary hover:text-ink hover:bg-paper-surface border border-border transition"
+                    onClick={async () => {
+                      await handleQuickResolve(activeGap, "Proceed with conservative baseline within current budget, timeline, and team capacity.");
+                      advanceToNextGap(activeGap.id);
+                    }}
+                    disabled={isWorking}
+                    className="w-full text-left p-3.5 rounded-md bg-[#E5DEC9]/80 hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] transition cursor-pointer disabled:opacity-50"
                   >
-                    {isSecondaryExpanded ? (
-                      <>
-                        <span>Collapse Digest</span>
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </>
-                    ) : (
-                      <>
-                        <span>Review Digest ({secondaryPendingGaps.length})</span>
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </>
-                    )}
+                    <div className="text-sm font-semibold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                      Conservative Baseline
+                    </div>
+                    <div className="text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+                      Stick strictly to current budget, timeline, and team capacity.
+                    </div>
                   </button>
 
                   <button
                     type="button"
-                    onClick={handleBatchAcceptSecondary}
-                    disabled={isBatchAccepting}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-paper-surface rounded-xl text-xs font-semibold shadow-xs transition"
+                    onClick={async () => {
+                      await handleQuickResolve(activeGap, "Plan with growth contingency buffer for higher scope, adoption, or edge cases.");
+                      advanceToNextGap(activeGap.id);
+                    }}
+                    disabled={isWorking}
+                    className="w-full text-left p-3.5 rounded-md bg-[#E5DEC9]/80 hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] hover:border-[#7a4e10] transition cursor-pointer disabled:opacity-50"
                   >
-                    {isBatchAccepting ? (
-                      <>
-                        <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Accepting All...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Accept All as Baseline ({secondaryPendingGaps.length})</span>
-                      </>
-                    )}
+                    <div className="text-sm font-semibold text-[#1d1d1b] dark:text-[#F0EAE1]">
+                      Add Contingency Buffer
+                    </div>
+                    <div className="text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+                      Allow extra budget or rollout time for unexpected scope or edge cases.
+                    </div>
+                  </button>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <label className="text-xs font-semibold text-[#4f4b40] dark:text-[#A89F91] block">
+                    Or type your exact answer:
+                  </label>
+                  <textarea
+                    value={answerInput}
+                    onChange={(e) => setAnswerInput(e.target.value)}
+                    placeholder="e.g. Under 1 week onboarding, $500/mo hard cap..."
+                    rows={2}
+                    className="w-full px-3.5 py-2.5 text-sm rounded-md border-2 border-[#b8af99] dark:border-[#38332C] bg-[#F4F0E6] dark:bg-[#181614] text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7d7567] focus:outline-none focus:border-[#7a4e10] dark:focus:border-[#D4AA50]"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-[#cfc7b2]/70 dark:border-[#38332C]">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleAnswerSubmit(activeGap, true);
+                      advanceToNextGap(activeGap.id);
+                    }}
+                    disabled={isWorking}
+                    className="text-xs font-semibold text-[#4f4b40] dark:text-[#A89F91] hover:text-[#1d1d1b] hover:underline cursor-pointer"
+                  >
+                    Skip for now
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!answerInput.trim()) return;
+                      await handleQuickResolve(activeGap, answerInput.trim());
+                      advanceToNextGap(activeGap.id);
+                    }}
+                    disabled={isWorking || !answerInput.trim()}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#1d1d1b] hover:bg-[#33302b] dark:bg-[#D4AA50] dark:text-[#181614] text-[#F4F0E6] text-xs font-semibold rounded-md transition disabled:opacity-45 cursor-pointer"
+                  >
+                    <span>{isWorking ? "Saving..." : "Save & Next Question"}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-
-              {/* Collapsible Digest of all 5 merged items */}
-              {isSecondaryExpanded && (
-                <div className="space-y-3 pt-3 border-t border-border/80 animate-in fade-in">
-                  <div className="space-y-2">
-                    {secondaryPendingGaps.map((gap, idx) => (
-                      <div
-                        key={gap.id}
-                        className="p-3.5 rounded-lg bg-paper-surface border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[14px] font-mono font-bold text-ink-secondary px-1.5 py-0.5 rounded bg-paper-sidebar border border-border">
-                              #{gap.priority_score || idx + 1}
-                            </span>
-                            <span className="font-semibold text-ink font-sans">{gap.question}</span>
-                            <span className="text-[14px] font-mono text-ink-secondary uppercase">
-                              ({gap.importance})
-                            </span>
-                          </div>
-                          {gap.reason && (
-                            <p className="text-[15px] text-ink-secondary font-light pl-6">
-                              {gap.reason}
-                            </p>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => openAskMe(gap)}
-                          className="inline-flex items-center gap-1 text-[15px] font-mono text-accent hover:underline shrink-0"
-                        >
-                          <span>Answer Separately</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Optional Overarching Directive for the Bundle */}
-                  <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <input
-                      type="text"
-                      value={batchDirectiveInput}
-                      onChange={(e) => setBatchDirectiveInput(e.target.value)}
-                      placeholder="Optional overarching directive for this bundle (e.g. 'Standardize on default cloud specs')..."
-                      className="flex-1 px-3.5 py-2 text-xs bg-paper-surface border border-border rounded-lg text-ink placeholder:text-ink-secondary/50 focus:outline-none focus:ring-1 focus:ring-accent font-sans"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleBatchAcceptSecondary}
-                      disabled={isBatchAccepting}
-                      className="px-4 py-2 bg-ink text-paper-surface rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-50 shrink-0 transition"
-                    >
-                      Apply Directive to All
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
-
-      {/* 6. Stage 4 Readiness & Advance Gate (Bottom Action Banner) */}
-      {gaps.length > 0 && (
-        <div className="pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            {pendingCount > 0 ? (
-              <div className="flex items-center gap-2 text-xs font-mono text-amber-800">
-                <span>
-                  <strong>{pendingCount} Critical Blockers remain ungrounded.</strong> Advancing will penalize option risk scores.
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-xs font-mono text-emerald-800">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>
-                  <strong>All critical gaps resolved!</strong> Epistemic Grounding at {groundingPercentage}%. Ready for Stage 4.
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0">
-            {onAdvanceToNextStage && (
-              <button
-                type="button"
-                onClick={onAdvanceToNextStage}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink text-paper-surface hover:opacity-90 rounded-xl text-xs font-semibold shadow-xs transition-all"
-              >
-                <span>Advance to Thinking Frameworks</span>
-                <ArrowRight className="w-3.5 h-3.5 text-accent" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

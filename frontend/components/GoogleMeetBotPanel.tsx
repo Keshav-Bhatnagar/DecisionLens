@@ -279,20 +279,20 @@ export default function GoogleMeetBotPanel({
   };
 
   return (
-    <div className="space-y-4 pt-1">
-      {/* Compact Header */}
+    <div className="space-y-4 pt-1 font-sans">
+      {/* Clear Plain-English Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#cfc7b2]/70 dark:border-[#38332C]">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-newsreader text-lg font-semibold text-[#1d1d1b] dark:text-[#F0EAE1]">
-              Google Meet Bot & Scribe
+            <h3 className="font-newsreader text-xl font-normal text-[#1d1d1b] dark:text-[#F0EAE1]">
+              Send AI Note-Taker to Google Meet
             </h3>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#7a4e10]/12 text-[#7a4e10] dark:bg-[#D4AA50]/20 dark:text-[#D4AA50]">
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase tracking-wider bg-[#E5DEC9] text-[#7a4e10] border border-[#cfc7b2] dark:bg-[#D4AA50]/20 dark:text-[#D4AA50] dark:border-[#38332C]">
               Live
             </span>
           </div>
-          <p className="text-xs text-[#6e655a] dark:text-[#A89F91]">
-            Joins your Meet call, transcribes live, filters chatter, and collects private participant notes.
+          <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5">
+            Paste a Google Meet link below — the bot joins your call, transcribes live, and captures notes.
           </p>
         </div>
 
@@ -348,14 +348,14 @@ export default function GoogleMeetBotPanel({
               <button
                 type="button"
                 onClick={() => setPanelMode("live")}
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-sm border transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md border transition-colors cursor-pointer ${
                   panelMode === "live"
                     ? "bg-[#1d1d1b] text-[#F4F0E6] border-[#1d1d1b] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50]"
-                    : "bg-[#F4F0E6] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE5D5]"
+                    : "bg-[#E5DEC9]/70 dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9]"
                 }`}
               >
-                <Radio className={`w-3.5 h-3.5 ${isLiveRunning ? "text-emerald-400 animate-pulse" : ""}`} />
-                Live Transcriptions
+                <Radio className={`w-3.5 h-3.5 ${isLiveRunning ? "text-[#D4AA50] animate-pulse" : ""}`} />
+                Live Session
               </button>
               <button
                 type="button"
@@ -363,14 +363,14 @@ export default function GoogleMeetBotPanel({
                   setPanelMode("conducted");
                   refreshSessions();
                 }}
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-sm border transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md border transition-colors cursor-pointer ${
                   panelMode === "conducted"
                     ? "bg-[#1d1d1b] text-[#F4F0E6] border-[#1d1d1b] dark:bg-[#D4AA50] dark:text-[#181614] dark:border-[#D4AA50]"
-                    : "bg-[#F4F0E6] dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#EDE5D5]"
+                    : "bg-[#E5DEC9]/70 dark:bg-[#181614] text-[#4f4b40] dark:text-[#A89F91] border-[#cfc7b2] dark:border-[#38332C] hover:bg-[#E5DEC9]"
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                Conducted Transcriptions {isLoadingSessions ? (
+                Past Meetings {isLoadingSessions ? (
                   <Loader2 className="w-3 h-3 animate-spin inline ml-1" />
                 ) : (
                   `(${conductedSessions.length})`
@@ -383,11 +383,11 @@ export default function GoogleMeetBotPanel({
                 {isLoadingSessions && conductedSessions.length === 0 ? (
                   <div className="p-8 text-center bg-[#EDE5D5]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-xs text-[#6e655a] dark:text-[#A89F91] flex items-center justify-center gap-2">
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Loading conducted transcriptions...
+                    Loading past meetings...
                   </div>
                 ) : conductedSessions.length === 0 ? (
                   <div className="p-8 text-center bg-[#EDE5D5]/60 dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] rounded-sm text-xs text-[#6e655a] dark:text-[#A89F91]">
-                    No conducted meeting transcriptions recorded yet for this decision.
+                    No past meetings recorded yet for this decision.
                   </div>
                 ) : (
                   conductedSessions.map((sess) => {
@@ -504,46 +504,46 @@ export default function GoogleMeetBotPanel({
                 )}
               </div>
             ) : !activeSession ? (
-        <form onSubmit={handleJoinMeet} className="space-y-4 max-w-2xl bg-[#EDE5D5] dark:bg-[#221F1C] p-5 border border-[#cfc7b2] dark:border-[#38332C] rounded-sm">
+        <form onSubmit={handleJoinMeet} className="space-y-4 bg-[#E5DEC9]/75 dark:bg-[#181614] p-5 border border-[#cfc7b2] dark:border-[#38332C] rounded-md">
           <div className="space-y-2">
-            <label className="text-[12px] font-bold uppercase tracking-wider text-[#4f4b40] dark:text-[#A89F91] block">
-              Google Meet URL or Meeting Code:
+            <label className="text-sm font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] block">
+              Paste your Google Meet link
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <input
                 type="text"
                 value={meetUrlInput}
                 onChange={(e) => setMeetUrlInput(e.target.value)}
                 placeholder="https://meet.google.com/abc-defg-hij"
-                className="flex-1 bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] px-3.5 py-2 text-[14px] rounded-none focus:outline-none"
+                className="flex-1 bg-[#F4F0E6] dark:bg-[#221F1C] border-2 border-[#b8af99] dark:border-[#38332C] focus:border-[#7a4e10] dark:focus:border-[#D4AA50] px-3.5 py-2.5 text-sm text-[#1d1d1b] dark:text-[#F0EAE1] placeholder-[#7d7567] rounded-md focus:outline-none font-sans"
               />
               <button
                 type="submit"
                 disabled={!meetUrlInput.trim() || isJoining}
-                className="px-5 py-2 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-[13px] font-bold uppercase tracking-wider rounded-none disabled:opacity-40 transition-colors flex items-center gap-2 cursor-pointer shrink-0"
+                className="px-5 py-2.5 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-sm font-semibold rounded-md disabled:opacity-45 transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0"
               >
                 {isJoining ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
-                Invite Bot to Meet
+                <span>{isJoining ? "Sending..." : "Send Bot"}</span>
               </button>
             </div>
-            <p className="text-[11px] text-[#6e655a] dark:text-[#A89F91]">
-              Paste any Google Meet link (e.g. <code className="font-mono">https://meet.google.com/abc-defg-hij</code>).
+            <p className="text-xs text-[#4f4b40] dark:text-[#A89F91]">
+              Example: <span className="font-mono">https://meet.google.com/abc-defg-hij</span> or just the meeting code <span className="font-mono">abc-defg-hij</span>
             </p>
           </div>
 
-          <div className="pt-2 border-t border-[#cfc7b2]/60 dark:border-[#38332C]/60 flex flex-wrap items-center justify-between gap-3 text-[12px] text-[#6e655a] dark:text-[#A89F91]">
+          <div className="pt-3 border-t border-[#cfc7b2]/70 dark:border-[#38332C]/60 flex flex-wrap items-center justify-between gap-3 text-xs text-[#4f4b40] dark:text-[#A89F91]">
             <div className="flex items-center gap-2">
-              <span className="font-bold">Bot Name in Call:</span>
+              <span className="font-medium">Bot display name:</span>
               <input
                 type="text"
                 value={botNameInput}
                 onChange={(e) => setBotNameInput(e.target.value)}
-                className="bg-[#EDE7D6] dark:bg-[#181614] border border-[#cfc7b2] dark:border-[#38332C] px-2 py-0.5 text-[12px] w-48 rounded-none"
+                className="bg-[#F4F0E6] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] px-2.5 py-1 text-xs text-[#1d1d1b] dark:text-[#F0EAE1] w-44 rounded-md"
               />
             </div>
-            <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-400 font-bold">
+            <div className="flex items-center gap-1.5 text-[#7a4e10] dark:text-[#D4AA50] font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Auto-Distraction Filter Enabled
+              <span>Auto-filters small talk &amp; filler</span>
             </div>
           </div>
         </form>

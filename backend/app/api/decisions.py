@@ -13,6 +13,8 @@ from app.schemas import (
     MemberResponse,
     MeetingTakeawaysRequest,
     MeetingTakeawaysResponse,
+    DecisionAskRequest,
+    DecisionAskResponse,
 )
 from app.auth import (
     get_current_user,
@@ -357,4 +359,36 @@ def get_meeting_takeaways(
         agenda=agenda,
         force_mock=force_mock,
         db=db,
+    )
+
+
+@router.post(
+    "/{decision_id}/ask",
+    response_model=DecisionAskResponse,
+    summary="Ask a follow-up question grounded in the full decision record",
+)
+def ask_decision_followup(
+    decision_id: int,
+    req: DecisionAskRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Answer any follow-up or 'what-if' question about this decision, grounded in
+    its problem statement, notes, transcript, gaps, MAUT scores, synthesis memo,
+    roadmap, and attached RAG documents.
+    """
+    decision = db.get(Decision, decision_id)
+    if not decision:
+        raise HTTPException(status_code=404, detail="Decision not found")
+
+    verify_decision_access(db, decision, current_user)
+
+    from app.services.decision_qa import answer_decision_question
+
+    return answer_decision_question(
+        decision=decision,
+        question=req.question,
+        history=req.history,
+        force_mock=req.force_mock,
     )

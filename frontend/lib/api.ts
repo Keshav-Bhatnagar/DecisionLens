@@ -1697,6 +1697,25 @@ export interface RagReindexResponse {
 }
 
 /** Ask a question; the answer is built only from this decision's uploaded documents, with numbered citations. */
+export interface DecisionAskResponse {
+  question: string;
+  answer: string;
+  grounded_sources: string[];
+  provider: string;
+}
+
+/** Ask a follow-up or what-if question grounded in the full decision record. */
+export async function askDecisionQuestion(
+  decisionId: number,
+  question: string,
+  history?: Array<{ role: string; content: string }>
+): Promise<DecisionAskResponse> {
+  return fetchApi<DecisionAskResponse>(`/api/decisions/${decisionId}/ask`, {
+    method: "POST",
+    body: JSON.stringify({ question, history }),
+  });
+}
+
 export async function askDecisionDocuments(
   decisionId: number,
   question: string,

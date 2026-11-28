@@ -746,16 +746,91 @@ def compute_blunder_shield(
     )
 
 
+def _extract_deadline_days(text: str) -> Optional[int]:
+    """Extract an explicit deadline in days (e.g., '30-day deadline', 'within 2 weeks')."""
+    if not text:
+        return None
+    lower = text.lower()
+    patterns = [
+        r"\b(\d+)\s*-\s*(day|week|month)\b",
+        r"\b(?:within|in|deadline(?:\s+of)?|under|by)\s+(\d+)\s+(day|week|month)s?\b",
+        r"\b(\d+)\s+(day|week|month)s?\s+(?:deadline|timeline|window|horizon|rollout|target)\b",
+    ]
+    for pat in patterns:
+        m = re.search(pat, lower)
+        if m:
+            val = int(m.group(1))
+            unit = m.group(2)
+            if val <= 0:
+                continue
+            if unit == "day":
+                return val
+            if unit == "week":
+                return val * 7
+            if unit == "month":
+                return val * 30
+    return None
+
+
 def _calculate_timeline_cadence(text_context: str, domain: str) -> dict:
     """
     Dynamically analyze problem context, explicit timeframe signals, and domain to calculate
     appropriate chronological time units, horizons, and phase spans (zero static hardcoding).
     """
     lower = text_context.lower()
+    deadline_days = _extract_deadline_days(lower)
 
-    # Check for explicit day or quick turnaround signals
+    if deadline_days is not None:
+        if deadline_days <= 7:
+            return {
+                "unit": "Day",
+                "p1_timeline": "Days 1–2",
+                "p2_timeline": "Days 3–5",
+                "p3_timeline": f"Days 6–{max(6, deadline_days)}",
+                "t1_timeline": "Days 1–2",
+                "t2_timeline": "Day 2",
+                "t3_timeline": "Days 3–4",
+                "t4_timeline": "Day 4",
+                "t5_timeline": "Day 5",
+                "t6_timeline": "Day 6",
+                "t7_timeline": f"Day {max(6, deadline_days)}",
+                "t8_timeline": f"Day {max(7, deadline_days)}",
+            }
+        if deadline_days <= 14:
+            return {
+                "unit": "Day",
+                "p1_timeline": "Days 1–4",
+                "p2_timeline": "Days 5–10",
+                "p3_timeline": f"Days 11–{deadline_days}",
+                "t1_timeline": "Days 1–2",
+                "t2_timeline": "Days 3–4",
+                "t3_timeline": "Days 5–7",
+                "t4_timeline": "Days 8–9",
+                "t5_timeline": "Day 10",
+                "t6_timeline": f"Days 11–{max(12, deadline_days - 1)}",
+                "t7_timeline": f"Day {max(12, deadline_days - 1)}",
+                "t8_timeline": f"Day {deadline_days}",
+            }
+        if deadline_days <= 35:
+            max_w = max(3, min(5, round(deadline_days / 7)))
+            return {
+                "unit": "Week",
+                "p1_timeline": "Week 1",
+                "p2_timeline": "Weeks 2–3",
+                "p3_timeline": f"Week {max_w}",
+                "t1_timeline": "Days 1–3",
+                "t2_timeline": "Days 4–7",
+                "t3_timeline": "Week 2",
+                "t4_timeline": "Weeks 2–3",
+                "t5_timeline": "Week 3",
+                "t6_timeline": f"Week {max_w}",
+                "t7_timeline": f"Week {max_w}",
+                "t8_timeline": f"Day {deadline_days}",
+            }
+
+    # Check for explicit day or quick turnaround signals (avoid matching '30-day' etc.)
     has_day_signals = any(k in lower for k in [
-        "day", "weekend", "trip", "travel", "vacation", "holiday", "manali",
+        "weekend", "trip", "travel", "vacation", "holiday", "manali",
         "getaway", "urgent", "immediate", "flight", "hotel", "resort", "leave",
         "quick", "short-term", "short term"
     ]) or domain.upper() in ("PERSONAL", "LIFESTYLE")
@@ -844,6 +919,7 @@ def generate_domain_grounded_roadmap(
     decision_title: Optional[str] = None,
     assumptions: Optional[List[str]] = None,
     force_mock: bool = False,
+    problem_context: Optional[str] = None,
 ) -> RoadmapData:
     """
     Generate a realistic, timely calculated execution roadmap dynamically synthesized
@@ -852,6 +928,9 @@ def generate_domain_grounded_roadmap(
     """
     domain_upper = (domain or "BUSINESS").upper()
     title_context = f" for {decision_title}" if decision_title else ""
+    deadline_days = _extract_deadline_days(
+        f"{decision_title or ''} {problem_context or ''} {' '.join(critical_conditions or [])} {' '.join(assumptions or [])}"
+    )
 
     # Tier 1: True AI / Semantic Intent-Driven Roadmap Generation (When LLM is available)
     if not force_mock:
@@ -880,7 +959,14 @@ def generate_domain_grounded_roadmap(
                     "   - For SOFTWARE/TECH decisions, assign authentic engineering and platform roles ('Lead Architect', 'Staff SRE', 'Platform Lead', 'Security Counsel').\n"
                     "   - For BUSINESS/OPERATIONS, assign authentic organizational roles ('Operations Lead', 'Procurement Director', 'Financial Analyst').\n"
                     "   - Form a connected dependency DAG where Phase 2 tasks depend on Phase 1 milestones, and Phase 3 tasks depend on Phase 2.\n"
-                    "\n"
+                    + (
+                        f"\n4. STRICT DEADLINE COMPLIANCE:\n"
+                        f"   - This decision has an explicit {deadline_days}-day deadline (~{max(1, round(deadline_days / 7))} weeks). "
+                        f"ALL 3 phases and ALL task timelines MUST fit strictly within {deadline_days} days. Never schedule Weeks 5–8 if the deadline is <= 35 days.\n"
+                        if deadline_days
+                        else ""
+                    )
+                    + "\n"
                     "Return ONLY valid JSON matching this schema:\n"
                     "{\n"
                     f'  "title": "Execution Roadmap: {top_option_name}",\n'
@@ -913,6 +999,7 @@ def generate_domain_grounded_roadmap(
 
                 user_prompt = (
                     f"Decision Title: {decision_title or 'Executive Strategy'}\n"
+                    f"Problem Context & Constraints: {problem_context or 'N/A'}\n"
                     f"Selected Winner Option: {top_option_name}\n"
                     f"Classified Domain: {domain_upper}\n"
                     f"Unresolved Unknown Gaps: {json.dumps(critical_gaps or [])}\n"
@@ -1049,7 +1136,10 @@ def generate_domain_grounded_roadmap(
         "trip", "vacation", "travel", "holiday", "itinerary", "flight", "hotel", "resort",
         "tour", "tourism", "destination", "booking", "manali", "getaway", "sightseeing"
     ])
-    cadence = _calculate_timeline_cadence(f"{decision_title or ''} {top_option_name}", domain_upper)
+    cadence = _calculate_timeline_cadence(
+        f"{decision_title or ''} {problem_context or ''} {top_option_name} {' '.join(critical_conditions or [])} {' '.join(assumptions or [])}",
+        domain_upper,
+    )
     default_p1_timeline = cadence["t1_timeline"]
 
     # Phase 1: Pre-Commitment Validation & Due Diligence
@@ -1628,7 +1718,7 @@ def generate_domain_grounded_roadmap(
                 title=f"Draft Operational Charter & Finalize Vendor SLA Agreements for {top_option_name}",
                 description=f"Establish formal delivery milestones, quality benchmarks, and supplier indemnity provisions.",
                 owner_role=legal_role,
-                timeline="Weeks 3-4",
+                timeline=cadence["t3_timeline"],
                 dependencies=[t.task_id for t in phase1_tasks[:1]],
                 success_criteria="Executed operational agreements and commercial contracts formally approved.",
                 is_completed=False,
@@ -1640,7 +1730,7 @@ def generate_domain_grounded_roadmap(
                 title=f"Mobilize Core Execution Pods & Pilot Workstream Delivery",
                 description=f"Deploy cross-functional execution teams, configure pilot workflows, and establish KPI tracking dashboards.",
                 owner_role=ops_role,
-                timeline="Weeks 4-5",
+                timeline=cadence["t4_timeline"],
                 dependencies=["task-p2-terms"],
                 success_criteria="Pilot workflow operational with initial cohort transactions processed cleanly.",
                 is_completed=False,
@@ -1652,7 +1742,7 @@ def generate_domain_grounded_roadmap(
                 title="Audit Quality Control Gates & Risk Containment Protocols",
                 description="Execute operational fire drills to verify contingency responses and fail-safe exception protocols.",
                 owner_role=risk_role,
-                timeline="Week 5",
+                timeline=cadence["t5_timeline"],
                 dependencies=["task-p2-exec"],
                 success_criteria="Exception drill completed successfully with zero compliance breaches.",
                 is_completed=False,
@@ -1661,14 +1751,14 @@ def generate_domain_grounded_roadmap(
             ),
         ]
 
-        # Phase 3: Enterprise Operationalization & Value Realization (Weeks 6-8)
+        # Phase 3: Enterprise Operationalization & Value Realization
         phase3_tasks: List[RoadmapTask] = [
             RoadmapTask(
                 task_id="task-p3-close",
                 title=f"Complete Full Operational Rollout & Decommission Deprioritized Workstreams{title_context}",
                 description=f"Execute organization-wide operational transition and sunset redundant vendor contracts.",
                 owner_role=ops_role,
-                timeline="Weeks 6-7",
+                timeline=cadence["t6_timeline"],
                 dependencies=["task-p2-canary"],
                 success_criteria="100% operational volume transitioned with redundant commitments cleanly decommissioned.",
                 is_completed=False,
@@ -1680,7 +1770,7 @@ def generate_domain_grounded_roadmap(
                 title="Operational SOP Handover & Steady-State Governance Protocols",
                 description="Transfer standard operating procedures, escalation matrices, and performance reporting to operational owners.",
                 owner_role=ops_role,
-                timeline="Week 7",
+                timeline=cadence["t7_timeline"],
                 dependencies=["task-p3-close"],
                 success_criteria="Operational owners sign off on comprehensive procedural handover.",
                 is_completed=False,
@@ -1689,10 +1779,10 @@ def generate_domain_grounded_roadmap(
             ),
             RoadmapTask(
                 task_id="task-p3-gov",
-                title="Institute Executive Governance Cadence & 30-Day Fiduciary ROI Audit",
-                description=f"Establish monthly executive committee review to audit realized outcomes against strategic baseline targets for {top_option_name}.",
+                title="Institute Executive Governance Cadence & Post-Rollout ROI Audit",
+                description=f"Establish executive review to audit realized outcomes against strategic baseline targets for {top_option_name}.",
                 owner_role=exec_role,
-                timeline="Week 8",
+                timeline=cadence["t8_timeline"],
                 dependencies=["task-p3-runbook"],
                 success_criteria="First 30-day post-transition performance review approved by executive stakeholders.",
                 is_completed=False,
@@ -2095,6 +2185,21 @@ def generate_mock_synthesis(
     domain_upper = domain.upper()
 
     # Supporting evidence gathering
+    def _clean_excerpt(text: str, max_len: int = 180) -> str:
+        """Trim leading mid-word fragments from chunk overlap and truncate on word boundaries."""
+        cleaned = " ".join((text or "").split())
+        if not cleaned:
+            return ""
+        # If chunk starts mid-word (lowercase) or with stray punctuation, skip to next word/sentence
+        if cleaned[0].islower() or cleaned[0] in ",.;:)]":
+            first_space = cleaned.find(" ")
+            if 0 < first_space < len(cleaned) - 10:
+                cleaned = cleaned[first_space + 1 :].lstrip()
+        if len(cleaned) > max_len:
+            cut = cleaned[:max_len].rsplit(" ", 1)[0].rstrip(",.;:")
+            return (cut or cleaned[:max_len]) + "..."
+        return cleaned
+
     supporting_evidence: List[SupportingEvidenceItem] = []
     research_list = research.get("research", []) if isinstance(research, dict) else (research if isinstance(research, list) else [])
 
@@ -2179,11 +2284,11 @@ def generate_mock_synthesis(
             doc_excerpts = doc_rag.retrieve_relevant_excerpts(decision.id, query=query or "architecture requirements", top_k=3)
             for exc in doc_excerpts:
                 doc_name = exc.get("metadata", {}).get("document_name", "Technical Specification")
-                content = exc.get("content", "").strip()
+                content = _clean_excerpt(exc.get("content", ""), max_len=180)
                 if content:
                     supporting_evidence.append(
                         SupportingEvidenceItem(
-                            claim=(content[:180] + "...") if len(content) > 180 else content,
+                            claim=content,
                             source_title=f"Internal Spec ({doc_name})",
                             source_url=None,
                             evidence_type="document_excerpt",
@@ -2200,14 +2305,21 @@ def generate_mock_synthesis(
             domain_rag = get_domain_rag_service()
             domain_rag.initialize_knowledge_bases()
             query = f"{decision.title or ''} {decision.problem_statement or ''}".strip()
-            guidelines = domain_rag.retrieve_guidelines(query=query or f"{domain.lower()} standards", top_k=2)
+            matched_domain, guidelines = domain_rag.guidelines_for_decision(
+                decision,
+                query or f"{domain.lower()} standards",
+                top_k=2,
+            )
             for g in guidelines:
-                domain_name = g.get("metadata", {}).get("domain", domain.title())
-                content = g.get("content", "").strip()
+                score = g.get("score")
+                if isinstance(score, (int, float)) and score < 0.20:
+                    continue
+                domain_name = g.get("metadata", {}).get("domain", (matched_domain.value if matched_domain else domain).title())
+                content = _clean_excerpt(g.get("content", ""), max_len=180)
                 if content:
                     supporting_evidence.append(
                         SupportingEvidenceItem(
-                            claim=(content[:180] + "...") if len(content) > 180 else content,
+                            claim=content,
                             source_title=f"Best Practice Guide ({domain_name.upper()})",
                             source_url=None,
                             evidence_type="domain_standard",
@@ -2278,13 +2390,12 @@ def generate_mock_synthesis(
                     f"Fallback Trigger: If commitment hurdles or budget exceed limits, consider '{second_option_name}' as a fallback alternative.",
                 ]
         else:
-            headline = f"Strategic Execution Plan: '{top_option_name}' (Risk-Gated Pre-Commitment)"
+            open_checks = len(critical_unknowns) or len(unresolved_gap_ids)
+            headline = f"Adopt {top_option_name} (Pending {open_checks} Check{'s' if open_checks != 1 else ''})"
             rec_text = (
-                f"Following multi-criteria strategic evaluation of '{decision_title_str}', '{top_option_name}' "
-                f"emerges as the recommended strategic direction, achieving optimal alignment across primary decision criteria. "
-                f"However, because {len(critical_unknowns) or len(unresolved_gap_ids)} critical unknown(s) remain unresolved, "
-                f"execution must proceed under an explicit risk-gated framework: Phase 1 focuses strictly on targeted due diligence "
-                f"and clearance of precedent conditions before irrevocable capital or organizational commitment is finalized."
+                f"'{top_option_name}' ranks #1 for '{decision_title_str}' across your decision criteria. "
+                f"Because {open_checks} key question(s) remain open, confirm those checks in Phase 1 "
+                f"before finalizing your commitment."
                 f"{continuity_note}"
             )
             conditional_triggers = critical_conditions or [
@@ -2496,6 +2607,7 @@ def generate_mock_synthesis(
         decision_title=decision.title,
         assumptions=[a.assumption for a in assumptions_items],
         force_mock=True,
+        problem_context=decision.problem_statement,
     )
 
     blunder_shield = None
@@ -2887,6 +2999,7 @@ def execute_hosted_synthesis(
             decision_title=decision.title,
             assumptions=[a.get("assumption", "") for a in parsed.get("assumptions", []) if isinstance(a, dict)],
             force_mock=False,
+            problem_context=decision.problem_statement,
         )
         parsed["roadmap"] = computed_roadmap.model_dump()
 

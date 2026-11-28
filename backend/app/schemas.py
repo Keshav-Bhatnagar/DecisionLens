@@ -1455,3 +1455,16 @@ class PublicBotInviteInfo(BaseModel):
     status: str
     token: str
 
+
+class DecisionAskRequest(BaseModel):
+    question: str = Field(..., min_length=2, max_length=2000)
+    history: Optional[List[Dict[str, str]]] = None
+    force_mock: bool = False
+
+
+class DecisionAskResponse(BaseModel):
+    question: str
+    answer: str
+    grounded_sources: List[str] = []
+    provider: str = "deterministic"
+

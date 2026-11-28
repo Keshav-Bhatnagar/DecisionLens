@@ -72,13 +72,13 @@ export default function LiveMeetingRoom({
             type="button"
             onClick={handleGenerateTakeaways}
             disabled={isGeneratingTakeaways}
-            title="Generate executive meeting takeaways, action matrix, and company memos"
-            className="px-3 py-1.5 rounded-md text-xs font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#F4F0E6] hover:bg-[#E5DEC9] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+            title="Generate executive summary, risks, and action items from this meeting's transcript"
+            className="px-3 py-1.5 rounded-none text-xs font-semibold text-[#1d1d1b] dark:text-[#F0EAE1] bg-[#E5DEC9] hover:bg-[#DDD4BC] dark:bg-[#181614] dark:hover:bg-[#2A2622] border border-[#cfc7b2] dark:border-[#38332C] transition-colors cursor-pointer inline-flex items-center gap-1.5"
           >
             {isGeneratingTakeaways && (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             )}
-            <span>Meeting Takeaways</span>
+            <span>Summarize Meeting</span>
           </button>
         }
         onAnalysisCompleted={(res) => {

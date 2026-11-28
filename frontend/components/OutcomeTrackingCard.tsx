@@ -136,17 +136,17 @@ export default function OutcomeTrackingCard({
   const latest = outcomes.length > 0 ? outcomes[0] : null;
 
   return (
-    <div className="mt-8 pt-8 border-t border-[#D9D2C3]">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+    <div className="bg-[#EDE5D5] dark:bg-[#221F1C] border border-[#cfc7b2] dark:border-[#38332C] rounded-none p-4 shadow-2xs space-y-3">
+      <div className="space-y-2.5">
         <div>
-          <span className="text-[14px] font-mono uppercase tracking-widest text-[#7a7264] block mb-1">
-            Stage 03 • Closed-Loop Accountability
+          <span className="text-[11px] font-mono uppercase tracking-widest text-[#7a4e10] dark:text-[#D4AA50] font-bold block mb-1">
+            Post-Execution Check-In (30 / 60 / 90 Days)
           </span>
-          <h3 className="text-lg font-serif font-bold text-[#26211b]">
-            Real-World Follow-Up & Outcome Tracking
+          <h3 className="text-base font-serif font-bold text-[#26211b] dark:text-[#F0EAE1]">
+            Did This Decision Work Out?
           </h3>
-          <p className="text-xs text-[#7a7264]">
-            Close the decision loop. Measure whether the implemented recommendation delivered expected value and train folder memory.
+          <p className="text-xs text-[#4f4b40] dark:text-[#A89F91] mt-0.5 leading-relaxed">
+            Log what actually happened after rollout so future workspace decisions learn from real results.
           </p>
         </div>
 
@@ -155,7 +155,7 @@ export default function OutcomeTrackingCard({
             setError(null);
             setIsModalOpen(true);
           }}
-          className="px-3.5 py-1.5 bg-[#1d1d1b] hover:bg-[#443a30] text-[#F4F0E6] text-xs font-bold uppercase tracking-wider rounded-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+          className="w-full px-3 py-2 bg-[#1d1d1b] hover:bg-[#33302b] text-[#F4F0E6] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] font-courier text-xs font-semibold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
         >
           <span>★</span>
           <span>{latest ? "Log Follow-Up Check-in" : "Log Decision Outcome"}</span>
@@ -272,15 +272,9 @@ export default function OutcomeTrackingCard({
           <h4 className="text-sm font-bold text-[#26211b] mb-1">
             No Real-World Outcome Recorded Yet
           </h4>
-          <p className="text-xs text-[#7a7264] max-w-md mx-auto mb-3">
-            Did you follow the recommendation? Check in at 30, 60, or 90 days to log whether this decision solved the problem, stay accountable, and help your team learn from past results.
+          <p className="text-xs text-[#7a7264] max-w-md mx-auto">
+            Did you follow the recommendation? Check in at 30, 60, or 90 days using <strong>Log Decision Outcome</strong> above to record real-world results.
           </p>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-[#1d1d1b] hover:bg-transparent hover:text-[#1d1d1b] text-[#F4F0E6] border border-[#1d1d1b] dark:border-[#D4AA50] dark:bg-[#D4AA50] dark:text-[#181614] dark:hover:bg-[#E5BE64] text-xs font-bold uppercase tracking-wider rounded-sm transition-colors shadow-xs"
-          >
-            Log 30-Day Decision Outcome
-          </button>
         </div>
       )}
 
